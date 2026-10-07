@@ -188,14 +188,16 @@ if [ "$P4_APP" = console_os ] &&
 fi
 
 # sdkconfig defaults do not override an existing generated configuration.
-# Regenerate when switching the explicit Tab5 USB-A host selection, in either
-# direction, so an incremental build cannot retain the wrong peripheral scope.
+# Regenerate when changing Tab5 features or the bounded cache-writeback policy,
+# so an incremental build cannot retain stale defaults.
 if [ "$P4_APP" = console_os ] &&
    [ "$P4_BOARD_PROFILE" = m5stack-tab5 ] &&
    [ -f "$P4_BUILD_DIR/sdkconfig" ] &&
    { ! grep -Fqx "$P4_TAB5_USB_CONFIG" "$P4_BUILD_DIR/sdkconfig" ||
-     ! grep -Fqx "$P4_TAB5_BLE_CONFIG" "$P4_BUILD_DIR/sdkconfig"; }; then
-    printf 'Regenerating Tab5 Console OS sdkconfig for USB-A host=%s.\n' "$P4_TAB5_USB_HOST"
+     ! grep -Fqx "$P4_TAB5_BLE_CONFIG" "$P4_BUILD_DIR/sdkconfig" ||
+     ! grep -Fqx 'CONFIG_ESP_MM_CACHE_MSYNC_C2M_CHUNKED_OPS=y' "$P4_BUILD_DIR/sdkconfig" ||
+     ! grep -Fqx 'CONFIG_ESP_MM_CACHE_MSYNC_C2M_CHUNKED_OPS_MAX_LEN=0x8000' "$P4_BUILD_DIR/sdkconfig"; }; then
+    printf 'Regenerating Tab5 Console OS sdkconfig for current features and cache-writeback policy.\n'
     cmake -E remove "$P4_BUILD_DIR/sdkconfig"
     p4_idf_action reconfigure
 fi

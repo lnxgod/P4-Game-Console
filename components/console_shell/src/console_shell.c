@@ -354,7 +354,7 @@ static const char s_terminal_keys[] = "QWERTYUIOPASDFGHJKLZXCVBNM";
 #if CONFIG_P4_BOARD_M5STACK_TAB5
 static console_shell_action_t nextgen_buttons(console_shell_t *, uint32_t);
 static console_shell_action_t nextgen_touch(console_shell_t *, bool, const console_shell_contact_t *, size_t);
-static bool nextgen_render(console_shell_t *, uint16_t *, size_t, bool);
+static bool nextgen_render(console_shell_t *, uint16_t *, size_t, bool, bool);
 static bool nextgen_advance(console_shell_t *, uint32_t);
 #endif
 static console_shell_action_t no_action(void);
@@ -3997,6 +3997,8 @@ bool console_shell_set_file_listing(
         shell->ng_file_scroll = 0;
         shell->ng_file_menu = false;
         shell->ng_scroll_kind = 0;
+        shell->ng_content_drag_started = false;
+        shell->ng_deferred_content_focus = false;
         shell->ng_glide_kind = 0;
         shell->ng_velocity_q16 = 0;
     }
@@ -7276,6 +7278,7 @@ void console_shell_invalidate_native_cache(console_shell_t *shell)
             .kind = CONSOLE_SHELL_NATIVE_UPDATE_FULL,
         };
         shell->native_home_cache_valid = false;
+        shell->native_logical_incomplete = false;
         shell->native_home_cache_pixels = 0U;
         shell->native_home_cache_stride = 0U;
     }
@@ -7411,7 +7414,7 @@ static bool render_rgb565_target(console_shell_t *shell,
     }
 #if CONFIG_P4_BOARD_M5STACK_TAB5
     return width == CONSOLE_SHELL_WIDTH && height == CONSOLE_SHELL_HEIGHT &&
-        nextgen_render(shell, pixels, stride_pixels, false);
+        nextgen_render(shell, pixels, stride_pixels, false, false);
 #endif
     shell->native_update = (console_shell_native_update_t){
         .kind = CONSOLE_SHELL_NATIVE_UPDATE_FULL,
@@ -7564,7 +7567,7 @@ bool console_shell_render_native_cached_rgb565(console_shell_t *shell,
         return false;
     }
 #if CONFIG_P4_BOARD_M5STACK_TAB5
-    return nextgen_render(shell, pixels, stride_pixels, true);
+    return nextgen_render(shell, pixels, stride_pixels, true, false);
 #endif
     const uint64_t signature = home_cache_signature(shell);
     if (!native_home_cache_candidate(
@@ -7672,6 +7675,51 @@ bool console_shell_render_native_cached_rgb565(console_shell_t *shell,
     return true;
 }
 
+bool console_shell_render_native_scroll_rgb565(console_shell_t *shell,
+                                                uint16_t *pixels,
+                                                size_t stride_pixels)
+{
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    return nextgen_render(shell, pixels, stride_pixels, true, true);
+#else
+    return console_shell_render_native_cached_rgb565(shell, pixels, stride_pixels);
+#endif
+}
+
+bool console_shell_commit_native_content_press_highlight(console_shell_t *shell)
+{
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    return shell != NULL && ng_commit_content_focus(shell);
+#else
+    (void)shell;
+    return false;
+#endif
+}
+
+bool console_shell_set_native_scroll_release_velocity(console_shell_t *shell,
+                                                        int32_t q16_per_ms)
+{
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    if (shell == NULL || !ng_content_drag_eligible(shell)) {
+        return false;
+    }
+    if (q16_per_ms > 196608) {
+        q16_per_ms = 196608;
+    } else if (q16_per_ms < -196608) {
+        q16_per_ms = -196608;
+    }
+    shell->ng_velocity_q16 = q16_per_ms;
+    shell->ng_sample_ms = shell->animation_clock_ms;
+    shell->ng_sample_scroll = shell->ng_scroll_kind == 1U
+        ? shell->ng_library_scroll : shell->ng_file_scroll;
+    return true;
+#else
+    (void)shell;
+    (void)q16_per_ms;
+    return false;
+#endif
+}
+
 bool console_shell_get_native_update(
     const console_shell_t *shell,
     console_shell_native_update_t *update_out)
@@ -7690,4 +7738,99 @@ bool console_shell_render_present_rgb565(console_shell_t *shell,
     return render_rgb565_target(
         shell, pixels, stride_pixels,
         CONSOLE_SHELL_PRESENT_WIDTH, CONSOLE_SHELL_PRESENT_HEIGHT, true);
+}
+
+size_t console_shell_native_cache_storage_bytes(void)
+{
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    return NG_RASTER_BYTES;
+#else
+    return 0U;
+#endif
+}
+
+bool console_shell_attach_native_cache(
+    console_shell_t *shell, uint16_t *arena, size_t bytes,
+    console_shell_rgb565_copy_fn copy, console_shell_rgb565_publish_fn publish,
+    void *context)
+{
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    if (shell == NULL || arena == NULL || bytes != NG_RASTER_BYTES ||
+        ((uintptr_t)arena & 63U) != 0U || (uintptr_t)arena > UINTPTR_MAX - bytes) {
+        return false;
+    }
+    console_shell_detach_native_cache(shell);
+    shell->native_raster_arena = arena;
+    shell->native_raster_arena_bytes = bytes;
+    shell->native_copy = copy;
+    shell->native_publish = publish;
+    shell->native_copy_context = context;
+    shell->native_rasters[0] = (console_shell_native_raster_cache_t){
+        .pixels = arena, .height = NG_LIBRARY_RASTER_HEIGHT,
+    };
+    shell->native_rasters[1] = (console_shell_native_raster_cache_t){
+        .pixels = arena + (size_t)NG_RASTER_STRIDE * NG_LIBRARY_RASTER_HEIGHT,
+        .height = NG_FILE_RASTER_HEIGHT,
+    };
+    return true;
+#else
+    (void)shell; (void)arena; (void)bytes; (void)copy; (void)publish; (void)context;
+    return false;
+#endif
+}
+
+void console_shell_detach_native_cache(console_shell_t *shell)
+{
+    if (shell == NULL) {
+        return;
+    }
+    console_shell_invalidate_native_cache(shell);
+    shell->native_raster_arena = NULL;
+    shell->native_raster_arena_bytes = 0U;
+    shell->native_copy = NULL;
+    shell->native_publish = NULL;
+    shell->native_copy_context = NULL;
+    memset(shell->native_rasters, 0, sizeof(shell->native_rasters));
+}
+
+bool console_shell_prepare_native_cache(console_shell_t *shell, uint16_t pixel_rows)
+{
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    if (shell == NULL || shell->native_raster_arena == NULL || pixel_rows == 0U ||
+        shell->contact_down || shell->ng_scroll_kind || shell->ng_glide_kind ||
+        shell->ng_categories || shell->ng_file_menu || shell->file_delete_confirm ||
+        shell->storage_repair_confirm || shell->page == CONSOLE_PAGE_EXTERNAL) {
+        return false;
+    }
+    if (pixel_rows > 64U) {
+        pixel_rows = 64U;
+    }
+    const bool files = shell->page == CONSOLE_PAGE_FILES || shell->page == CONSOLE_PAGE_GAMES;
+    return ng_prepare_raster(shell, !files, pixel_rows) ||
+        ng_prepare_raster(shell, files, pixel_rows);
+#else
+    (void)shell; (void)pixel_rows;
+    return false;
+#endif
+}
+
+bool console_shell_native_cache_ready(const console_shell_t *shell)
+{
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    if (shell == NULL || shell->native_raster_arena == NULL) {
+        return false;
+    }
+    for (unsigned page = 0U; page < 2U; ++page) {
+        const bool library = page == 0U;
+        if (ng_raster_count(shell, library) != 0U &&
+            (!ng_raster_covers(shell, library) ||
+             (shell->native_publish != NULL && !ng_raster_dma_clean(&shell->native_rasters[page])))) {
+            return false;
+        }
+    }
+    return true;
+#else
+    (void)shell;
+    return false;
+#endif
 }

@@ -107,3 +107,26 @@ if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
     target_link_options(platform_display_tab5_queue_tests PRIVATE -fsanitize=address,undefined)
 endif()
 add_test(NAME platform_display_tab5_queue_tests COMMAND platform_display_tab5_queue_tests)
+
+add_executable(platform_display_tab5_raster_tests test_tab5_raster_copy.c)
+target_include_directories(platform_display_tab5_raster_tests PRIVATE ../src ../include)
+target_compile_features(platform_display_tab5_raster_tests PRIVATE c_std_11)
+if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
+    target_compile_options(platform_display_tab5_raster_tests PRIVATE
+        -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Werror
+        -fsanitize=address,undefined -fno-omit-frame-pointer)
+    target_link_options(platform_display_tab5_raster_tests PRIVATE -fsanitize=address,undefined)
+endif()
+add_test(NAME platform_display_tab5_raster_tests COMMAND platform_display_tab5_raster_tests)
+
+add_executable(platform_display_tab5_scroll_tests test_tab5_ui_scroll.c ../src/platform_display_layout.c)
+target_include_directories(platform_display_tab5_scroll_tests PRIVATE ../src ../include ../../platform_board/include)
+target_compile_definitions(platform_display_tab5_scroll_tests PRIVATE CONFIG_P4_BOARD_M5STACK_TAB5=1)
+target_compile_features(platform_display_tab5_scroll_tests PRIVATE c_std_11)
+if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
+    target_compile_options(platform_display_tab5_scroll_tests PRIVATE
+        -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Werror
+        -fsanitize=address,undefined -fno-omit-frame-pointer)
+    target_link_options(platform_display_tab5_scroll_tests PRIVATE -fsanitize=address,undefined)
+endif()
+add_test(NAME platform_display_tab5_scroll_tests COMMAND platform_display_tab5_scroll_tests)

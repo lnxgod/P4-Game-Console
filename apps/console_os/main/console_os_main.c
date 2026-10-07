@@ -62,6 +62,7 @@
 #include "mbedtls/sha256.h"
 #include "platform/board.h"
 #if CONFIG_P4_BOARD_M5STACK_TAB5
+#include "touch_scroll_velocity.h"
 #include "platform/tab5_sensors.h"
 #include "platform/tab5_game_motion.h"
 #include "p4/clock_control.h"
@@ -214,6 +215,11 @@ enum {
     CONSOLE_TOUCH_MAILBOX_STACK_BYTES = 4096,
     CONSOLE_TOUCH_MAILBOX_STOP_TIMEOUT_MS = 500,
     CONSOLE_TOUCH_MAILBOX_MAX_AGE_US = 50000,
+#endif
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    CONSOLE_UI_WORKER_STACK_BYTES = 8192,
+    CONSOLE_UI_WORKER_JOIN_TIMEOUT_MS = 2000,
+    CONSOLE_UI_CACHE_PREPARE_ROWS = 16,
 #endif
 #if P4_CONSOLE_GAMEPAD_INPUT
     CONSOLE_GAMEPAD_STICK_THRESHOLD = 12000,
@@ -415,6 +421,48 @@ static unsigned s_boot_max_frame_ms;
 static unsigned s_boot_max_render_ms;
 static unsigned s_boot_max_submit_ms;
 static esp_err_t s_boot_animation_error;
+/* One synchronous command transfers the complete mutable UI to core 1.
+ * Main never inspects shell/s_pixels between request and completion. Games
+ * keep their existing core-0 callbacks and acquire these resources only after
+ * the worker is idle. No snapshots share mutable pointed-to state. */
+static TaskHandle_t s_ui_worker_task;
+static StaticSemaphore_t s_ui_worker_request_storage;
+static StaticSemaphore_t s_ui_worker_done_storage;
+static SemaphoreHandle_t s_ui_worker_request;
+static SemaphoreHandle_t s_ui_worker_done;
+static console_shell_t *s_ui_worker_shell;
+static bool s_ui_worker_prepare;
+static esp_err_t s_ui_worker_result;
+static bool s_ui_worker_busy;
+static bool s_ui_worker_stop;
+static bool s_ui_worker_poisoned;
+static int s_ui_worker_core = -1;
+static uint32_t s_ui_worker_stack_remaining;
+static uint32_t s_ui_cache_prepare_last_us;
+static uint32_t s_ui_cache_prepare_max_us;
+static uint32_t s_ui_cache_publish_last_us;
+static uint32_t s_ui_cache_publish_max_us;
+static uint32_t s_ui_cache_publish_failures;
+/* Worker-owned per-present copy attribution; main reads only after joining. */
+static uint32_t s_ui_cache_frame_raster_copies;
+static uint32_t s_ui_cache_frame_prepared_copies;
+static uint32_t s_ui_cache_frame_public_copies;
+static uint32_t s_ui_cache_frame_cpu_fallbacks;
+static uint32_t s_ui_cache_frame_copy_hook_us;
+static uint32_t s_ui_cache_frame_copy_hook_max_us;
+static bool s_ui_frame_scroll_delta;
+static bool s_ui_frame_scroll_fallback;
+static uint32_t s_ui_frame_scroll_repair_us;
+static uint32_t s_ui_frame_scroll_previous_context_reuses;
+static uint32_t s_ui_scroll_previous_context_reuses_observed;
+static int64_t s_ui_cache_allocation_retry_us;
+/* Separate from worker commands and from cartridge scheduling. Only the
+ * launcher consumes these coalesced input wakes. */
+static StaticSemaphore_t s_ui_input_wake_storage;
+static SemaphoreHandle_t s_ui_input_wake;
+static bool s_ui_input_wake_enabled;
+static uint16_t *s_ui_cache_arena;
+static bool s_ui_last_present_submitted;
 #endif
 #if P4_CONSOLE_GAMEPAD_INPUT
 static bool s_gamepad_connected;
@@ -469,6 +517,7 @@ static uint32_t s_touch_mailbox_report_interval_samples;
 static uint32_t s_touch_mailbox_report_interval_total_us;
 static uint32_t s_touch_mailbox_report_interval_min_us;
 static uint32_t s_touch_mailbox_report_interval_max_us;
+static int s_touch_mailbox_core = -1;
 /* Owned by the mailbox worker; zero also separates independent contact runs. */
 static int64_t s_touch_mailbox_last_report_timestamp_us;
 static TaskHandle_t s_touch_mailbox_task;
@@ -477,6 +526,30 @@ static bool s_touch_mailbox_stop_requested;
  * the next interactive present, rather than repeatedly attributing idle
  * mailbox snapshots to unrelated frames. */
 static int64_t s_interactive_touch_pending_timestamp_us;
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+static int64_t s_interactive_drag_pending_timestamp_us;
+static uint32_t s_ui_touch_to_submit_last_us;
+static uint32_t s_ui_drag_onset_to_submit_us;
+static bool s_ui_animation_present_pending;
+static bool s_ui_scroll_present_pending;
+static bool s_ui_scroll_reset;
+static bool s_ui_drag_motion_seen;
+/* Sampler owns acquisition state; its mailbox snapshot is copied under the
+ * same lock as the contact frame. Only joined main mutates consumed state. */
+static touch_scroll_velocity_t s_touch_sampler_velocity;
+static touch_scroll_velocity_t s_touch_mailbox_velocity;
+static uint32_t s_ui_touch_gesture_sequence;
+static int64_t s_ui_touch_last_down_us;
+static uint16_t s_ui_touch_last_x, s_ui_touch_last_y;
+static uint32_t s_ui_touch_release_replays;
+static uint32_t s_ui_touch_release_velocity_hints;
+static int32_t s_ui_touch_release_velocity_last_q16;
+static touch_scroll_highlight_t s_ui_touch_highlight;
+static console_page_t s_ui_touch_highlight_page;
+static uint32_t s_ui_touch_highlight_revision;
+static bool s_ui_touch_polled_this_iteration;
+static uint32_t s_ui_touch_highlight_deferrals;
+#endif
 static StaticSemaphore_t s_touch_mailbox_stopped_storage;
 static SemaphoreHandle_t s_touch_mailbox_stopped;
 static portMUX_TYPE s_touch_mailbox_lock = portMUX_INITIALIZER_UNLOCKED;
@@ -978,6 +1051,10 @@ static esp_err_t present_boot_screen(unsigned animation_step,
                                      const char *status);
 #if CONFIG_P4_BOARD_M5STACK_TAB5
 static esp_err_t stop_boot_animation(void);
+static esp_err_t start_ui_worker(void);
+static esp_err_t stop_ui_worker(void);
+static bool ui_worker_idle(void);
+static void release_ui_cache(console_shell_t *shell);
 #endif
 static console_shell_runtime_info_t runtime_info(void);
 static bool multiplayer_settings_editable(void);
@@ -1441,7 +1518,8 @@ static void halt_dark(const char *stage, esp_err_t error)
 {
     bool framebuffer_available = true;
 #if CONFIG_P4_BOARD_M5STACK_TAB5
-    framebuffer_available = stop_boot_animation() == ESP_OK;
+    framebuffer_available = stop_boot_animation() == ESP_OK &&
+        ui_worker_idle();
 #endif
     if (framebuffer_available && s_display_initialized && s_pixels != NULL) {
         for (size_t y = 0U; y < CONSOLE_SHELL_HEIGHT; ++y) {
@@ -2288,6 +2366,11 @@ static esp_err_t reload_manager_listing(
 
 static void rebuild_shell_registry(console_shell_t *shell)
 {
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    /* Reinitialization clears the shell's cache attachment. Return worker
+     * ownership before releasing it so idle preparation can attach anew. */
+    release_ui_cache(shell);
+#endif
     const console_page_t previous_page = shell->page;
     const uint32_t previous_app = shell->active_app_id;
     const console_color_mode_t previous_color_mode =
@@ -6492,9 +6575,32 @@ static void publish_touch_mailbox_frame(const platform_touch_frame_t *frame,
     if (frame == NULL) {
         return;
     }
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    touch_scroll_velocity_sample(&s_touch_sampler_velocity,
+        successful, frame->valid != 0U, frame->contact_count,
+        frame->contact_count ? frame->contacts[0].x : 0U,
+        frame->contact_count ? frame->contacts[0].y : 0U,
+        frame->timestamp_us, esp_timer_get_time());
+#endif
     taskENTER_CRITICAL(&s_touch_mailbox_lock);
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    bool changed = frame->valid != s_touch_mailbox_frame.valid ||
+        frame->contact_count != s_touch_mailbox_frame.contact_count;
+    for (size_t i = 0U; !changed && i < frame->contact_count &&
+         i < PLATFORM_TOUCH_MAX_CONTACTS; ++i) {
+        changed = frame->contacts[i].x != s_touch_mailbox_frame.contacts[i].x ||
+            frame->contacts[i].y != s_touch_mailbox_frame.contacts[i].y;
+    }
+    s_touch_mailbox_velocity = s_touch_sampler_velocity;
+#endif
     s_touch_mailbox_frame = *frame;
     taskEXIT_CRITICAL(&s_touch_mailbox_lock);
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    if (changed && s_ui_input_wake != NULL &&
+        __atomic_load_n(&s_ui_input_wake_enabled, __ATOMIC_ACQUIRE)) {
+        (void)xSemaphoreGive(s_ui_input_wake);
+    }
+#endif
     saturating_atomic_increment_u32(&s_touch_mailbox_samples);
     if (!successful) {
         saturating_atomic_increment_u32(&s_touch_mailbox_failures);
@@ -6544,13 +6650,20 @@ static void publish_touch_mailbox_frame(const platform_touch_frame_t *frame,
     }
 }
 
-static bool read_touch_mailbox_frame(platform_touch_frame_t *frame)
+static bool read_touch_mailbox_frame(platform_touch_frame_t *frame
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    , touch_scroll_velocity_t *velocity
+#endif
+    )
 {
     if (frame == NULL) {
         return false;
     }
     taskENTER_CRITICAL(&s_touch_mailbox_lock);
     const platform_touch_frame_t snapshot = s_touch_mailbox_frame;
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    if (velocity != NULL) *velocity = s_touch_mailbox_velocity;
+#endif
     taskEXIT_CRITICAL(&s_touch_mailbox_lock);
     uint32_t age_us = 0U;
     const int64_t now_us = esp_timer_get_time();
@@ -6584,6 +6697,8 @@ static bool read_touch_mailbox_frame(platform_touch_frame_t *frame)
 static void touch_mailbox_worker(void *context)
 {
     (void)context;
+    __atomic_store_n(&s_touch_mailbox_core, xPortGetCoreID(),
+                     __ATOMIC_RELAXED);
     p4_tick_scheduler_t scheduler;
     const bool scheduler_ready = p4_tick_scheduler_init(
         &scheduler, configTICK_RATE_HZ, CONSOLE_TOUCH_MAILBOX_HZ) ==
@@ -6638,14 +6753,38 @@ static esp_err_t start_touch_mailbox(void)
     taskENTER_CRITICAL(&s_touch_mailbox_lock);
     platform_touch_frame_neutral(&s_touch_mailbox_frame);
     s_touch_mailbox_last_report_timestamp_us = 0;
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    s_touch_sampler_velocity = (touch_scroll_velocity_t){0};
+    s_touch_mailbox_velocity = (touch_scroll_velocity_t){0};
+    s_ui_touch_gesture_sequence = 0U;
+    s_ui_touch_last_down_us = 0;
+    s_ui_touch_highlight = (touch_scroll_highlight_t){0};
+#endif
     taskEXIT_CRITICAL(&s_touch_mailbox_lock);
     __atomic_store_n(&s_touch_mailbox_stop_requested, false,
                      __ATOMIC_RELEASE);
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    if (s_ui_input_wake == NULL) {
+        s_ui_input_wake = xSemaphoreCreateBinaryStatic(
+            &s_ui_input_wake_storage);
+        if (s_ui_input_wake == NULL) {
+            return ESP_ERR_NO_MEM;
+        }
+    }
+#endif
     TaskHandle_t worker = NULL;
-    const BaseType_t created = xTaskCreate(
+    const BaseType_t created =
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+        xTaskCreatePinnedToCore(
+        touch_mailbox_worker, "touch_mailbox",
+        CONSOLE_TOUCH_MAILBOX_STACK_BYTES, NULL, tskIDLE_PRIORITY + 2U,
+        &worker, 0);
+#else
+        xTaskCreate(
         touch_mailbox_worker, "touch_mailbox",
         CONSOLE_TOUCH_MAILBOX_STACK_BYTES, NULL, tskIDLE_PRIORITY + 1U,
         &worker);
+#endif
     if (created != pdPASS || worker == NULL) {
         __atomic_store_n(&s_touch_mailbox_stop_requested, true,
                          __ATOMIC_RELEASE);
@@ -6655,8 +6794,11 @@ static esp_err_t start_touch_mailbox(void)
     s_touch_mailbox_task = worker;
     taskEXIT_CRITICAL(&s_touch_mailbox_lock);
     ESP_LOGI(TAG,
-             "P4_CONSOLE_OS TOUCH_MAILBOX_READY sample_hz=%u mode=latest",
-             (unsigned)CONSOLE_TOUCH_MAILBOX_HZ);
+             "P4_CONSOLE_OS TOUCH_MAILBOX_READY sample_hz=%u mode=latest "
+             "core=%d priority=%u",
+             (unsigned)CONSOLE_TOUCH_MAILBOX_HZ,
+             (int)xTaskGetCoreID(worker),
+             (unsigned)uxTaskPriorityGet(worker));
     return ESP_OK;
 }
 
@@ -6699,6 +6841,10 @@ static void note_interactive_touch_sample(
     int64_t timestamp_us,
     int32_t scroll_visual_before_q16,
     size_t scroll_row_before,
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    int library_scroll_before,
+    int file_scroll_before,
+#endif
     size_t pressed_index_before,
     bool press_active_before,
     bool dirty_before)
@@ -6712,6 +6858,10 @@ static void note_interactive_touch_sample(
      * sample which actually moved the launcher, changed a touch visual, or
      * returned a shell action; this avoids idle/repeated-coordinate noise. */
     const bool correlated = action->type != CONSOLE_ACTION_NONE ||
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+        library_scroll_before != shell->ng_library_scroll ||
+        file_scroll_before != shell->ng_file_scroll ||
+#endif
         scroll_visual_before_q16 != shell->home_scroll_visual_q16 ||
         scroll_row_before != shell->home_scroll_row ||
         press_active_before != shell->press_active ||
@@ -6719,25 +6869,66 @@ static void note_interactive_touch_sample(
         dirty_before != shell->dirty;
     s_interactive_touch_pending_timestamp_us = correlated
         ? timestamp_us : 0;
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    if (library_scroll_before != shell->ng_library_scroll ||
+        file_scroll_before != shell->ng_file_scroll) {
+        s_ui_animation_present_pending = true;
+        s_ui_scroll_present_pending = true;
+        if (!s_ui_drag_motion_seen && shell->contact_down) {
+            s_interactive_drag_pending_timestamp_us = timestamp_us;
+            s_ui_drag_motion_seen = true;
+        }
+    }
+#endif
 }
 #endif
 
 static console_shell_action_t poll_touch_input(console_shell_t *shell)
 {
     platform_touch_frame_t frame;
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    touch_scroll_velocity_t velocity = {0};
+    bool from_mailbox = false;
+    s_ui_touch_polled_this_iteration = true;
+#endif
 #if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 || CONFIG_P4_BOARD_M5STACK_TAB5
     s_interactive_touch_pending_timestamp_us = 0;
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    s_interactive_drag_pending_timestamp_us = 0;
+#endif
     if (touch_mailbox_running()) {
-        if (!read_touch_mailbox_frame(&frame)) {
+        if (!read_touch_mailbox_frame(&frame
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+            , &velocity
+#endif
+            )) {
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+            s_ui_touch_gesture_sequence = 0U;
+            s_ui_touch_last_down_us = 0;
+            s_ui_touch_highlight = (touch_scroll_highlight_t){0};
+#endif
             return console_shell_handle_touch(shell, false, NULL, 0U);
         }
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+        from_mailbox = true;
+#endif
     } else
 #endif
     if (!read_touch_frame(&frame)) {
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+        s_ui_touch_gesture_sequence = 0U;
+        s_ui_touch_last_down_us = 0;
+        s_ui_touch_highlight = (touch_scroll_highlight_t){0};
+#endif
         return console_shell_handle_touch(shell, false, NULL, 0U);
     }
     console_shell_contact_t contacts[CONSOLE_SHELL_MAX_CONTACTS];
     const size_t count = frame.contact_count;
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    if (count == 0U || !shell->contact_down) {
+        s_ui_drag_motion_seen = false;
+    }
+#endif
     for (size_t i = 0U; i < count; ++i) {
         contacts[i].x = frame.contacts[i].x;
         contacts[i].y = frame.contacts[i].y;
@@ -6745,15 +6936,111 @@ static console_shell_action_t poll_touch_input(console_shell_t *shell)
 #if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 || CONFIG_P4_BOARD_M5STACK_TAB5
     const int32_t scroll_visual_before_q16 = shell->home_scroll_visual_q16;
     const size_t scroll_row_before = shell->home_scroll_row;
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    const int library_scroll_before = shell->ng_library_scroll;
+    const int file_scroll_before = shell->ng_file_scroll;
+    const bool contact_down_before = shell->contact_down;
+    const bool glide_before = shell->ng_glide_kind != 0U;
+#endif
     const size_t pressed_index_before = shell->pressed_index;
     const bool press_active_before = shell->press_active;
     const bool dirty_before = shell->dirty;
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    int64_t attributed_timestamp_us = frame.timestamp_us;
+    if (from_mailbox && count == 1U) {
+        if (!shell->contact_down && velocity.down && !velocity.blocked &&
+            velocity.last_down_us == frame.timestamp_us) {
+            s_ui_touch_gesture_sequence = velocity.gesture_sequence;
+        } else if (s_ui_touch_gesture_sequence != 0U &&
+                   s_ui_touch_gesture_sequence != velocity.gesture_sequence) {
+            /* Main missed an intervening lift/new contact while presenting.
+             * Cancel the old run; never turn a different gesture into its tap
+             * or release velocity. A real lift restores normal hit-testing. */
+            s_ui_touch_gesture_sequence = 0U;
+            s_ui_touch_last_down_us = 0;
+            s_ui_touch_highlight = (touch_scroll_highlight_t){0};
+            return console_shell_handle_touch(shell, false, NULL, 0U);
+        }
+        if (s_ui_touch_gesture_sequence == velocity.gesture_sequence &&
+            frame.timestamp_us > s_ui_touch_last_down_us) {
+            s_ui_touch_last_down_us = frame.timestamp_us;
+            s_ui_touch_last_x = frame.contacts[0].x;
+            s_ui_touch_last_y = frame.contacts[0].y;
+        }
+    } else if (from_mailbox && count == 0U && shell->contact_down &&
+               shell->ng_scroll_kind > 0U && shell->ng_scroll_kind < 3U &&
+               !shell->ng_categories && !shell->ng_file_menu &&
+               !shell->file_delete_confirm && !shell->storage_repair_confirm &&
+               !shell->pointer_visible) {
+        const int64_t observed_us = esp_timer_get_time();
+        if (touch_scroll_release_replay(&velocity,
+                s_ui_touch_gesture_sequence, s_ui_touch_last_down_us,
+                s_ui_touch_last_x, s_ui_touch_last_y, observed_us)) {
+            const console_shell_contact_t last_down = {
+                .x = velocity.last_x, .y = velocity.last_y,
+            };
+            /* One real, newer motion report establishes the existing drag
+             * threshold and final offset before UP. No synthetic trajectory
+             * or sampler access to shell is needed. */
+            (void)console_shell_handle_touch(shell, true, &last_down, 1U);
+            s_ui_touch_last_down_us = velocity.last_down_us;
+            s_ui_touch_last_x = velocity.last_x;
+            s_ui_touch_last_y = velocity.last_y;
+            attributed_timestamp_us = velocity.last_down_us;
+            if (!s_ui_drag_motion_seen &&
+                (library_scroll_before != shell->ng_library_scroll ||
+                 file_scroll_before != shell->ng_file_scroll)) {
+                s_interactive_drag_pending_timestamp_us = velocity.last_down_us;
+                s_ui_drag_motion_seen = true;
+            }
+            saturating_atomic_increment_u32(&s_ui_touch_release_replays);
+        }
+        int32_t release_velocity = 0;
+        if (touch_scroll_release_velocity(&velocity,
+                s_ui_touch_gesture_sequence, observed_us, &release_velocity) &&
+            console_shell_set_native_scroll_release_velocity(
+                shell, release_velocity)) {
+            if (attributed_timestamp_us <= 0)
+                attributed_timestamp_us = velocity.last_motion_us;
+            s_ui_touch_release_velocity_last_q16 = release_velocity;
+            saturating_atomic_increment_u32(&s_ui_touch_release_velocity_hints);
+        }
+    }
+#endif
     const console_shell_action_t action = console_shell_handle_touch(
         shell, true, count == 0U ? NULL : contacts, count);
     note_interactive_touch_sample(
-        shell, &action, frame.timestamp_us, scroll_visual_before_q16,
-        scroll_row_before, pressed_index_before, press_active_before,
+        shell, &action,
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+        attributed_timestamp_us,
+#else
+        frame.timestamp_us,
+#endif
+        scroll_visual_before_q16,
+        scroll_row_before,
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+        library_scroll_before, file_scroll_before,
+#endif
+        pressed_index_before, press_active_before,
         dirty_before);
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    if (from_mailbox && count == 1U && !contact_down_before && !glide_before &&
+        action.type == CONSOLE_ACTION_NONE && shell->contact_down &&
+        shell->ng_scroll_kind > 0U && shell->ng_scroll_kind < 3U &&
+        !shell->ng_content_drag_started && !shell->ng_categories &&
+        !shell->ng_file_menu && !shell->file_delete_confirm &&
+        !shell->storage_repair_confirm && !shell->pointer_visible &&
+        touch_scroll_highlight_begin(&s_ui_touch_highlight,
+            s_ui_touch_gesture_sequence, frame.timestamp_us, esp_timer_get_time())) {
+        s_ui_touch_highlight_page = shell->page;
+        s_ui_touch_highlight_revision = shell->files.revision;
+        saturating_atomic_increment_u32(&s_ui_touch_highlight_deferrals);
+    }
+    if (count != 1U) {
+        s_ui_touch_gesture_sequence = 0U;
+        s_ui_touch_last_down_us = 0;
+    }
+#endif
     return action;
 #else
     return console_shell_handle_touch(
@@ -6767,6 +7054,10 @@ static console_shell_action_t poll_input(console_shell_t *shell)
 #if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 || CONFIG_P4_BOARD_M5STACK_TAB5
     /* A USB-owned early return has no following touch-originated present. */
     s_interactive_touch_pending_timestamp_us = 0;
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    s_interactive_drag_pending_timestamp_us = 0;
+    s_ui_touch_polled_this_iteration = false;
+#endif
 #endif
 #if P4_CONSOLE_GAMEPAD_INPUT
     platform_gamepad_snapshot_t gamepad;
@@ -6803,6 +7094,30 @@ static console_shell_action_t poll_input(console_shell_t *shell)
     return no_action;
 #endif
 }
+
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+static bool defer_native_touch_highlight(console_shell_t *shell,
+    const console_shell_action_t *action)
+{
+    const bool candidate = s_ui_touch_polled_this_iteration &&
+        action->type == CONSOLE_ACTION_NONE && shell->contact_down &&
+        shell->ng_scroll_kind > 0U && shell->ng_scroll_kind < 3U &&
+        !shell->ng_content_drag_started && !shell->ng_glide_kind &&
+        !shell->ng_categories && !shell->ng_file_menu &&
+        !shell->file_delete_confirm && !shell->storage_repair_confirm &&
+        !shell->pointer_visible && shell->page == s_ui_touch_highlight_page &&
+        shell->files.revision == s_ui_touch_highlight_revision;
+    const bool was_pending = s_ui_touch_highlight.gesture_sequence != 0U;
+    const bool deferred = touch_scroll_highlight_deferred(&s_ui_touch_highlight,
+        s_ui_touch_gesture_sequence, candidate, esp_timer_get_time());
+    if (was_pending && candidate && !deferred) {
+        /* A deliberate held press paints by the bounded deadline. Hit/press
+         * identity and UP activation have remained authoritative throughout. */
+        (void)console_shell_commit_native_content_press_highlight(shell);
+    }
+    return deferred;
+}
+#endif
 
 static void log_memory_health(const char *stage)
 {
@@ -7006,7 +7321,8 @@ static void log_runtime_stats(const console_shell_t *shell)
 #endif
 
 static void wait_for_console_tick(p4_tick_scheduler_t *scheduler,
-                                  TickType_t *last_wake)
+                                  TickType_t *last_wake,
+                                  const console_shell_t *shell)
 {
     uint32_t interval_ticks = 0U;
     if (p4_tick_scheduler_next(scheduler, &interval_ticks) !=
@@ -7015,6 +7331,52 @@ static void wait_for_console_tick(p4_tick_scheduler_t *scheduler,
         *last_wake = xTaskGetTickCount();
         return;
     }
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    const bool highlight_pending = s_ui_touch_highlight.gesture_sequence != 0U;
+    const bool moving = !highlight_pending && shell != NULL &&
+        ((shell->ng_scroll_kind != 0U && !shell->press_active) ||
+         shell->ng_glide_kind != 0U);
+    if (shell != NULL && !moving && s_ui_input_wake != NULL &&
+        __atomic_load_n(&s_ui_input_wake_enabled, __ATOMIC_ACQUIRE)) {
+        const TickType_t now = xTaskGetTickCount();
+        const TickType_t elapsed = now - *last_wake;
+        if (elapsed < (TickType_t)interval_ticks) {
+            TickType_t remaining = (TickType_t)interval_ticks - elapsed;
+            bool shortened = false;
+            if (highlight_pending) {
+                const int64_t until_highlight_us =
+                    s_ui_touch_highlight.deadline_us - esp_timer_get_time();
+                if (until_highlight_us <= 0) {
+                    *last_wake = now;
+                    return;
+                }
+                const uint64_t deadline_ticks =
+                    ((uint64_t)until_highlight_us * configTICK_RATE_HZ +
+                     UINT64_C(999999)) / UINT64_C(1000000);
+                if (deadline_ticks < remaining) {
+                    remaining = (TickType_t)deadline_ticks;
+                    shortened = true;
+                }
+            }
+            if (xSemaphoreTake(s_ui_input_wake, remaining) == pdTRUE || shortened) {
+                /* Wake promptly for onset/press/release, retaining the
+                 * scheduler's fractional phase rather than catch-up ticks. */
+                *last_wake = xTaskGetTickCount();
+            } else {
+                *last_wake += (TickType_t)interval_ticks;
+            }
+        } else {
+            *last_wake = now;
+        }
+        return;
+    }
+    if (s_ui_input_wake != NULL) {
+        while (xSemaphoreTake(s_ui_input_wake, 0U) == pdTRUE) {
+        }
+    }
+#else
+    (void)shell;
+#endif
     /* Do not let an over-budget frame create a catch-up burst.  Keep the
      * scheduler's fractional interval phase, but restart the FreeRTOS wake
      * anchor from now whenever the requested deadline was already missed. */
@@ -7070,8 +7432,56 @@ static void note_animation_frame(int64_t timestamp_us)
     }
 }
 
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+static void record_ui_input_submit_time(int64_t submit_started_us)
+{
+    const int64_t touch_us = s_interactive_touch_pending_timestamp_us;
+    const uint64_t touch_elapsed_us = touch_us > 0 && submit_started_us > touch_us
+        ? (uint64_t)(submit_started_us - touch_us) : 0U;
+    s_ui_touch_to_submit_last_us = touch_elapsed_us > UINT32_MAX
+        ? UINT32_MAX : (uint32_t)touch_elapsed_us;
+    const int64_t drag_us = s_interactive_drag_pending_timestamp_us;
+    const uint64_t drag_elapsed_us = drag_us > 0 && submit_started_us > drag_us
+        ? (uint64_t)(submit_started_us - drag_us) : 0U;
+    s_ui_drag_onset_to_submit_us = drag_elapsed_us > UINT32_MAX
+        ? UINT32_MAX : (uint32_t)drag_elapsed_us;
+}
+
+static platform_display_ui_scroll_t ui_scroll_state(
+    const console_shell_native_update_t *update)
+{
+    return (platform_display_ui_scroll_t){
+        .context = update->scroll_context,
+        .previous_context = update->previous_scroll_context,
+        .previous_offset = update->previous_scroll_offset,
+        .current_offset = update->current_scroll_offset,
+        .viewport = {update->viewport_x, update->viewport_y,
+            update->viewport_width, update->viewport_height},
+        .scrollbar = {(uint16_t)(update->viewport_x + update->viewport_width),
+            update->viewport_y, 32U, update->viewport_height},
+        .stationary_damage = {update->scroll_stationary_x,
+            update->scroll_stationary_y, update->scroll_stationary_width,
+            update->scroll_stationary_height},
+    };
+}
+#endif
+
 static esp_err_t present(console_shell_t *shell)
 {
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    s_ui_last_present_submitted = false;
+    s_ui_cache_frame_raster_copies = 0U;
+    s_ui_cache_frame_prepared_copies = 0U;
+    s_ui_cache_frame_public_copies = 0U;
+    s_ui_cache_frame_cpu_fallbacks = 0U;
+    s_ui_cache_frame_copy_hook_us = 0U;
+    s_ui_cache_frame_copy_hook_max_us = 0U;
+    s_ui_frame_scroll_delta = false;
+    s_ui_frame_scroll_fallback = false;
+    s_ui_frame_scroll_repair_us = 0U;
+    s_ui_frame_scroll_previous_context_reuses = 0U;
+    const uint32_t raster_copies_before = shell->native_raster_copy_frames;
+#endif
     const int64_t dirty_started_us = esp_timer_get_time();
     if (s_ui_timing_last_dirty_us > 0 &&
         dirty_started_us > s_ui_timing_last_dirty_us) {
@@ -7091,16 +7501,25 @@ static esp_err_t present(console_shell_t *shell)
     }
     const int64_t render_started_us = dirty_started_us;
 #if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 || CONFIG_P4_BOARD_M5STACK_TAB5
-    /* Tab5 renders the native 1280x720 interface; Waveshare retains 768x480. Windows
-     * Home reuses its persistent chrome and updates only moving scroll bands. */
+    /* Tab5 can leave the shifted interior in the selected physical buffer.
+     * Waveshare retains its existing authoritative logical cache renderer. */
     const bool rendered = console_shell_uses_native_bbs_launcher(shell)
         ? console_shell_render_rgb565(
               shell, s_pixels, CONSOLE_SHELL_WIDTH)
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+        : console_shell_render_native_scroll_rgb565(
+              shell, s_pixels, CONSOLE_SHELL_WIDTH);
+#else
         : console_shell_render_native_cached_rgb565(
               shell, s_pixels, CONSOLE_SHELL_WIDTH);
+#endif
     if (!rendered) {
         return ESP_ERR_INVALID_STATE;
     }
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    s_ui_cache_frame_raster_copies =
+        shell->native_raster_copy_frames - raster_copies_before;
+#endif
     console_shell_native_update_t native_update = {
         .kind = CONSOLE_SHELL_NATIVE_UPDATE_FULL,
     };
@@ -7114,6 +7533,10 @@ static esp_err_t present(console_shell_t *shell)
     }
 #endif
     const int64_t submit_started_us = esp_timer_get_time();
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    record_ui_input_submit_time(submit_started_us);
+    uint64_t fallback_render_us = 0U;
+#endif
     const uint64_t render_us = (uint64_t)(submit_started_us -
                                           render_started_us);
     s_ui_timing_last_render_us = render_us > UINT32_MAX
@@ -7124,10 +7547,75 @@ static esp_err_t present(console_shell_t *shell)
 #if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 || CONFIG_P4_BOARD_M5STACK_TAB5
     esp_err_t result;
 #if CONFIG_P4_BOARD_M5STACK_TAB5
-    if(native_update.kind==CONSOLE_SHELL_NATIVE_UPDATE_REGION){
-        const platform_display_rgb565_region_t region={native_update.x,native_update.y,native_update.width,native_update.height};
-        result=platform_display_submit_ui_region_rgb565(s_pixels,CONSOLE_SHELL_WIDTH,&region,CONSOLE_SUBMIT_TIMEOUT_MS);
-    }else result=platform_display_submit_ui_rgb565(s_pixels,CONSOLE_SHELL_WIDTH,CONSOLE_SUBMIT_TIMEOUT_MS);
+    if(native_update.kind==CONSOLE_SHELL_NATIVE_UPDATE_NONE){
+        s_ui_timing_last_submit_us=0U;
+        return ESP_OK;
+    }
+    s_ui_last_present_submitted=true;
+    platform_display_ui_scroll_t scroll = ui_scroll_state(&native_update);
+    if (native_update.kind == CONSOLE_SHELL_NATIVE_UPDATE_SCROLL) {
+        if (!native_update.scroll_context_valid) {
+            return ESP_ERR_INVALID_STATE;
+        }
+        result = platform_display_submit_ui_scroll_rgb565(
+            s_pixels, CONSOLE_SHELL_WIDTH, &scroll, CONSOLE_SUBMIT_TIMEOUT_MS);
+        if (result == ESP_OK) {
+            s_ui_frame_scroll_delta = true;
+            platform_display_stats_t display = {0};
+            if (platform_display_get_stats(&display) == ESP_OK) {
+                /* Scroll entry clears last_us; a nonzero joined repair cost
+                 * identifies this successful frame without a logging burst. */
+                s_ui_frame_scroll_repair_us = display.ui_scroll_repair_last_us;
+                /* The joined launcher is the sole scroll publisher. Its
+                 * existing snapshot also attributes this boot-cumulative
+                 * successful-publication counter without another poll. */
+                const uint32_t reused = display.ui_scroll_previous_context_reused_frames;
+                s_ui_frame_scroll_previous_context_reuses =
+                    reused >= s_ui_scroll_previous_context_reuses_observed
+                        ? reused - s_ui_scroll_previous_context_reuses_observed : 0U;
+                s_ui_scroll_previous_context_reuses_observed = reused;
+            }
+        } else if (result == ESP_ERR_NOT_SUPPORTED) {
+            /* NOT_SUPPORTED is a pre-mutation rejection. Only this result
+             * permits rebuilding the incomplete logical source for fallback. */
+            s_ui_frame_scroll_fallback = true;
+            const int64_t fallback_started_us = esp_timer_get_time();
+            console_shell_invalidate_native_cache(shell);
+            if (!console_shell_render_native_cached_rgb565(
+                    shell, s_pixels, CONSOLE_SHELL_WIDTH) ||
+                !console_shell_get_native_update(shell, &native_update) ||
+                native_update.kind != CONSOLE_SHELL_NATIVE_UPDATE_FULL) {
+                return ESP_ERR_INVALID_STATE;
+            }
+            fallback_render_us = (uint64_t)(
+                esp_timer_get_time() - fallback_started_us);
+            const uint64_t complete_render_us = render_us + fallback_render_us;
+            s_ui_timing_last_render_us = complete_render_us > UINT32_MAX
+                ? UINT32_MAX : (uint32_t)complete_render_us;
+            if (s_ui_timing_last_render_us > s_ui_timing_max_render_us) {
+                s_ui_timing_max_render_us = s_ui_timing_last_render_us;
+            }
+            s_ui_cache_frame_raster_copies =
+                shell->native_raster_copy_frames - raster_copies_before;
+            scroll = ui_scroll_state(&native_update);
+            record_ui_input_submit_time(esp_timer_get_time());
+            result = platform_display_submit_ui_tagged_rgb565(
+                s_pixels, CONSOLE_SHELL_WIDTH, NULL,
+                native_update.scroll_context_valid ? &scroll : NULL,
+                CONSOLE_SUBMIT_TIMEOUT_MS);
+        }
+    } else {
+        const platform_display_rgb565_region_t region = {
+            native_update.x, native_update.y,
+            native_update.width, native_update.height,
+        };
+        result = platform_display_submit_ui_tagged_rgb565(
+            s_pixels, CONSOLE_SHELL_WIDTH,
+            native_update.kind == CONSOLE_SHELL_NATIVE_UPDATE_REGION
+                ? &region : NULL,
+            native_update.scroll_context_valid ? &scroll : NULL,
+            CONSOLE_SUBMIT_TIMEOUT_MS);
+    }
 #else
     if (native_update.kind == CONSOLE_SHELL_NATIVE_UPDATE_REGION) {
         const platform_display_rgb565_region_t region = {
@@ -7149,8 +7637,14 @@ static esp_err_t present(console_shell_t *shell)
         s_pixels, CONSOLE_SHELL_WIDTH, CONSOLE_SUBMIT_TIMEOUT_MS);
 #endif
     const int64_t submit_finished_us = esp_timer_get_time();
-    const uint64_t submit_us = submit_finished_us > submit_started_us
+    uint64_t submit_us = submit_finished_us > submit_started_us
         ? (uint64_t)(submit_finished_us - submit_started_us) : 0U;
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    /* Rejected-composition time belongs to submit; fallback CPU drawing is
+     * recorded in render and excluded here to keep the phase totals disjoint. */
+    submit_us = submit_us > fallback_render_us
+        ? submit_us - fallback_render_us : 0U;
+#endif
     s_ui_timing_last_submit_us = submit_us > UINT32_MAX
         ? UINT32_MAX : (uint32_t)submit_us;
     if (s_ui_timing_last_submit_us > s_ui_timing_max_submit_us) {
@@ -7185,24 +7679,454 @@ static void clear_interactive_touch_timestamp_after_present(void)
 #endif
 
 #if CONFIG_P4_BOARD_M5STACK_TAB5
-static void report_scroll_timing(const console_shell_t *shell,bool presented)
+static bool ui_worker_idle(void)
 {
-    static uint32_t frames,render_max,submit_max;
-    static uint64_t render_sum,submit_sum;
+    return !__atomic_load_n(&s_ui_worker_busy, __ATOMIC_ACQUIRE) &&
+        !__atomic_load_n(&s_ui_worker_poisoned, __ATOMIC_ACQUIRE);
+}
+
+static void ui_worker(void *context)
+{
+    (void)context;
+    s_ui_worker_core = xPortGetCoreID();
+    for (;;) {
+        (void)xSemaphoreTake(s_ui_worker_request, portMAX_DELAY);
+        if (__atomic_load_n(&s_ui_worker_stop, __ATOMIC_ACQUIRE)) {
+            s_ui_worker_shell = NULL;
+            s_ui_worker_result = ESP_OK;
+            __atomic_store_n(&s_ui_worker_task, NULL, __ATOMIC_RELEASE);
+            __atomic_store_n(&s_ui_worker_busy, false, __ATOMIC_RELEASE);
+            (void)xSemaphoreGive(s_ui_worker_done);
+            vTaskDelete(NULL);
+        }
+        /* A request/done semaphore pair transfers ownership, including all
+         * pointers inside shell. Main is blocked for this entire operation. */
+        if (s_ui_worker_prepare) {
+            const int64_t prepare_started_us = esp_timer_get_time();
+            (void)console_shell_prepare_native_cache(
+                s_ui_worker_shell, CONSOLE_UI_CACHE_PREPARE_ROWS);
+            const uint64_t elapsed_us = (uint64_t)(
+                esp_timer_get_time() - prepare_started_us);
+            s_ui_cache_prepare_last_us = elapsed_us > UINT32_MAX
+                ? UINT32_MAX : (uint32_t)elapsed_us;
+            if (s_ui_cache_prepare_last_us > s_ui_cache_prepare_max_us) {
+                s_ui_cache_prepare_max_us = s_ui_cache_prepare_last_us;
+            }
+            s_ui_worker_result = ESP_OK;
+        } else {
+            s_ui_worker_result = present(s_ui_worker_shell);
+        }
+        s_ui_worker_stack_remaining =
+            (uint32_t)uxTaskGetStackHighWaterMark(NULL);
+        s_ui_worker_shell = NULL;
+        __atomic_store_n(&s_ui_worker_busy, false, __ATOMIC_RELEASE);
+        (void)xSemaphoreGive(s_ui_worker_done);
+    }
+}
+
+static esp_err_t start_ui_worker(void)
+{
+    if (s_ui_worker_task != NULL) {
+        return ui_worker_idle() ? ESP_OK : ESP_ERR_INVALID_STATE;
+    }
+    if (s_ui_worker_request == NULL) {
+        s_ui_worker_request = xSemaphoreCreateBinaryStatic(
+            &s_ui_worker_request_storage);
+        s_ui_worker_done = xSemaphoreCreateBinaryStatic(
+            &s_ui_worker_done_storage);
+    }
+    if (s_ui_input_wake == NULL) {
+        s_ui_input_wake = xSemaphoreCreateBinaryStatic(
+            &s_ui_input_wake_storage);
+    }
+    if (s_ui_worker_request == NULL || s_ui_worker_done == NULL ||
+        s_ui_input_wake == NULL) {
+        return ESP_ERR_NO_MEM;
+    }
+    while (xSemaphoreTake(s_ui_worker_done, 0U) == pdTRUE) {
+    }
+    __atomic_store_n(&s_ui_worker_stop, false, __ATOMIC_RELEASE);
+    __atomic_store_n(&s_ui_worker_busy, false, __ATOMIC_RELEASE);
+    const BaseType_t created = xTaskCreatePinnedToCore(
+        ui_worker, "console_ui", CONSOLE_UI_WORKER_STACK_BYTES, NULL,
+        tskIDLE_PRIORITY + 1U, &s_ui_worker_task, 1);
+    if (created != pdPASS || s_ui_worker_task == NULL) {
+        return ESP_ERR_NO_MEM;
+    }
+    __atomic_store_n(&s_ui_input_wake_enabled, true, __ATOMIC_RELEASE);
+    ESP_LOGI(TAG,
+             "P4_CONSOLE_OS UI_WORKER_READY main_core=%d render_core=%d "
+             "touch_core=%d ownership=joined-command",
+             xPortGetCoreID(), (int)xTaskGetCoreID(s_ui_worker_task),
+             (int)__atomic_load_n(&s_touch_mailbox_core, __ATOMIC_RELAXED));
+    return ESP_OK;
+}
+
+static esp_err_t run_on_ui_worker(console_shell_t *shell, bool prepare)
+{
+    if (s_ui_worker_task == NULL) {
+        return prepare ? ESP_ERR_INVALID_STATE : present(shell);
+    }
+    if (!ui_worker_idle() || shell == NULL) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    while (xSemaphoreTake(s_ui_worker_done, 0U) == pdTRUE) {
+    }
+    s_ui_worker_shell = shell;
+    s_ui_worker_prepare = prepare;
+    __atomic_store_n(&s_ui_worker_busy, true, __ATOMIC_RELEASE);
+    (void)xSemaphoreGive(s_ui_worker_request);
+    if (xSemaphoreTake(s_ui_worker_done,
+            pdMS_TO_TICKS(CONSOLE_UI_WORKER_JOIN_TIMEOUT_MS)) != pdTRUE) {
+        /* Ownership did not return. FATAL_HOLD must not paint/free either
+         * surface, even if this timed-out command eventually completes. */
+        ESP_LOGE(TAG, "P4_CONSOLE_OS UI_WORKER_JOIN_TIMEOUT source_retained=1");
+        __atomic_store_n(&s_ui_worker_poisoned, true, __ATOMIC_RELEASE);
+        return ESP_ERR_INVALID_STATE;
+    }
+    return s_ui_worker_result;
+}
+
+static bool ui_cache_copy(void *context,
+                          const console_shell_rgb565_copy_t *copy)
+{
+    (void)context;
+    if (copy == NULL) {
+        return false;
+    }
+    const platform_display_rgb565_region_t region = {
+        .x = copy->source_x, .y = copy->source_y,
+        .width = copy->width, .height = copy->height,
+    };
+    const int64_t started_us = esp_timer_get_time();
+    /* Only shell's current published epoch can authorize the no-flush path.
+     * Both helpers relinquish their buffers only after the DMA has joined. */
+    const esp_err_t result = copy->source_dma_clean
+        ? platform_display_copy_prepared_rgb565_rectangle(
+            copy->source, copy->source_stride_pixels, copy->source_height,
+            &region, copy->destination, copy->destination_stride_pixels,
+            copy->destination_height, copy->destination_x, copy->destination_y,
+            CONSOLE_SUBMIT_TIMEOUT_MS)
+        : platform_display_copy_rgb565_rectangle(
+            copy->source, copy->source_stride_pixels, copy->source_height,
+            &region, copy->destination, copy->destination_stride_pixels,
+            copy->destination_height, copy->destination_x, copy->destination_y,
+            CONSOLE_SUBMIT_TIMEOUT_MS);
+    const uint64_t elapsed_us = (uint64_t)(esp_timer_get_time() - started_us);
+    const uint32_t copy_us = elapsed_us > UINT32_MAX
+        ? UINT32_MAX : (uint32_t)elapsed_us;
+    if (s_ui_cache_frame_copy_hook_us <= UINT32_MAX - copy_us) {
+        s_ui_cache_frame_copy_hook_us += copy_us;
+    } else {
+        s_ui_cache_frame_copy_hook_us = UINT32_MAX;
+    }
+    if (copy_us > s_ui_cache_frame_copy_hook_max_us) {
+        s_ui_cache_frame_copy_hook_max_us = copy_us;
+    }
+    if (result != ESP_OK) {
+        ++s_ui_cache_frame_cpu_fallbacks;
+        return false;
+    }
+    if (copy->source_dma_clean) {
+        ++s_ui_cache_frame_prepared_copies;
+    } else {
+        ++s_ui_cache_frame_public_copies;
+    }
+    return true;
+}
+
+static bool ui_cache_publish(void *context,
+                             const console_shell_rgb565_publication_t *publication)
+{
+    (void)context;
+    if (publication == NULL) {
+        return false;
+    }
+    const int64_t started_us = esp_timer_get_time();
+    const esp_err_t result = platform_display_prepare_rgb565_rows(
+        publication->pixels, publication->stride_pixels, publication->height,
+        publication->first_row, publication->row_count,
+        CONSOLE_SUBMIT_TIMEOUT_MS);
+    const uint64_t elapsed_us = (uint64_t)(esp_timer_get_time() - started_us);
+    s_ui_cache_publish_last_us = elapsed_us > UINT32_MAX
+        ? UINT32_MAX : (uint32_t)elapsed_us;
+    if (s_ui_cache_publish_last_us > s_ui_cache_publish_max_us) {
+        s_ui_cache_publish_max_us = s_ui_cache_publish_last_us;
+    }
+    if (result != ESP_OK && s_ui_cache_publish_failures != UINT32_MAX) {
+        ++s_ui_cache_publish_failures;
+    }
+    return result == ESP_OK;
+}
+
+static void release_ui_cache(console_shell_t *shell)
+{
+    /* Releasing caller-owned memory is legal only after the last synchronous
+     * prepare/present command and its DMA copies returned ownership. */
+    if (!ui_worker_idle()) {
+        halt_dark("ui-cache-ownership", ESP_ERR_INVALID_STATE);
+    }
+    console_shell_detach_native_cache(shell);
+    heap_caps_free(s_ui_cache_arena);
+    s_ui_cache_arena = NULL;
+    s_ui_scroll_reset = true;
+    s_ui_touch_highlight = (touch_scroll_highlight_t){0};
+    s_ui_animation_present_pending = false;
+    s_ui_scroll_present_pending = false;
+    s_ui_timing_last_animation_us = 0;
+}
+
+static esp_err_t prepare_ui_cache_idle(console_shell_t *shell)
+{
+    if (!ui_worker_idle() || shell->contact_down || shell->ng_glide_kind != 0U ||
+        shell->ng_scroll_kind != 0U || console_shell_is_dirty(shell)) {
+        return ESP_OK;
+    }
+    if (s_ui_input_wake != NULL && uxSemaphoreGetCount(s_ui_input_wake) != 0U) {
+        return ESP_OK; /* Consume a newly sampled contact before idle work. */
+    }
+    if (s_ui_cache_arena == NULL) {
+        const int64_t now_us = esp_timer_get_time();
+        if (now_us < s_ui_cache_allocation_retry_us) {
+            return ESP_OK;
+        }
+        const size_t bytes = console_shell_native_cache_storage_bytes();
+        if (bytes == 0U || bytes > 4U * 1024U * 1024U) {
+            return ESP_ERR_INVALID_SIZE;
+        }
+        uint16_t *const arena = heap_caps_aligned_alloc(
+            64U, bytes, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+        if (arena == NULL) {
+            s_ui_cache_allocation_retry_us = now_us + INT64_C(5000000);
+            return ESP_OK; /* The bounded CPU renderer remains authoritative. */
+        }
+        if (!console_shell_attach_native_cache(
+                shell, arena, bytes, ui_cache_copy, ui_cache_publish, NULL)) {
+            heap_caps_free(arena);
+            return ESP_ERR_INVALID_STATE;
+        }
+        s_ui_cache_arena = arena;
+    }
+    return console_shell_native_cache_ready(shell) ? ESP_OK
+        : run_on_ui_worker(shell, true);
+}
+
+static esp_err_t stop_ui_worker(void)
+{
+    __atomic_store_n(&s_ui_input_wake_enabled, false, __ATOMIC_RELEASE);
+    if (s_ui_worker_task == NULL) {
+        return ESP_OK;
+    }
+    if (!ui_worker_idle()) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    while (xSemaphoreTake(s_ui_worker_done, 0U) == pdTRUE) {
+    }
+    __atomic_store_n(&s_ui_worker_stop, true, __ATOMIC_RELEASE);
+    __atomic_store_n(&s_ui_worker_busy, true, __ATOMIC_RELEASE);
+    (void)xSemaphoreGive(s_ui_worker_request);
+    if (xSemaphoreTake(s_ui_worker_done,
+            pdMS_TO_TICKS(CONSOLE_UI_WORKER_JOIN_TIMEOUT_MS)) != pdTRUE) {
+        __atomic_store_n(&s_ui_worker_poisoned, true, __ATOMIC_RELEASE);
+        return ESP_ERR_TIMEOUT;
+    }
+    return ESP_OK;
+}
+
+static void report_scroll_timing(const console_shell_t *shell,bool presented,bool attempted)
+{
+    static uint32_t frames,render_max,submit_max,interval_max,missed;
+    static uint32_t touch_samples,touch_max,drag_onset;
+    static uint32_t raster_copies,prepared_copies,public_copies,cpu_fallbacks,copy_hook_max;
+    static uint32_t scroll_delta_frames,scroll_fallback_frames;
+    static uint32_t scroll_repair_count,scroll_repair_last,scroll_repair_max,glide_frames;
+    static uint32_t scroll_previous_context_reuse_count;
+    static uint32_t release_hints,release_replays,pending_hints,pending_replays;
+    static uint32_t observed_hints,observed_replays;
+    static uint32_t highlight_deferrals,pending_deferrals,observed_deferrals;
+    static int32_t release_velocity_last,pending_velocity_last;
+    static uint32_t release_velocity_peak,pending_velocity_peak;
+    static uint32_t optimized_pair_count;
+    static uint64_t render_sum,submit_sum,interval_sum,touch_sum,copy_hook_sum;
+    static uint64_t scroll_delta_render_sum,scroll_delta_submit_sum,optimized_pair_interval_sum;
+    static bool previous_delta_present;
     static int64_t start,last;
     static uint32_t blits;
+    static unsigned first_page;
+    static size_t first_files_entries;
+    static int32_t first_previous_offset,first_current_offset;
+    static uint16_t first_cache_prepared_rows,first_cache_published_rows;
+    static bool first_cache_valid,first_cache_epoch_clean;
     const int64_t now=esp_timer_get_time();
     const bool moving=(shell->ng_scroll_kind&&!shell->press_active)||shell->ng_glide_kind;
-    if(moving&&presented){
-        if(!frames){start=now;blits=shell->native_home_scroll_blit_frames;}
+    const uint32_t new_hints=s_ui_touch_release_velocity_hints-observed_hints;
+    pending_hints+=new_hints;
+    pending_replays+=s_ui_touch_release_replays-observed_replays;
+    pending_deferrals+=s_ui_touch_highlight_deferrals-observed_deferrals;
+    if(new_hints){
+        pending_velocity_last=s_ui_touch_release_velocity_last_q16;
+        const uint32_t speed=(uint32_t)(pending_velocity_last<0?
+            -pending_velocity_last:pending_velocity_last);
+        if(speed>pending_velocity_peak)pending_velocity_peak=speed;
+    }
+    observed_hints=s_ui_touch_release_velocity_hints;
+    observed_replays=s_ui_touch_release_replays;
+    observed_deferrals=s_ui_touch_highlight_deferrals;
+    if(s_ui_scroll_reset){
+        frames=0;previous_delta_present=false;s_ui_scroll_reset=false;
+        pending_hints=0;pending_replays=0;
+        pending_deferrals=0;pending_velocity_peak=0;
+    }
+    if(!frames&&!s_ui_scroll_present_pending&&!shell->contact_down&&!shell->ng_glide_kind)
+        pending_deferrals=0; /* A completed tap does not belong to a later drag. */
+    /* Ordinary successful frames and failed attempts break a consecutive
+     * optimized pair. Idle calls leave the preceding presentation intact. */
+    if(attempted&&!(presented&&s_ui_scroll_present_pending))previous_delta_present=false;
+    if(presented&&s_ui_scroll_present_pending){
+        if(!frames || now-last>250000){
+            frames=0;render_sum=0;submit_sum=0;interval_sum=0;touch_sum=0;
+            render_max=0;submit_max=0;interval_max=0;missed=0;
+            touch_samples=0;touch_max=0;drag_onset=0;
+            raster_copies=0;prepared_copies=0;public_copies=0;cpu_fallbacks=0;
+            copy_hook_sum=0;copy_hook_max=0;
+            scroll_delta_frames=0;scroll_fallback_frames=0;
+            scroll_repair_count=0;scroll_repair_last=0;scroll_repair_max=0;glide_frames=0;
+            scroll_previous_context_reuse_count=0;
+            release_hints=0;release_replays=0;
+            highlight_deferrals=0;release_velocity_last=0;release_velocity_peak=0;
+            scroll_delta_render_sum=0;scroll_delta_submit_sum=0;
+            optimized_pair_count=0;optimized_pair_interval_sum=0;previous_delta_present=false;
+            start=now;blits=shell->native_home_scroll_blit_frames;
+            /* The worker has relinquished shell. Retain this successful
+             * first frame's cache state; later idle preparation must not
+             * make a cold onset look warm in the end-of-burst summary. */
+            const bool library=shell->page==CONSOLE_PAGE_HOME&&shell->home_all_programs;
+            const console_shell_native_raster_cache_t *const cache=
+                &shell->native_rasters[library?0:1];
+            first_page=(unsigned)shell->page;
+            first_files_entries=shell->files.entry_count;
+            first_previous_offset=shell->native_update.previous_scroll_offset;
+            first_current_offset=shell->native_update.current_scroll_offset;
+            first_cache_valid=cache->valid;
+            first_cache_prepared_rows=cache->prepared_rows;
+            first_cache_published_rows=cache->published_rows;
+            first_cache_epoch_clean=cache->pixels!=NULL&&cache->valid&&
+                cache->preparation_epoch!=0U&&cache->published_epoch==cache->preparation_epoch&&
+                cache->published_rows==cache->height;
+        }else if(now>last){
+            const uint64_t elapsed=(uint64_t)(now-last);
+            const uint32_t interval=elapsed>UINT32_MAX?UINT32_MAX:(uint32_t)elapsed;
+            interval_sum+=interval;
+            if(interval>interval_max)interval_max=interval;
+            if(interval>25000U&&missed<UINT32_MAX)++missed;
+        }
+        if(s_ui_frame_scroll_delta){
+            scroll_delta_render_sum+=s_ui_timing_last_render_us;
+            scroll_delta_submit_sum+=s_ui_timing_last_submit_us;
+            if(previous_delta_present&&now>last){
+                ++optimized_pair_count;optimized_pair_interval_sum+=(uint64_t)(now-last);
+            }
+        }
+        previous_delta_present=s_ui_frame_scroll_delta;
         ++frames;last=now;render_sum+=s_ui_timing_last_render_us;submit_sum+=s_ui_timing_last_submit_us;
+        raster_copies+=s_ui_cache_frame_raster_copies;
+        prepared_copies+=s_ui_cache_frame_prepared_copies;
+        public_copies+=s_ui_cache_frame_public_copies;
+        cpu_fallbacks+=s_ui_cache_frame_cpu_fallbacks;
+        copy_hook_sum+=s_ui_cache_frame_copy_hook_us;
+        if(s_ui_cache_frame_copy_hook_max_us>copy_hook_max)copy_hook_max=s_ui_cache_frame_copy_hook_max_us;
+        if(s_ui_frame_scroll_delta)++scroll_delta_frames;
+        if(s_ui_frame_scroll_fallback)++scroll_fallback_frames;
+        scroll_previous_context_reuse_count+=s_ui_frame_scroll_previous_context_reuses;
+        if(s_ui_frame_scroll_repair_us){
+            ++scroll_repair_count;scroll_repair_last=s_ui_frame_scroll_repair_us;
+            if(scroll_repair_last>scroll_repair_max)scroll_repair_max=scroll_repair_last;
+        }
+        if(shell->ng_glide_kind)++glide_frames;
+        release_hints+=pending_hints;release_replays+=pending_replays;
+        highlight_deferrals+=pending_deferrals;
+        if(pending_hints)release_velocity_last=pending_velocity_last;
+        if(pending_velocity_peak>release_velocity_peak)release_velocity_peak=pending_velocity_peak;
+        pending_hints=0;pending_replays=0;
+        pending_deferrals=0;pending_velocity_peak=0;
         if(s_ui_timing_last_render_us>render_max)render_max=s_ui_timing_last_render_us;
         if(s_ui_timing_last_submit_us>submit_max)submit_max=s_ui_timing_last_submit_us;
-    }else if(frames&&!moving&&now-last>250000){
-        ESP_LOGI(TAG,"P4_CONSOLE_OS SCROLL frames=%lu elapsed_ms=%lu render_avg_us=%lu render_max_us=%lu submit_avg_us=%lu submit_max_us=%lu cached_frames=%lu",
+        if(s_interactive_touch_pending_timestamp_us>0){
+            ++touch_samples;touch_sum+=s_ui_touch_to_submit_last_us;
+            if(s_ui_touch_to_submit_last_us>touch_max)touch_max=s_ui_touch_to_submit_last_us;
+        }
+        if(s_interactive_drag_pending_timestamp_us>0)drag_onset=s_ui_drag_onset_to_submit_us;
+    }else if(frames){
+        release_hints+=pending_hints;release_replays+=pending_replays;
+        highlight_deferrals+=pending_deferrals;
+        if(pending_hints)release_velocity_last=pending_velocity_last;
+        if(pending_velocity_peak>release_velocity_peak)release_velocity_peak=pending_velocity_peak;
+        pending_hints=0;pending_replays=0;
+        pending_deferrals=0;pending_velocity_peak=0;
+        if(moving||now-last<=250000)return;
+        platform_display_stats_t display={0};
+        (void)platform_display_get_stats(&display);
+        ESP_LOGI(TAG,"P4_CONSOLE_OS SCROLL frames=%lu elapsed_ms=%lu render_avg_us=%lu render_max_us=%lu submit_avg_us=%lu submit_max_us=%lu cached_frames=%lu "
+            "animation_interval_avg_us=%lu animation_interval_max_us=%lu animation_missed=%lu "
+            "touch_samples=%lu touch_to_submit_avg_us=%lu touch_to_submit_max_us=%lu drag_onset_to_submit_us=%lu "
+            "touch_age_us=%lu refresh_latency_bound_last_us=%lu main_core=%d touch_core=%d render_core=%d render_stack=%lu "
+            "idle_prepare_last_us=%lu idle_prepare_max_us=%lu "
+            "panel_refresh_interval_last_us=%lu panel_refresh_interval_min_us=%lu panel_refresh_interval_max_us=%lu panel_refresh_events=%lu "
+            "reuse_wait_last_us=%lu transform_last_us=%lu handoff_last_us=%lu "
+            "raster_copy_frames=%lu prepared_copy_requests=%lu public_copy_frames=%lu cpu_fallback_frames=%lu copy_hook_avg_us=%lu copy_hook_max_us=%lu "
+            "cache_publish_last_us=%lu cache_publish_max_us=%lu cache_publish_failures=%lu "
+            "prepared_copy_prepare_last_us=%lu prepared_copy_enqueue_last_us=%lu prepared_copy_wait_last_us=%lu "
+            "scroll_delta_frames=%lu scroll_fallback_frames=%lu "
+            "scroll_delta_render_avg_us=%lu scroll_delta_submit_avg_us=%lu "
+            "consecutive_optimized_pair_interval_avg_us=%lu consecutive_optimized_pair_count=%lu "
+            "scroll_repair_count=%lu scroll_repair_last_us=%lu scroll_repair_max_us=%lu scroll_previous_context_reuse_count=%lu "
+            "release_hint_count=%lu replayed_release_count=%lu glide_frames=%lu "
+            "release_velocity_last_q16=%ld release_velocity_peak_abs_q16=%lu down_highlight_deferred_count=%lu "
+            "ui_region_cloned_frames_total=%lu ui_region_clone_last_us=%lu ui_region_clone_max_us=%lu "
+            "first_page=%u first_files_entries=%lu first_previous_scroll_offset=%ld first_current_scroll_offset=%ld "
+            "first_cache_valid=%u first_cache_prepared_rows=%u first_cache_published_rows=%u first_cache_epoch_clean=%u",
             (unsigned long)frames,(unsigned long)((last-start)/1000),(unsigned long)(render_sum/frames),(unsigned long)render_max,
-            (unsigned long)(submit_sum/frames),(unsigned long)submit_max,(unsigned long)(shell->native_home_scroll_blit_frames-blits));
-        frames=0;render_sum=0;submit_sum=0;render_max=0;submit_max=0;
+            (unsigned long)(submit_sum/frames),(unsigned long)submit_max,(unsigned long)(shell->native_home_scroll_blit_frames-blits),
+            (unsigned long)(frames>1U?interval_sum/(frames-1U):0U),(unsigned long)interval_max,(unsigned long)missed,
+            (unsigned long)touch_samples,(unsigned long)(touch_samples?touch_sum/touch_samples:0U),(unsigned long)touch_max,(unsigned long)drag_onset,
+            (unsigned long)__atomic_load_n(&s_touch_mailbox_age_last_us,__ATOMIC_RELAXED),
+            (unsigned long)display.interactive_input_to_refresh_last_us,xPortGetCoreID(),
+            (int)__atomic_load_n(&s_touch_mailbox_core,__ATOMIC_RELAXED),s_ui_worker_core,(unsigned long)s_ui_worker_stack_remaining,
+            (unsigned long)s_ui_cache_prepare_last_us,(unsigned long)s_ui_cache_prepare_max_us,
+            (unsigned long)display.pipeline_refresh_interval_last_us,
+            (unsigned long)display.pipeline_refresh_interval_min_us,
+            (unsigned long)display.pipeline_refresh_interval_max_us,
+            (unsigned long)display.pipeline_refresh_events,
+            (unsigned long)display.pipeline_reuse_wait_last_us,
+            (unsigned long)display.pipeline_transform_last_us,
+            (unsigned long)display.pipeline_handoff_last_us,
+            (unsigned long)raster_copies,(unsigned long)prepared_copies,
+            (unsigned long)public_copies,(unsigned long)cpu_fallbacks,
+            (unsigned long)(raster_copies?copy_hook_sum/raster_copies:0U),
+            (unsigned long)copy_hook_max,(unsigned long)s_ui_cache_publish_last_us,
+            (unsigned long)s_ui_cache_publish_max_us,(unsigned long)s_ui_cache_publish_failures,
+            (unsigned long)display.prepared_copy_prepare_last_us,
+            (unsigned long)display.prepared_copy_enqueue_last_us,
+            (unsigned long)display.prepared_copy_wait_last_us,
+            (unsigned long)scroll_delta_frames,(unsigned long)scroll_fallback_frames,
+            (unsigned long)(scroll_delta_frames?scroll_delta_render_sum/scroll_delta_frames:0U),
+            (unsigned long)(scroll_delta_frames?scroll_delta_submit_sum/scroll_delta_frames:0U),
+            (unsigned long)(optimized_pair_count?optimized_pair_interval_sum/optimized_pair_count:0U),
+            (unsigned long)optimized_pair_count,
+            (unsigned long)scroll_repair_count,(unsigned long)scroll_repair_last,
+            (unsigned long)scroll_repair_max,(unsigned long)scroll_previous_context_reuse_count,
+            (unsigned long)release_hints,
+            (unsigned long)release_replays,(unsigned long)glide_frames,
+            (long)release_velocity_last,(unsigned long)release_velocity_peak,
+            (unsigned long)highlight_deferrals,
+            (unsigned long)display.ui_region_cloned_frames,
+            (unsigned long)display.ui_region_clone_last_us,
+            (unsigned long)display.ui_region_clone_max_us,
+            first_page,(unsigned long)first_files_entries,
+            (long)first_previous_offset,(long)first_current_offset,
+            first_cache_valid?1U:0U,(unsigned)first_cache_prepared_rows,
+            (unsigned)first_cache_published_rows,first_cache_epoch_clean?1U:0U);
+        frames=0;
     }
 }
 #endif
@@ -7215,9 +8139,26 @@ static esp_err_t present_interactive(console_shell_t *shell)
      * present so later animation/service frames cannot inherit it. */
     arm_interactive_touch_timestamp_for_present();
 #endif
-    const esp_err_t result = present(shell);
+    const esp_err_t result =
 #if CONFIG_P4_BOARD_M5STACK_TAB5
-    report_scroll_timing(shell,true);
+        run_on_ui_worker(shell, false);
+#else
+        present(shell);
+#endif
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    if (!ui_worker_idle()) {
+        /* A timed-out worker still owns shell, pixels and input attribution. */
+        return result;
+    }
+    if (result == ESP_OK && s_ui_last_present_submitted &&
+        s_ui_animation_present_pending) {
+        note_animation_frame(esp_timer_get_time());
+    }
+    report_scroll_timing(shell,result==ESP_OK&&s_ui_last_present_submitted,
+        s_ui_last_present_submitted);
+    s_ui_animation_present_pending = false;
+    s_ui_scroll_present_pending = false;
+    s_interactive_drag_pending_timestamp_us = 0;
 #endif
 #if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 || CONFIG_P4_BOARD_M5STACK_TAB5
     clear_interactive_touch_timestamp_after_present();
@@ -9029,6 +9970,9 @@ static esp_err_t run_stored_game(
         return ESP_ERR_INVALID_STATE;
     }
     present_game_loading(shell, game->package.launcher_id);
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    release_ui_cache(shell);
+#endif
     const bool multiplayer_ready = s_native_multiplayer.active &&
         s_multiplayer_native_launcher_id == game->package.launcher_id &&
         strcmp(s_multiplayer_local_offer.game_id, game->package.id) == 0;
@@ -9193,6 +10137,14 @@ static esp_err_t run_stored_game(
         return touch_mailbox_stop_result;
     }
 #endif
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    if (!ui_worker_idle()) {
+        halt_dark("cartridge-ui-ownership", ESP_ERR_INVALID_STATE);
+    }
+    __atomic_store_n(&s_ui_input_wake_enabled, false, __ATOMIC_RELEASE);
+    while (xSemaphoreTake(s_ui_input_wake, 0U) == pdTRUE) {
+    }
+#endif
     esp_err_t result = platform_game_loader_run(game, &host);
     if (multiplayer_ready) {
         native_multiplayer_end();
@@ -9214,6 +10166,12 @@ static esp_err_t run_stored_game(
                  "fallback=launcher-direct error=%s",
                  esp_err_to_name(touch_mailbox_start_result));
     }
+#endif
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    while (xSemaphoreTake(s_ui_input_wake, 0U) == pdTRUE) {
+    }
+    __atomic_store_n(&s_ui_input_wake_enabled, true, __ATOMIC_RELEASE);
+    s_ui_drag_motion_seen = false;
 #endif
     console_shell_set_achievement_catalog(shell, &s_achievements);
     (void)console_shell_set_save_catalog(shell, &s_saves);
@@ -9242,6 +10200,12 @@ static esp_err_t run_stored_game(
     cartridge_log_timing(context);
     heap_caps_free(context);
     log_memory_health("cartridge-stop");
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    const esp_err_t cache_result = prepare_ui_cache_idle(shell);
+    if (cache_result != ESP_OK) {
+        halt_dark("cartridge-return-cache", cache_result);
+    }
+#endif
     return result;
 }
 
@@ -9344,6 +10308,13 @@ static void launch_doom_exclusive(
              title == PLATFORM_GAME_STORAGE_DOOM_TITLE_CHEX_QUEST
                 ? "chex-quest" : "doom",
              multiplayer != NULL ? 1U : 0U);
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    release_ui_cache(shell);
+    result = stop_ui_worker();
+    if (result != ESP_OK) {
+        halt_dark("handoff-ui-worker", result);
+    }
+#endif
     result = platform_display_set_brightness(0U);
     if (result != ESP_OK) {
         halt_dark("handoff-backlight", result);
@@ -9439,7 +10410,12 @@ void app_main(void)
         halt_dark("display-init", result);
     }
     s_display_initialized = true;
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    s_pixels = heap_caps_aligned_calloc(
+        64U,
+#else
     s_pixels = heap_caps_calloc(
+#endif
         (size_t)CONSOLE_SHELL_WIDTH * CONSOLE_SHELL_HEIGHT,
         sizeof(*s_pixels), MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
     if (s_pixels == NULL) {
@@ -9597,6 +10573,12 @@ void app_main(void)
     if (result != ESP_OK) {
         halt_dark("first-frame", result);
     }
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    result = start_ui_worker();
+    if (result != ESP_OK) {
+        halt_dark("ui-worker-start", result);
+    }
+#endif
     ESP_LOGI(TAG,
              "P4_CONSOLE_OS LAUNCHER_READY_BEFORE_WAD_SCAN_COMPLETE "
              "native_catalog_valid=%u wad_policy=verify-on-demand "
@@ -9769,7 +10751,7 @@ void app_main(void)
             p4_file_transfer_info().busy) {
             /* H1 provisioning owns UART and the mounted FAT volume until its
              * verified staging transaction finishes. */
-            wait_for_console_tick(&console_scheduler, &last_wake);
+            wait_for_console_tick(&console_scheduler, &last_wake, NULL);
             continue;
         }
         if (s_multiplayer_launch_due) {
@@ -9816,10 +10798,8 @@ void app_main(void)
             last_wake = xTaskGetTickCount();
             continue;
         }
-#if P4_CONSOLE_USB_INPUT
-        confirm_usb_enum_probe_after_stable_runtime();
-#endif
-        confirm_ota_after_stable_runtime();
+        /* Refresh authoritative catalog/listing state before interpreting a
+         * touch action; a changed file revision must never reuse an old hit. */
         const int64_t service_now_us = esp_timer_get_time();
         if (service_now_us >= next_storage_sync_us) {
             sync_game_storage();
@@ -9841,8 +10821,62 @@ void app_main(void)
                     shell, CONSOLE_FILE_NOTICE_NONE);
             }
         }
+        if (shell->page == CONSOLE_PAGE_FILES &&
+            file_listing_needs_reload()) {
+            (void)reload_file_listing(
+                shell, CONSOLE_FILE_NOTICE_NONE);
+        }
+        const int64_t shell_animation_now_us = esp_timer_get_time();
+        uint32_t shell_elapsed_ms = 0U;
+        if (shell_animation_now_us > shell_animation_last_us) {
+            const uint64_t elapsed_us = (uint64_t)(
+                shell_animation_now_us - shell_animation_last_us);
+            shell_elapsed_ms = elapsed_us / UINT64_C(1000) > UINT32_MAX
+                ? UINT32_MAX
+                : (uint32_t)(elapsed_us / UINT64_C(1000));
+        }
+        shell_animation_last_us = shell_animation_now_us;
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+        const int library_before_advance = shell->ng_library_scroll;
+        const int file_before_advance = shell->ng_file_scroll;
+#endif
+        bool animation_changed =
+            console_shell_advance(shell, shell_elapsed_ms);
+        const int32_t scroll_after_advance_q16 =
+            shell->home_scroll_visual_q16;
+        const console_page_t page_before_input = shell->page;
+        const console_shell_action_t action = poll_input(shell);
+        animation_changed = animation_changed ||
+            shell->home_scroll_visual_q16 != scroll_after_advance_q16;
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+        const bool scroll_changed =
+            library_before_advance != shell->ng_library_scroll ||
+            file_before_advance != shell->ng_file_scroll;
+        s_ui_scroll_present_pending = s_ui_scroll_present_pending || scroll_changed;
+        s_ui_animation_present_pending = s_ui_animation_present_pending ||
+            animation_changed || scroll_changed;
+        const bool highlight_was_pending =
+            s_ui_touch_highlight.gesture_sequence != 0U;
+        const bool highlight_deferred = defer_native_touch_highlight(shell, &action);
+        const bool ui_motion =
+            (shell->ng_scroll_kind != 0U && !shell->press_active) ||
+            shell->ng_glide_kind != 0U || highlight_was_pending;
+#else
+        const bool ui_motion = false;
+        if (animation_changed) {
+            note_animation_frame(esp_timer_get_time());
+        }
+#endif
+#if P4_CONSOLE_USB_INPUT
+        if (!ui_motion) {
+            confirm_usb_enum_probe_after_stable_runtime();
+        }
+#endif
+        if (!ui_motion) {
+            confirm_ota_after_stable_runtime();
+        }
 #if P4_CONSOLE_BLE_MULTIPLAYER
-        if (s_multiplayer_ble_enable_pending) {
+        if (!ui_motion && s_multiplayer_ble_enable_pending) {
             if (shell->page != CONSOLE_PAGE_MULTIPLAYER) {
                 (void)release_multiplayer_ble_transport(
                     "deferred-page-left");
@@ -9864,34 +10898,8 @@ void app_main(void)
             }
         }
 #endif
-        if (shell->page == CONSOLE_PAGE_FILES &&
-            file_listing_needs_reload()) {
-            (void)reload_file_listing(
-                shell, CONSOLE_FILE_NOTICE_NONE);
-        }
-        const int64_t shell_animation_now_us = esp_timer_get_time();
-        uint32_t shell_elapsed_ms = 0U;
-        if (shell_animation_now_us > shell_animation_last_us) {
-            const uint64_t elapsed_us = (uint64_t)(
-                shell_animation_now_us - shell_animation_last_us);
-            shell_elapsed_ms = elapsed_us / UINT64_C(1000) > UINT32_MAX
-                ? UINT32_MAX
-                : (uint32_t)(elapsed_us / UINT64_C(1000));
-        }
-        shell_animation_last_us = shell_animation_now_us;
-        bool animation_changed =
-            console_shell_advance(shell, shell_elapsed_ms);
-        const int32_t scroll_after_advance_q16 =
-            shell->home_scroll_visual_q16;
-        const console_page_t page_before_input = shell->page;
-        const console_shell_action_t action = poll_input(shell);
-        animation_changed = animation_changed ||
-            shell->home_scroll_visual_q16 != scroll_after_advance_q16;
-        if (animation_changed) {
-            note_animation_frame(esp_timer_get_time());
-        }
         const int64_t runtime_now_us = esp_timer_get_time();
-        if (runtime_now_us >= next_runtime_info_us) {
+        if (!ui_motion && runtime_now_us >= next_runtime_info_us) {
             const console_shell_runtime_info_t current_runtime =
                 runtime_info();
             console_shell_set_runtime_info(shell, &current_runtime);
@@ -9920,6 +10928,11 @@ void app_main(void)
         if (action.type == CONSOLE_ACTION_LAUNCH ||
             action.type == CONSOLE_ACTION_MULTIPLAYER_LAUNCH_GAME) {
             s_interactive_touch_pending_timestamp_us = 0;
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+            s_interactive_drag_pending_timestamp_us = 0;
+            s_ui_animation_present_pending = false;
+            s_ui_scroll_present_pending = false;
+#endif
         }
 #endif
         if (action.type == CONSOLE_ACTION_COLOR_MODE_CHANGED) {
@@ -10073,7 +11086,11 @@ void app_main(void)
                 last_wake = xTaskGetTickCount();
             }
         }
-        if (console_shell_is_dirty(shell)) {
+        if (console_shell_is_dirty(shell)
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+            && !highlight_deferred
+#endif
+            ) {
             result = present_interactive(shell);
             if (result != ESP_OK) {
                 halt_dark("frame-submit", result);
@@ -10088,8 +11105,14 @@ void app_main(void)
         }
 #endif
 #if CONFIG_P4_BOARD_M5STACK_TAB5
-        report_scroll_timing(shell,false);
+        report_scroll_timing(shell,false,false);
+        if (!ui_motion) {
+            const esp_err_t cache_result = prepare_ui_cache_idle(shell);
+            if (cache_result != ESP_OK) {
+                halt_dark("ui-cache-prepare", cache_result);
+            }
+        }
 #endif
-        wait_for_console_tick(&console_scheduler, &last_wake);
+        wait_for_console_tick(&console_scheduler, &last_wake, shell);
     }
 }

@@ -514,6 +514,8 @@ typedef struct {
 typedef enum {
     CONSOLE_SHELL_NATIVE_UPDATE_FULL = 0,
     CONSOLE_SHELL_NATIVE_UPDATE_REGION,
+    CONSOLE_SHELL_NATIVE_UPDATE_NONE,
+    CONSOLE_SHELL_NATIVE_UPDATE_SCROLL,
 } console_shell_native_update_kind_t;
 
 typedef struct {
@@ -522,7 +524,62 @@ typedef struct {
     uint16_t y;
     uint16_t width;
     uint16_t height;
+    /* A display slot may translate only matching stationary list contexts. */
+    bool scroll_context_valid;
+    uint64_t scroll_context;
+    /* SCROLL proves the selected source matches this prior context. Files
+     * edge transitions may also replace the explicit stationary footer patch. */
+    uint64_t previous_scroll_context;
+    int32_t previous_scroll_offset, current_scroll_offset;
+    uint16_t viewport_x, viewport_y, viewport_width, viewport_height;
+    uint16_t scroll_stationary_x, scroll_stationary_y;
+    uint16_t scroll_stationary_width, scroll_stationary_height;
 } console_shell_native_update_t;
+
+/** A synchronous, non-overlapping RGB565 copy; all geometry is in pixels. */
+typedef struct {
+    const uint16_t *source;
+    size_t source_stride_pixels, source_height;
+    uint16_t *destination;
+    size_t destination_stride_pixels, destination_height;
+    uint16_t source_x, source_y, destination_x, destination_y, width, height;
+    /* True only after the full current preparation epoch was published. */
+    bool source_dma_clean;
+} console_shell_rgb565_copy_t;
+
+/** A bounded idle publication of caller-owned RGB565 source rows. */
+typedef struct {
+    const uint16_t *pixels;
+    size_t stride_pixels, height;
+    uint16_t first_row, row_count;
+} console_shell_rgb565_publication_t;
+
+/**
+ * Publish every specified row synchronously for DMA reads. True means C2M
+ * completed for the complete slice; false leaves the slice dirty for retry.
+ * The callback must not retain the source or write any of its pixels.
+ */
+typedef bool (*console_shell_rgb565_publish_fn)(
+    void *context, const console_shell_rgb565_publication_t *publication);
+
+/**
+ * Source is immutable and destination is exclusively owned until return.
+ * Backing ranges are disjoint. Implementations must preserve adjacent dirty
+ * destination pixels and finish DMA/cache synchronization before returning.
+ * False requests the portable CPU fallback after the hook has relinquished
+ * both buffers. The hook must not retain either pointer.
+ */
+typedef bool (*console_shell_rgb565_copy_fn)(
+    void *context, const console_shell_rgb565_copy_t *copy);
+
+typedef struct {
+    uint16_t *pixels;
+    uint64_t signature;
+    uint64_t preparation_epoch, published_epoch;
+    int content_origin;
+    uint16_t height, prepared_rows, published_rows;
+    bool valid;
+} console_shell_native_raster_cache_t;
 
 typedef struct {
     const console_app_descriptor_t *apps;
@@ -599,6 +656,8 @@ typedef struct {
     console_color_mode_t native_home_cache_color_mode;
     uint8_t native_home_cache_battery_percent;
     bool native_home_cache_valid;
+    /* The opt-in scroll renderer left the logical viewport interior stale. */
+    bool native_logical_incomplete;
     bool native_home_cache_press_active;
     bool native_home_cache_battery_supported;
     bool native_home_cache_battery_valid;
@@ -606,13 +665,27 @@ typedef struct {
     uint32_t native_home_dynamic_frames;
     uint32_t native_home_scroll_blit_frames;
     uint64_t native_home_shifted_pixels;
+    uint32_t native_raster_copy_frames;
     console_shell_native_update_t native_update;
+    /* Optional caller-owned, bounded Games/Files rasters; never allocated here. */
+    uint16_t *native_raster_arena;
+    size_t native_raster_arena_bytes;
+    console_shell_native_raster_cache_t native_rasters[2];
+    console_shell_rgb565_copy_fn native_copy;
+    console_shell_rgb565_publish_fn native_publish;
+    void *native_copy_context;
+    uint64_t ng_frame_structure_signature, ng_frame_content_signature, ng_frame_chrome_signature;
+    uint16_t ng_previous_focus, ng_previous_focus_ms;
+    size_t ng_previous_pressed_index, ng_previous_file_selected;
+    bool ng_previous_press_active;
     /* Native Tab5 presentation state; no game coordinates or hardware handles. */
     uint16_t ng_focus, ng_focus_ms;
     size_t ng_list_first, ng_category_first;
     char ng_category[CONSOLE_SHELL_FOLDER_PATH_MAX_BYTES];
     int ng_library_scroll, ng_file_scroll, ng_scroll_origin;
     unsigned ng_scroll_kind;
+    bool ng_content_drag_started;
+    bool ng_deferred_content_focus;
     /* Pixel motion uses Q16 velocity, sampled against the shell clock. */
     unsigned ng_glide_kind;
     int32_t ng_velocity_q16, ng_glide_q16;
@@ -633,7 +706,7 @@ bool console_shell_init(console_shell_t *shell,
                         size_t app_count);
 
 /**
- * Consume one complete physical 1024x600 touch snapshot.
+ * Consume one complete physical touch snapshot (1280x720 on Tab5).
  *
  * Invalid frames, more than one contact, and out-of-viewport coordinates
  * cancel the pending press. On the home view, a bounded one-finger vertical
@@ -727,7 +800,7 @@ bool console_shell_render_rgb565(console_shell_t *shell,
                                  size_t stride_pixels);
 
 /**
- * Render the Windows home page into a persistent native framebuffer (1152x720 on Tab5, 768x480 on Waveshare).
+ * Render into a persistent native framebuffer (1280x720 on Tab5, 768x480 on Waveshare).
  *
  * The first call and every structural change perform an authoritative full
  * render. Scroll-only frames reuse the existing chrome and shift/redraw only
@@ -740,6 +813,40 @@ bool console_shell_render_native_cached_rgb565(console_shell_t *shell,
                                                 size_t stride_pixels);
 
 /**
+ * Opt-in Tab5 physical-scroll composition. SCROLL writes only the newly exposed
+ * viewport strip, complete scrollbar and any explicit stationary footer patch;
+ * the logical interior is then stale. Consume the exact previous context and
+ * offset before accepting the update, including its new context and patch. A
+ * regular render reconstructs a complete logical source for unsupported or
+ * ordinary submission. No source pointer may outlive the joined submission.
+ * Other targets retain complete ordinary rendering.
+ */
+bool console_shell_render_native_scroll_rgb565(console_shell_t *shell,
+                                                uint16_t *pixels,
+                                                size_t stride_pixels);
+
+/**
+ * Supply measured Q16 logical scroll pixels/ms immediately before a neutral
+ * release. The joined caller must authorize a matching current gesture from
+ * distinct, fresh movement/release report timestamps and bounded delivery age;
+ * this function cannot verify hardware timestamps or caller gesture sequences.
+ * Only an eligible active content drag past the 6-pixel onset accepts the hint (not a press, scrollbar
+ * thumb, modal, stale Files revision or reduced-motion gesture). Velocity is
+ * saturated to +/-3 pixels/ms and the normal release guards remain in force.
+ * Returns false without changing state for other gestures/board targets.
+ */
+bool console_shell_set_native_scroll_release_velocity(console_shell_t *shell,
+                                                        int32_t q16_per_ms);
+
+/**
+ * Commit a pending Games-list card/Files-row focus for a held touch. Main may
+ * call at its bounded highlight deadline; contact/press/activation stay intact.
+ * UP taps commit automatically. Drag, stop-fling, invalid or stale presses have
+ * no pending highlight. Returns true only for a valid pending content press.
+ */
+bool console_shell_commit_native_content_press_highlight(console_shell_t *shell);
+
+/**
  * Return conservative source update metadata for the most recent render.
  * FULL is reported whenever a partial update cannot be proven safe.
  */
@@ -749,6 +856,34 @@ bool console_shell_get_native_update(
 
 /** Mark the persistent native framebuffer contents unavailable for reuse. */
 void console_shell_invalidate_native_cache(console_shell_t *shell);
+
+/** Optional Tab5 arena size: 4 MiB total, split between bounded page windows. */
+size_t console_shell_native_cache_storage_bytes(void);
+
+/**
+ * Attach caller-owned 64-byte-aligned storage. No memory is allocated.
+ * A null publisher retains CPU-valid caching but never claims DMA cleanliness.
+ */
+bool console_shell_attach_native_cache(
+    console_shell_t *shell, uint16_t *arena, size_t bytes,
+    console_shell_rgb565_copy_fn copy, console_shell_rgb565_publish_fn publish,
+    void *context);
+
+/** Drop every arena pointer before the caller frees storage or hands off. */
+void console_shell_detach_native_cache(console_shell_t *shell);
+
+/**
+ * Paint and publish at most 64 pixel rows each during idle. Failed publication
+ * retries a bounded dirty-prefix slice; returns true when work was attempted.
+ * No work runs during a contact, drag, glide, modal or game handoff.
+ */
+bool console_shell_prepare_native_cache(console_shell_t *shell, uint16_t pixel_rows);
+
+/**
+ * All applicable page windows cover their current offset and content state;
+ * with a publisher, every row of the current preparation epoch is DMA-clean.
+ */
+bool console_shell_native_cache_ready(const console_shell_t *shell);
 
 /** Render non-BBS pages into the board's accelerated shell source surface. */
 bool console_shell_render_present_rgb565(console_shell_t *shell,

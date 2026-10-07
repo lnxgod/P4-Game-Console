@@ -91,6 +91,8 @@ def verify(build: pathlib.Path, firmware_only: bool = False) -> dict:
         "CONFIG_SPIRAM=y", "CONFIG_SPIRAM_SPEED_200M=y",
         "CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY=y",
         "CONFIG_SPIRAM_MALLOC_RESERVE_INTERNAL=65536",
+        "CONFIG_ESP_MM_CACHE_MSYNC_C2M_CHUNKED_OPS=y",
+        "CONFIG_ESP_MM_CACHE_MSYNC_C2M_CHUNKED_OPS_MAX_LEN=0x8000",
         "CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y", "CONFIG_CODEC_ES8388_SUPPORT=y",
     ):
         require(line in sdk.splitlines(), f"missing required sdkconfig: {line}")

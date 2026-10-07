@@ -623,3 +623,291 @@ no transport qualification is inherited. See `games/tide_maze/LOCAL_TESTING.json
 for local/build evidence. This candidate was not installed by the game-authoring
 task; an exact-artifact, exact-unit guarded OS update is needed before loading
 a cartridge with the new motion capability on older firmware.
+
+## 0.60 renderer successor
+
+The native launcher keeps three physical framebuffers and the two-refresh
+retirement fence before reusing a previous scanout buffer. PPA rotation completes
+before its logical source can change. Each physical buffer replays its missing
+damage, then publishes the affected rotated row span through the owned-framebuffer
+DPI path. CPU fallback and margin writes publish the full frame. The redundant
+application-wide cache invalidate/writeback after PPA is removed; the pinned
+driver supplies the required cache operations. C2M writeback is chunked at 32 KiB
+to limit uninterrupted cache-maintenance work. Panel timing remains pinned.
+
+Games and Files can use separate prepared raster windows in one optional,
+64-byte-aligned PSRAM arena capped at 4 MiB. Their content signatures and readiness
+are tracked independently. Idle preparation paints at most 16 rows per command;
+incomplete or stale windows are never copied. A ready source stays immutable
+through a joined, nonoverlapping PPA copy into the writable logical raster.
+Destination row writeback preserves nearby CPU-painted pixels before DMA, and
+selection/focus overlays follow the copy. The portable CPU renderer remains the
+fallback. Dragging allocates no cache memory, and the arena is released only after
+work joins, before game or external-page handoff.
+
+Touch sampling remains independent on core 0 at priority 2. A core-1 worker at
+priority 1 owns rendering, cache preparation and display submission for each
+joined command; the caller resumes shell/raster access only when ownership
+returns. New touch samples wake UI processing and take precedence over idle cache
+preparation. A join timeout retains the surfaces instead of freeing in-flight
+memory.
+
+Timing reports separate successful animation submission intervals from general
+dirty-frame/service cadence and actual display refresh callback intervals. Scroll
+summaries include render/submit cost, animation gaps, sampled-input-to-submit and
+drag-onset-to-submit timings. Input-to-refresh measurements wait for two callbacks
+after publication: they are conservative attribution bounds because the callback
+does not identify which framebuffer became visible, not exact visible-frame
+acknowledgments. Callback cadence must be measured rather than assuming 60 Hz.
+
+Focused host coverage checks rotation/damage replay, retirement, copy bounds and
+dirty-neighbour cache preservation. On the separately backed-up owner Tab5/ST7121,
+0.60 passed device checksum, launcher and boot health verification. A continuous
+31-frame swipe measured 49.576 ms between successful submissions (20.17 Hz),
+26.544 ms rendering and 21.577 ms submission. Refresh callbacks measured about
+57.25 Hz. The owner reported improved onset but scrolling remained unsmooth;
+the scrolling target is not met. See the
+[exact artifact and swipe record](../../hardware/evidence/owner-tab5-0.60-renderer-testing-20261007.json).
+These are submission timings, not optical FPS. Earlier acceptance records above
+remain historical evidence for their stated versions.
+
+## 0.61 prepared-copy measurement
+
+The owner unit installed 0.61 with an application-only write at `0x20000`,
+verified by the device checksum and launcher/OTA boot health. The prepared
+DMA2D copy backend initialized; idle source-publication failures and CPU-copy
+fallbacks were zero during the captured gestures. Warm scrolling still took
+about 23 ms to render and 21 ms to submit. The copy hook alone took about
+18.7 ms, including per-row destination cache preservation/invalidation and
+DMA completion. This metric does not isolate DMA transfer throughput.
+
+The owner reported no perceptible onset or smoothness improvement over 0.60,
+and no glitches after launching and exiting a game. Preserve that failed
+smoothness acceptance in the
+[exact 0.61 artifact and swipe record](../../hardware/evidence/owner-tab5-0.61-renderer-testing-20261007.json).
+The next candidate shifts a released physical framebuffer from the selected
+immutable frame and rotates only newly exposed content, with complete redraw
+when stationary state or buffer history cannot be proven equivalent.
+
+## 0.62 physical scroll composition candidate
+
+During steady Games/Files motion, the native renderer can leave its logical
+viewport interior incomplete and return a scroll descriptor. It paints only
+the newly exposed strip and the scrollbar. The display service copies the
+shifted interior from its immutable selected framebuffer into a distinct
+retired buffer, then rotates the exposed strip and scrollbar into that buffer.
+The selected source remains immutable until the DMA completion joins; the
+destination must satisfy the existing two-refresh retirement fence.
+
+Each buffer carries its exact logical source/stride, stationary context, list
+offset and viewport geometry. The context includes chrome, focus/selection,
+content revisions and file endpoint controls. Both physical buffers must match
+the current context; the selected offset must match the descriptor's previous
+offset. Unmatched slots reject before mutation and keep their existing tags
+while an authoritative redraw warms another slot. Other errors cannot submit
+stale logical pixels. A regular renderer call reconstructs the complete source
+before any ordinary presentation, and modal/page/content changes rebuild it.
+
+The physical fast path writes only driver-owned buffers that have remained
+under DMA ownership without CPU access since accelerated reconstruction. Its
+cache cleanliness is tracked separately from the content tag. Logical source
+strips still preserve neighbouring CPU pixels and use bounded cache operations;
+idle raster publication epochs and 32 KiB C2M chunks remain unchanged.
+
+The physical panel stride is 1440 bytes, so its private DMA copy uses picture
+bases and pixel offsets rather than the generic logical copy's 64-byte-stride
+cache simplification. Odd RGB565 scroll offsets are permitted for nonencrypted
+memory by the [ESP32-P4 v1.3 TRM](https://documentation.espressif.com/esp32-p4-chip-revision-v1.3_technical_reference_manual_en.pdf),
+sections 6.4.2 and 6.4.11 (pages 382 and 392). Full driver-owned allocations
+remain four-byte aligned. The generic logical-copy alignment guards remain
+unchanged; encrypted devices reject this physical fast path.
+
+Timing separates cache preparation, private DMA enqueue and joined wait.
+Scroll summaries retain the complete gesture cadence and onset, and separately
+report optimized-frame render/submit averages and intervals between consecutive
+optimized frames. Host differential tests compare composed rotated pixels with
+authoritative complete redraws, including odd/even motion, Files endpoints,
+cache changes, incomplete-source fallback and game/source handoff. Device
+cadence and owner smoothness acceptance remain pending for this exact candidate.
+
+The owner unit's exact 0.62 candidate passed checksum and boot health.
+Consecutive optimized-frame intervals in captured Games swipes measured
+17.381-19.391 ms (about 53-57 successful submissions/s), with optimized
+rendering around 4 ms and submission around 11-13 ms. Complete gesture
+statistics include the slower warm-up and intentional pauses. The owner
+reported much smoother steady motion but a startup hop, jumping fast swipes
+and missing release momentum; the complete interaction target is not yet met.
+Two ordinary warm-up fallbacks took about 116 ms each. See the
+[exact 0.62 image, source snapshot and gestures](../../hardware/evidence/owner-tab5-0.62-renderer-testing-20261007.json).
+
+## 0.63 startup and release-momentum candidate
+
+A retired target with older stationary context can now copy the exact
+stationary complement from the selected immutable frame in up to four
+disjoint DMA rectangles. The selected context and previous offset must still
+match. This repairs an old or untagged slot without the two complete logical
+redraws that caused 0.62's opening hop. An initial bounded M2C operation
+establishes DMA-only cleanliness for the driver's already cleared/published
+allocations; CPU writes still revoke that proof. Every copy joins before
+another uses the private DMA descriptor state, and the normal retirement
+fence applies to all target pixels.
+
+The core-0 sampler retains a gesture sequence, actual report timestamps,
+last down contact and recent release velocity. The joined UI path can replay
+one missed final contact from the same consumed gesture before processing
+release. Errors, multiple contacts, changed gestures and stale samples revoke
+the hint. Movement-to-release freshness is bounded to 80 ms, and release
+consumption to 150 ms to tolerate a known slow frame without inventing motion.
+The shell accepts momentum only after an actual content drag crossed its
+threshold. Fractional, time-based deceleration preserves smooth easing across
+frame cadences; taps, motion-disabled settings and endpoint bounds remain
+authoritative. Inactive press identities no longer invalidate stationary
+frames because they do not change their pixels.
+
+Host checks cover the stationary complement, first-use/stale target repair,
+missed-report replay, release freshness, duplicate samples, stop-fling taps
+and cadence-independent deceleration. Exact device timings and physical
+acceptance remain pending for 0.63.
+
+The exact 0.63 image passed its application checksum, but failed display
+initialization because the pinned cache API forbids `M2C | UNALIGNED`.
+No scrolling acceptance was requested for that unusable image. Its source,
+installation receipt and failed boot are preserved in the
+[0.63 failure record](../../hardware/evidence/owner-tab5-0.63-renderer-testing-20261007.json).
+The 0.64 correction uses `DIR_M2C` alone after validating cache-line alignment
+of the allocation and its full size. If the optional startup cleanliness proof
+cannot be established, the normal PPA warm-up remains available. Bounded
+32 KiB chunks and all refresh-retirement fences are unchanged. Physical
+startup and release-momentum acceptance remains pending for 0.64.
+
+The owner unit's exact 0.64 image subsequently passed checksum and boot
+health. Its capture contains 396 physical delta frames, 26 stationary repairs,
+133 glide frames and eight same-gesture release replays. Warm repairs took
+about 7–8.5 ms; an example quick-release burst produced 13 glide frames at
+17.984 ms between consecutive optimized submissions. The owner reported a
+smaller opening hop, but quick flicks still jumped after a perceptible delay
+and then coasted slowly. The full interaction target is not accepted. See the
+[exact 0.64 image and feedback](../../hardware/evidence/owner-tab5-0.64-renderer-testing-20261007.json).
+
+Zero unsupported-scroll fallbacks does not mean zero opening cost: ordinary
+authoritative UI frames still cost about 23–25 ms of warm logical drawing and
+42–44 ms of full-frame PPA. Scroll summaries count changed-offset submissions;
+they exclude the initial press-only frame, and their onset timing ends at
+submission start, before display transformation. They do not establish physical
+finger-down-to-visible latency.
+
+## 0.65 content-touch onset and flick candidate
+
+The independent core-0 sampler keeps waking the joined UI path during a
+bounded 24 ms ambiguity window after ordinary content DOWN. The shell retains
+the displayed content focus while the touch becomes a drag; a held press
+commits its highlight at the deadline, and an eligible UP tap commits before
+activation. Press identity, catalog revision, drag threshold, stop-glide taps
+and input ownership remain authoritative. Optional services defer through this
+short window. Content cards/rows have no pressed fill, so their transient hit
+state does not invalidate unchanged stationary pixels.
+
+Ordinary authoritative region updates can clone the selected immutable
+physical frame into a retired DMA-clean frame, then rotate only current damage.
+This applies when source/stride match and the retired history is absent or
+large. Small damage replay stays available; unsupported ownership or a joined
+operation failure reconstructs from the complete authoritative logical source.
+Incomplete logical interiors are reconstructed before ordinary presentation.
+Copies join before PPA, source release and full-row publication, preserving the
+existing refresh fence. Clone counts and timings are reported separately.
+
+The ST7121 touch path stamps each successful acquisition, including unchanged
+coordinates. Release velocity now decays linearly with elapsed stillness over
+80 ms instead of halving with every identical-coordinate poll. The last actual
+movement velocity is retained separately; motion estimates use a 16 ms integer
+time-weighted smoother. Direction changes, sample gaps, invalid input, gesture
+identity and release freshness still bound momentum. Signed accepted release
+velocity is recorded with gesture timing, and no per-frame logging is added.
+Host tests compare 60/120 Hz acquisition, neutral lift tails, stopped holds,
+first-drag pixels, held-tap damage, glide completion, source handoff and cloned
+triple-buffer composition. Exact device acceptance remains pending for 0.65.
+
+The exact owner-unit 0.65 image passed its application checksum and boot health.
+The bounded recording contains seven scroll bursts, 374 physical delta frames,
+178 glide frames, 16 stationary repairs and 14 cumulative authoritative region
+clones, with no recorded crash, fatal hold, display timeout or PPA failure.
+First consumed motion to submission start measured 4.034–12.201 ms; an example
+quick release retained about 2.01 logical pixels/ms and produced ten glide
+frames. Whole physical clones took at most 14.124 ms. The captured pair
+averages include pauses and slow fractional movement, and do not establish
+optical FPS or physical finger-down-to-visible timing. Qualitative onset,
+flick and game-return acceptance remains pending. See the
+[exact 0.65 image, checks and recording](../../hardware/evidence/owner-tab5-0.65-renderer-testing-20261007.json).
+
+The owner subsequently reported that Files did not have the speedup, so the
+interaction target remains unaccepted for 0.65. Its root directory has five
+entries and only 84 pixels of travel. A captured Files burst took 56.460 ms
+average rendering plus 27.044 ms submission, with no optimized frames or
+raster copies. The production renderer changes stationary context at list
+endpoints because Prev/Next enabled states change, forcing an ordinary redraw.
+The old telemetry does not record offsets or cache readiness, so the exact
+endpoint sequence and cold-cache cause remain inferred; no repeated directory
+scan was observed during that burst.
+
+## 0.66 Files endpoint patch
+
+Files endpoint transitions retain the complete stationary context hash, but
+authorize an explicit Prev/Next damage rectangle at logical `(368,558,288,88)`.
+The shell derives the prior endpoint context from the unchanged base signature;
+only an exact match to the last rendered context permits physical translation.
+It paints the exposed strip, scrollbar and the two buttons with their exact
+shared renderer. Changes to selection, directory, chrome or other state retain
+the authoritative fallback. Cold caches can draw the exposed strip directly
+without rebuilding the entire file viewport.
+
+The display requires the selected frame's exact previous context, offset,
+source and geometry. A destination with another context gets the existing
+stationary-complement repair, then joined interior DMA, strip/bar PPA and the
+explicit stationary patch. A changed context without a valid disjoint patch
+rejects before mutation. The new context commits only after the complete
+composition is published; publication includes patch rows. Games and interior
+Files motion use the unchanged no-patch path and retirement fence.
+
+Each scroll summary now includes the first successful changed-scroll frame's
+page, file count, previous/current offset and raster validity/prepared/published
+rows. This distinguishes cold source preparation from endpoint rejection
+without adding per-frame logging. Host tests cover five-entry and longer
+directories, cold/warm caches, both endpoint directions, exact rotated pixels,
+context mismatch, guarded fallbacks and normal file controls. Device acceptance
+remains pending for this exact image.
+
+The exact 0.66 owner-unit image passed application checksum, launcher startup
+and OTA boot health. Three recorded Files bursts contain ten moving frames;
+all ten use physical scroll translation and prepared raster copies, with no
+unsupported fallback or recorded display error. Their first-frame snapshots
+identify the five-entry root, departures from offsets 84 or 0, and a clean
+768-row prepared/published raster. Average rendering is 4.627–5.369 ms and
+submission is 12.065–15.553 ms. Consecutive optimized pairs average
+22.272–25.538 ms, so this recording does not establish panel-rate scrolling.
+Four stationary repairs take up to 9.822 ms. First consumed motion to submission
+start is 5.059–5.565 ms; it excludes display completion and optical latency.
+Owner smoothness, endpoint control and game-return acceptance remains pending.
+See the [exact 0.66 image and Files recording](../../hardware/evidence/owner-tab5-0.66-renderer-testing-20261007.json).
+
+## 0.67 previous-context repair shortcut
+
+An explicit endpoint patch proves that every stationary difference between the
+previous and new context lies inside that rectangle. A retired DMA-clean
+destination with an exact previous-context tag, source, stride and geometry
+already has the required stationary pixels outside the patch. Its old moving
+offset does not matter: selected-frame translation and the exposed strip
+replace the complete viewport, and the scrollbar and patch are still rewritten.
+That case can skip the stationary-complement copy. A destination with unknown
+or another context still requires repair. Refresh retirement, joined copy
+ownership, cache publication and new-tag commit order remain unchanged.
+
+A separate successful-presentation counter records previous-context reuse, so
+the experiment can distinguish actual avoided repairs from other timing
+changes. The exact 0.67 owner-unit image passed application checksum, launcher
+startup and OTA boot health. All six display host suites and the final focused
+pixel/ownership suite passed under ASan/UBSan; affected shell version fixtures,
+pinned shell/display/main syntax and the firmware build passed. Its bounded
+device recording contains no scrolling gestures, so actual repair skips,
+current-image timing and owner smoothness acceptance remain pending. The 0.66
+Files measurements above apply to that image. See the
+[exact 0.67 image and startup recording](../../hardware/evidence/owner-tab5-0.67-renderer-testing-20261007.json).

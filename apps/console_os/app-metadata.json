@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "app": "console_os",
-  "version": "0.59",
+  "version": "0.67",
   "stage": "native-game-catalog-ota-launcher",
   "purpose": "GameChangersAI OS: native 1280x720 navy/cyan Tab5 interface with live system services, installed-game library, normalized touch/controller input and existing game viewport compatibility.",
   "runtime_supported": false,
@@ -296,6 +296,6 @@
       "dedicated original Doom/Chex cover art and branded game-loading screen",
       "cartridge-owned artwork throughout the enabled native catalog"
     ],
-    "status": "0.59 curated default library on the 0.58 Pure Hades and USB batch foundation; Blast Circuit featured; explicit developer install for held-back games; core-1 audio and four-player local Wi-Fi retained; exact-image hardware acceptance recorded separately"
+    "status": "0.67 Tab5 renderer candidate retaining explicit Files endpoint patches and skipping stationary repairs only for exact previous-context retired buffers; bounded content-touch onset, deferred content focus and elapsed-time release velocity on the curated 0.59 library; preserve released-buffer ownership, independent core-0 touch, games and saves; exact-image timings and physical acceptance recorded separately"
   }
 }
