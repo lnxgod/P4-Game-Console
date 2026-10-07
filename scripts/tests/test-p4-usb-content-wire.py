@@ -67,6 +67,26 @@ class BatchTests(unittest.TestCase):
             readers=[c.kwargs['reader'] for c in install.call_args_list]
             self.assertTrue(all(r is readers[0] for r in readers))
             self.assertTrue(all(c.kwargs['connection'] is port for c in install.call_args_list))
+    def test_timeout_retries_file_once_after_idle_on_same_connection(self):
+        port=MagicMock();port.__enter__.return_value=port
+        with patch.object(wire,'open_port',return_value=port) as opened, \
+             patch.object(wire,'validate_content'), \
+             patch.object(wire,'wait_for_content_ready',return_value=True) as ready, \
+             patch.object(wire,'install_content',side_effect=[wire.TransferTimeout('ack')]+[None]*16) as install:
+            self.assertEqual(wire.main(['game-changers-ai','--port','test-port']),0)
+            opened.assert_called_once_with('test-port');ready.assert_called_once()
+            self.assertEqual(install.call_count,17)
+            self.assertEqual(install.call_args_list[0],install.call_args_list[1])
+    def test_timeout_stops_if_device_not_ready_or_retry_fails(self):
+        for idle in [False,True]:
+            port=MagicMock();port.__enter__.return_value=port
+            with self.subTest(idle=idle), patch.object(wire,'open_port',return_value=port) as opened, \
+                 patch.object(wire,'validate_content'), \
+                 patch.object(wire,'wait_for_content_ready',return_value=idle), \
+                 patch.object(wire,'install_content',side_effect=wire.TransferTimeout('ack')) as install:
+                self.assertEqual(wire.main(['game-changers-ai','--port','test-port']),2)
+                self.assertEqual(install.call_count,2 if idle else 1)
+                opened.assert_called_once_with('test-port')
     def test_batch_preflight_failure_never_opens_usb(self):
         with patch.object(wire,'open_port') as opened, \
              patch.object(wire,'validate_content',side_effect=wire.TransferError('missing')):

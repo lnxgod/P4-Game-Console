@@ -62,6 +62,10 @@ class TransferError(RuntimeError):
     pass
 
 
+class TransferTimeout(TransferError):
+    pass
+
+
 @dataclass(frozen=True)
 class ContentSpec:
     command: str
@@ -249,7 +253,7 @@ class WireReader:
                 self.buffer.extend(block)
             else:
                 time.sleep(0.005)
-        raise TransferError(f"badge did not return {marker.decode('ascii')} in time")
+        raise TransferTimeout(f"badge did not return {marker.decode('ascii')} in time")
 
 
 def status_name(status: int) -> str:
@@ -389,6 +393,7 @@ def parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = parser().parse_args(argv)
+    reader = None
     try:
         arena_files = arena_inputs(args.input, args.pack, args.dwango) if args.kind == "game-changers-ai" else []
         port = args.port or detect_port()
@@ -406,10 +411,23 @@ def main(argv: list[str] | None = None) -> int:
         with open_port(port) as connection:
             reader = WireReader(connection)
             for spec, path in files:
-                install_content(spec, path, port, connection=connection, reader=reader)
+                for attempt in range(2):
+                    try:
+                        install_content(spec, path, port, connection=connection, reader=reader)
+                        break
+                    except TransferTimeout:
+                        # Never replay an ambiguous chunk. Wait until the
+                        # device has closed/discarded staging and is idle, then
+                        # retry the exact file once on this same connection.
+                        if attempt or not wait_for_content_ready(connection, reader, 30.0):
+                            raise
+                        print(f"P4_H1 RETRY kind={spec.command} device_ready=1 connection_reused=1")
             print(f"P4_H1 BATCH PASS files={len(files)} connections=1 "
                   f"boot_ready_events={reader.boot_ready_events} resume_events={reader.resume_events}")
     except (OSError, serial.SerialException, TransferError) as error:
+        if reader is not None:
+            print(f"P4_H1 BATCH FAILED boot_ready_events={reader.boot_ready_events} "
+                  f"resume_events={reader.resume_events}", file=sys.stderr)
         print(f"P4_H1 FAILED reason={error}", file=sys.stderr)
         return 2
     return 0
