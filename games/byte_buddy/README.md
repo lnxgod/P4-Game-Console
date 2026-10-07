@@ -2,9 +2,12 @@
 
 [Game index](../README.md) · [Build and install](../README.md#build-and-play) · [Console OS](../../apps/console_os/README.md)
 
-**Availability:** Included work in progress; requires resource sidecar. **Folder:** `GAMES/WIP`.
+**Availability:** Developer install only; requires resource sidecar. **Folder:** `GAMES/WIP`.
 
 **Package:** `BYTEBUD.P4G` + `BYTEBUD.P4R`. **Players:** Solo.
+
+Hidden from standard installs; see [developer installs](../README.md#developer-installs).
+Game IDs and saved progress are preserved.
 
 **Local preview:** `make play-game GAME=byte_buddy` from the repository root.
 

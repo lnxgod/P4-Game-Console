@@ -11,7 +11,7 @@ content and acceptance belong in the [arena README](../../docs/games/arena/READM
 ## Primary device and current source
 
 **M5Stack Tab5** is the actively maintained board. The current source release
-is **0.56**; the [board record](../../docs/boards/M5STACK_TAB5.md) identifies
+is **0.57** (curated library and Blast Circuit home feature); the [board record](../../docs/boards/M5STACK_TAB5.md) identifies
 exact installed images on A/ST7121 and B/ST7123. Installation/readback and
 healthy launcher startup passed for those recorded images. Physical gameplay,
 multiplayer, controls/audio and sustained game cadence require their own

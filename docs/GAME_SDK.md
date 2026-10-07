@@ -87,7 +87,9 @@ new shared helpers and change the payload. A same-source comparison with a
 second fresh build does not prove compatibility with the installed OS.
 
 A firmware-only build still generates this protected cartridge for its
-allowlist. An OS upgrade must account for the paired cartridge even when other
+allowlist. While Red Dragon is held back, that paired cartridge is built under
+`dev-games/GAMES/LORD.P4G`, outside the standard SD bundle. It is not installed
+by default. An OS upgrade must account for the paired cartridge even when other
 game files are intentionally left alone. Record the OS image, paired payload
 and device transfer/registration evidence; retain a pending result if they do
 not match. A successful upload alone does not prove protected-game acceptance.
@@ -195,6 +197,9 @@ letting an unloadable game reach the SD card.
 
 `game.json` is the source/package contract. Its important fields are:
 
+- `enabled`: true for standard inclusion; `GAMES/WIP` is always developer-only.
+  Disabled drafts require explicit packaging `--allow-dev` or
+  [developer installation](../games/README.md#developer-installs);
 - `format`: `p4-native-elf-v1`;
 - `api_version`: `1`;
 - `version`: a bounded semantic version;

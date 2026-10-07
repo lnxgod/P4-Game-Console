@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "app": "console_os",
-  "version": "0.56",
+  "version": "0.57",
   "stage": "native-game-catalog-ota-launcher",
   "purpose": "GameChangersAI OS: native 1280x720 navy/cyan Tab5 interface with live system services, installed-game library, normalized touch/controller input and existing game viewport compatibility.",
   "runtime_supported": false,
@@ -296,6 +296,6 @@
       "dedicated original Doom/Chex cover art and branded game-loading screen",
       "cartridge-owned artwork throughout the enabled native catalog"
     ],
-    "status": "0.56 Game Changers AI OS initial launch candidate; classic Doom cover and protected Red Dragon native ANSI remix; core-1 audio and four-player local Wi-Fi retained; exact-image hardware acceptance recorded separately"
+    "status": "0.57 curated default library; Blast Circuit featured; explicit developer install for held-back games; core-1 audio and four-player local Wi-Fi retained; exact-image hardware acceptance recorded separately"
   }
 }

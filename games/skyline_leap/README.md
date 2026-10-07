@@ -2,9 +2,12 @@
 
 [Game index](../README.md) · [Build and install](../README.md#build-and-play) · [Console OS](../../apps/console_os/README.md)
 
-**Availability:** Disabled draft; not in default bundle. **Folder:** `GAMES/WIP`.
+**Availability:** Developer install only; unfinished. **Folder:** `GAMES/WIP`.
 
 **Package:** `SKYLINE.P4G`. **Players:** Solo.
+
+Hidden from standard installs; see [developer installs](../README.md#developer-installs).
+Game IDs and saved progress are preserved.
 
 **Local preview:** `make play-game GAME=skyline_leap` from the repository root.
 

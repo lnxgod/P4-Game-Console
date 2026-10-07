@@ -302,11 +302,20 @@ play-game:
 game-registry-check:
 	python3 scripts/generate-game-registry.py --games-root games --check
 	python3 scripts/tests/test-game-registry.py
+	python3 scripts/tests/test-game-release.py
 	python3 scripts/tests/test-native-board-verifiers.py
 	python3 scripts/tests/test-game-resource.py
 	python3 scripts/tests/test-protected-game-lineage.py
 	python3 scripts/tests/test-new-game.py
 	python3 scripts/tests/test-tab5-warm-boot-capture.py
+
+.PHONY: dev-games install-dev
+dev-games:
+	P4_TAB5_DEV_GAMES_ONLY=1 ./scripts/build.sh console_os m5stack-tab5
+
+install-dev:
+	@test -n "$(GAME)" -a -n "$(PORT)" || { echo 'Usage: make install-dev GAME=byte_buddy PORT=/dev/cu.usbmodem...'; exit 2; }
+	python3 scripts/install-dev-games.py --game "$(GAME)" --port "$(PORT)" $(if $(PROTECTED_PAYLOAD_SHA256),--protected-payload-sha256 "$(PROTECTED_PAYLOAD_SHA256)",)
 
 game-sdk-host: p4-desktop-host p4-game-api-host p4-game-save-host platform-save-seal-host p4-signal-scan-host p4-game-package-host p4-os-update-package-host p4-game-platform-host p4-frame-scheduler-host p4-content-host p4-multiplayer-host p4-multiplayer-registry-host lord-realm-e2e-host maze-chase-host space-invaders-host frog-hop-host byte-buddy-host skyline-leap-host solitaire-host p4-yahtzee-host calculator-host input-test-host av-test-host game-registry-check
 

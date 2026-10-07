@@ -989,14 +989,14 @@ static void test_window_manager_visual_contract(void)
     const uint64_t olimex_system_hash = UINT64_C(0x552b449074ff213b);
 #elif CONSOLE_SHELL_TARGET_WIDTH == 800U && \
     CONSOLE_SHELL_TARGET_HEIGHT == 480U
-    /* OS 0.56 version text is included in these complete-frame fixtures. */
-    const uint64_t desktop_hash = UINT64_C(0xc9b356de31b71b47);
-    const uint64_t elecrow_system_hash = UINT64_C(0x217dddfd56ecc3c4);
-    const uint64_t olimex_system_hash = UINT64_C(0xcb3fe97422e8aa9a);
+    /* OS 0.57 version text is included in these complete-frame fixtures. */
+    const uint64_t desktop_hash = UINT64_C(0x5d8101519a03b4bf);
+    const uint64_t elecrow_system_hash = UINT64_C(0xe98326a31f25fe28);
+    const uint64_t olimex_system_hash = UINT64_C(0x87bc90d0f0f599c6);
 #else
-    const uint64_t desktop_hash = UINT64_C(0xd302ef7179bda80f);
-    const uint64_t elecrow_system_hash = UINT64_C(0x042d46fb5037f711);
-    const uint64_t olimex_system_hash = UINT64_C(0xa4abb0781d6438e2);
+    const uint64_t desktop_hash = UINT64_C(0xf0b6425c690eb6e8);
+    const uint64_t elecrow_system_hash = UINT64_C(0x3a10a8d9a3c4b176);
+    const uint64_t olimex_system_hash = UINT64_C(0x6e537193d1cb302d);
 #endif
     uint16_t *const frame = calloc(
         (size_t)CONSOLE_SHELL_WIDTH * CONSOLE_SHELL_HEIGHT,

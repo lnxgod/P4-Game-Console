@@ -67,6 +67,17 @@ static void init(void)
     console_shell_set_runtime_info(&shell,&rt);render();
 }
 
+static void check_featured_game(void)
+{
+    init();
+    apps[1].title="Blast Circuit";apps[2].title="Wacky Wheels";
+    capture("blast-featured");
+    assert(tap(420,360).app_id==101U);
+    shell.page=CONSOLE_PAGE_HOME;apps[1].enabled=false;render();
+    assert(tap(420,360).app_id==102U);
+    puts("TAB5 FEATURED PASS blast_first=1 wacky_fallback=1 byte_not_promoted=1");
+}
+
 static void check_game_covers(void)
 {
     init();
@@ -206,6 +217,7 @@ int main(int argc,char **argv)
     pixels=malloc((721U)*stride*sizeof(*pixels));assert(pixels);
     for(size_t i=0;i<721U*stride;++i)pixels[i]=0xdead;
     check_game_covers();
+    check_featured_game();
     check_scroll_cache();check_scroll_motion();check_catalog_grouping();
     init();
     /* Every shell page reports the effective game master volume, and the

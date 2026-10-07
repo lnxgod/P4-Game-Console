@@ -13,6 +13,7 @@ import tempfile
 from typing import Any
 
 from p4_multiplayer_manifest import normalize_multiplayer_profile
+from p4_game_release import development_only
 
 
 API_VERSION = 1
@@ -181,7 +182,7 @@ def load_manifest(path: pathlib.Path) -> dict[str, Any]:
     return value
 
 
-def discover(games_root: pathlib.Path) -> list[dict[str, Any]]:
+def discover(games_root: pathlib.Path, *, dev_only: bool = False) -> list[dict[str, Any]]:
     if not games_root.is_dir():
         raise ManifestError(f"games root is not a directory: {games_root}")
     manifests = [load_manifest(path) for path in sorted(games_root.glob("*/game.json"))]
@@ -202,20 +203,20 @@ def discover(games_root: pathlib.Path) -> list[dict[str, Any]]:
                             fail(manifest["_path"], f"{key} is reserved by retired game {entry['id']}")
         except (OSError, UnicodeError, json.JSONDecodeError) as error:
             fail(retired_path, f"cannot read retirement registry: {error}")
-    enabled = [manifest for manifest in manifests if manifest["enabled"]]
     for key in (
         "component", "entry_symbol", "id", "launcher_id", "package_file",
         "resource_file",
     ):
         seen: dict[Any, pathlib.Path] = {}
-        for manifest in enabled:
+        for manifest in manifests:
             value = manifest.get(key)
             if value is None:
                 continue
             if value in seen:
                 fail(manifest["_path"], f"duplicate {key} also used by {seen[value]}")
             seen[value] = manifest["_path"]
-    return enabled
+    return [manifest for manifest in manifests
+            if development_only(manifest) == dev_only]
 
 
 def atomic_write(path: pathlib.Path, content: str) -> None:
@@ -235,12 +236,13 @@ def atomic_write(path: pathlib.Path, content: str) -> None:
         raise
 
 
-def cmake_text(manifests: list[dict[str, Any]]) -> str:
+def cmake_text(manifests: list[dict[str, Any]], *, dev_only: bool = False) -> str:
     calls = "".join(
         f"p4_add_seed_game({json.dumps(item['package_file'])} "
         f"{json.dumps(item['component'])} "
         f"{json.dumps(item.get('resource_file', ''))} "
-        f"{json.dumps(item.get('resource_payload', ''))})\n"
+        f"{json.dumps(item.get('resource_payload', ''))}"
+        f"{' DEV' if dev_only else ''})\n"
         for item in manifests
     )
     return "# Generated; do not edit.\n" + calls
@@ -251,14 +253,17 @@ def main() -> int:
     parser.add_argument("--games-root", type=pathlib.Path, default=pathlib.Path("games"))
     parser.add_argument("--output-cmake", type=pathlib.Path)
     parser.add_argument("--check", action="store_true")
+    parser.add_argument("--dev-only", action="store_true",
+                        help="select held-back games for the separate developer build")
     args = parser.parse_args()
-    manifests = discover(args.games_root.resolve())
+    manifests = discover(args.games_root.resolve(), dev_only=args.dev_only)
     if not args.check and args.output_cmake is None:
         parser.error("generation requires --output-cmake")
     if args.output_cmake is not None:
-        atomic_write(args.output_cmake.resolve(), cmake_text(manifests))
+        atomic_write(args.output_cmake.resolve(), cmake_text(manifests, dev_only=args.dev_only))
     print(json.dumps({
         "result": "p4-game-manifests-valid",
+        "profile": "development" if args.dev_only else "standard",
         "format": FORMAT,
         "api_version": API_VERSION,
         "enabled_games": [item["id"] for item in manifests],

@@ -33,6 +33,6 @@
   ],
   "license": "MIT",
   "assets": "672 dragon/action frames in required P4R; ImageGen city and dragon cover; Arimo UI. Provenance: assets/launch-v5.",
-  "enabled": true,
+  "enabled": false,
   "launcher_icon": "assets/launch-v5/launcher.p4i"
 }

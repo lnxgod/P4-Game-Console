@@ -5,7 +5,7 @@
 Each folder below owns a native C game's `game.json`, source, art, tests and
 README. Console OS loads its `.P4G` cartridge; a declared `.P4R` supplies extra
 resources. The manifest is the source of truth for identity, version, category,
-capabilities and inclusion. An enabled manifest makes a package eligible for
+capabilities and inclusion. An enabled manifest outside `GAMES/WIP` makes a package eligible for
 the bundle, not automatically release-qualified.
 
 ## Games
@@ -24,9 +24,14 @@ the bundle, not automatically release-qualified.
 | [Texas Hold'em](texas_holdem/README.md) | Cards | Poker with betting, all-ins and side pots. | 2–4 local human/CPU seats; 2–4 linked | Included |
 | [Tide Maze](tide_maze/README.md) | Arcade | Tilt a flooded marble maze and collect pearls. | Solo; 2 linked co-op | Included candidate; device lag acceptance open |
 | [Yahtzee](p4_yahtzee/README.md) | Tabletop | Roll, hold dice and fill the scorecard. | 2–4 pass-and-play or linked | Included |
-| [Byte Buddy](byte_buddy/README.md) | WIP | Raise a dragon, explore Signal City and play activities. | Solo | Included work in progress; requires resource sidecar |
-| [Red Dragon](lord/README.md) | WIP | A text-and-ANSI fantasy adventure with saved progression. | Solo; 2-player linked profile / realm features | Included work in progress; protected OS pairing |
-| [Skyline Leap](skyline_leap/README.md) | WIP | A rooftop platformer retained for further development. | Solo | Disabled draft; not in default bundle |
+
+Held-back games are available only through an explicit developer install:
+
+| Game | Category | What you do | Players / mode | Availability |
+| --- | --- | --- | --- | --- |
+| [Byte Buddy](byte_buddy/README.md) | WIP | Raise a dragon, explore Signal City and play activities. | Solo | Developer install only; requires resource sidecar |
+| [Red Dragon](lord/README.md) | WIP | A text-and-ANSI fantasy adventure with saved progression. | Solo; 2-player linked profile / realm features | Developer install only; protected OS pairing |
+| [Skyline Leap](skyline_leap/README.md) | WIP | A rooftop platformer retained for further development. | Solo | Developer install only; unfinished |
 
 ## Utilities
 
@@ -73,6 +78,30 @@ as Red Dragon need their exact paired OS lineage; follow the SDK's
 [protected-payload contract](../docs/GAME_SDK.md#protected-game-payloads).
 A compatible game-only update normally needs no OS reflash. First-time OS
 installation belongs to [ESP32 - Set Up](../.agents/skills/esp32-setup/SKILL.md).
+
+## Developer installs
+
+Byte Buddy, Red Dragon and Skyline Leap are hidden from standard installs.
+Their sources, game IDs and save namespaces remain intact. Local previews still
+work with `make play-game GAME=<slug>`. To explicitly install Byte Buddy on a
+Tab5 that is at the launcher:
+
+```sh
+make install-dev GAME=byte_buddy PORT=/dev/cu.usbmodem...
+```
+
+Use `GAME=skyline_leap` for that draft. `make dev-games` builds all development
+cartridges into `apps/console_os/build-tab5/dev-games/GAMES`, separate from the
+normal `sd-card/GAMES` bundle. The installer copies only the selected game and
+its required resources. Standard `push-bundle` rejects WIP cartridges unless
+`--include-dev` is explicitly supplied. Ordinary `push` remains an individual
+file operation for deliberate custom workflows.
+
+Red Dragon additionally requires `PROTECTED_PAYLOAD_SHA256=<64 hex digits>`
+from the **installed OS's frozen lineage evidence**. The installer rejects a
+mismatched payload before opening USB. An OS rebuild alone is not evidence
+that the device has that matching OS; follow the protected-payload contract.
+Holding back a game never deletes its saves or retires its IDs.
 
 ## Test status and multiplayer
 

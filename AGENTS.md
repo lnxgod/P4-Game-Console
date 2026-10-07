@@ -131,3 +131,9 @@ artifact/evidence update. For SD-backed firmware use `DOOM1.WAD`,
 `FREEDOOM1.WAD`, or `FREEDOOM2.WAD` at the SD root as documented in
 `docs/DOOM.md`. Never push WADs, generated WAD assembly, WAD-bearing firmware
 binaries, or local recovery images to GitHub.
+
+Standard installs exclude disabled games and `GAMES/WIP`. Byte Buddy, Red Dragon
+and Skyline Leap are development-only; use `make install-dev GAME=<slug>
+PORT=<port>` only on explicit opt-in. Keep Tide Maze available per the owner’s
+request and preserve its open acceptance notes. See
+[developer installs](games/README.md#developer-installs).

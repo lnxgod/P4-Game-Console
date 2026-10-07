@@ -8,6 +8,7 @@ import re
 import struct
 import subprocess
 import sys
+from p4_game_release import development_only
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 APP = ROOT / "apps/console_os"
@@ -166,8 +167,12 @@ def verify(build: pathlib.Path, firmware_only: bool = False) -> dict:
                 "local shareware WAD identity mismatch")
         packages = sorted((bundle / "GAMES").glob("*.P4G"))
         manifests = [json.loads(p.read_text()) for p in (ROOT / "games").glob("*/game.json")]
-        expected = {m["package_file"] for m in manifests if m.get("enabled") is True}
-        require({p.name for p in packages} == expected, "native game seed differs from enabled manifests")
+        released = [m for m in manifests if not development_only(m)]
+        expected = {m["package_file"] for m in released}
+        require({p.name for p in packages} == expected, "native game seed differs from standard manifests")
+        expected_files = expected | {m["resource_file"] for m in released if m.get("resource_file")}
+        require({p.name for p in (bundle / "GAMES").iterdir()} == expected_files,
+                "standard bundle contains stale or unexpected game files")
         for path in packages:
             data = path.read_bytes()
             require(256 < len(data) <= 512*1024 and data[:8] == b"P4GAME1\0" and
