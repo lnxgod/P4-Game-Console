@@ -1,37 +1,68 @@
-# Repository skills
+# ESP32 skills
 
-These skills ship with Game Changers AI OS. Open the repository root so your
-coding agent can read `AGENTS.md` and this directory. No personal skill folder
-is required. Each skill links to the source contracts and board-specific checks.
-M5Stack Tab5 is the only actively maintained board target; shared game and
-platform workflows below default to Tab5.
+Open the repository root and describe what you want. [AGENTS.md](../../AGENTS.md)
+loads [ESP32 - Start Here](esp32-start/SKILL.md), which selects the relevant
+skills automatically. No personal installation or remembered command is needed.
+Human-facing names use **ESP32 - …**; optional `$esp32-…` commands use short,
+space-free identifiers.
 
-| Skill | Use |
-| --- | --- |
-| [installos](installos/SKILL.md) | First setup, storage choice, verified Doom download, guarded installation and initial configuration |
-| [develop-p4-console-games](develop-p4-console-games/SKILL.md) | Native C gameplay and custom engines through the stable Game API |
-| [create-p4-game-art](create-p4-game-art/SKILL.md) | Native-resolution art, launcher icons, provenance and packing |
-| [develop-p4-games](develop-p4-games/SKILL.md) | Manifests, cartridges, resources, catalogs and game installation/removal |
-| [test-p4-games-locally](test-p4-games-locally/SKILL.md) | Real SDL play, sanitizer checks and gameplay iteration |
-| [develop-p4-multiplayer-games](develop-p4-multiplayer-games/SKILL.md) | Game synchronization using OS Host/Join and bounded protocols |
-| [develop-esp32-p4-platform](develop-esp32-p4-platform/SKILL.md) | Pinned tools, shared services, Tab5 builds and guarded hardware work |
-| [add-usb-gamepad-support](add-usb-gamepad-support/SKILL.md) | OS-owned USB/Bluetooth controllers and normalized input |
+## Everyday work
+
+| Name | Optional command | What it helps with |
+| --- | --- | --- |
+| [ESP32 - Start Here](esp32-start/SKILL.md) | `$esp32-start` | Pick the right workflow from your request |
+| [ESP32 - Set Up](esp32-setup/SKILL.md) | `$esp32-setup` | Set up a Tab5 with Console OS and games |
+| [ESP32 - Make Game](esp32-make-game/SKILL.md) | `$esp32-make-game` | Make or change a native console game |
+| [ESP32 - Game Art](esp32-game-art/SKILL.md) | `$esp32-game-art` | Draw game art, sprites and launcher pictures |
+| [ESP32 - Add Game](esp32-add-game/SKILL.md) | `$esp32-add-game` | Package, install or update console games |
+| [ESP32 - Test Game](esp32-test-game/SKILL.md) | `$esp32-test-game` | Play and check games on your computer |
+| [ESP32 - Multiplayer](esp32-multiplayer/SKILL.md) | `$esp32-multiplayer` | Let friends play on connected consoles |
+| [ESP32 - Fix Console](esp32-fix-console/SKILL.md) | `$esp32-fix-console` | Build, fix and test the Tab5 console OS |
+| [ESP32 - Controllers](esp32-controllers/SKILL.md) | `$esp32-controllers` | Connect and fix USB or Bluetooth controllers |
+
+Say “make a racing game,” “draw its cover,” “let four friends play,” or
+“put it on my Tab5.” The agent follows the matching workflow and combines
+skills when needed. Multiplayer, art and testing supplement the game idea.
 
 ## Legacy board maintenance
 
-These skills are retained for explicitly requested work on existing legacy
-boards. They are not the Tab5 installation or acceptance workflow.
+These workflows are only for explicitly requested work on existing older
+boards. Tab5 setup and testing use **Set Up** and **Fix Console**.
 
-| Skill | Use |
+| Name | Optional command | What it helps with |
+| --- | --- | --- |
+| [ESP32 - Waveshare](esp32-waveshare/SKILL.md) | `$esp32-waveshare` | Maintain the older Waveshare 4.3 console |
+| [ESP32 - Waveshare Screen](esp32-waveshare-screen/SKILL.md) | `$esp32-waveshare-screen` | Fix the older Waveshare console screen |
+| [ESP32 - Waveshare Sound](esp32-waveshare-sound/SKILL.md) | `$esp32-waveshare-sound` | Fix the older Waveshare console sound |
+| [ESP32 - Elecrow Test](esp32-elecrow-test/SKILL.md) | `$esp32-elecrow-test` | Check the older Elecrow 10-inch console |
+| [ESP32 - Elecrow Screen](esp32-elecrow-screen/SKILL.md) | `$esp32-elecrow-screen` | Fix the older Elecrow 10-inch screen |
+| [ESP32 - Elecrow Sound](esp32-elecrow-sound/SKILL.md) | `$esp32-elecrow-sound` | Fix the older Elecrow 10-inch speaker |
+
+## Previous names
+
+The folders, skill IDs, UI names and maintained links have all been renamed.
+Old acceptance records retain their original paths and hashes as historical
+evidence. Frozen recovery installers retain their original inventory keys and
+must be reproduced with their exact historical source revision; these renames
+do not issue a new hardware authorization. When an older conversation uses one of these names, select its
+replacement; do not recreate a second copy of the skill.
+
+| Previous name | Current skill |
 | --- | --- |
-| [develop-waveshare-p4-4-3](develop-waveshare-p4-4-3/SKILL.md) | Exact Waveshare 4.3-inch board builds and qualification |
-| [use-waveshare-p4-4-3-display](use-waveshare-p4-4-3-display/SKILL.md) | Waveshare display path |
-| [use-waveshare-p4-4-3-audio](use-waveshare-p4-4-3-audio/SKILL.md) | Waveshare audio path |
-| [test-console-os-builds](test-console-os-builds/SKILL.md) | Exact Elecrow 10-inch Console OS qualification |
-| [use-elecrow-p4-display](use-elecrow-p4-display/SKILL.md) | Exact Elecrow 10-inch display path |
-| [use-elecrow-p4-audio](use-elecrow-p4-audio/SKILL.md) | Exact Elecrow 10-inch factory speaker path |
+| `installos` | [ESP32 - Set Up](esp32-setup/SKILL.md) |
+| `develop-p4-console-games` | [ESP32 - Make Game](esp32-make-game/SKILL.md) |
+| `create-p4-game-art` | [ESP32 - Game Art](esp32-game-art/SKILL.md) |
+| `develop-p4-games` | [ESP32 - Add Game](esp32-add-game/SKILL.md) |
+| `test-p4-games-locally` | [ESP32 - Test Game](esp32-test-game/SKILL.md) |
+| `develop-p4-multiplayer-games` | [ESP32 - Multiplayer](esp32-multiplayer/SKILL.md) |
+| `develop-esp32-p4-platform` | [ESP32 - Fix Console](esp32-fix-console/SKILL.md) |
+| `add-usb-gamepad-support` | [ESP32 - Controllers](esp32-controllers/SKILL.md) |
+| `develop-waveshare-p4-4-3` | [ESP32 - Waveshare](esp32-waveshare/SKILL.md) |
+| `use-waveshare-p4-4-3-display` | [ESP32 - Waveshare Screen](esp32-waveshare-screen/SKILL.md) |
+| `use-waveshare-p4-4-3-audio` | [ESP32 - Waveshare Sound](esp32-waveshare-sound/SKILL.md) |
+| `test-console-os-builds` | [ESP32 - Elecrow Test](esp32-elecrow-test/SKILL.md) |
+| `use-elecrow-p4-display` | [ESP32 - Elecrow Screen](esp32-elecrow-screen/SKILL.md) |
+| `use-elecrow-p4-audio` | [ESP32 - Elecrow Sound](esp32-elecrow-sound/SKILL.md) |
 
-Board-specific skills never transfer flash
-authorization to another board. Game work uses native 768×480 rendering with a
-tested 320×200 fallback, a 60 FPS target and a measured 30 FPS device release
-floor. The removed Lua authoring stack is not a supported creation route.
+The hardware safety, native API, dual-core ownership and measured-performance
+contracts remain in the specialist skills. Friendly names do not change them.

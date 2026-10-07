@@ -1,5 +1,10 @@
 # Wacky Wheels on P4
 
+[Monorepo](../../README.md) · [Console OS](../../apps/console_os/README.md)
+
+**Status:** experimental game port, outside the default bundle. Its source
+workflow is part of this monorepo; upstream code/data are local prerequisites.
+
 This local development port uses Justin Marshall's recreation at revision
 `7dd510096c58ee84c36970a11c4f57b4a9c2a4cf` from
 <https://git.retrodamage.com/jmarshall/wacky-wheels>, with the separately pinned

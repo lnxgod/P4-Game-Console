@@ -1,4 +1,4 @@
-# ESP32-P4 badge platform invariants
+# P4 Game Console: agent instructions
 
 M5Stack Tab5 is the only actively maintained Console OS board target. All
 other board targets are legacy; preserve their source and recovery contracts,
@@ -18,7 +18,7 @@ Lua game-creation stack, tooling and skill are removed.
 C++ ports need an explicitly tested C-ABI/toolchain adapter; current packaging
 supports C sources. See `docs/GAME_SDK.md` and `docs/GAME_PERFORMANCE.md`.
 
-Use [`installos`](.agents/skills/installos/SKILL.md) as the default entry point
+Use [**ESP32 - Set Up**](.agents/skills/esp32-setup/SKILL.md) as the default entry point
 for Console OS installation, provisioning and first-time setup. Ask whether the
 user will have a microSD card unless already answered. The default content is
 basic games plus the pinned Doom shareware WAD, including its verified download
@@ -28,30 +28,37 @@ would use internal flash and support adding SD at a later restart without
 reflashing; verify implementation before promising that route. Creating the
 skill does not itself enable that firmware behavior.
 
-Use the repository skills in `.agents/skills` whenever their descriptions match:
+## Automatic skill selection
 
-- `develop-p4-games` for creating, porting, modifying, packaging, installing, or testing storage-installed `.P4G` games.
-- `develop-esp32-p4-platform` for toolchain, build, flash, monitor, recovery, or board bring-up work.
-- `use-elecrow-p4-audio` for the 10 in variant factory I2S1/GPIO30 speaker path, Doom sound effects, audio diagnostics, or acoustic acceptance.
-- `use-elecrow-p4-display` for the 10 in variant panel, framebuffer, backlight, or game-video path.
-- `add-usb-gamepad-support` for USB/Bluetooth HID controllers, pairing,
-  canonical controller input, or game input integration.
-- `test-console-os-builds` for fresh-session Console OS/Game API build tests,
-  guarded successor installs, recovery, and honest manual game acceptance.
-- `develop-p4-console-games` for creating or changing native games, choosing
-  their `GAMES/<TYPE>` folder, and integrating Game API drawing, controls, and
-  sound without giving games raw hardware ownership. Accept free-form game
-  ideas; use `docs/GAME_STARTERS.md` as optional guidance, not a mandatory
-  template menu. New games should map gameplay and menus to OS-normalized
-  controls so supported controllers work without per-game USB/BLE code.
-- `create-p4-game-art` for native-resolution art, launcher icons, provenance
-  and deterministic packing without changing gameplay or save identities.
-- `develop-p4-multiplayer-games` automatically alongside game authoring when
-  a game needs linked-console co-op, versus or synchronized play. Reuse the
-  OS-owned Host/Join, session and registration services; implement only the
-  game's bounded protocol and rules. Do not promise an unavailable board link.
-- `test-p4-games-locally` for the required SDL3 play-test, sanitizer smoke,
-  and gameplay-tuning loop before building native-game firmware candidates.
+For console or game work, start with [ESP32 - Start Here](.agents/skills/esp32-start/SKILL.md).
+It is the core routing skill and links every repository workflow. Infer the
+needed skills from the task; do not require the user to name or remember them.
+Load only the matching specialists, including their relevant references.
+
+- Making/changing a game: **Make Game**, then **Test Game**; add **Game Art**
+  for artwork and **Multiplayer** for linked-console play.
+- Installing/updating a game: **Add Game**. First-time OS setup: **Set Up**.
+- Shared OS, hardware, build, sound or display work: **Fix Console**.
+- Shared USB/Bluetooth controller support: **Controllers**; ordinary game
+  button mappings stay with **Make Game**.
+- Legacy board work: use the exact board's route in **Start Here**, only for
+  the requested board. Never infer Tab5 support from another board's evidence.
+
+The [skill index](.agents/skills/README.md) lists the friendly names, command
+IDs and previous-name mapping. Automatic invocation is enabled for all skills.
+
+## Monorepo and documentation
+
+The root README describes **P4 Game Console**, the whole monorepo. Console OS
+is the shared platform; the Game Changers AI Doom arena is one integrated game
+mode, and Pure Hell is a map pack. Keep their documentation distinct.
+Every game has its own README with controls, player modes, source/data needs,
+build/play/install guidance and current verification limits. Keep the root
+inventory and `games/README.md` linked to the owning README when adding a title.
+Keep old evidence as history; do not turn an install or host test into a claim
+of physical gameplay acceptance.
+
+## Platform invariants
 
 Keep these rules true for every change:
 

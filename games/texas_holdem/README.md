@@ -1,5 +1,15 @@
 # Texas Hold'em
 
+[Game index](../README.md) · [Build and install](../README.md#build-and-play) · [Console OS](../../apps/console_os/README.md)
+
+**Availability:** Included. **Folder:** `GAMES/CARDS`.
+
+**Package:** `TEXAS_HOLDEM.P4G`. **Players:** 2–4 local human/CPU seats; 2–4 linked.
+
+**Local preview:** `make play-game GAME=texas_holdem` from the repository root.
+
+Linked counts describe the game profile; see [transport and hardware limits](../README.md#test-status-and-multiplayer).
+
 Texas Hold'em is an original native P4 Game API v1 poker game for two to four
 human or CPU-controlled seats. A normal launcher start opens a four-seat
 pass-and-play table. A

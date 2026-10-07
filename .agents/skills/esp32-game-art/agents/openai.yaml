@@ -1,0 +1,6 @@
+interface:
+  display_name: "ESP32 - Game Art"
+  short_description: "Draw game art, sprites and launcher pictures"
+  default_prompt: "Use $esp32-game-art to help with game art for this console."
+policy:
+  allow_implicit_invocation: true

@@ -1,5 +1,10 @@
 # Game Changers AI multiplayer arena
 
+[Game README](games/arena/README.md) · [Console OS](../apps/console_os/README.md) · [Monorepo](../README.md)
+
+This guide describes one Doom-based game mode in the monorepo. Console OS
+is the shared platform that hosts it; Pure Hades is one of its content packs.
+
 M5Stack Tab5 candidate, Console OS **0.57**. This is a special selection inside
 **Multiplayer**, with no separate launcher tile. Ordinary Doom shareware and
 Chex Quest retain their separate content and two-player adapters. Installation and physical acceptance are recorded separately below.
@@ -82,7 +87,7 @@ standalone files. Startup exact-hashes every required file, including notices.
 DWANGO 5 comes from the [Doom2.net archive](https://www.doom2.net/doom2/wads/DWANGO5.ZIP).
 Its archive digest, original credits and local paths are pinned in
 `third_party/game-data.json`. Freedoom and DWANGO remain ignored local inputs.
-Pure Hell is no longer selectable or provisioned. An old inactive `PUREHELL.WAD`
+Pure Hades is no longer selectable or provisioned. An old inactive `PUREHELL.WAD`
 on an existing SD card is not loaded by this firmware.
 No WAD is embedded in firmware. This integration does not grant redistribution
 rights to DWANGO or its music.

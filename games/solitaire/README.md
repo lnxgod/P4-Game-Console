@@ -1,5 +1,13 @@
 # Solitaire
 
+[Game index](../README.md) · [Build and install](../README.md#build-and-play) · [Console OS](../../apps/console_os/README.md)
+
+**Availability:** Included. **Folder:** `GAMES/CARDS`.
+
+**Package:** `SOLITAIR.P4G`. **Players:** Solo.
+
+**Local preview:** `make play-game GAME=solitaire` from the repository root.
+
 An original clean-room Klondike-style card game for P4 Game API v1. It draws crisp native-resolution cards, suit silhouettes, focused-card
 previews, and direct card manipulation over original ImageGen felt and card backs.
 

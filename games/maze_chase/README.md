@@ -1,5 +1,13 @@
 # Maze Chase
 
+[Game index](../README.md) · [Build and install](../README.md#build-and-play) · [Console OS](../../apps/console_os/README.md)
+
+**Availability:** Included. **Folder:** `GAMES/ARCADE`.
+
+**Package:** `MAZE.P4G`. **Players:** Solo.
+
+**Local preview:** `make play-game GAME=maze_chase` from the repository root.
+
 Version 1.1.1, device qualification pending. Guide the golden chomping explorer through an original 25×13 labyrinth, collect every pearl, and turn the tables on four pursuing spirits with power crystals. This overhaul keeps the stable game ID, title, launcher ID, and Game API v1 ownership boundaries.
 
 The playable maze uses 2.49 times the previous screen area. Connected cyan wall runs, rounded corners, subtle original circuit etching, luminous pickups, distinct spirit silhouettes, directional chomp frames, and a composed title/pause/result presentation draw directly into **768×480 RGB565**. A **320×200 fallback** retains the same complete board and controls. Neither mode stretches a low-resolution framebuffer.

@@ -1,6 +1,16 @@
-# P4 Air Hockey
+# Air Hockey
 
-P4 Air Hockey is a native Game API v1 table-sport game for two P4 consoles.
+[Game index](../README.md) · [Build and install](../README.md#build-and-play) · [Console OS](../../apps/console_os/README.md)
+
+**Availability:** Included. **Folder:** `GAMES/SPORTS`.
+
+**Package:** `P4_AIR_HOCKEY.P4G`. **Players:** Solo vs CPU; 2 linked.
+
+**Local preview:** `make play-game GAME=p4_air_hockey` from the repository root.
+
+Linked counts describe the game profile; see [transport and hardware limits](../README.md#test-status-and-multiplayer).
+
+Air Hockey is a native Game API v1 table-sport game for two P4 consoles.
 The Host console owns puck physics, collisions, scoring, and rematches. Each
 console controls one paddle, and the Join console sends bounded input intents
 while receiving complete 30 Hz snapshots through the OS-owned P4MP session.

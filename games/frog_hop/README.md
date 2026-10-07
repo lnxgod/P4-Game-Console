@@ -1,5 +1,13 @@
 # Frog Hop
 
+[Game index](../README.md) · [Build and install](../README.md#build-and-play) · [Console OS](../../apps/console_os/README.md)
+
+**Availability:** Included. **Folder:** `GAMES/ARCADE`.
+
+**Package:** `FROGHOP.P4G`. **Players:** Solo.
+
+**Local preview:** `make play-game GAME=frog_hop` from the repository root.
+
 Version 1.1.0. Guide the frog across traffic and floating logs, then fill all five lily-pad homes.
 
 The native view adds an 80 ms visual hop with crisp lime frog animation, four distinct car designs, bark-textured logs, flowered home pads, an original flowing-water texture, clover-covered banks, granular asphalt, pebbled shore, and a larger original frog illustration on the title panel. Pause and result panels dim the live scene while preserving context. Vehicle art spans the original collision widths and HUD labels avoid the Exit and Start buttons.

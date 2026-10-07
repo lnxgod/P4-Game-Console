@@ -1,6 +1,14 @@
-# AV Test
+# Sound & Motion
 
-AV Test is a removable `AVTEST.P4G` diagnostic under `SYSTEM/TESTS`. Left and
+[Game index](../README.md) · [Build and install](../README.md#build-and-play) · [Console OS](../../apps/console_os/README.md)
+
+**Availability:** Included system utility. **Folder:** `SYSTEM/TESTS`.
+
+**Package:** `AVTEST.P4G`. **Players:** One operator; no linked game mode.
+
+**Local preview:** `make play-game GAME=av_test` from the repository root.
+
+Sound & Motion is a removable `AVTEST.P4G` diagnostic under `SYSTEM/TESTS`. Left and
 Right cycle color bars, a geometry grid, checkerboard pixels, and a color
 gradient. A plays a four-step tone sequence, B pauses or resumes the 30 Hz
 motion marker, Start resets its counters, and Back returns to Program Manager.

@@ -2,7 +2,7 @@
 
 Console OS uses native `.P4G` cartridges and their declared `.P4R` resource
 sidecars. See [the SDK](GAME_SDK.md) and
-[the installation skill](../.agents/skills/develop-p4-games/SKILL.md) for
+[the installation skill](../.agents/skills/esp32-add-game/SKILL.md) for
 validated packaging and board-specific transfer. Native game changes do not
 require an OS reflash while their API remains compatible.
 

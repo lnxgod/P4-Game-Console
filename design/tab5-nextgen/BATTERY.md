@@ -52,6 +52,6 @@ The installed app remains the earlier 0.43 image, SHA-256 `b93336fb04b8d66bf2fe3
 
 Confirm whether a battery is attached to each unit and whether it runs when USB is unplugged. This distinguishes the UI/charger defect from pack connection or protection state.
 
-Existing exact-artifact installation scopes exclude charger control. A charger-specific, identity-bound scope and the normal guarded successor-install evidence are required before flashing this new peripheral behavior; older authorization hashes must not be reused. See [platform skill](../../.agents/skills/develop-esp32-p4-platform/SKILL.md), “Use only the resources named by that authorization; every other pin and peripheral remains locked.”
+Existing exact-artifact installation scopes exclude charger control. A charger-specific, identity-bound scope and the normal guarded successor-install evidence are required before flashing this new peripheral behavior; older authorization hashes must not be reused. See [platform skill](../../.agents/skills/esp32-fix-console/SKILL.md), “Use only the resources named by that authorization; every other pin and peripheral remains locked.”
 
 After an authorized exact-artifact install, record unit and battery model, CHARGER_INIT readback, valid pack voltage, observed current direction with USB connected, unplugged operation, and return to USB charging. Readback alone is not acoustic, display or battery acceptance. No battery capacity or charge-time claim is made from this build.

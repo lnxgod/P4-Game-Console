@@ -1,4 +1,0 @@
-interface:
-  display_name: "Test P4 Games Locally"
-  short_description: "Play and tune native games before flashing"
-  default_prompt: "Use $test-p4-games-locally to play-test and tune a native P4 Console OS game before building firmware or flashing."

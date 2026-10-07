@@ -1,6 +1,0 @@
-interface:
-  display_name: "Install Console OS"
-  short_description: "Install Console OS, basic games and Doom"
-  default_prompt: "Use $installos to set up Console OS, ask whether I have a microSD card, and install basic games plus Doom with the supported storage route."
-policy:
-  allow_implicit_invocation: true

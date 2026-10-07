@@ -1,4 +1,0 @@
-interface:
-  display_name: "Test Elecrow Console OS Builds"
-  short_description: "Build and qualify Console OS on Elecrow 10 in"
-  default_prompt: "Use $test-console-os-builds to build and qualify Console OS on the exact Elecrow 10 in tablet within the requested install scope."
