@@ -208,6 +208,23 @@ class WireReader:
     def __init__(self, connection: serial.Serial) -> None:
         self.connection = connection
         self.buffer = bytearray()
+        self.boot_ready_events = 0
+        self.resume_events = 0
+        self.audit_tail = b""
+
+    def observe(self, block: bytes) -> None:
+        markers = (b"P4_CONSOLE_OS READY board=", b"P4_USB_CONTENT READY resume=1 reboot=0")
+        combined = self.audit_tail + block
+        self.boot_ready_events += combined.count(markers[0])
+        self.resume_events += combined.count(markers[1])
+        # Independent tails prevent recounting a shorter marker retained in a
+        # longer tail. Keep only incomplete suffixes of either marker.
+        suffix = 0
+        for marker in markers:
+            for length in range(1, len(marker)):
+                if combined.endswith(marker[:length]): suffix = max(suffix, length)
+        self.audit_tail = combined[-suffix:] if suffix else b""
+
 
     def frame(self, marker: bytes, frame_bytes: int, timeout: float,
               startup_manifest: bytes | None = None) -> bytes:
@@ -228,6 +245,7 @@ class WireReader:
                 del self.buffer[:-256]
             block = self.connection.read(max(1, self.connection.in_waiting))
             if block:
+                self.observe(block)
                 self.buffer.extend(block)
             else:
                 time.sleep(0.005)
@@ -389,6 +407,8 @@ def main(argv: list[str] | None = None) -> int:
             reader = WireReader(connection)
             for spec, path in files:
                 install_content(spec, path, port, connection=connection, reader=reader)
+            print(f"P4_H1 BATCH PASS files={len(files)} connections=1 "
+                  f"boot_ready_events={reader.boot_ready_events} resume_events={reader.resume_events}")
     except (OSError, serial.SerialException, TransferError) as error:
         print(f"P4_H1 FAILED reason={error}", file=sys.stderr)
         return 2

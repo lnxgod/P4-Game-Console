@@ -29,6 +29,13 @@ class Port:
         return len(data)
 
 class WireTests(unittest.TestCase):
+    def test_boot_and_resume_audit_survives_fragmentation(self):
+        reader=wire.WireReader(Port([]))
+        trace=b'boot P4_CONSOLE_OS READY board=m5stack-tab5\nP4_USB_CONTENT READY resume=1 reboot=0\n'
+        for byte in trace: reader.observe(bytes([byte]))
+        reader.observe(b'next file, same connection')
+        self.assertEqual(reader.boot_ready_events,1)
+        self.assertEqual(reader.resume_events,1)
     def test_coalesced_ack_and_done_are_retained(self):
         ack = b'P4A1' + bytes(5)
         done = b'P4D1' + bytes(37)
