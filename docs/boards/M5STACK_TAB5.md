@@ -3,7 +3,13 @@
 M5Stack Tab5 is the permanent primary target. `make console-os-idf` aliases
 `make console-os-tab5-idf`; Elecrow now requires `make console-os-elecrow-idf`.
 
-The current arena successor is **0.58**, based on the native 0.55 launch and
+The curated-library successor is **0.59**. It features Blast Circuit, retains
+Tide Maze, and excludes Byte Buddy, Red Dragon and Skyline Leap from standard
+bundles. Explicit developer installs use a separate build output. See the
+[0.59 curation and installation record](../../test-runs/2026-10-06-tab5-curated-library.json)
+for exact A/B results and [developer installs](../../games/README.md#developer-installs).
+
+The underlying arena successor is **0.58**, based on the native 0.55 launch and
 merged multiplayer reliability fixes. A/ST7121 and B/ST7123 passed device-checksum
 application verification, launcher startup and the 10-second health gate in
 [the 0.58 installation record](../../test-runs/2026-10-06-tab5-no-reboot-content.json).

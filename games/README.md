@@ -41,7 +41,7 @@ Held-back games are available only through an explicit developer install:
 
 Doom, Chex Quest and the Game Changers AI arena use the OS-integrated engine.
 Wacky Wheels and Quake use separate port workflows. Find their own READMEs in
-the [root inventory](../README.md#engine-games-and-ports). Pure Hell is a map
+the [root inventory](../README.md#engine-games-and-ports). Pure Hades is a map
 pack, not a native cartridge.
 
 ## Build and play
