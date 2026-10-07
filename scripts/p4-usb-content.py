@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+from contextlib import nullcontext
 import binascii
 from dataclasses import dataclass
 import glob
@@ -61,6 +62,10 @@ class TransferError(RuntimeError):
     pass
 
 
+class TransferTimeout(TransferError):
+    pass
+
+
 @dataclass(frozen=True)
 class ContentSpec:
     command: str
@@ -115,7 +120,7 @@ def arena_inputs(iwad: Path, pack: Path, dwango: Path):
     result = []
     for entry in ARENA_BUNDLE["files"]:
         spec = CONTENT_SPECS[entry["command"]]
-        path = iwad if entry["symbol"] == "BASE" else (dwango if entry["symbol"].startswith("DWANGO") else pack) / entry["filename"]
+        path = iwad if entry["symbol"] == "BASE" else (dwango if entry["symbol"].startswith("DWANGO") else pack) / entry.get("pack_path", entry["filename"])
         result.append((spec, path.resolve()))
     # No serial connection or device writes until every local input passes.
     for spec, path in result:
@@ -207,6 +212,23 @@ class WireReader:
     def __init__(self, connection: serial.Serial) -> None:
         self.connection = connection
         self.buffer = bytearray()
+        self.boot_ready_events = 0
+        self.resume_events = 0
+        self.audit_tail = b""
+
+    def observe(self, block: bytes) -> None:
+        markers = (b"P4_CONSOLE_OS READY board=", b"P4_USB_CONTENT READY resume=1 reboot=0")
+        combined = self.audit_tail + block
+        self.boot_ready_events += combined.count(markers[0])
+        self.resume_events += combined.count(markers[1])
+        # Independent tails prevent recounting a shorter marker retained in a
+        # longer tail. Keep only incomplete suffixes of either marker.
+        suffix = 0
+        for marker in markers:
+            for length in range(1, len(marker)):
+                if combined.endswith(marker[:length]): suffix = max(suffix, length)
+        self.audit_tail = combined[-suffix:] if suffix else b""
+
 
     def frame(self, marker: bytes, frame_bytes: int, timeout: float,
               startup_manifest: bytes | None = None) -> bytes:
@@ -227,10 +249,11 @@ class WireReader:
                 del self.buffer[:-256]
             block = self.connection.read(max(1, self.connection.in_waiting))
             if block:
+                self.observe(block)
                 self.buffer.extend(block)
             else:
                 time.sleep(0.005)
-        raise TransferError(f"badge did not return {marker.decode('ascii')} in time")
+        raise TransferTimeout(f"badge did not return {marker.decode('ascii')} in time")
 
 
 def status_name(status: int) -> str:
@@ -250,14 +273,14 @@ def wait_for_content_ready(
         return False
 
 
-def install_content(spec: ContentSpec, path: Path, port: str) -> None:
+def install_content(spec: ContentSpec, path: Path, port: str, *, connection=None, reader=None) -> None:
     print(f"P4_H1 validating kind={spec.command} path={path}")
     digest = validate_content(path, spec)
     manifest = make_manifest(spec.kind, spec.bytes, digest)
 
-    with open_port(port) as connection:
-        print(f"P4_H1 connecting port={port} baud={IDLE_BAUD}")
-        reader = WireReader(connection)
+    with (open_port(port) if connection is None else nullcontext(connection)) as connection:
+        print(f"P4_H1 using port={port} baud={IDLE_BAUD}")
+        reader = reader if reader is not None else WireReader(connection)
         time.sleep(0.25)
         write_all(connection, manifest)
         # Already-installed content is re-hashed before the badge reports that
@@ -325,9 +348,9 @@ def install_content(spec: ContentSpec, path: Path, port: str) -> None:
         )
         if not wait_for_content_ready(connection, reader):
             raise TransferError(
-                "content activated, but the reboot log did not confirm it before timeout"
+                "content activated, but the transfer service did not return to ready before timeout"
             )
-        print(f"P4_H1 PASS rebooted=1 transfer_service=ready kind={spec.command} hash=verified")
+        print(f"P4_H1 PASS transfer_service=ready kind={spec.command} hash=verified")
 
 
 def parser() -> argparse.ArgumentParser:
@@ -347,10 +370,10 @@ def parser() -> argparse.ArgumentParser:
             "input", nargs="?", type=Path, default=spec.default_path
         )
         content.add_argument("--port")
-    arena = subparsers.add_parser("game-changers-ai", help="install the verified Freedoom + Pure Hell + DWANGO 5 bundle and notices")
+    arena = subparsers.add_parser("game-changers-ai", help="install the verified Freedoom + Pure Hades + DWANGO 5 bundle and notices")
     arena.add_argument("input", nargs="?", type=Path, default=CONTENT_SPECS["freedoom2"].default_path)
     arena.add_argument("--dwango", type=Path, default=CONTENT_SPECS["dwango5"].default_path.parent)
-    arena.add_argument("--pack", type=Path, default=CONTENT_SPECS["pure-hell"].default_path.parent)
+    arena.add_argument("--pack", type=Path, default=CONTENT_SPECS["pure-hades"].default_path.parent)
     arena.add_argument("--port")
     chex = subparsers.add_parser(
         "chex",
@@ -370,23 +393,41 @@ def parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = parser().parse_args(argv)
+    reader = None
     try:
         arena_files = arena_inputs(args.input, args.pack, args.dwango) if args.kind == "game-changers-ai" else []
         port = args.port or detect_port()
         if arena_files:
-            for spec, path in arena_files:
-                install_content(spec, path, port)
+            files = arena_files
         elif args.kind == "chex":
-            install_content(
-                CONTENT_SPECS["chex-wad"], args.wad.resolve(), port
-            )
-            install_content(
-                CONTENT_SPECS["chex-deh"], args.deh.resolve(), port
-            )
+            files = [(CONTENT_SPECS["chex-wad"], args.wad.resolve()),
+                     (CONTENT_SPECS["chex-deh"], args.deh.resolve())]
         else:
-            spec = CONTENT_SPECS[args.kind]
-            install_content(spec, args.input.resolve(), port)
+            files = [(CONTENT_SPECS[args.kind], args.input.resolve())]
+        # Preflight the complete batch before opening native USB. Reopening
+        # between files can itself reset the Tab5 on this host.
+        for spec, path in files:
+            validate_content(path, spec)
+        with open_port(port) as connection:
+            reader = WireReader(connection)
+            for spec, path in files:
+                for attempt in range(2):
+                    try:
+                        install_content(spec, path, port, connection=connection, reader=reader)
+                        break
+                    except TransferTimeout:
+                        # Never replay an ambiguous chunk. Wait until the
+                        # device has closed/discarded staging and is idle, then
+                        # retry the exact file once on this same connection.
+                        if attempt or not wait_for_content_ready(connection, reader, 30.0):
+                            raise
+                        print(f"P4_H1 RETRY kind={spec.command} device_ready=1 connection_reused=1")
+            print(f"P4_H1 BATCH PASS files={len(files)} connections=1 "
+                  f"boot_ready_events={reader.boot_ready_events} resume_events={reader.resume_events}")
     except (OSError, serial.SerialException, TransferError) as error:
+        if reader is not None:
+            print(f"P4_H1 BATCH FAILED boot_ready_events={reader.boot_ready_events} "
+                  f"resume_events={reader.resume_events}", file=sys.stderr)
         print(f"P4_H1 FAILED reason={error}", file=sys.stderr)
         return 2
     return 0

@@ -28,4 +28,4 @@ USB data connectivity does not imply host-power capability. A valid host fixture
 
 ## Recovery
 
-Prefer a targeted app/partition write over an erase and read back the exact written range for a hash comparison. If recovery is required, require the live identity hash to match the backup, identify the exact flash offsets from the saved partition table, and make restoration a separate, explicit operation.
+Prefer a targeted app/partition write over an erase. Routine authorized Tab5 successors use device checksum verification; full readback is optional for recovery or diagnostics. Other boards keep their exact installer verification contract. If recovery is required, require the live identity hash to match the backup, identify the exact flash offsets from the saved partition table, and make restoration a separate, explicit operation.

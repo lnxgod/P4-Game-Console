@@ -96,7 +96,7 @@ coverage/
 local-data/lord-upstream/
 local-data/realm/
 
-# External Doom game data stays local; the Pure Hell exception is below.
+# External Doom game data stays local; the Pure Hades exception is below.
 *.[Ww][Aa][Dd]
 local-data/doom/chex.deh
 local-data/doom/freedoom-0.13.0-release/
@@ -122,5 +122,5 @@ local-data/quake/id1/pak0.pak
 local-data/quake/id1/config.cfg
 hardware/backups/.waveshare-readback.*
 
-# Owner-authorized original Pure Hell maps; all other WADs remain local.
-!/game-data/pure-hell/v0.5/PUREHELL.WAD
+# Owner-authorized original Pure Hades maps; all other WADs remain local.
+!/game-data/pure-hades/v0.6/PUREHADES.WAD

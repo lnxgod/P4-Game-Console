@@ -1464,6 +1464,24 @@ esp_err_t platform_game_storage_init(void)
 #endif
 }
 
+esp_err_t platform_game_storage_content_changed(void)
+{
+    if (!s_initialized || !lock_storage()) return ESP_ERR_INVALID_STATE;
+    if (s_maintenance || !game_storage_model_files_available(&s_model)
+#if P4_GAME_STORAGE_BACKGROUND_CONTENT_SCAN
+        || s_content_validation_running
+#endif
+    ) {
+        unlock_storage();
+        return ESP_ERR_INVALID_STATE;
+    }
+    s_model.content = GAME_STORAGE_CONTENT_UNKNOWN;
+    if (s_file_mutations != UINT32_MAX) ++s_file_mutations;
+    s_last_error = ESP_OK;
+    unlock_storage();
+    return ESP_OK;
+}
+
 esp_err_t platform_game_storage_refresh(void)
 {
     if (!s_initialized || !lock_storage()) {

@@ -55,3 +55,16 @@ if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
 endif()
 add_test(NAME file_transfer_sync_failure COMMAND test_file_transfer_failures sync)
 add_test(NAME file_transfer_transaction_namespace COMMAND test_file_transfer_failures namespace)
+
+add_executable(test_content_transfer_batch test_content_transfer_batch.c
+    ../src/content_transfer.c stubs/sha256.c)
+target_include_directories(test_content_transfer_batch PRIVATE
+    stubs ../include ../../platform_game_storage/include)
+target_compile_features(test_content_transfer_batch PRIVATE c_std_11)
+target_compile_definitions(test_content_transfer_batch PRIVATE
+    PACK_ROOT="${CMAKE_CURRENT_SOURCE_DIR}/../../../game-data/pure-hades/v0.6")
+target_compile_options(test_content_transfer_batch PRIVATE
+    -Wall -Wextra -Wconversion -Wshadow -Werror
+    -fsanitize=address,undefined -fno-omit-frame-pointer)
+target_link_options(test_content_transfer_batch PRIVATE -fsanitize=address,undefined)
+add_test(NAME content_transfer_batch COMMAND test_content_transfer_batch)

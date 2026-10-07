@@ -34,7 +34,7 @@ extern "C" {
 #define PLATFORM_GAME_STORAGE_FREEDOOM2_WAD_PATH "/game-data/FREEDOOM2.WAD"
 #define PLATFORM_GAME_STORAGE_FREEDOOM2_WAD_BYTES UINT64_C(28787748)
 #define PLATFORM_GAME_STORAGE_DWANGO5_WAD_BYTES UINT64_C(2109396)
-#define PLATFORM_GAME_STORAGE_PUREHELL_WAD_BYTES UINT64_C(875026)
+#define PLATFORM_GAME_STORAGE_PUREHADES_WAD_BYTES UINT64_C(2313392)
 
 typedef enum {
     PLATFORM_GAME_STORAGE_DOOM_TITLE_DOOM = 0,
@@ -133,6 +133,9 @@ esp_err_t platform_game_storage_init(void);
 
 /** Refresh the cached game-file inventory after an ownership generation. */
 esp_err_t platform_game_storage_refresh(void);
+
+/** Invalidate content caches after a verified app-owned USB content write. */
+esp_err_t platform_game_storage_content_changed(void);
 
 /**
  * Start exact Doom/Chex validation without blocking the Console OS task.

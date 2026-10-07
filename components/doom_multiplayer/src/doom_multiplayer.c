@@ -135,7 +135,7 @@ bool p4_doom_mp_setup_valid(const p4_doom_mp_setup_t *setup)
 {
     if (setup != NULL && setup->game == P4_DOOM_MP_GAME_GAME_CHANGERS_AI) {
         return setup->mode == P4_DOOM_MP_MODE_ALTDEATH &&
-            setup->episode == 1 && setup->map >= 1 && setup->map <= 26 &&
+            setup->episode == 1 && setup->map >= 1 && setup->map <= 29 &&
             setup->skill >= 1 && setup->skill <= P4_DOOM_MP_MAX_SKILL &&
             setup->no_monsters && !setup->fast_monsters &&
             !setup->respawn_monsters && setup->time_limit_minutes == 0;

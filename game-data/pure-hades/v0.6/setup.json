@@ -1,0 +1,48 @@
+{
+  "project": "Pure Hades",
+  "version": "0.6",
+  "wad": "PUREHADES.WAD",
+  "wad_sha256": "ab027fbeebe20787214a3bc1239bba73271030dc284cd108c20ae8bc73752fc8",
+  "base_game": "Freedoom Phase 2",
+  "base_iwad_filename": "freedoom2.wad",
+  "tested_iwad_version": "0.13.0",
+  "tested_engine": "Chocolate Doom 3.1.1",
+  "map_numbers": [
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "map_names": [
+    "Shotguns",
+    "Rockets",
+    "Plasma",
+    "Pure Chaos",
+    "Double-Barrel Finale"
+  ],
+  "setup_document": "README.md",
+  "license_index": "LICENSE",
+  "commands_are_examples_not_automatic_actions": true,
+  "single_player_command_template": "chocolate-doom -iwad freedoom2.wad -file PUREHADES.WAD -warp MAP_NUMBER",
+  "private_host_command_template": "chocolate-doom -iwad freedoom2.wad -file PUREHADES.WAD -server -privateserver -altdeath -warp MAP_NUMBER",
+  "client_command_template": "chocolate-doom -iwad freedoom2.wad -file PUREHADES.WAD -connect HOST",
+  "rotation": {
+    "native_engine_tested": [
+      "MAP01->MAP02",
+      "MAP02->MAP03",
+      "MAP03->MAP04",
+      "MAP04->MAP05",
+      "MAP05->Freedoom MAP06"
+    ],
+    "UMAPINFO_declared": [
+      "MAP01->MAP02",
+      "MAP02->MAP03",
+      "MAP03->MAP04",
+      "MAP04->MAP05",
+      "MAP05->MAP01"
+    ],
+    "UMAPINFO_runtime_tested": false,
+    "vanilla_fallback": "After MAP05, host a new match using -warp 1; select individual maps with -warp 1 through -warp 5."
+  }
+}

@@ -7,7 +7,7 @@ game, work on a port, or improve the shared platform.
 
 **Console OS** is the launcher and system platform, currently branded
 *Game Changers AI OS* on the device. **Game Changers AI multiplayer arena** is
-one Doom-based game mode that runs inside it. **Pure Hell** is a map pack used
+one Doom-based game mode that runs inside it. **Pure Hades** is a map pack used
 by that mode. Each has its own documentation below.
 
 ## What is in this monorepo?
@@ -81,12 +81,12 @@ folders or default-installed games.
 | [Doom](docs/games/doom/README.md) | OS-integrated engine, controls, MIDI/effects and two-player adapter | Verified v1.9 shareware is the default setup data; WAD stays local |
 | [Chex Quest](docs/games/chex-quest/README.md) | Optional title using the integrated Doom engine | Explicit SD opt-in; verified WAD and patch required |
 | [Game Changers AI arena](docs/games/arena/README.md) | Doom-based 2–4 player Wi-Fi mode with arena voting and visit scores | Optional exact content bundle; hardware multiplayer/cadence acceptance pending |
-| [Pure Hell](game-data/pure-hell/README.md) | Original Shotguns and Rockets arenas with MIDI and notices | Map pack for the arena mode; committed with the owner's authorization |
+| [Pure Hades](game-data/pure-hades/README.md) | Original Shotguns and Rockets arenas with MIDI and notices | Map pack for the arena mode; committed with the owner's authorization |
 | [Wacky Wheels](scripts/wacky/README.md) | Five race courses, championship, Duck Shoot, MIDI/effects and new 2–4 racer sprint | Experimental local port; absent from default catalog, source/data redistribution and device acceptance unresolved |
 | [Quake](ports/quake/README.md) | Pinned engine, SDL3 host adapter and retained OS adapter | Dormant: not linked or exposed by current OS; local shareware PAK required |
 
 Downloaded WADs/PAKs and Wacky upstream data stay in ignored local storage.
-The original Pure Hell pack has its own notices and a narrow publication
+The original Pure Hades pack has its own notices and a narrow publication
 exception. See [content handling](docs/CONTENT_LIBRARY.md) and
 [third-party licensing](third_party/README.md); this repository's visibility
 does not change third-party rights.
@@ -137,7 +137,7 @@ python3 scripts/p4-usb-content.py doom --port /dev/cu.usbmodem...
 
 The transfer tools validate content before activation. Keep downloaded game data,
 firmware binaries, and factory backups in ignored local storage. The committed
-original Pure Hell pack has its own notices; that does not permit committing
+Pure Hades pack has its own notices; that does not permit committing
 commercial Doom data. See the [content library](docs/CONTENT_LIBRARY.md).
 
 ## Make a game or change the console
@@ -214,7 +214,7 @@ apps/           Console OS, diagnostics and accessory firmware
 components/     Shared APIs, engine adapters, services and board support
 games/          Native game/utility sources, manifests, art and per-title READMEs
 ports/          Engine port adapters, including the Quake host runner
-game-data/      Original Pure Hell pack and its notices
+game-data/      Original Pure Hades pack and its notices
 docs/           SDK, game/arena guides, Tab5 setup and design contracts
 hardware/       Board profiles, installation evidence and backup metadata
 scripts/        Setup, build, package, upload, verification and recovery tools

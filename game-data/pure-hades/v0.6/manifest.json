@@ -1,0 +1,461 @@
+{
+  "title": "Pure Hades",
+  "version": "0.6",
+  "edition": "Shareable licensed community MIDI edition",
+  "file": "PUREHADES.WAD",
+  "sha256": "ab027fbeebe20787214a3bc1239bba73271030dc284cd108c20ae8bc73752fc8",
+  "bytes": 2313392,
+  "format": "Classic Doom II-format PWAD",
+  "requirements": {
+    "base_iwad": "Official Freedoom Phase 2 0.13.0 freedoom2.wad",
+    "iwad_sha256": "a8772e088847032510d97ba2312406a6998f21cbab44d4ff10696faa9c0ecd4b",
+    "maps": "MAP01-MAP05",
+    "recommended_rotation_engine": "UMAPINFO-compatible Doom II engine",
+    "vanilla_note": "Chocolate Doom plays all five maps; its MAP05 exit continues into the base IWAD MAP06."
+  },
+  "launch_examples": [
+    "chocolate-doom -iwad freedoom2.wad -file PUREHADES.WAD -warp 1",
+    "chocolate-doom -iwad freedoom2.wad -file PUREHADES.WAD -warp 5"
+  ],
+  "maps": [
+    {
+      "marker": "MAP01",
+      "name": "Shotguns",
+      "things": {
+        "1": 1,
+        "11": 8,
+        "82": 8,
+        "2001": 8,
+        "2006": 1,
+        "2011": 8,
+        "2012": 16,
+        "2049": 16
+      },
+      "lump_sha256": {
+        "THINGS": "aecbabbc29dc6c0b6d5a782233e10f51894cda792805e234b106449d69533c26",
+        "LINEDEFS": "6bcf7ab088d58d98c61ac5dc1151415c4ae468c6849537468f92e4695477e28d",
+        "SIDEDEFS": "723a461391103f5b7213c3aabe4fcdd07a56bf633ec2c54926bfc48c3401ca29",
+        "VERTEXES": "2329e26355815899df349c4d8b7826b30154f6525e8b25422cc21f90d305a2b7",
+        "SEGS": "69e04cd7e07d8c0188707d360cb04ba3fe329462ef9e744f15ddf9e0f0959fcf",
+        "SSECTORS": "a19c9642c08315eb074f5dc05c5627df9bb98b954bfb31496e1cef6d881b4e51",
+        "NODES": "be462c4f2f3d35fefdc8f59402b3449a239505bbf4d20e7b7f5cc726f35afae3",
+        "SECTORS": "832ec794a940a9ebad003de458549469b42f2a89f053cef5f40a638ba1b6e277",
+        "REJECT": "6a3a9301bb8dd782bb5c170bedfa73e9e7c60235e6e1840f14bd14b812127ef2",
+        "BLOCKMAP": "f8c63b5ad7147329c10b1c79d74ccfa5c1e3380b769844ee44b17bd47bc31fd3"
+      },
+      "bfg_four_switch_gate": true,
+      "hidden_exit": {
+        "x": -96,
+        "y": 1088,
+        "face": "north",
+        "special": 11
+      },
+      "next_map_with_umapinfo": "MAP02",
+      "next_map_vanilla": "MAP02"
+    },
+    {
+      "marker": "MAP02",
+      "name": "Rockets",
+      "things": {
+        "1": 1,
+        "11": 8,
+        "2003": 16,
+        "2006": 1,
+        "2011": 8,
+        "2012": 16,
+        "2046": 16
+      },
+      "lump_sha256": {
+        "THINGS": "13dc66cff0411e7c9110fe1f8914b59ce15534e1b57ad3f036c052df6fa2dbe8",
+        "LINEDEFS": "6bcf7ab088d58d98c61ac5dc1151415c4ae468c6849537468f92e4695477e28d",
+        "SIDEDEFS": "723a461391103f5b7213c3aabe4fcdd07a56bf633ec2c54926bfc48c3401ca29",
+        "VERTEXES": "2329e26355815899df349c4d8b7826b30154f6525e8b25422cc21f90d305a2b7",
+        "SEGS": "69e04cd7e07d8c0188707d360cb04ba3fe329462ef9e744f15ddf9e0f0959fcf",
+        "SSECTORS": "a19c9642c08315eb074f5dc05c5627df9bb98b954bfb31496e1cef6d881b4e51",
+        "NODES": "be462c4f2f3d35fefdc8f59402b3449a239505bbf4d20e7b7f5cc726f35afae3",
+        "SECTORS": "832ec794a940a9ebad003de458549469b42f2a89f053cef5f40a638ba1b6e277",
+        "REJECT": "6a3a9301bb8dd782bb5c170bedfa73e9e7c60235e6e1840f14bd14b812127ef2",
+        "BLOCKMAP": "f8c63b5ad7147329c10b1c79d74ccfa5c1e3380b769844ee44b17bd47bc31fd3"
+      },
+      "bfg_four_switch_gate": true,
+      "hidden_exit": {
+        "x": -96,
+        "y": 1088,
+        "face": "north",
+        "special": 11
+      },
+      "next_map_with_umapinfo": "MAP03",
+      "next_map_vanilla": "MAP03"
+    },
+    {
+      "marker": "MAP03",
+      "name": "Plasma",
+      "things": {
+        "1": 1,
+        "11": 8,
+        "17": 16,
+        "2004": 16,
+        "2006": 1,
+        "2011": 8,
+        "2012": 16
+      },
+      "lump_sha256": {
+        "THINGS": "2d1035918ab6e1b5a876e68f8fbe77e4e8ed3573cd4da6a69e701ac89275301e",
+        "LINEDEFS": "6bcf7ab088d58d98c61ac5dc1151415c4ae468c6849537468f92e4695477e28d",
+        "SIDEDEFS": "723a461391103f5b7213c3aabe4fcdd07a56bf633ec2c54926bfc48c3401ca29",
+        "VERTEXES": "2329e26355815899df349c4d8b7826b30154f6525e8b25422cc21f90d305a2b7",
+        "SEGS": "69e04cd7e07d8c0188707d360cb04ba3fe329462ef9e744f15ddf9e0f0959fcf",
+        "SSECTORS": "a19c9642c08315eb074f5dc05c5627df9bb98b954bfb31496e1cef6d881b4e51",
+        "NODES": "be462c4f2f3d35fefdc8f59402b3449a239505bbf4d20e7b7f5cc726f35afae3",
+        "SECTORS": "832ec794a940a9ebad003de458549469b42f2a89f053cef5f40a638ba1b6e277",
+        "REJECT": "6a3a9301bb8dd782bb5c170bedfa73e9e7c60235e6e1840f14bd14b812127ef2",
+        "BLOCKMAP": "f8c63b5ad7147329c10b1c79d74ccfa5c1e3380b769844ee44b17bd47bc31fd3"
+      },
+      "bfg_four_switch_gate": true,
+      "hidden_exit": {
+        "x": -96,
+        "y": 1088,
+        "face": "north",
+        "special": 11
+      },
+      "next_map_with_umapinfo": "MAP04",
+      "next_map_vanilla": "MAP04"
+    },
+    {
+      "marker": "MAP04",
+      "name": "Pure Chaos",
+      "things": {
+        "1": 1,
+        "11": 8,
+        "17": 8,
+        "82": 8,
+        "2001": 8,
+        "2002": 4,
+        "2003": 4,
+        "2004": 4,
+        "2005": 4,
+        "2006": 1,
+        "2011": 8,
+        "2012": 16,
+        "2046": 8,
+        "2048": 4,
+        "2049": 16
+      },
+      "lump_sha256": {
+        "THINGS": "84434e78429d28b31a385eb2e2b44f762a357b43fdf8db89d141ed4b0808e4ef",
+        "LINEDEFS": "6bcf7ab088d58d98c61ac5dc1151415c4ae468c6849537468f92e4695477e28d",
+        "SIDEDEFS": "723a461391103f5b7213c3aabe4fcdd07a56bf633ec2c54926bfc48c3401ca29",
+        "VERTEXES": "2329e26355815899df349c4d8b7826b30154f6525e8b25422cc21f90d305a2b7",
+        "SEGS": "69e04cd7e07d8c0188707d360cb04ba3fe329462ef9e744f15ddf9e0f0959fcf",
+        "SSECTORS": "a19c9642c08315eb074f5dc05c5627df9bb98b954bfb31496e1cef6d881b4e51",
+        "NODES": "be462c4f2f3d35fefdc8f59402b3449a239505bbf4d20e7b7f5cc726f35afae3",
+        "SECTORS": "832ec794a940a9ebad003de458549469b42f2a89f053cef5f40a638ba1b6e277",
+        "REJECT": "6a3a9301bb8dd782bb5c170bedfa73e9e7c60235e6e1840f14bd14b812127ef2",
+        "BLOCKMAP": "f8c63b5ad7147329c10b1c79d74ccfa5c1e3380b769844ee44b17bd47bc31fd3"
+      },
+      "bfg_four_switch_gate": true,
+      "hidden_exit": {
+        "x": -96,
+        "y": 1088,
+        "face": "north",
+        "special": 11
+      },
+      "next_map_with_umapinfo": "MAP05",
+      "next_map_vanilla": "MAP05"
+    },
+    {
+      "marker": "MAP05",
+      "name": "Double-Barrel Finale",
+      "things": {
+        "1": 1,
+        "11": 8,
+        "82": 16,
+        "2011": 8,
+        "2012": 16,
+        "2049": 16
+      },
+      "lump_sha256": {
+        "THINGS": "a754e945508cf146f7c5b40eae5bfb24a50c1f0c6c3807373d90b4d20b19f916",
+        "LINEDEFS": "10592e3296a5dd277f9712bd83ed303aefbf22ba95e8d591907642238104810b",
+        "SIDEDEFS": "2aa8aca327ff98c4808b717a4364885acc77b6a84a67d5ede0a7c2550fa74a5e",
+        "VERTEXES": "2329e26355815899df349c4d8b7826b30154f6525e8b25422cc21f90d305a2b7",
+        "SEGS": "69e04cd7e07d8c0188707d360cb04ba3fe329462ef9e744f15ddf9e0f0959fcf",
+        "SSECTORS": "a19c9642c08315eb074f5dc05c5627df9bb98b954bfb31496e1cef6d881b4e51",
+        "NODES": "be462c4f2f3d35fefdc8f59402b3449a239505bbf4d20e7b7f5cc726f35afae3",
+        "SECTORS": "680e618f98482750d88148387297a8836d6a2cced69fb2b91663361620c4dee1",
+        "REJECT": "6a3a9301bb8dd782bb5c170bedfa73e9e7c60235e6e1840f14bd14b812127ef2",
+        "BLOCKMAP": "f8c63b5ad7147329c10b1c79d74ccfa5c1e3380b769844ee44b17bd47bc31fd3"
+      },
+      "bfg_four_switch_gate": false,
+      "hidden_exit": {
+        "x": -96,
+        "y": 1088,
+        "face": "north",
+        "special": 11
+      },
+      "next_map_with_umapinfo": "MAP01",
+      "next_map_vanilla": "MAP06"
+    }
+  ],
+  "music": [
+    {
+      "map": "MAP01",
+      "filename": "E1M8 Myrgharok - Escaping the Darkness.mid",
+      "title": "Escaping the Darkness",
+      "author": "Myrgharok",
+      "lump": "D_RUNNIN",
+      "sha256": "9fd0ac8a64f3261c2860a5ac581a756534f6c383fb77bac41754ef845a9339e0",
+      "bytes": 15236,
+      "license": "CC-BY-SA-4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "source_url": "https://opengameart.org/content/ultimate-midi-pack",
+      "edits": "None to MIDI content; assigned to map music lump",
+      "midi": {
+        "format": 1,
+        "tracks": 24,
+        "ppq": 120,
+        "seconds": 121.263,
+        "note_on_events": 2288,
+        "gm_programs_zero_based": [
+          0,
+          29,
+          30,
+          34,
+          45,
+          46,
+          51,
+          52,
+          80,
+          81,
+          94
+        ],
+        "embedded_text": [
+          "Escaping the Darkness",
+          "Copyright (c) 2021 Myrgharok. Some rights reserved.",
+          "TheUltimateDoomer666\n",
+          "Balanced for the following sound sets:\n",
+          "* Microsoft GS Wavetable Synth\n",
+          "* Roland Sound Canvas VA - SC-55 map\n",
+          "MIDI last updated: 2021/04/25 00:13 AEST\n",
+          "Halo",
+          "Bass",
+          "Guitar L",
+          "Guitar R",
+          "Sawtooth",
+          "Choir L",
+          "Choir C",
+          "Choir R",
+          "Guitar lead L",
+          "Guitar lead R",
+          "SynthStrings 2",
+          "Pizzicato Strings",
+          "Harp",
+          "Square",
+          "Harp (2)",
+          "Kick",
+          "Snare",
+          "Toms",
+          "Cymbals",
+          "\"Escaping the Darkness\"",
+          "Copyright (c) 2021",
+          "Myrgharok",
+          "Some Rights Reserved"
+        ]
+      }
+    },
+    {
+      "map": "MAP02",
+      "filename": "E3M4 NeilJohnRips - Siege Mentality.mid",
+      "title": "Siege Mentality",
+      "author": "NeilJohnRips",
+      "lump": "D_STALKS",
+      "sha256": "84a107bb608e9d3e3653e00cbf088932ee0095b72fbf6c90e4b9966b1f039967",
+      "bytes": 54692,
+      "license": "CC-BY-SA-4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "source_url": "https://opengameart.org/content/ultimate-midi-pack",
+      "edits": "None to MIDI content; assigned to map music lump",
+      "midi": {
+        "format": 1,
+        "tracks": 12,
+        "ppq": 120,
+        "seconds": 302.0,
+        "note_on_events": 6979,
+        "gm_programs_zero_based": [
+          0,
+          28,
+          29,
+          30,
+          34,
+          43,
+          48,
+          81
+        ],
+        "embedded_text": [
+          "Siege Mentality",
+          "By NeilJohnRips",
+          "AKA Neil John",
+          "AKA Neil Forshaw",
+          "AKA Neil Forshaw"
+        ]
+      }
+    },
+    {
+      "map": "MAP03",
+      "filename": "E4M2 Sego - A Compact Hell.mid",
+      "title": "A Compact Hell",
+      "author": "Sego",
+      "lump": "D_COUNTD",
+      "sha256": "7180c35caa81f691eb2956b307c3f6a4300e92317c00dd00298b55e3df06efbb",
+      "bytes": 25510,
+      "license": "CC-BY-SA-4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "source_url": "https://opengameart.org/content/ultimate-midi-pack",
+      "edits": "None to MIDI content; assigned to map music lump",
+      "midi": {
+        "format": 1,
+        "tracks": 12,
+        "ppq": 480,
+        "seconds": 136.748,
+        "note_on_events": 2817,
+        "gm_programs_zero_based": [
+          3,
+          29,
+          30,
+          36,
+          45,
+          46,
+          52,
+          80,
+          81
+        ],
+        "embedded_text": []
+      }
+    },
+    {
+      "map": "MAP04",
+      "filename": "E4M3 Lee Jackson - Ant Farm Melee.mid",
+      "title": "Ant Farm Melee",
+      "author": "Lee Jackson, ASCAP",
+      "lump": "D_BETWEE",
+      "sha256": "b8b7521dcc97154c02a3263954284a0ddd22d8e8a66a37c566ee37198d0cb834",
+      "bytes": 56527,
+      "license": "CC-BY-SA-4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "source_url": "https://opengameart.org/content/ultimate-midi-pack",
+      "edits": "None to MIDI content; assigned to map music lump",
+      "midi": {
+        "format": 1,
+        "tracks": 10,
+        "ppq": 960,
+        "seconds": 176.667,
+        "note_on_events": 6936,
+        "gm_programs_zero_based": [
+          0,
+          11,
+          18,
+          29,
+          30,
+          34,
+          48,
+          98
+        ],
+        "embedded_text": [
+          "Drums",
+          "Organ 2",
+          "Strings",
+          "Overdrive Guitar",
+          "Distortion Guitar",
+          "Bass",
+          "Rhythm Guitar",
+          "Crystal",
+          "Vibraphone"
+        ]
+      }
+    },
+    {
+      "map": "MAP05",
+      "filename": "E2M8 Manniacc - Dethrone the Tyrant.mid",
+      "title": "Dethrone the Tyrant",
+      "author": "Manniacc",
+      "lump": "D_DOOM",
+      "sha256": "b786e98c5783f6cbaf4221153acd06fb0e4a51afe9b65ffb3d9d277d1c508c9e",
+      "bytes": 41389,
+      "license": "CC-BY-SA-4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "source_url": "https://opengameart.org/content/ultimate-midi-pack",
+      "edits": "None to MIDI content; assigned to map music lump",
+      "midi": {
+        "format": 1,
+        "tracks": 14,
+        "ppq": 960,
+        "seconds": 214.857,
+        "note_on_events": 5943,
+        "gm_programs_zero_based": [
+          0,
+          14,
+          19,
+          29,
+          30,
+          34,
+          48,
+          52,
+          102,
+          116,
+          119
+        ],
+        "embedded_text": [
+          "untitled",
+          "rythmgtr",
+          "leadgtr",
+          "bass",
+          "drums",
+          "organ",
+          "bells",
+          "taiko",
+          "reverse cymbal",
+          "echoes",
+          "choir",
+          "string ensemble",
+          "Track 12",
+          "Track 13"
+        ]
+      }
+    }
+  ],
+  "music_edits": "MIDI bytes unchanged; assigned to new map music lumps. MAP01/04 tracks also used for title/intermission.",
+  "licenses": {
+    "map_geometry_and_level_design": "CC-BY-SA-4.0",
+    "python_source": "MIT",
+    "music": "CC-BY-SA-4.0",
+    "Freedoom_font-derived_title_graphics": "BSD-3-Clause"
+  },
+  "provenance": "Remix of a new reconstruction from Will\u2019s rough 2012 sketch and memory. The historical Pure Hell WAD was not recovered. Previous Pure Hell releases remain separate.",
+  "repository": "https://github.com/lnxgod/pure-hades",
+  "release_date": "2026-10-06",
+  "entry_document": "README.md",
+  "deathmatch": {
+    "max_players_tested": 4,
+    "start_positions_per_map": 8,
+    "recommended_mode": "alternate deathmatch / -altdeath",
+    "pistol_and_fist": "standard spawn inventory, not placeable pickups"
+  },
+  "progression": {
+    "native_engine_tested": [
+      "MAP01->MAP02",
+      "MAP02->MAP03",
+      "MAP03->MAP04",
+      "MAP04->MAP05",
+      "MAP05->Freedoom MAP06"
+    ],
+    "UMAPINFO_declared": [
+      "MAP01->MAP02",
+      "MAP02->MAP03",
+      "MAP03->MAP04",
+      "MAP04->MAP05",
+      "MAP05->MAP01"
+    ],
+    "UMAPINFO_runtime_tested": false,
+    "vanilla_fallback": "After MAP05, host a new match using -warp 1; select individual maps with -warp 1 through -warp 5."
+  }
+}

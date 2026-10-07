@@ -17,7 +17,7 @@ platform in `apps/console_os` and `components`. Native games live in `games`;
 engine ports and experimental work have their own entries in the root README.
 The **Game Changers AI multiplayer arena** is a Doom-based game mode inside
 the OS, documented in `docs/GAME_CHANGERS_AI_DOOM.md`. It is not the whole
-platform. Pure Hell is one of its map packs. Do not rename game IDs, packages,
+platform. Pure Hades is one of its map packs. Do not rename game IDs, packages,
 saves or the OS's current branding merely to clarify these documentation names.
 
 ## Choose the workflow

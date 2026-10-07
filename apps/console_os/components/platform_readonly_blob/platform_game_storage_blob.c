@@ -74,8 +74,8 @@ static bool resolve_path(
         return true;
     }
     if (context->title == PLATFORM_GAME_STORAGE_DOOM_TITLE_GAME_CHANGERS_AI &&
-        strcmp(path,"purehell.wad")==0) {
-        *size_bytes=PLATFORM_GAME_STORAGE_PUREHELL_WAD_BYTES;
+        strcmp(path,"purehades.wad")==0) {
+        *size_bytes=PLATFORM_GAME_STORAGE_PUREHADES_WAD_BYTES;
         return true;
     }
     if (context->title == PLATFORM_GAME_STORAGE_DOOM_TITLE_GAME_CHANGERS_AI &&
@@ -121,7 +121,7 @@ static const uint8_t *loaded_data_for_path(
     if (context->title == PLATFORM_GAME_STORAGE_DOOM_TITLE_GAME_CHANGERS_AI &&
         strcmp(path,"freedoom2.wad")==0) return &s_arena_marker[P4_GCA_BASE];
     if (context->title == PLATFORM_GAME_STORAGE_DOOM_TITLE_GAME_CHANGERS_AI &&
-        strcmp(path,"purehell.wad")==0) return &s_arena_marker[P4_GCA_PWAD];
+        strcmp(path,"purehades.wad")==0) return &s_arena_marker[P4_GCA_PWAD];
     if (context->title == PLATFORM_GAME_STORAGE_DOOM_TITLE_GAME_CHANGERS_AI &&
         strcmp(path,"dwango5.wad")==0) return &s_arena_marker[P4_GCA_DWANGO];
     if (context->title == PLATFORM_GAME_STORAGE_DOOM_TITLE_DOOM &&

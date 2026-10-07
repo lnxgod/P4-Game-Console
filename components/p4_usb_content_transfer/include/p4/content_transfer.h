@@ -29,6 +29,7 @@ typedef struct {
     p4_content_transfer_state_t state;
     uint32_t received_bytes;
     uint32_t expected_bytes;
+    uint32_t generation; /* successful activations; storage cache invalidation */
     uint8_t progress_percent;
     uint8_t last_status;
     bool ready;
@@ -65,7 +66,8 @@ void p4_content_transfer_set_available(bool available);
 
 /**
  * Feed one raw H1 receive block. True means an accepted transfer owns the
- * block and multiplayer framing must remain suspended until reboot.
+ * block and multiplayer framing must remain suspended until the service is idle.
+ * Successful or failed files return to idle on this connection without reboot.
  */
 bool p4_content_transfer_consume(
     const uint8_t *bytes, size_t bytes_length);

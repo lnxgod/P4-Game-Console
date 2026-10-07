@@ -108,12 +108,22 @@ def prepare(auth, unit):
     return identity, recovery, artifacts, predecessor
 
 
+def flash_range_matches(esp, offset, data, verification):
+    if verification == 'device-checksum':
+        # This verifies flash in place; it does not transfer the app back over USB.
+        return esp.flash_md5sum(offset, len(data)) == hashlib.md5(data).hexdigest()
+    require(verification == 'full-readback', 'unsupported flash verification method')
+    return esp.read_flash(offset, len(data)) == data
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--authorization', type=pathlib.Path, required=True)
     parser.add_argument('--authorization-sha256', required=True)
     parser.add_argument('--unit', choices=('A', 'B'), required=True)
     parser.add_argument('--port')
+    parser.add_argument('--verification', choices=('device-checksum', 'full-readback'),
+                        default='device-checksum', help='full readback is optional for recovery/diagnostics')
     parser.add_argument('--monitor-seconds', type=int, default=60,
                         help='capture boot and operator testing on one open connection (30-600 seconds)')
     parser.add_argument('--install', action='store_true', help='write after all checks; default checks local inputs only')
@@ -141,6 +151,7 @@ def main():
                'started_at': datetime.datetime.now(datetime.timezone.utc).isoformat(),
                'authorization_sha256': args.authorization_sha256, 'artifacts': auth['artifacts'],
                'port': args.port, 'write_started': False, 'readback_verified': False,
+               'verification_method': args.verification, 'checksum_verified': False,
                'boot_ready': False, 'physical_acceptance': 'pending'}
     esp = None
     def save():
@@ -173,15 +184,14 @@ def main():
                 if seq not in (0, 0xffffffff) and state not in (3, 4) and crc == binascii.crc32(ota[pos:pos+4], 0xffffffff):
                     sequences.append(seq)
             require(sequences and (max(sequences)-1) % 2 == 0, 'app-only requires active OTA slot 0')
-            require(esp.read_flash(0x20000, len(predecessor)) == predecessor,
+            require(flash_range_matches(esp, 0x20000, predecessor, args.verification),
                     'installed app differs from authorized predecessor')
             writes = {'0x20000': artifacts['0x20000']}
         else:
             # Verify the ranges to be replaced still match the captured predecessor.
             for offset, data in artifacts.items():
                 start = int(offset, 0)
-                old = esp.read_flash(start, len(data))
-                require(old == recovery[start:start+len(data)], 'live predecessor differs from backup; no write performed')
+                require(flash_range_matches(esp, start, recovery[start:start+len(data)], args.verification), 'live predecessor differs from backup; no write performed')
             writes = artifacts
         quiet(lambda: validate_live(esp, identity))
         receipt['write_offsets'] = list(writes)
@@ -197,12 +207,13 @@ def main():
             command.extend([offset, str(path)])
         quiet(lambda: esptool.main(command, esp=esp))
         for offset, data in writes.items():
-            actual = esp.read_flash(int(offset, 0), len(data))
-            require(actual == data, f'exact readback mismatch at {offset}; left in loader')
+            require(flash_range_matches(esp, int(offset, 0), data, args.verification),
+                    f'flash verification mismatch at {offset}; left in loader')
         quiet(lambda: validate_live(esp, identity))
-        receipt['readback_verified'] = True
+        receipt['checksum_verified'] = True
+        receipt['readback_verified'] = args.verification == 'full-readback'
         save()
-        print(f'Tab5 {args.unit}: all written ranges matched on readback; booting', flush=True)
+        print(f'Tab5 {args.unit}: all written ranges verified ({args.verification}); booting', flush=True)
         quiet(esp.watchdog_reset)
         esp._port.close()
         esp = None
@@ -240,7 +251,7 @@ def main():
         receipt['runtime_log_sha256'] = sha(log.encode())
         receipt['health_ready'] = 'OTA_BOOT_VALID result=ESP_OK' in log
         print(log[-24000:])
-        require(receipt['boot_ready'], 'flash/readback passed, but launcher boot acceptance failed; inspect runtime.log')
+        require(receipt['boot_ready'], 'flash verification passed, but launcher boot acceptance failed; inspect runtime.log')
     finally:
         save()
         if esp is not None:

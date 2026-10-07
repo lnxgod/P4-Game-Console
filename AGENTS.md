@@ -51,7 +51,7 @@ IDs and previous-name mapping. Automatic invocation is enabled for all skills.
 
 The root README describes **P4 Game Console**, the whole monorepo. Console OS
 is the shared platform; the Game Changers AI Doom arena is one integrated game
-mode, and Pure Hell is a map pack. Keep their documentation distinct.
+mode, and Pure Hades is a map pack. Keep their documentation distinct.
 Every game has its own README with controls, player modes, source/data needs,
 build/play/install guidance and current verification limits. Keep the root
 inventory and `games/README.md` linked to the owning README when adding a title.
@@ -78,8 +78,8 @@ Keep these rules true for every change:
 
 ## Set up Doom game data on a fresh clone
 
-WAD files are local inputs, except the owner-authorized original Pure Hell v0.5
-pack under `game-data/pure-hell/v0.5/`, with its unchanged music and notices.
+WAD files are local inputs, except the owner-authorized Pure Hades v0.6
+pack under `game-data/pure-hades/v0.6/`, with its unchanged music and notices.
 That narrow exception does not permit other WADs or WAD-bearing firmware in Git. Keep them under the
 ignored `local-data/doom/` directory and confirm `git check-ignore` succeeds
 before building. The exact identities and upstream URLs are authoritative in
@@ -131,3 +131,9 @@ artifact/evidence update. For SD-backed firmware use `DOOM1.WAD`,
 `FREEDOOM1.WAD`, or `FREEDOOM2.WAD` at the SD root as documented in
 `docs/DOOM.md`. Never push WADs, generated WAD assembly, WAD-bearing firmware
 binaries, or local recovery images to GitHub.
+
+Routine authorized Tab5 app flashes use device checksum verification; do not
+transfer a full app readback on every flash. Use `--verification full-readback`
+only for recovery, diagnostics, or an explicit request. Preserve exact-unit,
+backup, security, predecessor, partition and artifact checks. Record which
+verification method ran; a checksum result is not full readback evidence.

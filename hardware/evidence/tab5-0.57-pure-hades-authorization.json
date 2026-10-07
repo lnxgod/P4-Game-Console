@@ -1,0 +1,262 @@
+{
+  "schema": 1,
+  "board": "m5stack-tab5",
+  "product": "Game Changers AI OS",
+  "operation": "app-only",
+  "toolchain": {
+    "schema": 1,
+    "esp_idf": {
+      "version": "5.5.3",
+      "git_tag": "v5.5.3",
+      "git_commit": "2c211b236707889e8400c4dc5644dd5c4ee071e0",
+      "repository": "https://github.com/espressif/esp-idf.git"
+    },
+    "target": {
+      "chip": "esp32p4",
+      "silicon_family": "revision_1_x",
+      "min_revision_full": 100,
+      "max_revision_full": 199
+    },
+    "managed_components": {
+      "espressif/esp_codec_dev": "1.5.4",
+      "espressif/esp_hosted": "1.4.7",
+      "espressif/esp_lcd_lt8912b": "0.2.0",
+      "espressif/esp_tinyusb": "2.0.1",
+      "espressif/esp_wifi_remote": "0.14.5",
+      "espressif/usb": "1.5.0",
+      "espressif/usb_host_hid": "1.2.0"
+    },
+    "policy": {
+      "commit_dependencies_lock": true,
+      "upgrade_only_with_hardware_regression": true
+    }
+  },
+  "usb_host_enabled": true,
+  "peripheral_scope": {
+    "global_pin_map_authorized": false,
+    "pcb_revision": "not separately marked/confirmed; bounded common C145 interfaces only",
+    "published_variants_reviewed": [
+      "initial 2025-05-09 ILI9881C/GT911",
+      "2025-10-14 ST7123",
+      "2026-04-28 ST7121"
+    ],
+    "official_source": {
+      "commit": "73ee07b1ad56f865f13a2739be8bb6808c1da58a",
+      "manual_sha256": "6c054369e4fb1a7d04fa95fb31adda26feaa9de3540942f733eb2c1a68cd81e1",
+      "manual_url": "https://docs.m5stack.com/en/core/Tab5",
+      "repository": "https://github.com/espressif/esp-bsp",
+      "schematic_sha256": "13cf3fd9954d39aa198e57b1bb94ec56af7d49107c80a245acc5bd90ac8ea329",
+      "schematic_url": "https://m5stack-doc.oss-cn-shenzhen.aliyuncs.com/1132/Tab5_Schematics_PDF.pdf"
+    },
+    "review": "Official C145 schematic and Tab5 manual give one shared P4/expander/audio/SD wiring map for all three published panel assemblies. The pinned BSP supplies distinct panel timings/init and GPIO23 handling, selected by the touch controller. Unknown panel firmware fails closed. No factory-binary pin inference used. INA226 0x41/5 mOhm shunt, BMI270 0x68 and RX8130CE 0x32 use the same published shared I2C1 map; identity and configuration readback precede telemetry. The RTC backup control matches the fitted rechargeable supply. Charger/rail controls stay excluded. USB-A J10 and its masked 0x44/P3 enable are additionally scoped by the pinned USB-controller schematic/BSP review. USB-C Serial/JTAG remains independent. User subsequently approved the exact C6 radio scope and requested battery charging. These narrowly scoped authorizations extend the prior 0.44 scope.",
+    "allowed": {
+      "display": {
+        "backlight_gpio": 22,
+        "bus": "MIPI-DSI",
+        "dphy_ldo_channel": 3,
+        "dphy_ldo_mv": 2500,
+        "logical_height": 720,
+        "logical_width": 1280,
+        "native_height": 1280,
+        "native_width": 720,
+        "panels": [
+          "ILI9881C",
+          "ST7123",
+          "ST7121"
+        ],
+        "reset": "PI4IOE5V6408 0x43 P4, release as input pull-up",
+        "rotation_cw_degrees": 90
+      },
+      "i2c": {
+        "expanders": [
+          67,
+          68
+        ],
+        "port": 1,
+        "scl": 32,
+        "sda": 31
+      },
+      "touch": {
+        "controllers": [
+          "GT911 at 0x14",
+          "ST7123/ST7121 at 0x55"
+        ],
+        "interrupt_gpio": 23,
+        "reset": "expander 0x43 P5"
+      },
+      "audio": {
+        "address_7bit": 16,
+        "amp_enable": "expander 0x43 P1 active high",
+        "bclk": 27,
+        "codec": "ES8388",
+        "dout": 26,
+        "i2s_port": 1,
+        "lrclk": 29,
+        "mclk": 30
+      },
+      "sd": {
+        "clk": 43,
+        "cmd": 44,
+        "data": [
+          39,
+          40,
+          41,
+          42
+        ],
+        "format_on_failure": false,
+        "power_ldo_channel": 4,
+        "slot": 0,
+        "width": 4
+      },
+      "sensors": {
+        "provenance": "third_party/tab5-sensors.json",
+        "power": "INA226 at 0x41, 5 mOhm shunt, voltage-based 2S estimate",
+        "motion": "BMI270 at 0x68, 4g / 2000 degrees per second",
+        "clock": "RX8130CE 0x32: read/init plus explicit UTC calendar write 0x10..0x16, VLF-only W0C 0x1D=0xBD after calendar readback, and clearing a pre-existing STOP bit at 0x1E after valid calendar; no alarms, timers, clock-output or offset configuration."
+      },
+      "usb_host": {
+        "connector": "J10 dedicated USB-A; native HS peripheral 0",
+        "power_enable": "PI4IOE5V6408 0x44/P3 active high; U27 MT9700 current-limited switch",
+        "driver_scope": "Masked direction/latch/high-impedance operations preserve every other expander bit; rollback powers off",
+        "provenance": "hardware/evidence/tab5-usb-gamepad-20261004-build.json",
+        "source_schematic_sha256": "13cf3fd9954d39aa198e57b1bb94ec56af7d49107c80a245acc5bd90ac8ea329",
+        "user_scope": "Requested native Xbox-compatible USB controller support in Core OS and approved the complete 0.43 update",
+        "acceptance": "USB host startup may be observed; no controller model is hardware-qualified by this install"
+      },
+      "c6_local_multiplayer": {
+        "evidence": "design/tab5-bluetooth/proposal.json",
+        "scope": "User explicitly approved C6 Bluetooth and local Wi-Fi Host/Join on 2026-10-05. Shared I2C1 GPIO31/32, masked expander 0x44/P0 WLAN 3.3V enable only; SDMMC slot1 GPIO12 CLK,13 CMD,11/10/9/8 D0-D3 at initial 10 MHz, GPIO15 C6 EN high-low-high reset. No C6 flash writes or unrelated pins/rails. Exact P4 artifact and backed-up unit must pass the installation guard.",
+        "broad_flash_authorization": false,
+        "hardware_acceptance": "pending"
+      },
+      "battery_charger_500ma": {
+        "authorized": true,
+        "date": "2026-10-05",
+        "basis": "User confirms attached batteries and requests fixing charging; pinned official M5Unified and C145 schematic in third_party/tab5-sensors.json.",
+        "scope": "Shared I2C1 GPIO31/32, expander 0x44 P7 CHG_EN, P5 QC disabled, P6 charge status input. 500 mA selection only; preserve all other pins. Exact-artifact guarded install required.",
+        "hardware_acceptance": "pending"
+      }
+    },
+    "usb_console": "native FS USB Serial/JTAG GPIO24/25 only",
+    "excluded": [
+      "C6 firmware writes",
+      "external 5V",
+      "camera",
+      "mic",
+      "expansion GPIO",
+      "All expander 0x44 controls except P0 radio power, P3 USB-A, P5/P7 charger control and P6 charger-status input"
+    ],
+    "sensor_reference": "third_party/tab5-sensors.json",
+    "rtc_reference": {
+      "url": "https://download.epsondevice.com/td/pdf/app/RX8130CE_en.pdf",
+      "revision": "ETM50E-10",
+      "sha256": "db027a5fa2dd17b333da81e95063764eb5536d2878c63b64949348d2ec4b8a22",
+      "sections": [
+        "13.2 register table",
+        "14.5 VLF write-zero-to-clear",
+        "18.5 sequential calendar setting without STOP",
+        "18.6 sequential calendar reading"
+      ]
+    }
+  },
+  "startup_audio": {
+    "profile": "treasure-fanfare",
+    "sample_rate": 16000,
+    "stereo_frames": 16000,
+    "duration_ms": 1000,
+    "peak_absolute_pcm": 7350,
+    "dialing": false,
+    "saved_volume_preserved": "One-time policy4 migration establishes3/3; later saved edits remain preserved.",
+    "provenance": "Original composition and deterministic fixed-point bell synthesis; no sampled game audio or transcribed Nintendo melody.",
+    "preview_sha256": "50548b0a152ba6d899ddd60fc274ea82e27576fdb4f20b32c1c8f48b08aef68e"
+  },
+  "target_selection": "The same backed-up Tab5 A and B explicitly selected by the user; live hashed identity must match the named unit before writing.",
+  "charger_control_enabled": true,
+  "ble_multiplayer_enabled": true,
+  "wifi_multiplayer_enabled": true,
+  "paired_protected_game": {
+    "file": "apps/console_os/build-tab5/sd-card/GAMES/LORD.P4G",
+    "sha256": "bc737068ddf41e651132e7003f5cf60d59bb85f01d8421a5859d2f33996fb46e",
+    "payload_sha256": "5a2f96266b305ad7abc549aeaa838b3d21b9cfd666c2b4c2f775aa5cd7d373ff",
+    "save_identity_unchanged": true
+  },
+  "created_at": "2026-10-07T01:48:10.809897+00:00",
+  "version": "0.57",
+  "install_authorized": true,
+  "firmware_only": false,
+  "operator_request": "Both of the things are plugged in. Let's flash from both so I can test them.",
+  "selected_scope": "App-only 0.57 Pure Hades successor on the connected and independently identity-verified Tab5 A/ST7121 and B/ST7123. Includes the merged multiplayer reliability fixes, five-map Pure Hades v0.6 replacement, protocol 5 and disjoint vote-token framing. Retains existing pin/peripheral scope, native games, protected Red Dragon payload, saves and partition layout. Install verified replacement arena content through native USB.",
+  "source_commit": "ddc32bf29dd0096bedc8d2fbdd4a7cf7f7a93b7f",
+  "previous_install_evidence": "test-runs/2026-10-06-doom-arena-install.json",
+  "physical_acceptance": "pending exact-image guarded install; multiplayer gameplay acceptance remains separate",
+  "build_verifier": {
+    "ble_multiplayer_enabled": true,
+    "board": "m5stack-tab5",
+    "charger_control_enabled": true,
+    "content_bundle_verified": true,
+    "flash_authorized": false,
+    "hardware_verified": false,
+    "image_bytes": 4319568,
+    "image_sha256": "a535203480cfee9b2f54d2c40b038870f6389e0035bcc7e8058f19bacf535671",
+    "native_cartridges": 17,
+    "result": "tab5-build-candidate-verified",
+    "usb_host_enabled": true,
+    "version": "0.57",
+    "wifi_multiplayer_enabled": true
+  },
+  "content_identity": "363c69fd5b0ae3faa5360d96624414e6dabd2d4c9c86d1eab518899d8095358b",
+  "units": {
+    "B": {
+      "identity_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+      "backup_sha256": "5539e586c84d653cbe96d8c94b9aa775ad0ce5f134c3b28a5192af01429dc1c9",
+      "model_confirmed": true,
+      "predecessor": {
+        "file": "build-host/pure-hades-integration/predecessor-B.bin",
+        "bytes": 4317712,
+        "sha256": "98dae268cfbe1bfedd6721394eee5c16abd1cc4cacdf99a1415aa807a4f0e36e"
+      },
+      "port_at_authorization": "/dev/cu.usbmodem101"
+    },
+    "A": {
+      "identity_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+      "backup_sha256": "afe3e5df1ef2580aac055abc13a9c62bdfbd4816b46384d92978bdfa1abf16c8",
+      "model_confirmed": true,
+      "predecessor": {
+        "file": "build-host/pure-hades-integration/predecessor-A.bin",
+        "bytes": 4317712,
+        "sha256": "98dae268cfbe1bfedd6721394eee5c16abd1cc4cacdf99a1415aa807a4f0e36e"
+      },
+      "port_at_authorization": "/dev/cu.usbmodem2101"
+    }
+  },
+  "artifacts": {
+    "0x2000": {
+      "file": "apps/console_os/build-tab5/bootloader/bootloader.bin",
+      "bytes": 23136,
+      "sha256": "058cf4c0434733d72800c383e1bddb54aa33cf667b21254c8bd9d2f4f7f43443"
+    },
+    "0x8000": {
+      "file": "apps/console_os/build-tab5/partition_table/partition-table.bin",
+      "bytes": 3072,
+      "sha256": "606f2ba90d4e68e36eb704e2dff8e2b509ce2adf1a398297d1fe0fc626590871"
+    },
+    "0x10000": {
+      "file": "apps/console_os/build-tab5/ota_data_initial.bin",
+      "bytes": 8192,
+      "sha256": "7d2c7ac4888bfd75cd5f56e8d61f69595121183afc81556c876732fd3782c62f"
+    },
+    "0x20000": {
+      "file": "apps/console_os/build-tab5/p4_console_os.bin",
+      "bytes": 4319568,
+      "sha256": "a535203480cfee9b2f54d2c40b038870f6389e0035bcc7e8058f19bacf535671"
+    }
+  },
+  "write_review": {
+    "reason": "User explicitly requests both connected Tab5s for Pure Hades testing. Only the application changes.",
+    "offset": "0x20000",
+    "preserve": "bootloader, partition table, NVS settings, PHY, active OTA selector, microSD native games/saves and RTC time",
+    "erase_all": false,
+    "force_revision": false,
+    "readback_required": "exact full app range before boot"
+  }
+}

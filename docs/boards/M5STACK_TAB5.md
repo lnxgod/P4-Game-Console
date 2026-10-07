@@ -3,15 +3,21 @@
 M5Stack Tab5 is the permanent primary target. `make console-os-idf` aliases
 `make console-os-tab5-idf`; Elecrow now requires `make console-os-elecrow-idf`.
 
-The current arena successor is **0.56**, based on the native 0.55 launch.
-Both A/ST7121 and B/ST7123 have exact application readback, launcher/health
-checks, eleven verified arena-content files each, and healthy post-transfer
-warm boots in [the installation record](../../test-runs/2026-10-06-doom-arena-install.json).
-The [Game Changers AI mode](../GAME_CHANGERS_AI_DOOM.md) adds four-slot local
-Wi-Fi play, verified SD-backed Freedoom/Pure Hell/DWANGO 5 reads, host map
-selection, in-game voting and connected idle breaks. Four-console gameplay
-and device cadence remain pending. The existing 0.55 Red Dragon payload is
-unchanged and still registers on both units.
+The current arena successor is **0.58**, based on the native 0.55 launch and
+merged multiplayer reliability fixes. A/ST7121 and B/ST7123 passed device-checksum
+application verification, launcher startup and the 10-second health gate in
+[the 0.58 installation record](../../test-runs/2026-10-06-tab5-no-reboot-content.json).
+The [Game Changers AI mode](../GAME_CHANGERS_AI_DOOM.md) uses the five-map
+Pure Hades v0.6 replacement plus optional DWANGO 5. All consoles need protocol-5
+firmware and the 16-file content bundle. The existing Red Dragon payload is
+unchanged; physical multiplayer gameplay and device cadence remain to be tested.
+
+USB content batches keep one connection open and return to idle between files
+without rebooting. Both units completed all 16 files on one connection each,
+with no mid-batch restart. Routine app installs use device checksums; full app
+readback
+is optional for recovery/diagnostics. The prior 0.57 content batch was stopped
+when the operator reported its per-file restarts; 0.58 corrects that behavior.
 
 The earlier Tab5 presentation release was **0.52**. Both A/ST7121 and B/ST7123
 have exact 4,508,176-byte application readback, launcher boot, post-service
@@ -417,9 +423,10 @@ Use `scripts/flash-console-os-tab5.py` with the pinned IDF Python environment.
 Its default mode checks local inputs only. `--install` requires an explicit port,
 unit A/B, authorization file and its SHA-256. It stages immutable image bytes,
 checks the full recovery snapshot, verifies live identity/revision/flash/security,
-and uses the same open connection for predecessor comparison, write and exact
-readback. A failed check leaves the unit unmodified or in the loader after a
-write failure. The app-only route also verifies the bootloader, partitions and
+and uses the same open connection for predecessor comparison, write and device
+checksum verification. Full app readback is optional with
+`--verification full-readback` for recovery or diagnostics. A failed check leaves the unit unmodified or in the
+loader after a write failure. The app-only route also verifies the bootloader, partitions and
 CRC-valid active OTA slot; it preserves the existing OTA selector.
 
 Both units' current artifact, install receipts, SD sizes, upload hashes and

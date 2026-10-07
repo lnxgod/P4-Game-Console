@@ -39,29 +39,32 @@ int main(int argc,char **argv)
         puts("verified WAD: supplied IWAD/PWAD passed the production block reader and directory validator");
         return 0;
     }
-    uint8_t data[4096]={0};
-    static const char names[24][9]={"MAP01","THINGS","LINEDEFS","SIDEDEFS","VERTEXES","SEGS","SSECTORS","NODES","SECTORS","REJECT","BLOCKMAP",
-        "MAP02","THINGS","LINEDEFS","SIDEDEFS","VERTEXES","SEGS","SSECTORS","NODES","SECTORS","REJECT","BLOCKMAP","D_RUNNIN","D_STALKS"};
+    uint8_t data[8192]={0};
+    static const char names[11][9]={"MAP01","THINGS","LINEDEFS","SIDEDEFS","VERTEXES","SEGS","SSECTORS","NODES","SECTORS","REJECT","BLOCKMAP"};
+    static const char extras[16][9]={"D_RUNNIN","D_STALKS","D_COUNTD","D_BETWEE","D_DOOM","D_DM2TTL","D_DM2INT","DEHACKED","UMAPINFO","CWILV00","CWILV01","CWILV02","CWILV03","CWILV04","M_DOOM","TITLEPIC"};
     static const size_t sizes[11]={0,40,14,30,4,12,4,28,26,1,10};
-    memcpy(data,"PWAD",4);put32(data+4,24);put32(data+8,2048);
+    memcpy(data,"PWAD",4);put32(data+4,71);put32(data+8,4096);
     size_t at=12;
-    for(size_t i=0;i<24;++i) {
-        const size_t n=i<22?sizes[i%11]:14;
-        uint8_t *entry=data+2048+i*16;
-        put32(entry,at);put32(entry+4,n);memcpy(entry+8,names[i],8);
-        if(i<22 && i%11==1) for(unsigned j=0;j<4;++j) data[at+j*10+6]=11;
-        if(i>=22) memcpy(data+at,"MThd",4);
+    for(size_t i=0;i<71;++i) {
+        const size_t n=i<55?sizes[i%11]:14;
+        uint8_t *entry=data+4096+i*16;
+        put32(entry,at);put32(entry+4,n);if(i<55) {
+            char name[9];if(i%11==0)snprintf(name,sizeof(name),"MAP%02u",(unsigned)(i/11+1));else memcpy(name,names[i%11],9);
+            memcpy(entry+8,name,8);
+        } else memcpy(entry+8,extras[i-55],8);
+        if(i<55 && i%11==1) for(unsigned j=0;j<4;++j) data[at+j*10+6]=11;
+        if(i>=55 && i<62) memcpy(data+at,"MThd",4);
         at+=n;
     }
-    assert(validate(data,sizeof(data),true));
-    assert(!validate(data,sizeof(data),false));
-    put32(data+4,UINT32_MAX); assert(!validate(data,sizeof(data),true));put32(data+4,24);
-    put32(data+8,4090);assert(!validate(data,sizeof(data),true));put32(data+8,2048);
-    put32(data+2048+16,4095);assert(!validate(data,sizeof(data),true));put32(data+2048+16,12);
-    data[18]=1;assert(!validate(data,sizeof(data),true));data[18]=11;
-    data[2048+11*16+8]='X';assert(!validate(data,sizeof(data),true));data[2048+11*16+8]='M';
-    put32(data+2048+2*16+4,13);assert(!validate(data,sizeof(data),true));put32(data+2048+2*16+4,14);
-    assert(validate(data,sizeof(data),true));
+    assert(validate(data,sizeof(data),P4_WAD_PURE_HADES));
+    assert(!validate(data,sizeof(data),P4_WAD_IWAD));
+    put32(data+4,UINT32_MAX); assert(!validate(data,sizeof(data),P4_WAD_PURE_HADES));put32(data+4,71);
+    put32(data+8,8190);assert(!validate(data,sizeof(data),P4_WAD_PURE_HADES));put32(data+8,4096);
+    put32(data+4096+16,8191);assert(!validate(data,sizeof(data),P4_WAD_PURE_HADES));put32(data+4096+16,12);
+    data[18]=1;assert(!validate(data,sizeof(data),P4_WAD_PURE_HADES));data[18]=11;
+    data[4096+11*16+8]='X';assert(!validate(data,sizeof(data),P4_WAD_PURE_HADES));data[4096+11*16+8]='M';
+    put32(data+4096+2*16+4,13);assert(!validate(data,sizeof(data),P4_WAD_PURE_HADES));put32(data+4096+2*16+4,14);
+    assert(validate(data,sizeof(data),P4_WAD_PURE_HADES));
     puts("verified WAD: bad magic/count/directory/lump bounds/record size/start count/map identity rejected");
     return 0;
 }

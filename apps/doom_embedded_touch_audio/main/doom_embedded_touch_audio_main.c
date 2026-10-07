@@ -1318,13 +1318,13 @@ void app_main(void)
     s_blob_registered = true;
 #ifdef P4_CONSOLE_OS_EMBEDDED
     if (arena) {
-        result=verify_readonly_vfs("/doom/purehell.wad",
-            (size_t)PLATFORM_GAME_STORAGE_PUREHELL_WAD_BYTES,true);
+        result=verify_readonly_vfs("/doom/purehades.wad",
+            (size_t)PLATFORM_GAME_STORAGE_PUREHADES_WAD_BYTES,true);
         if (result!=ESP_OK) halt_dark("arena-pwad-vfs-readback",result);
         result=verify_readonly_vfs("/doom/dwango5.wad",
             (size_t)PLATFORM_GAME_STORAGE_DWANGO5_WAD_BYTES,true);
         if (result!=ESP_OK) halt_dark("arena-dwango-vfs-readback",result);
-        ESP_LOGI(TAG,"P4_DOOM_ARENA CONTENT pure-hell=0.5 dwango5=24 default=01,02 vote=majority midi=embedded");
+        ESP_LOGI(TAG,"P4_DOOM_ARENA CONTENT pure-hades=0.6 dwango5=24 default=01,02,03,04,05 vote=majority midi=embedded");
     }
 #endif
     result = verify_readonly_vfs(wad_path, wad_size, chex);
@@ -1363,7 +1363,7 @@ void app_main(void)
     int engine_argc=5;
     if (arena) {
         engine_argv[engine_argc++]="-file";
-        engine_argv[engine_argc++]="/doom/purehell.wad";
+        engine_argv[engine_argc++]="/doom/purehades.wad";
         engine_argv[engine_argc++]="/doom/dwango5.wad";
     }
     if (!sound_enabled) {

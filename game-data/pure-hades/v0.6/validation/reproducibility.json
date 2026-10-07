@@ -1,0 +1,6 @@
+{
+  "result": "PASS",
+  "method": "Fresh directory, Python standard library build, included source/MIDI/title assets only, no network or IWAD needed for the build.",
+  "wad_sha256": "ab027fbeebe20787214a3bc1239bba73271030dc284cd108c20ae8bc73752fc8",
+  "source_rebuild_exact": true
+}

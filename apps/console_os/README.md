@@ -11,7 +11,7 @@ content and acceptance belong in the [arena README](../../docs/games/arena/READM
 ## Primary device and current source
 
 **M5Stack Tab5** is the actively maintained board. The current source release
-is **0.56**; the [board record](../../docs/boards/M5STACK_TAB5.md) identifies
+is **0.58**; the [board record](../../docs/boards/M5STACK_TAB5.md) identifies
 exact installed images on A/ST7121 and B/ST7123. Installation/readback and
 healthy launcher startup passed for those recorded images. Physical gameplay,
 multiplayer, controls/audio and sustained game cadence require their own
@@ -50,7 +50,7 @@ such as Red Dragon require their exact paired OS lineage.
 
 [Doom](../../docs/games/doom/README.md), [Chex Quest](../../docs/games/chex-quest/README.md)
 and the [arena](../../docs/games/arena/README.md) use the engine integrated into
-firmware, with verified files on SD. [Pure Hell](../../game-data/pure-hell/README.md)
+firmware, with verified files on SD. [Pure Hades](../../game-data/pure-hades/README.md)
 is arena content. Experimental [Wacky Wheels](../../scripts/wacky/README.md)
 and retained [Quake](../../ports/quake/README.md) have their own port workflows
 and are not default native-library titles.
