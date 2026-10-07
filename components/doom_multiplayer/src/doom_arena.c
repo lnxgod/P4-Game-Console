@@ -74,7 +74,7 @@ uint8_t p4_doom_arena_next_map(p4_doom_arena_t *arena)
     if (!arena || !arena->map_count || arena->map_count > P4_DOOM_ARENA_MAX_MAPS)
         return 0;
     arena->vote_map=0; arena->vote_tics=0;
-    arena->vote_generation=(uint8_t)((arena->vote_generation+1U)&127U);
+    arena->vote_generation=(uint8_t)((arena->vote_generation+1U)&63U);
     memset(arena->vote_wait,0,sizeof(arena->vote_wait));
     arena->map_index = (uint8_t)((arena->map_index + 1U) % arena->map_count);
     for (uint8_t i = 0; i < P4_MP_MAX_PLAYERS; ++i) arena->players[i].idle_tics = 0;
@@ -82,35 +82,36 @@ uint8_t p4_doom_arena_next_map(p4_doom_arena_t *arena)
 }
 bool p4_doom_arena_begin_default(p4_doom_arena_t *arena, uint8_t players)
 {
-    static const uint8_t maps[] = {1, 2};
+    static const uint8_t maps[] = {1, 2, 3, 4, 5};
     return p4_doom_arena_begin(arena, players, maps, sizeof(maps));
 }
 
 uint8_t p4_doom_arena_map_number(uint8_t selection)
 {
-    return selection>=1 && selection<=26 ? (selection<=2 ? selection : (uint8_t)(selection-2U)) : 0;
+    return selection>=1 && selection<=P4_DOOM_ARENA_SELECTIONS ? (selection<=5 ? selection : (uint8_t)(selection-5U)) : 0;
 }
 
 const char *p4_doom_arena_label(uint8_t selection)
 {
-    static const char *const labels[]={"INVALID ARENA", "PURE HELL: SHOTGUNS", "PURE HELL: ROCKETS",
+    static const char *const labels[]={"INVALID ARENA", "PURE HADES: SHOTGUNS", "PURE HADES: ROCKETS",
+        "PURE HADES: PLASMA", "PURE HADES: PURE CHAOS", "PURE HADES: DOUBLE BARREL",
         "DWANGO 5 MAP01", "DWANGO 5 MAP02", "DWANGO 5 MAP03", "DWANGO 5 MAP04",
         "DWANGO 5 MAP05", "DWANGO 5 MAP06", "DWANGO 5 MAP07", "DWANGO 5 MAP08",
         "DWANGO 5 MAP09", "DWANGO 5 MAP10", "DWANGO 5 MAP11", "DWANGO 5 MAP12",
         "DWANGO 5 MAP13", "DWANGO 5 MAP14", "DWANGO 5 MAP15", "DWANGO 5 MAP16",
         "DWANGO 5 MAP17", "DWANGO 5 MAP18", "DWANGO 5 MAP19", "DWANGO 5 MAP20",
         "DWANGO 5 MAP21", "DWANGO 5 MAP22", "DWANGO 5 MAP23", "DWANGO 5 MAP24"};
-    return labels[selection<=26 ? selection : 0];
+    return labels[selection<=P4_DOOM_ARENA_SELECTIONS ? selection : 0];
 }
 
 bool p4_doom_arena_select(p4_doom_arena_t *a,uint8_t selection)
 {
     if (!a || !p4_doom_arena_map_number(selection)) return false;
-    a->map_count=selection<=2 ? 2 : 24;
-    for (uint8_t i=0;i<a->map_count;++i) a->maps[i]=(uint8_t)(i+(selection<=2 ? 1U : 3U));
-    a->map_index=(uint8_t)(selection-(selection<=2 ? 1U : 3U));
+    a->map_count=selection<=5 ? 5 : 24;
+    for (uint8_t i=0;i<a->map_count;++i) a->maps[i]=(uint8_t)(i+(selection<=5 ? 1U : 6U));
+    a->map_index=(uint8_t)(selection-(selection<=5 ? 1U : 6U));
     a->vote_map=0; a->vote_tics=0;
-    a->vote_generation=(uint8_t)((a->vote_generation+1U)&127U);
+    a->vote_generation=(uint8_t)((a->vote_generation+1U)&63U);
     memset(a->vote_wait,0,sizeof(a->vote_wait));
     for (unsigned i=0;i<P4_MP_MAX_PLAYERS;++i) a->players[i].idle_tics=0;
     return true;
@@ -152,8 +153,8 @@ uint8_t p4_doom_arena_vote_tick(p4_doom_arena_t *a,const uint8_t chat[P4_MP_MAX_
             if (!c) continue;
             const uint8_t op=a->vote_opcode[i];
             a->vote_wait[i]=0;
-            if (c!=(uint8_t)(0x80U|a->vote_generation)) continue;
-            if (op>=0x81 && op<=0x9a && !a->vote_map && !a->vote_cooldown) {
+            if (c!=(uint8_t)(0xa0U+a->vote_generation)) continue;
+            if (op>=0x81 && op<=0x9d && !a->vote_map && !a->vote_cooldown) {
                 const uint8_t selection=(uint8_t)(op-0x80U);
                 if (selection==a->maps[a->map_index]) continue;
                 a->vote_map=selection; a->vote_tics=P4_DOOM_ARENA_VOTE_TICS;
@@ -161,7 +162,7 @@ uint8_t p4_doom_arena_vote_tick(p4_doom_arena_t *a,const uint8_t chat[P4_MP_MAX_
             } else if (a->vote_map && (op==0xf0 || op==0xf1) && !((a->vote_yes|a->vote_no)&bit)) {
                 if (op==0xf0) a->vote_yes|=bit; else a->vote_no|=bit;
             }
-        } else if ((c>=0x81 && c<=0x9a) || c==0xf0 || c==0xf1) {
+        } else if ((c>=0x81 && c<=0x9d) || c==0xf0 || c==0xf1) {
             a->vote_opcode[i]=c; a->vote_wait[i]=3;
         }
     }
@@ -171,7 +172,7 @@ uint8_t p4_doom_arena_vote_tick(p4_doom_arena_t *a,const uint8_t chat[P4_MP_MAX_
     if (passed || !eligible || no>=(eligible+1U)/2U || --a->vote_tics==0) {
         const uint8_t result=passed ? a->vote_map : 0;
         a->vote_map=0; a->vote_tics=0; a->vote_cooldown=P4_DOOM_ARENA_VOTE_COOLDOWN;
-        a->vote_generation=(uint8_t)((a->vote_generation+1U)&127U);
+        a->vote_generation=(uint8_t)((a->vote_generation+1U)&63U);
         memset(a->vote_wait,0,sizeof(a->vote_wait));
         return result;
     }

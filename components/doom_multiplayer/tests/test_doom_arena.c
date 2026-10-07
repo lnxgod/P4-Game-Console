@@ -8,7 +8,7 @@ static uint8_t command(p4_doom_arena_t *a,unsigned slot,uint8_t opcode,uint8_t g
 {
     uint8_t chat[4]={0}; chat[slot]=opcode;
     assert(!p4_doom_arena_vote_tick(a,chat));
-    chat[slot]=(uint8_t)(0x80U|generation);
+    chat[slot]=(uint8_t)(0xa0U+generation);
     return p4_doom_arena_vote_tick(a,chat);
 }
 static void wait_vote(p4_doom_arena_t *a,unsigned tics)
@@ -24,19 +24,19 @@ static void vote_tests(void)
         assert(p4_doom_arena_begin_selected(a,4,1));
         assert(p4_doom_arena_kill(a,0,1));
         uint8_t gen=a->vote_generation;
-        assert(!command(a,0,0x83,gen)); /* DWANGO 5 MAP01 */
-        assert(a->vote_map==3 && a->vote_yes==1);
+        assert(!command(a,0,0x86,gen)); /* DWANGO 5 MAP01 */
+        assert(a->vote_map==6 && a->vote_yes==1);
         assert(!command(a,1,0xf0,gen)); /* A 2/4 tie is not sufficient. */
-        assert(a->vote_map==3);
+        assert(a->vote_map==6);
         assert(!command(a,1,0xf1,gen)); /* One ballot per visit. */
         assert(!a->vote_no);
         assert(!command(a,2,0xf0,(uint8_t)(gen+1U))); /* stale/future token */
         assert(a->vote_yes==3);
-        assert(command(a,2,0xf0,gen)==3);
-        assert(p4_doom_arena_select(a,3));
+        assert(command(a,2,0xf0,gen)==6);
+        assert(p4_doom_arena_select(a,6));
         assert(a->map_count==24 && a->players[0].kills==1 && a->players[0].visit==1);
         for(unsigned map=2;map<=24;++map) assert(p4_doom_arena_map_number(p4_doom_arena_next_map(a))==map);
-        assert(p4_doom_arena_next_map(a)==3); /* never MAP25 or the commercial finale */
+        assert(p4_doom_arena_next_map(a)==6); /* never MAP25 or the commercial finale */
         assert(!command(a,0,0x81,a->vote_generation)); /* cooldown */
         assert(!a->vote_map); wait_vote(a,P4_DOOM_ARENA_VOTE_COOLDOWN);
         gen=a->vote_generation;
@@ -49,9 +49,9 @@ static void vote_tests(void)
         wait_vote(a,P4_DOOM_ARENA_VOTE_COOLDOWN);
         /* Partial command expires, invalid op and range never start a vote. */
         uint8_t chat[4]={0x81,0,0,0}; assert(!p4_doom_arena_vote_tick(a,chat));
-        wait_vote(a,4); chat[0]=(uint8_t)(0x80U|a->vote_generation);
+        wait_vote(a,4); chat[0]=(uint8_t)(0xa0U+a->vote_generation);
         assert(!p4_doom_arena_vote_tick(a,chat)); wait_vote(a,4);
-        assert(!command(a,0,0x9b,a->vote_generation)); assert(!a->vote_map);
+        assert(!command(a,0,0x9e,a->vote_generation)); assert(!a->vote_map);
         gen=a->vote_generation; assert(!command(a,0,0x81,gen));
         assert(!command(a,1,0xf0,gen));
         /* A departure reduces eligible voters; all four simulations agree. */
@@ -59,20 +59,30 @@ static void vote_tests(void)
         (void)p4_doom_arena_tick(a,7,activity);
         memset(chat,0,sizeof(chat)); assert(p4_doom_arena_vote_tick(a,chat)==1);
         assert(p4_doom_arena_select(a,1));
-        assert(a->players[0].kills==1 && a->connected_mask==7 && a->map_count==2);
+        assert(a->players[0].kills==1 && a->connected_mask==7 && a->map_count==5);
         wait_vote(a,P4_DOOM_ARENA_VOTE_COOLDOWN);
         /* Idle seats cannot propose, vote, or retain partial commands. */
         activity[0].moving=false;
         for(unsigned t=0;t<P4_DOOM_ARENA_IDLE_TICS;++t) (void)p4_doom_arena_tick(a,7,activity);
-        assert(!command(a,0,0x83,a->vote_generation) && !a->vote_map);
-        assert(!command(a,1,0x83,a->vote_generation));
-        assert(command(a,2,0xf0,a->vote_generation)==3);
+        assert(!command(a,0,0x86,a->vote_generation) && !a->vote_map);
+        assert(!command(a,1,0x86,a->vote_generation));
+        assert(command(a,2,0xf0,a->vote_generation)==6);
     }
     for(unsigned i=1;i<4;++i) assert(!memcmp(&peers[0],&peers[i],sizeof(peers[0])));
-    assert(!p4_doom_arena_begin_selected(&peers[0],4,27));
+    assert(!p4_doom_arena_begin_selected(&peers[0],4,30));
 }
 int main(void)
 {
+    /* An orphan generation token or invalid opcode must not swallow a new vote. */
+    for (uint8_t gen=0; gen<64; ++gen) {
+        p4_doom_arena_t a;
+        assert(p4_doom_arena_begin_selected(&a,4,1)); a.vote_generation=gen;
+        uint8_t chat[4]={(uint8_t)(0xa0U+gen),0,0,0};
+        assert(!p4_doom_arena_vote_tick(&a,chat)); assert(!a.vote_wait[0]);
+        assert(!command(&a,0,0x9e,gen)); assert(!a.vote_wait[0]);
+        assert(!command(&a,0,0x9d,gen)); assert(a.vote_map==29);
+        assert(!command(&a,1,0xf0,gen)); assert(command(&a,2,0xf0,gen)==29);
+    }
     vote_tests();
     p4_doom_arena_t peers[4];
     const uint8_t maps[] = {1, 7, 32};
@@ -118,12 +128,12 @@ int main(void)
     assert(!p4_doom_arena_begin(&peers[0], 4, bad, 2));
     for (unsigned i=0; i<4; ++i) {
         assert(p4_doom_arena_begin_default(&peers[i],4));
-        assert(peers[i].maps[peers[i].map_index]==1 && peers[i].map_count==2);
+        assert(peers[i].maps[peers[i].map_index]==1 && peers[i].map_count==5);
         assert(p4_doom_arena_kill(&peers[i],1,2));
     }
     for (unsigned exit=0; exit<20; ++exit) {
         for (unsigned i=0; i<4; ++i) {
-            assert(p4_doom_arena_next_map(&peers[i])==(exit%2?1:2));
+            assert(p4_doom_arena_next_map(&peers[i])==((exit+1U)%5U+1U));
             assert(peers[i].players[1].kills==1 && peers[i].players[1].visit==1);
             assert(peers[i].connected_mask==15);
         }

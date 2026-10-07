@@ -141,11 +141,11 @@ static void test_arena_setup(void)
     CHECK(p4_doom_mp_setup_decode(bytes,sizeof(bytes),&result));
     CHECK(result.game==setup.game && result.map==1);
     setup.map=2; CHECK(p4_doom_mp_setup_valid(&setup));
-    for (uint8_t map=3;map<=26;++map) {
+    for (uint8_t map=3;map<=29;++map) {
         setup.map=map; CHECK(p4_doom_mp_setup_encode(&setup,bytes));
         CHECK(p4_doom_mp_setup_decode(bytes,sizeof(bytes),&result) && result.map==map);
     }
-    setup.map=27; CHECK(!p4_doom_mp_setup_valid(&setup));
+    setup.map=30; CHECK(!p4_doom_mp_setup_valid(&setup));
     setup.map=32; CHECK(!p4_doom_mp_setup_valid(&setup));
     setup.map=1; setup.no_monsters=false; CHECK(!p4_doom_mp_setup_valid(&setup));
     setup.no_monsters=true; setup.mode=P4_DOOM_MP_MODE_COOPERATIVE;

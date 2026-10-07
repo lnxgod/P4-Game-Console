@@ -30,7 +30,7 @@ static void old_world_probe(thinker_t *thinker)
     (void)thinker;
     const p4_doom_arena_t *a=p4_doom_gc_test_state();
     /* A passed vote must not run old-map thinkers/exits in the same tic. */
-    assert(!(phase==2 && a->maps[a->map_index]==3));
+    assert(!(phase==2 && a->maps[a->map_index]==6));
 }
 static void key(int value)
 {
@@ -42,7 +42,7 @@ static void propose(uint8_t target)
     key(KEY_ESCAPE); key(KEY_DOWNARROW); key(KEY_ENTER); /* choose arena */
     const p4_doom_arena_t *a=p4_doom_gc_test_state();
     uint8_t selected=a->maps[a->map_index];
-    while(selected!=target) { key(KEY_RIGHTARROW); selected=selected==26?1:(uint8_t)(selected+1U); }
+    while(selected!=target) { key(KEY_RIGHTARROW); selected=selected==29?1:(uint8_t)(selected+1U); }
     key(KEY_ENTER);
 }
 
@@ -54,7 +54,7 @@ static void verify_loaded_arena(void)
     assert(gamemap==p4_doom_arena_map_number(selection));
     char marker[9]; (void)snprintf(marker,sizeof(marker),"MAP%02d",gamemap);
     const int map_lump=P4_DoomArenaMapLump(W_GetNumForName(marker));
-    if (selection>2) {
+    if (selection>5) {
         assert(strncmp(lumpinfo[map_lump].name,"D5L",3)==0);
         assert(W_LumpLength((unsigned)(map_lump+1))>0);
         assert(W_LumpLength((unsigned)P4_DoomArenaMusicLump(0))>0);
@@ -62,22 +62,28 @@ static void verify_loaded_arena(void)
         printf("P4_DOOM_ARENA LOADED DWANGO5 MAP%02d lump=%d vertices=%d lines=%d sectors=%d\n",gamemap,map_lump,numvertexes,numlines,numsectors);
         return;
     }
-    assert(W_LumpLength((unsigned)(map_lump+1))==660);
+    const int things_bytes=W_LumpLength((unsigned)(map_lump+1));
+    assert(things_bytes>0 && things_bytes%10==0);
     const uint8_t *things=W_CacheLumpNum(map_lump+1,PU_STATIC);
-    unsigned shotgun=0,super=0,rocket=0,starts=0;
-    for (size_t i=0;i<660;i+=10) {
+    unsigned shotgun=0,super=0,rocket=0,plasma=0,bfg=0,starts=0;
+    for (int i=0;i<things_bytes;i+=10) {
         const unsigned type=(unsigned)things[i+6]|((unsigned)things[i+7]<<8);
-        shotgun+=type==2001; super+=type==82; rocket+=type==2003; starts+=type==11;
+        shotgun+=type==2001;super+=type==82;rocket+=type==2003;
+        plasma+=type==2004;bfg+=type==2006;starts+=type==11;
     }
-    assert(starts==8);
-    assert(gamemap==1 ? shotgun==8 && super==8 && rocket==0 : shotgun==0 && super==0 && rocket==16);
+    static const unsigned weapons[5][5]={{8,8,0,0,1},{0,0,16,0,1},{0,0,0,16,1},{8,8,4,4,1},{0,16,0,0,0}};
+    static const int midi_bytes[5]={15236,54692,25510,56527,41389};
+    assert(starts==8 && gamemap>=1 && gamemap<=5);
+    const unsigned *expected=weapons[gamemap-1];
+    assert(shotgun==expected[0] && super==expected[1] && rocket==expected[2] && plasma==expected[3] && bfg==expected[4]);
     W_ReleaseLumpNum(map_lump+1);
-    const int music=P4_DoomArenaMusicLump(W_GetNumForName(gamemap==1?"D_RUNNIN":"D_STALKS"));
-    assert(W_LumpLength((unsigned)music)==43798);
+    const int music=P4_DoomArenaMusicLump(0);
+    assert(W_LumpLength((unsigned)music)==midi_bytes[gamemap-1]);
     const uint8_t *midi=W_CacheLumpNum(music,PU_STATIC);
-    assert(memcmp(midi,"MThd",4)==0);
-    W_ReleaseLumpNum(music);
-    printf("P4_DOOM_ARENA LOADED map=%d starts=%u shotguns=%u super=%u rockets=%u midi_bytes=43798\n",gamemap,starts,shotgun,super,rocket);
+    assert(memcmp(midi,"MThd",4)==0);W_ReleaseLumpNum(music);
+    printf("P4_DOOM_ARENA LOADED PUREHADES map=%d starts=%u shotguns=%u super=%u rockets=%u plasma=%u bfg=%u midi_bytes=%d\n",
+           gamemap,starts,shotgun,super,rocket,plasma,bfg,midi_bytes[gamemap-1]);
+
 }
 
 boolean p4_doom_gc_active(void) { return true; }
@@ -114,7 +120,7 @@ void P4_DoomNetSubmitTic(const ticcmd_t *local,int tick)
     if (remote_pending) { commands[1].chatchar=remote_token; remote_pending=false; }
     else if (a->vote_map && remote_generation!=a->vote_generation) {
         commands[1].chatchar=0xf0; remote_generation=a->vote_generation;
-        remote_token=(uint8_t)(0x80U|remote_generation); remote_pending=true;
+        remote_token=(uint8_t)(0xa0U+remote_generation); remote_pending=true;
     }
     /* Engine-generated consistency is view-independent for every seat. */
     extern byte consistancy[MAXPLAYERS][BACKUPTICS];
@@ -130,7 +136,7 @@ void P4_DoomNetPoll(void)
     if (quick_selection) {
         if (!observed_map) { verify_loaded_arena(); observed_map=true; }
         if (!exited && leveltime>=5) { G_SecretExitLevel(); exited=true; }
-        const uint8_t next=quick_selection<=2?1:3;
+        const uint8_t next=quick_selection<=5?(uint8_t)(quick_selection%5U+1U):(uint8_t)(quick_selection==29?6:quick_selection+1U);
         if (exited && a->maps[a->map_index]==next && gameaction==ga_nothing) {
             verify_loaded_arena(); puts("P4_DOOM_ARENA HOST SELECTION PASS starting selection and secret-exit wrap"); exit(0);
         }
@@ -160,28 +166,29 @@ void P4_DoomNetPoll(void)
     if (pending_map && gamemap==pending_map && leveltime<20) {
         assert(returned && a->players[0].kills==1 && a->players[0].visit==2);
         assert(!a->players[3].active && players[3].mo==NULL && a->connected_mask==7);
-        assert(P4_DoomArenaFragCount(0)==1 && a->map_count==2);
+        assert(P4_DoomArenaFragCount(0)==1 && a->map_count==5);
         assert(gamestate==GS_LEVEL && gameaction==ga_nothing);
         verify_loaded_arena(); pending_map=0; ++rotations;
-        if (rotations==4) {
+        if (rotations==10) {
             phase=1;
             key(KEY_ESCAPE); key(KEY_DOWNARROW); key(KEY_ENTER);
         }
     }
     if (!phase && !pending_map && ((!exited && leveltime>=580) || (exited && leveltime>=25))) {
-        pending_map=gamemap==1?2:1;
-        /* Both exit types on both maps must bypass vanilla progression/finale. */
-        if (rotations==1 || rotations==2) G_SecretExitLevel(); else G_ExitLevel();
+        pending_map=gamemap%5+1;
+        /* Both exit types across the five maps must bypass vanilla progression/finale. */
+        if (rotations%2==1) G_SecretExitLevel(); else G_ExitLevel();
         exited=true;
     }
     if (phase==1 && leveltime>=15) {
-        key(KEY_RIGHTARROW); key(KEY_RIGHTARROW); key(KEY_ENTER); /* Pure Hell 1 -> DWANGO 1 */
+        for(unsigned i=0;i<5;++i)key(KEY_RIGHTARROW);
+        key(KEY_ENTER); /* Pure Hades 1 -> DWANGO 1 */
         phase=2;
         thinker_t *probe=Z_Malloc(sizeof(*probe),PU_LEVEL,NULL);
         probe->function.acp1=(actionf_p1)old_world_probe;
         P_AddThinker(probe);
     }
-    if (phase==2 && a->maps[a->map_index]==3 && gameaction==ga_nothing && leveltime<20) {
+    if (phase==2 && a->maps[a->map_index]==6 && gameaction==ga_nothing && leveltime<20) {
         assert(a->players[0].kills==1 && a->players[0].visit==2 && a->connected_mask==7);
         verify_loaded_arena(); dwango_loaded=1; phase=3;
     }
@@ -190,15 +197,15 @@ void P4_DoomNetPoll(void)
         if (dwango_loaded==25) phase=4;
     }
     if (phase==3 && !pending_selection && leveltime>=20) {
-        pending_selection=a->maps[a->map_index]==26 ? 3 : (uint8_t)(a->maps[a->map_index]+1U);
+        pending_selection=a->maps[a->map_index]==29 ? 6 : (uint8_t)(a->maps[a->map_index]+1U);
         if (gamemap%2) G_SecretExitLevel(); else G_ExitLevel();
     }
     if (phase==4 && leveltime>=10 && !a->vote_cooldown) { propose(1); phase=5; }
     if (phase==5 && a->maps[a->map_index]==1 && gameaction==ga_nothing && leveltime<20) {
         verify_loaded_arena();
         assert(a->players[0].kills==1 && a->players[0].visit==2 && a->connected_mask==7);
-        assert(a->map_count==2 && !players[3].mo);
-        puts("P4_DOOM_ARENA PASS four seats; idle/fire/break/return; Pure Hell ordinary+secret 1->2 loop; controller menu proposal and synchronized majority to DWANGO; all 24 DWANGO maps loaded and cycled; vote back to Pure Hell; scores/visits/membership and music preserved");
+        assert(a->map_count==5 && !players[3].mo);
+        puts("P4_DOOM_ARENA PASS four seats; idle/fire/break/return; Pure Hades ordinary+secret five-map loop; controller menu proposal and synchronized majority to DWANGO; all 24 DWANGO maps loaded and cycled; vote back to Pure Hades; scores/visits/membership and music preserved");
         exit(0);
     }
 

@@ -44,6 +44,7 @@
 #include "p4/content_transfer.h"
 #include "p4/desktop.h"
 #include "p4/doom_multiplayer.h"
+#include "p4/doom_arena.h"
 #include "p4/draw.h"
 #include "p4/file_transfer.h"
 #include "p4/game.h"
@@ -536,6 +537,7 @@ static unsigned s_game_catalog_scan_low_water_bytes;
 static int64_t s_game_catalog_scan_started_us;
 static p4_mp_game_registry_t s_multiplayer_game_registry;
 static uint32_t s_file_transfer_generation_seen;
+static uint32_t s_content_transfer_generation_seen;
 #if CONFIG_P4_BOARD_M5STACK_TAB5
 static p4_clock_control_t s_clock_control;
 #endif
@@ -3924,7 +3926,7 @@ static esp_err_t configure_multiplayer_local_offer(void)
             offer.player_capacity=4;
             setup.mode=P4_DOOM_MP_MODE_ALTDEATH;
             setup.episode=1;
-            if (setup.game!=s_multiplayer_local_setup.game || setup.map<1 || setup.map>26) setup.map=1;
+            if (setup.game!=s_multiplayer_local_setup.game || setup.map<1 || setup.map>P4_DOOM_ARENA_SELECTIONS) setup.map=1;
             setup.no_monsters=true;
             setup.fast_monsters=false;
             setup.respawn_monsters=false;
@@ -3933,7 +3935,7 @@ static esp_err_t configure_multiplayer_local_offer(void)
         offer.mode = P4_MP_GAME_MODE_LOCKSTEP;
         offer.input_delay_tics = 2U;
         offer.tick_rate_hz = P4_DOOM_MP_TICK_RATE_HZ;
-        offer.game_protocol = multiplayer_selected_game_is_arena() ? 4U : CONSOLE_DOOM_MULTIPLAYER_PROTOCOL;
+        offer.game_protocol = multiplayer_selected_game_is_arena() ? 5U : CONSOLE_DOOM_MULTIPLAYER_PROTOCOL;
         strcpy(offer.game_id, multiplayer_selected_game_is_arena() ? "org.p4console.gamechangersai" : multiplayer_selected_game_is_chex()
             ? "org.p4console.chexquest" : "org.p4console.doom");
         const uint8_t *const content_sha256 =
@@ -4458,7 +4460,7 @@ static void handle_multiplayer_config_action(
     case CONSOLE_MULTIPLAYER_OPTION_MAP:
         requested.map = multiplayer_cycle_range(
             requested.map, 1U,
-            multiplayer_selected_game_is_arena() ? 26U : multiplayer_selected_game_is_chex()
+            multiplayer_selected_game_is_arena() ? P4_DOOM_ARENA_SELECTIONS : multiplayer_selected_game_is_chex()
                 ? P4_DOOM_MP_MAX_CHEX_MAP : P4_DOOM_MP_MAX_MAP,
             delta);
         break;
@@ -5374,6 +5376,15 @@ static void poll_multiplayer_link(const console_shell_t *shell)
         &s_h1_usb_drive_control,
         (uint64_t)esp_timer_get_time() / UINT64_C(1000));
 #endif
+    const p4_content_transfer_info_t content_after = p4_content_transfer_info();
+    if (content_after.generation != s_content_transfer_generation_seen &&
+        platform_game_storage_content_changed() == ESP_OK) {
+        s_content_transfer_generation_seen = content_after.generation;
+        s_file_listing_seen = false;
+        sync_game_storage();
+        ESP_LOGI(TAG, "P4_CONSOLE_OS CONTENT_ACTIVATED generation=%lu reboot=0",
+                 (unsigned long)content_after.generation);
+    }
     const p4_file_transfer_info_t file_after = p4_file_transfer_info();
     if (file_after.generation != s_file_transfer_generation_seen) {
         s_file_transfer_generation_seen = file_after.generation;

@@ -6,7 +6,7 @@
 #include "p4/doom_multiplayer.h"
 
 enum { P4_DOOM_ARENA_IDLE_TICS = 15 * P4_DOOM_MP_TICK_RATE_HZ,
-       P4_DOOM_ARENA_MAX_MAPS = 32, P4_DOOM_ARENA_SELECTIONS = 26,
+       P4_DOOM_ARENA_MAX_MAPS = 32, P4_DOOM_ARENA_SELECTIONS = 29,
        P4_DOOM_ARENA_VOTE_TICS = 20 * P4_DOOM_MP_TICK_RATE_HZ,
        P4_DOOM_ARENA_VOTE_COOLDOWN = 5 * P4_DOOM_MP_TICK_RATE_HZ };
 typedef struct {
@@ -26,15 +26,15 @@ typedef struct { uint8_t entered_break, returned; } p4_doom_arena_transition_t;
 
 bool p4_doom_arena_begin(p4_doom_arena_t *, uint8_t players,
                         const uint8_t *maps, uint8_t map_count);
-/* Pure Hell v0.5: always start with shotguns, then rockets, repeating. */
+/* Pure Hades v0.6: five-map rotation, starting with shotguns. */
 bool p4_doom_arena_begin_default(p4_doom_arena_t *, uint8_t players);
-/* Selection 1/2: Pure Hell; 3..26: DWANGO 5 MAP01..24. */
+/* Selection 1..5: Pure Hades; 6..29: DWANGO 5 MAP01..24. */
 bool p4_doom_arena_begin_selected(p4_doom_arena_t *, uint8_t players, uint8_t selection);
 bool p4_doom_arena_select(p4_doom_arena_t *, uint8_t selection);
 uint8_t p4_doom_arena_map_number(uint8_t selection);
 const char *p4_doom_arena_label(uint8_t selection);
 uint8_t p4_doom_arena_active_mask(const p4_doom_arena_t *);
-/* Two synchronized chat bytes: opcode then 0x80 | generation. Returns a
+/* Two synchronized chat bytes: opcode then 0xa0 + generation (0..63); disjoint byte ranges. Returns a
  * majority-approved selection, otherwise zero. Called once per game tic. */
 uint8_t p4_doom_arena_vote_tick(p4_doom_arena_t *, const uint8_t chat[P4_MP_MAX_PLAYERS]);
 /* Exactly one call per simulated, unpaused level tic on every engine. */

@@ -127,12 +127,12 @@ def verify_local_distribution_policy(wad_path: pathlib.Path) -> None:
     require(tracked.returncode == 0, "could not inspect tracked-file policy")
     tracked_wads = [line for line in tracked.stdout.splitlines() if pathlib.PurePosixPath(line).suffix.lower() == ".wad"]
     # Explicit owner-authorized original map pack; never allow an IWAD here.
-    allowed = {"game-data/pure-hell/v0.5/PUREHELL.WAD":
-               "b0e8ab211fe263bdf263b219cd0f3584cac0071ec1cf3ce73defa843f00a3663"}
+    allowed = {"game-data/pure-hades/v0.6/PUREHADES.WAD":
+               "ab027fbeebe20787214a3bc1239bba73271030dc284cd108c20ae8bc73752fc8"}
     for name in tracked_wads:
         require(name in allowed, f"Unauthorized tracked WAD: {name}")
         require(sha256_file(ROOT / name) == allowed[name],
-                f"Published Pure Hell identity changed: {name}")
+                f"Published Pure Hades identity changed: {name}")
 
 
 def verify_input(wad_path: pathlib.Path, partitions_path: pathlib.Path) -> None:

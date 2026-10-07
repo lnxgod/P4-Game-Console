@@ -4,6 +4,7 @@ import importlib.util
 import pathlib
 import struct
 import unittest
+from unittest.mock import Mock
 
 spec = importlib.util.spec_from_file_location('installer', pathlib.Path(__file__).resolve().parents[1] / 'flash-console-os-tab5.py')
 installer = importlib.util.module_from_spec(spec)
@@ -45,6 +46,24 @@ class Gates(unittest.TestCase):
         installer.validate_image(data)
         struct.pack_into('<HH',data,15,300,399)
         with self.assertRaisesRegex(ValueError,'silicon'):installer.validate_image(data)
+    def test_checksum_without_full_read(self):
+        data=b'fixed app artifact'; device=Mock()
+        device.flash_md5sum.return_value=installer.hashlib.md5(data).hexdigest()
+        self.assertTrue(installer.flash_range_matches(device,0x20000,data,'device-checksum'))
+        device.read_flash.assert_not_called()
+        device.flash_md5sum.assert_called_once_with(0x20000,len(data))
+        device.flash_md5sum.return_value='00'*16
+        self.assertFalse(installer.flash_range_matches(device,0x20000,data,'device-checksum'))
+    def test_optional_readback_and_failures(self):
+        device=Mock();device.read_flash.return_value=b'app'
+        self.assertTrue(installer.flash_range_matches(device,0x20000,b'app','full-readback'))
+        device.read_flash.return_value=b'bad'
+        self.assertFalse(installer.flash_range_matches(device,0x20000,b'app','full-readback'))
+        device.flash_md5sum.side_effect=RuntimeError('checksum unsupported')
+        with self.assertRaises(RuntimeError):
+            installer.flash_range_matches(device,0x20000,b'app','device-checksum')
+        with self.assertRaises(ValueError):
+            installer.flash_range_matches(device,0x20000,b'app','none')
     def test_redaction(self):
         self.assertNotIn('01:02:03:04:05:06',installer.redact('MAC: 01:02:03:04:05:06'))
 

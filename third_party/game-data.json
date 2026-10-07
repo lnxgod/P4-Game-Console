@@ -5,13 +5,50 @@
     "bytes_in_firmware": false,
     "redistribution_by_project": false,
     "repository_asset_exceptions": [
-      "game-data/pure-hell/v0.5/PUREHELL.WAD",
-      "game-data/pure-hell/v0.5/Freedoom-0.13.0-COPYING.txt",
-      "game-data/pure-hell/v0.5/Freedoom-0.13.0-CREDITS-MUSIC.txt",
-      "game-data/pure-hell/v0.5/Freedoom-0.13.0-CREDITS.txt",
-      "game-data/pure-hell/v0.5/README.txt",
-      "game-data/pure-hell/v0.5/build-manifest.json",
-      "game-data/pure-hell/v0.5/Beasts-of-Horizon.mid"
+      "game-data/pure-hades/v0.6/.gitignore",
+      "game-data/pure-hades/v0.6/CREDITS.md",
+      "game-data/pure-hades/v0.6/LICENSE",
+      "game-data/pure-hades/v0.6/PUREHADES.WAD",
+      "game-data/pure-hades/v0.6/README.md",
+      "game-data/pure-hades/v0.6/SHA256SUMS",
+      "game-data/pure-hades/v0.6/assets/CWILV00.lmp",
+      "game-data/pure-hades/v0.6/assets/CWILV01.lmp",
+      "game-data/pure-hades/v0.6/assets/CWILV02.lmp",
+      "game-data/pure-hades/v0.6/assets/CWILV03.lmp",
+      "game-data/pure-hades/v0.6/assets/CWILV04.lmp",
+      "game-data/pure-hades/v0.6/assets/M_DOOM.lmp",
+      "game-data/pure-hades/v0.6/assets/TITLEPIC.lmp",
+      "game-data/pure-hades/v0.6/licenses/CC-BY-SA-4.0.txt",
+      "game-data/pure-hades/v0.6/licenses/Freedoom-0.13.0-COPYING.txt",
+      "game-data/pure-hades/v0.6/licenses/Freedoom-0.13.0-CREDITS-MUSIC.txt",
+      "game-data/pure-hades/v0.6/licenses/Freedoom-0.13.0-CREDITS.txt",
+      "game-data/pure-hades/v0.6/licenses/MIT.txt",
+      "game-data/pure-hades/v0.6/licenses/Ultimate-MIDI-Pack-original-readme.txt",
+      "game-data/pure-hades/v0.6/manifest.json",
+      "game-data/pure-hades/v0.6/menu-preview.png",
+      "game-data/pure-hades/v0.6/music/E1M8 Myrgharok - Escaping the Darkness.mid",
+      "game-data/pure-hades/v0.6/music/E2M8 Manniacc - Dethrone the Tyrant.mid",
+      "game-data/pure-hades/v0.6/music/E3M4 NeilJohnRips - Siege Mentality.mid",
+      "game-data/pure-hades/v0.6/music/E4M2 Sego - A Compact Hell.mid",
+      "game-data/pure-hades/v0.6/music/E4M3 Lee Jackson - Ant Farm Melee.mid",
+      "game-data/pure-hades/v0.6/music/tracklist.json",
+      "game-data/pure-hades/v0.6/preview.png",
+      "game-data/pure-hades/v0.6/setup.json",
+      "game-data/pure-hades/v0.6/source/audit_map.py",
+      "game-data/pure-hades/v0.6/source/base_map.py",
+      "game-data/pure-hades/v0.6/source/bfg_helpers.py",
+      "game-data/pure-hades/v0.6/source/build.py",
+      "game-data/pure-hades/v0.6/source/check_gameplay.py",
+      "game-data/pure-hades/v0.6/source/make_titles.py",
+      "game-data/pure-hades/v0.6/source/test_gameplay.py",
+      "game-data/pure-hades/v0.6/source/validate.py",
+      "game-data/pure-hades/v0.6/source/wadlib.py",
+      "game-data/pure-hades/v0.6/source/walk_tests.py",
+      "game-data/pure-hades/v0.6/title-preview.png",
+      "game-data/pure-hades/v0.6/validation/gameplay.json",
+      "game-data/pure-hades/v0.6/validation/music-playback.json",
+      "game-data/pure-hades/v0.6/validation/reproducibility.json",
+      "game-data/pure-hades/v0.6/validation/structure.json"
     ]
   },
   "game_data": [
@@ -127,17 +164,20 @@
     }
   ],
   "game_changers_ai_bundle": {
-    "version": "pure-hell-0.5-dwango5-freedoom-0.13.0",
+    "version": "pure-hades-0.6-dwango5-freedoom-0.13.0",
     "default_map": 1,
     "rotation": [
       1,
-      2
+      2,
+      3,
+      4,
+      5
     ],
     "max_players": 4,
-    "identity_encoding": "ASCII P4-GCA-ARENAS-1 NUL then binary SHA-256 of IWAD, Pure Hell PWAD, DWANGO5 PWAD in that order",
-    "content_sha256": "6fbdec7a25f87088884382706fbe2c73dba284c3139ee04f1113d7fb7bba3960",
-    "source": "User-supplied Pure-Hell-v0.5-Shotguns-Rockets-Metal.zip, 218033 bytes, SHA-256 c8990cbfbc6c08a693151309452dffe6f0d4e4f463f0312e8beb444c69456271",
-    "notice": "Pure Hell v0.5 and its unchanged music/credits are published with the owner's explicit authorization. External Freedoom/DWANGO inputs stay ignored; preserve all notices.",
+    "identity_encoding": "ASCII P4-GCA-ARENAS-1 NUL then binary SHA-256 of IWAD, Pure Hades PWAD, DWANGO5 PWAD in that order",
+    "content_sha256": "363c69fd5b0ae3faa5360d96624414e6dabd2d4c9c86d1eab518899d8095358b",
+    "source": "https://github.com/lnxgod/pure-hades at 142c6ff56ff8fb9eee40e6b2ea7875a0424337e8 (v0.6); replaces Pure Hell v0.5",
+    "notice": "Owner-requested Pure Hades replacement. Maps and unchanged community MIDI: CC BY-SA 4.0; original source: MIT; Freedoom-derived artwork: BSD-3-Clause. All upstream source, notices and credits are preserved. External Freedoom/DWANGO inputs stay ignored.",
     "files": [
       {
         "symbol": "BASE",
@@ -153,11 +193,12 @@
         "symbol": "PWAD",
         "usb_kind": 6,
         "directory": "",
-        "filename": "PUREHELL.WAD",
-        "local_path": "game-data/pure-hell/v0.5/PUREHELL.WAD",
-        "command": "pure-hell",
-        "size_bytes": 875026,
-        "sha256": "b0e8ab211fe263bdf263b219cd0f3584cac0071ec1cf3ce73defa843f00a3663",
+        "filename": "PUREHADES.WAD",
+        "local_path": "game-data/pure-hades/v0.6/PUREHADES.WAD",
+        "pack_path": "PUREHADES.WAD",
+        "command": "pure-hades",
+        "size_bytes": 2313392,
+        "sha256": "ab027fbeebe20787214a3bc1239bba73271030dc284cd108c20ae8bc73752fc8",
         "repository_asset": true
       },
       {
@@ -173,9 +214,10 @@
       {
         "symbol": "COPYING",
         "usb_kind": 7,
-        "directory": "/GCADOOM",
+        "directory": "/GCADOOM/licenses",
         "filename": "Freedoom-0.13.0-COPYING.txt",
-        "local_path": "game-data/pure-hell/v0.5/Freedoom-0.13.0-COPYING.txt",
+        "local_path": "game-data/pure-hades/v0.6/licenses/Freedoom-0.13.0-COPYING.txt",
+        "pack_path": "licenses/Freedoom-0.13.0-COPYING.txt",
         "command": "arena-copying",
         "size_bytes": 1644,
         "sha256": "7c62f2c520769c798774f416637eec4921e5f0aafdac1245ae7c8a8cf65fe102",
@@ -184,9 +226,10 @@
       {
         "symbol": "CREDITS_MUSIC",
         "usb_kind": 8,
-        "directory": "/GCADOOM",
+        "directory": "/GCADOOM/licenses",
         "filename": "Freedoom-0.13.0-CREDITS-MUSIC.txt",
-        "local_path": "game-data/pure-hell/v0.5/Freedoom-0.13.0-CREDITS-MUSIC.txt",
+        "local_path": "game-data/pure-hades/v0.6/licenses/Freedoom-0.13.0-CREDITS-MUSIC.txt",
+        "pack_path": "licenses/Freedoom-0.13.0-CREDITS-MUSIC.txt",
         "command": "arena-credits-music",
         "size_bytes": 9388,
         "sha256": "2bb77677bbc4e587bba44ccb6514ee0f5397c7bb8ae9580b9188d3d6a57c0a31",
@@ -195,9 +238,10 @@
       {
         "symbol": "CREDITS",
         "usb_kind": 9,
-        "directory": "/GCADOOM",
+        "directory": "/GCADOOM/licenses",
         "filename": "Freedoom-0.13.0-CREDITS.txt",
-        "local_path": "game-data/pure-hell/v0.5/Freedoom-0.13.0-CREDITS.txt",
+        "local_path": "game-data/pure-hades/v0.6/licenses/Freedoom-0.13.0-CREDITS.txt",
+        "pack_path": "licenses/Freedoom-0.13.0-CREDITS.txt",
         "command": "arena-credits",
         "size_bytes": 15872,
         "sha256": "72364333d295c598d75ef9553d3b3661ad0b60e27271c87b7637c74b2f46918a",
@@ -207,33 +251,96 @@
         "symbol": "README",
         "usb_kind": 10,
         "directory": "/GCADOOM",
-        "filename": "README.txt",
-        "local_path": "game-data/pure-hell/v0.5/README.txt",
+        "filename": "README.md",
+        "local_path": "game-data/pure-hades/v0.6/README.md",
+        "pack_path": "README.md",
         "command": "arena-readme",
-        "size_bytes": 4220,
-        "sha256": "e10bcbce5d602672fd7dcac442861d9675db902c3669fb7b9510062def04832d",
+        "size_bytes": 8324,
+        "sha256": "09cedf54ba776413fcee13aee95563eb988bc71887a564e28bf909187b23a55c",
         "repository_asset": true
       },
       {
         "symbol": "MANIFEST",
         "usb_kind": 11,
         "directory": "/GCADOOM",
-        "filename": "build-manifest.json",
-        "local_path": "game-data/pure-hell/v0.5/build-manifest.json",
+        "filename": "manifest.json",
+        "local_path": "game-data/pure-hades/v0.6/manifest.json",
+        "pack_path": "manifest.json",
         "command": "arena-manifest",
-        "size_bytes": 2823,
-        "sha256": "90b9629971c5af62a7aa2406727c2153ebaca567a3b0fbcd002e8115f8c8c721",
+        "size_bytes": 15101,
+        "sha256": "1344d73da9c7f1f264e817d50a5747a2b3fe3b7dfe584f21d5f59b9231733712",
         "repository_asset": true
       },
       {
-        "symbol": "MIDI",
+        "symbol": "TRACKLIST",
         "usb_kind": 12,
+        "directory": "/GCADOOM/music",
+        "filename": "tracklist.json",
+        "local_path": "game-data/pure-hades/v0.6/music/tracklist.json",
+        "pack_path": "music/tracklist.json",
+        "command": "arena-tracklist",
+        "size_bytes": 5577,
+        "sha256": "e8d930a8528a48d07b3460feb7eac0a295101b7c042e1a53dc678fb52e3582d2",
+        "repository_asset": true
+      },
+      {
+        "symbol": "LICENSE",
+        "usb_kind": 16,
         "directory": "/GCADOOM",
-        "filename": "Beasts-of-Horizon.mid",
-        "local_path": "game-data/pure-hell/v0.5/Beasts-of-Horizon.mid",
-        "command": "arena-midi",
-        "size_bytes": 43798,
-        "sha256": "01c7618d0e03224156f29cdb07895ca224f0a30ba41fe67595fffadf0454fa89",
+        "filename": "LICENSE",
+        "local_path": "game-data/pure-hades/v0.6/LICENSE",
+        "pack_path": "LICENSE",
+        "command": "arena-license",
+        "size_bytes": 1375,
+        "sha256": "889d96b2da176a6242b47cd3375cadb20d4dd9f16d06d98763b647e9b33ef511",
+        "repository_asset": true
+      },
+      {
+        "symbol": "HADES_CREDITS",
+        "usb_kind": 17,
+        "directory": "/GCADOOM",
+        "filename": "CREDITS.md",
+        "local_path": "game-data/pure-hades/v0.6/CREDITS.md",
+        "pack_path": "CREDITS.md",
+        "command": "arena-hades-credits",
+        "size_bytes": 2366,
+        "sha256": "906c8a6ab2c664c2a57f117cbb79af2c6ae00da50c53fe6dd70d7ec36a1bde26",
+        "repository_asset": true
+      },
+      {
+        "symbol": "CC_BY_SA",
+        "usb_kind": 18,
+        "directory": "/GCADOOM/licenses",
+        "filename": "CC-BY-SA-4.0.txt",
+        "local_path": "game-data/pure-hades/v0.6/licenses/CC-BY-SA-4.0.txt",
+        "pack_path": "licenses/CC-BY-SA-4.0.txt",
+        "command": "arena-cc-by-sa",
+        "size_bytes": 20138,
+        "sha256": "28a9529c7d0bb4dc51f4bf5c116a3d16ef247a052f7591466768ddf563fd1cf5",
+        "repository_asset": true
+      },
+      {
+        "symbol": "MIDI_NOTICE",
+        "usb_kind": 19,
+        "directory": "/GCADOOM/licenses",
+        "filename": "Ultimate-MIDI-Pack-original-readme.txt",
+        "local_path": "game-data/pure-hades/v0.6/licenses/Ultimate-MIDI-Pack-original-readme.txt",
+        "pack_path": "licenses/Ultimate-MIDI-Pack-original-readme.txt",
+        "command": "arena-midi-notice",
+        "size_bytes": 14450,
+        "sha256": "37c32dcaca6f8eb143842c7cdf2bce06865c13fe6207094d092ea0c94a313456",
+        "repository_asset": true
+      },
+      {
+        "symbol": "MIT",
+        "usb_kind": 20,
+        "directory": "/GCADOOM/licenses",
+        "filename": "MIT.txt",
+        "local_path": "game-data/pure-hades/v0.6/licenses/MIT.txt",
+        "pack_path": "licenses/MIT.txt",
+        "command": "arena-mit",
+        "size_bytes": 1068,
+        "sha256": "ddba3b25d16067476f8e4a4498c3f9f43328d22d30b5f1019cd73b0e07f5f3e5",
         "repository_asset": true
       },
       {
@@ -260,156 +367,174 @@
     "selections": [
       {
         "id": 1,
-        "pack": "PUREHELL",
+        "pack": "PUREHADES",
         "map": 1,
-        "title": "Pure Hell Shotguns"
+        "title": "Pure Hades Shotguns"
       },
       {
         "id": 2,
-        "pack": "PUREHELL",
+        "pack": "PUREHADES",
         "map": 2,
-        "title": "Pure Hell Rockets"
+        "title": "Pure Hades Rockets"
       },
       {
         "id": 3,
+        "pack": "PUREHADES",
+        "map": 3,
+        "title": "Pure Hades Plasma"
+      },
+      {
+        "id": 4,
+        "pack": "PUREHADES",
+        "map": 4,
+        "title": "Pure Hades Pure Chaos"
+      },
+      {
+        "id": 5,
+        "pack": "PUREHADES",
+        "map": 5,
+        "title": "Pure Hades Double-Barrel Finale"
+      },
+      {
+        "id": 6,
         "pack": "DWANGO5",
         "map": 1,
         "title": "DWANGO 5 MAP01"
       },
       {
-        "id": 4,
+        "id": 7,
         "pack": "DWANGO5",
         "map": 2,
         "title": "DWANGO 5 MAP02"
       },
       {
-        "id": 5,
+        "id": 8,
         "pack": "DWANGO5",
         "map": 3,
         "title": "DWANGO 5 MAP03"
       },
       {
-        "id": 6,
+        "id": 9,
         "pack": "DWANGO5",
         "map": 4,
         "title": "DWANGO 5 MAP04"
       },
       {
-        "id": 7,
+        "id": 10,
         "pack": "DWANGO5",
         "map": 5,
         "title": "DWANGO 5 MAP05"
       },
       {
-        "id": 8,
+        "id": 11,
         "pack": "DWANGO5",
         "map": 6,
         "title": "DWANGO 5 MAP06"
       },
       {
-        "id": 9,
+        "id": 12,
         "pack": "DWANGO5",
         "map": 7,
         "title": "DWANGO 5 MAP07"
       },
       {
-        "id": 10,
+        "id": 13,
         "pack": "DWANGO5",
         "map": 8,
         "title": "DWANGO 5 MAP08"
       },
       {
-        "id": 11,
+        "id": 14,
         "pack": "DWANGO5",
         "map": 9,
         "title": "DWANGO 5 MAP09"
       },
       {
-        "id": 12,
+        "id": 15,
         "pack": "DWANGO5",
         "map": 10,
         "title": "DWANGO 5 MAP10"
       },
       {
-        "id": 13,
+        "id": 16,
         "pack": "DWANGO5",
         "map": 11,
         "title": "DWANGO 5 MAP11"
       },
       {
-        "id": 14,
+        "id": 17,
         "pack": "DWANGO5",
         "map": 12,
         "title": "DWANGO 5 MAP12"
       },
       {
-        "id": 15,
+        "id": 18,
         "pack": "DWANGO5",
         "map": 13,
         "title": "DWANGO 5 MAP13"
       },
       {
-        "id": 16,
+        "id": 19,
         "pack": "DWANGO5",
         "map": 14,
         "title": "DWANGO 5 MAP14"
       },
       {
-        "id": 17,
+        "id": 20,
         "pack": "DWANGO5",
         "map": 15,
         "title": "DWANGO 5 MAP15"
       },
       {
-        "id": 18,
+        "id": 21,
         "pack": "DWANGO5",
         "map": 16,
         "title": "DWANGO 5 MAP16"
       },
       {
-        "id": 19,
+        "id": 22,
         "pack": "DWANGO5",
         "map": 17,
         "title": "DWANGO 5 MAP17"
       },
       {
-        "id": 20,
+        "id": 23,
         "pack": "DWANGO5",
         "map": 18,
         "title": "DWANGO 5 MAP18"
       },
       {
-        "id": 21,
+        "id": 24,
         "pack": "DWANGO5",
         "map": 19,
         "title": "DWANGO 5 MAP19"
       },
       {
-        "id": 22,
+        "id": 25,
         "pack": "DWANGO5",
         "map": 20,
         "title": "DWANGO 5 MAP20"
       },
       {
-        "id": 23,
+        "id": 26,
         "pack": "DWANGO5",
         "map": 21,
         "title": "DWANGO 5 MAP21"
       },
       {
-        "id": 24,
+        "id": 27,
         "pack": "DWANGO5",
         "map": 22,
         "title": "DWANGO 5 MAP22"
       },
       {
-        "id": 25,
+        "id": 28,
         "pack": "DWANGO5",
         "map": 23,
         "title": "DWANGO 5 MAP23"
       },
       {
-        "id": 26,
+        "id": 29,
         "pack": "DWANGO5",
         "map": 24,
         "title": "DWANGO 5 MAP24"
@@ -420,6 +545,7 @@
       "archive_size_bytes": 716652,
       "archive_sha256": "f6cc5b7adcb38f9e1bcee979668f155f2d8815d6218a694869f81c27386a407c",
       "notes": "Unmodified local input from the community deathmatch archive. Preserve DWANGO5.TXT and FILE_ID.DIZ. No redistribution by this repository. In-memory lump namespace isolates legacy graphics/sounds; maps and map music are selected explicitly."
-    }
+    },
+    "game_protocol": 5
   }
 }

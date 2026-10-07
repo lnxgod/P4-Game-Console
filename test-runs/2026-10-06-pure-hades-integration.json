@@ -1,0 +1,277 @@
+{
+  "schema": 1,
+  "title": "Pure Hades v0.6 replacement and Tab5 OS 0.57",
+  "created_at_utc": "2026-10-07T01:48:52.040278+00:00",
+  "source_commit": "ddc32bf29dd0096bedc8d2fbdd4a7cf7f7a93b7f",
+  "base_main": "426a4d51efcbbb5fc86f3cb40d42b6ac085685cf",
+  "status": "0.57 installed and boot verified; content batch interrupted at operator request; superseded by 0.58 without per-file resets",
+  "upstream": {
+    "repository": "https://github.com/lnxgod/pure-hades",
+    "commit": "142c6ff56ff8fb9eee40e6b2ea7875a0424337e8",
+    "tag": "v0.6",
+    "destination": "game-data/pure-hades/v0.6",
+    "files": {
+      ".gitignore": "93e22e91ba6602ca06594136081b1349c4f4bc9ddcfddf5a4be78b2c3c42fcaf",
+      "CREDITS.md": "906c8a6ab2c664c2a57f117cbb79af2c6ae00da50c53fe6dd70d7ec36a1bde26",
+      "LICENSE": "889d96b2da176a6242b47cd3375cadb20d4dd9f16d06d98763b647e9b33ef511",
+      "PUREHADES.WAD": "ab027fbeebe20787214a3bc1239bba73271030dc284cd108c20ae8bc73752fc8",
+      "README.md": "09cedf54ba776413fcee13aee95563eb988bc71887a564e28bf909187b23a55c",
+      "SHA256SUMS": "167f924732ada8bf142b1c5b71d07388604d3e97b655c3a6144bd34ffed9f18d",
+      "assets/CWILV00.lmp": "8d41592bbb4d185bacba09a6798d4e14e227944a43a5e00721fc6d4028768019",
+      "assets/CWILV01.lmp": "6ce4137128bca0cd11501802e698a0859a2272a05804870b9d51f967c79729e0",
+      "assets/CWILV02.lmp": "bcc52959299ce02c99ee7183452c2cee15d5516f27ace5bf7d23b108bfdd7573",
+      "assets/CWILV03.lmp": "b6f3f7eee9461faa249862ef3870fb02e3c75f0500e5e6c1f34814698473c5e1",
+      "assets/CWILV04.lmp": "bbee0058dc6c33133598b67b66579016248ff1c6f1f16366bc37372c39fce315",
+      "assets/M_DOOM.lmp": "1fdde93ef97b78f8a9762b0aea69e14612ad987d4fb5387b7d26f57148d493f8",
+      "assets/TITLEPIC.lmp": "b6965abb058243d0201d7a8535676f99fd8d93b7c2de978d7551e99f707ff550",
+      "licenses/CC-BY-SA-4.0.txt": "28a9529c7d0bb4dc51f4bf5c116a3d16ef247a052f7591466768ddf563fd1cf5",
+      "licenses/Freedoom-0.13.0-COPYING.txt": "7c62f2c520769c798774f416637eec4921e5f0aafdac1245ae7c8a8cf65fe102",
+      "licenses/Freedoom-0.13.0-CREDITS-MUSIC.txt": "2bb77677bbc4e587bba44ccb6514ee0f5397c7bb8ae9580b9188d3d6a57c0a31",
+      "licenses/Freedoom-0.13.0-CREDITS.txt": "72364333d295c598d75ef9553d3b3661ad0b60e27271c87b7637c74b2f46918a",
+      "licenses/MIT.txt": "ddba3b25d16067476f8e4a4498c3f9f43328d22d30b5f1019cd73b0e07f5f3e5",
+      "licenses/Ultimate-MIDI-Pack-original-readme.txt": "37c32dcaca6f8eb143842c7cdf2bce06865c13fe6207094d092ea0c94a313456",
+      "manifest.json": "1344d73da9c7f1f264e817d50a5747a2b3fe3b7dfe584f21d5f59b9231733712",
+      "menu-preview.png": "ab25e014666316b61775345b825c7265fcc46839103a381c98152468af4760bd",
+      "music/E1M8 Myrgharok - Escaping the Darkness.mid": "9fd0ac8a64f3261c2860a5ac581a756534f6c383fb77bac41754ef845a9339e0",
+      "music/E2M8 Manniacc - Dethrone the Tyrant.mid": "b786e98c5783f6cbaf4221153acd06fb0e4a51afe9b65ffb3d9d277d1c508c9e",
+      "music/E3M4 NeilJohnRips - Siege Mentality.mid": "84a107bb608e9d3e3653e00cbf088932ee0095b72fbf6c90e4b9966b1f039967",
+      "music/E4M2 Sego - A Compact Hell.mid": "7180c35caa81f691eb2956b307c3f6a4300e92317c00dd00298b55e3df06efbb",
+      "music/E4M3 Lee Jackson - Ant Farm Melee.mid": "b8b7521dcc97154c02a3263954284a0ddd22d8e8a66a37c566ee37198d0cb834",
+      "music/tracklist.json": "e8d930a8528a48d07b3460feb7eac0a295101b7c042e1a53dc678fb52e3582d2",
+      "preview.png": "079f8b7d30900c54fff99f2f052554a332bb9e1778ddc6278bc616174f2b826d",
+      "setup.json": "1ce0003822fbbbaac9227eac1e0f787d878034a60a0355be1aed7ec027d0691a",
+      "source/audit_map.py": "c95418745418796e597a48c3fc9e702e147ad72ade8167e30d1b6b86e71cd8da",
+      "source/base_map.py": "49873b9d8fbe4c109430b6a36a472a84aac57cf38303c733a98f89e330e164c3",
+      "source/bfg_helpers.py": "382b5b4cf02059318872465b77f37f6da5d1f7f6442dc60b88151ea2927efda0",
+      "source/build.py": "6f69370b73b95c9c7cd3c8fe7345cfbcca6b0b84e1c20abcee2d4933f45e7cbe",
+      "source/check_gameplay.py": "7deba9618bb7437de9c12475743a6a83a76d98a9364783b586e9cc6381f47771",
+      "source/make_titles.py": "5d0eb600028878a0bae526eac838d908a6493230c6954b67db9b07c9afd963ce",
+      "source/test_gameplay.py": "1c66e1718ae94ae41fd2ed070f005da384920740f62fcffa654b861bb3376096",
+      "source/validate.py": "fe9578b53a824e852ab97f52dc2f242aaaa3012e68a3d1fee1fda06c5862721a",
+      "source/wadlib.py": "9c54d431883ac8c4e4fd8650ac7bb493757c208f12b264bb0e1d0294257095d4",
+      "source/walk_tests.py": "94393735e1b2935ad8ba5adaf89699fddff05746af8defef31cdfacb8e148c23",
+      "title-preview.png": "7e80124eb7553c89aabb042d1fd59da39ed2a8426ebcb330348cdb325abe770f",
+      "validation/gameplay.json": "13dd79fbf1a71e64262b94d46584af5eb3866b21f016b4e02e03292a50b761da",
+      "validation/music-playback.json": "561993d5773a0910ec6f251caac8bc06f42df2c12d4c0b5cea41186dae3f3bbd",
+      "validation/reproducibility.json": "77899910b5f0c2b0a8909d0e3bdc21f4911f5d6889ca869c9610793e04362379",
+      "validation/structure.json": "d3db50bc71daa85a1c025e0da8da1092241d82a41778ffbf58eace0491534d6c"
+    }
+  },
+  "app": {
+    "file": "apps/console_os/build-tab5/p4_console_os.bin",
+    "bytes": 4319568,
+    "sha256": "a535203480cfee9b2f54d2c40b038870f6389e0035bcc7e8058f19bacf535671"
+  },
+  "update": {
+    "path": "apps/console_os/build-tab5/sd-card/UPDATE/P4UPDATE.P4U",
+    "bytes": 4319824,
+    "sha256": "19e11a9a215d4c48946908baffe26766d3b988b267097e91f2360ca6748397e1"
+  },
+  "build_verifier": {
+    "ble_multiplayer_enabled": true,
+    "board": "m5stack-tab5",
+    "charger_control_enabled": true,
+    "content_bundle_verified": true,
+    "flash_authorized": false,
+    "hardware_verified": false,
+    "image_bytes": 4319568,
+    "image_sha256": "a535203480cfee9b2f54d2c40b038870f6389e0035bcc7e8058f19bacf535671",
+    "native_cartridges": 17,
+    "result": "tab5-build-candidate-verified",
+    "usb_host_enabled": true,
+    "version": "0.57",
+    "wifi_multiplayer_enabled": true
+  },
+  "authorization": {
+    "path": "hardware/evidence/tab5-0.57-pure-hades-authorization.json",
+    "bytes": 11914,
+    "sha256": "8c9d6b3f1d2f25c9f3535e8614243ab8f024fe8ac3ac59bcc223f3b538387812"
+  },
+  "content": {
+    "identity_sha256": "363c69fd5b0ae3faa5360d96624414e6dabd2d4c9c86d1eab518899d8095358b",
+    "protocol": 5,
+    "required_files": 16,
+    "pure_hades_maps": 5,
+    "optional_dwango_maps": 24,
+    "repository_wad_exception": "game-data/pure-hades/v0.6/PUREHADES.WAD",
+    "old_pack_removed_from_active_bundle": true
+  },
+  "tests": {
+    "doom_multiplayer_ctest": 12,
+    "storage_ctest": 6,
+    "content_ctest": 5,
+    "content_python": 7,
+    "native_bundle_python": 4,
+    "usb_wire_python": 7,
+    "content_fetch_python": 5,
+    "arena_memory_python": 2,
+    "guarded_install_python": 7,
+    "full_engine": "ASan four seats, all five Pure Hades maps through ordinary/secret exits, all 24 DWANGO maps, controller proposal/majority switching, idle return, score and membership preservation",
+    "boundary_starts": [
+      5,
+      29
+    ],
+    "token_framing": "All 64 generation values reject orphan token/invalid opcode and admit selection 29 vote",
+    "source_reproducibility": "44 upstream files hash-identical; source rebuild reproduces pinned WAD digest"
+  },
+  "logs": {
+    "focused-host-final.log": {
+      "path": "build-host/pure-hades-integration/focused-host-final.log",
+      "bytes": 8658,
+      "sha256": "49d2c851f1714218af940dd3e452ab9f8cd372c96cee87cd3c898f3900de90a0"
+    },
+    "usb-wire.log": {
+      "path": "build-host/pure-hades-integration/usb-wire.log",
+      "bytes": 105,
+      "sha256": "83166b089fbcb82fac63f22522fa6ae99bb5e46368cd35d756277fd463dd6346"
+    },
+    "content-tests.log": {
+      "path": "build-host/pure-hades-integration/content-tests.log",
+      "bytes": 103,
+      "sha256": "1f11b6e880045ee35de832b81b45d06257342e13b5c79bbf0034379d4ca220b9"
+    },
+    "memory-tests.log": {
+      "path": "build-host/pure-hades-integration/memory-tests.log",
+      "bytes": 100,
+      "sha256": "a6707d4eff38012da33ddc34bc6dc076a3b17151cfc9aef223c8790cbe64c3da"
+    },
+    "install-tests.log": {
+      "path": "build-host/pure-hades-integration/install-tests.log",
+      "bytes": 105,
+      "sha256": "fe836cbecd3b6b4f70bec51b58d30c3e45ad72ae7fb3cb63421a0f7337e651ae"
+    },
+    "engine-build.log": {
+      "path": "build-host/pure-hades-integration/engine-build.log",
+      "bytes": 286,
+      "sha256": "0a992f833e1850e394a58b4576dcfd60b2be4ad1f5948e20297341ad6ec00eb5"
+    },
+    "engine-full.log": {
+      "path": "build-host/pure-hades-integration/engine-full.log",
+      "bytes": 5631,
+      "sha256": "bf15cc5095f48c6234d3ede9e72bd41a34cb460fcc24d240bc4b96b1fb9752c6"
+    },
+    "engine-start5.log": {
+      "path": "build-host/pure-hades-integration/engine-start5.log",
+      "bytes": 2387,
+      "sha256": "d90a997f06d4a84edf520a14bd5248ba12f2c9fe399455e42b88d10227a86104"
+    },
+    "engine-start29.log": {
+      "path": "build-host/pure-hades-integration/engine-start29.log",
+      "bytes": 2331,
+      "sha256": "84dee82a321753343a14368f6f790527492e51e97b9e40f96a6dca051a755a2e"
+    },
+    "actual-wads.log": {
+      "path": "build-host/pure-hades-integration/actual-wads.log",
+      "bytes": 92,
+      "sha256": "3723c1701e137887ca3dc0abe288d6b1cdd23398864a2b9c36a0b86c4f6c24a9"
+    },
+    "stage.log": {
+      "path": "build-host/pure-hades-integration/stage.log",
+      "bytes": 105,
+      "sha256": "c50c965cd0719a0009ff187fd760fa209769e46e3e86d96abb524ecbceb75278"
+    },
+    "upstream-build.log": {
+      "path": "build-host/pure-hades-integration/upstream-build.log",
+      "bytes": 1257,
+      "sha256": "01e1d52d062d26bc02dd4af77f430b2417dbe35f7e7bb6166a09dac06949f3f3"
+    },
+    "upstream-validate.log": {
+      "path": "build-host/pure-hades-integration/upstream-validate.log",
+      "bytes": 218,
+      "sha256": "5ab5f63bab627a5c04ee4b2fbf8629529a9936a212d5c2522e8d17aee913184f"
+    },
+    "tab5-build.log": {
+      "path": "build-host/pure-hades-integration/tab5-build.log",
+      "bytes": 4742,
+      "sha256": "c5c216e12e6fc6aa36946cde9f15233577c0227f3bbbf63ae89157b413d02b13"
+    },
+    "tab5-verifier.json": {
+      "path": "build-host/pure-hades-integration/tab5-verifier.json",
+      "bytes": 435,
+      "sha256": "8ecf59f4adc928b7bb3a7a498055994200dfda62f8ed2e8b5ff56b3e30ea03b1"
+    }
+  },
+  "paired_protected_game": {
+    "file": "apps/console_os/build-tab5/sd-card/GAMES/LORD.P4G",
+    "sha256": "bc737068ddf41e651132e7003f5cf60d59bb85f01d8421a5859d2f33996fb46e",
+    "payload_sha256": "5a2f96266b305ad7abc549aeaa838b3d21b9cfd666c2b4c2f775aa5cd7d373ff",
+    "save_identity_unchanged": true
+  },
+  "units": {
+    "A": {
+      "panel": "ST7121",
+      "port": "/dev/cu.usbmodem2101",
+      "identity_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+      "flash_bytes": 16777216,
+      "silicon": "v1.3",
+      "write_offsets": [
+        "0x20000"
+      ],
+      "verification_method": "full-readback",
+      "app_readback_verified": true,
+      "app_checksum_verified": null,
+      "launcher_ready": true,
+      "ten_second_health_gate": true,
+      "install_receipt": {
+        "path": "hardware/backups/tab5-a-install-qmv2rvp3/receipt.json",
+        "bytes": 1554,
+        "sha256": "7f96e351eb8f5826f0ba9ee39740065e1f60a5201ba55c6aff60087190723faf"
+      },
+      "install_runtime_log": {
+        "path": "hardware/backups/tab5-a-install-qmv2rvp3/runtime.log",
+        "bytes": 15599,
+        "sha256": "31417b808e381668fa672cc724d0bb415e383f46fedb3244b3f25ee6b4c30f25"
+      },
+      "content_status": "interrupted after operator reported per-file restarts",
+      "completed_content_files_before_stop": 7,
+      "interrupted_content_log": {
+        "path": "build-host/pure-hades-integration/content-A.log",
+        "sha256": "09e6f4222d9f00308d756b8f086962f0dd73033281314f65ac470df9a54fdbc3"
+      }
+    },
+    "B": {
+      "panel": "ST7123",
+      "port": "/dev/cu.usbmodem101",
+      "identity_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+      "flash_bytes": 16777216,
+      "silicon": "v1.3",
+      "write_offsets": [
+        "0x20000"
+      ],
+      "verification_method": "device-checksum",
+      "app_readback_verified": false,
+      "app_checksum_verified": true,
+      "launcher_ready": true,
+      "ten_second_health_gate": true,
+      "install_receipt": {
+        "path": "hardware/backups/tab5-b-install-4sxxx9n5/receipt.json",
+        "bytes": 1627,
+        "sha256": "295bd158d8a4799d790cbc018dc7258616829d761c5cc550e573c80fbd39cac4"
+      },
+      "install_runtime_log": {
+        "path": "hardware/backups/tab5-b-install-4sxxx9n5/runtime.log",
+        "bytes": 15656,
+        "sha256": "b5c4f9e69f288ba63f63be78bd313b29d184187400be1cc092df1435e7e920c0"
+      },
+      "content_status": "interrupted after operator reported per-file restarts",
+      "completed_content_files_before_stop": 5,
+      "interrupted_content_log": {
+        "path": "build-host/pure-hades-integration/content-B.log",
+        "sha256": "67a6f6368faa1fb37257d9f9088803217c48204ce0b32a04f18f9dd6c0baac67"
+      }
+    }
+  },
+  "limits": [
+    "Automated engine tests run locally, not on linked physical consoles.",
+    "Physical two/four-player play, controller feel, sound and sustained device cadence require operator testing.",
+    "Historical Pure Hell evidence remains historical. Old unused PUREHELL.WAD on an SD card is never loaded by 0.57.",
+    "Upstream whitespace is preserved byte-for-byte; project-owned diff passed whitespace checks."
+  ],
+  "checksum_authorization": {
+    "path": "hardware/evidence/tab5-0.57-pure-hades-checksum-authorization.json",
+    "bytes": 11758,
+    "sha256": "68f9d682bec9c8a8e9219b55bded9f4801388518846f9eb40419ed6a1700d647"
+  },
+  "verification_preference": "Routine Tab5 flashes use device checksums. A was already being installed when preference arrived and completed full readback; B used device-checksum with no full app readback. Full readback remains an explicit optional diagnostic.",
+  "successor_evidence": "test-runs/2026-10-06-tab5-no-reboot-content.json"
+}

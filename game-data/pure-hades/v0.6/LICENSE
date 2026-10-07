@@ -1,0 +1,27 @@
+PURE HADES v0.6 — LICENSE INDEX
+
+Map geometry and level design, original documentation and original content:
+Copyright 2026 Will Hatzer. Licensed under Creative Commons Attribution-
+ShareAlike 4.0 International (CC-BY-SA-4.0).
+Full terms: licenses/CC-BY-SA-4.0.txt
+https://creativecommons.org/licenses/by-sa/4.0/
+
+Original Python source in source/:
+MIT license; see licenses/MIT.txt.
+
+Music under music/ and embedded MIDI music in PUREHADES.WAD:
+Copyright the respective composers identified in music/tracklist.json and
+CREDITS.md. CC-BY-SA-4.0; MIDI data unchanged. See the original Ultimate MIDI
+Pack readme and full CC license under licenses/. When adapting the music,
+retain attribution, indicate changes and license adaptations under CC BY-SA.
+
+Freedoom-derived font artwork under assets/, the menu/title previews and
+embedded M_DOOM, TITLEPIC and CWILV graphics:
+Copyright 2001-2024 contributors to the Freedoom project. BSD-3-Clause.
+See licenses/Freedoom-0.13.0-COPYING.txt and matching contributor credits.
+The Pure Hades lettering/layout was rendered from the Freedoom font;
+letter color and composition were changed for this release.
+
+This WAD is a collection of separately identified components. Their licenses
+and notices are retained. No commercial Doom IWAD, executable, original
+historical WAD, Metallica cover, private sketch or private email is included.

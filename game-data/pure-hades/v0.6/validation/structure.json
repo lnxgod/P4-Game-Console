@@ -1,0 +1,111 @@
+{
+  "result": "PASS",
+  "wad_sha256": "ab027fbeebe20787214a3bc1239bba73271030dc284cd108c20ae8bc73752fc8",
+  "map_checks": [
+    {
+      "map": "MAP01",
+      "things": {
+        "1": 1,
+        "11": 8,
+        "82": 8,
+        "2001": 8,
+        "2006": 1,
+        "2011": 8,
+        "2012": 16,
+        "2049": 16
+      },
+      "classic_format_and_indices": "PASS",
+      "single_hidden_exit": "PASS",
+      "geometry_and_pickup_symmetry": "PASS with player-one/hidden-exit exceptions",
+      "spawn_to_spawn_and_health_route_distances": "D4 invariant",
+      "bfg_present": true,
+      "sha256": "28a6cd08ff6ab54b51a15ef9994b60dcc2d25b38e0212a8f137859b33bec7cf1"
+    },
+    {
+      "map": "MAP02",
+      "things": {
+        "1": 1,
+        "11": 8,
+        "2003": 16,
+        "2006": 1,
+        "2011": 8,
+        "2012": 16,
+        "2046": 16
+      },
+      "classic_format_and_indices": "PASS",
+      "single_hidden_exit": "PASS",
+      "geometry_and_pickup_symmetry": "PASS with player-one/hidden-exit exceptions",
+      "spawn_to_spawn_and_health_route_distances": "D4 invariant",
+      "bfg_present": true,
+      "sha256": "14527c47776a53554f4e27266651f56c26e1a4df349223e336ca2708c7d7dfad"
+    },
+    {
+      "map": "MAP03",
+      "things": {
+        "1": 1,
+        "11": 8,
+        "2004": 16,
+        "17": 16,
+        "2006": 1,
+        "2011": 8,
+        "2012": 16
+      },
+      "classic_format_and_indices": "PASS",
+      "single_hidden_exit": "PASS",
+      "geometry_and_pickup_symmetry": "PASS with player-one/hidden-exit exceptions",
+      "spawn_to_spawn_and_health_route_distances": "D4 invariant",
+      "bfg_present": true,
+      "sha256": "813484660daddc6f340aa989bb8859c63445415b763339be06cb7bb7665ff746"
+    },
+    {
+      "map": "MAP04",
+      "things": {
+        "1": 1,
+        "11": 8,
+        "82": 8,
+        "2001": 8,
+        "2002": 4,
+        "2003": 4,
+        "2004": 4,
+        "2005": 4,
+        "2006": 1,
+        "2011": 8,
+        "2012": 16,
+        "17": 8,
+        "2046": 8,
+        "2048": 4,
+        "2049": 16
+      },
+      "classic_format_and_indices": "PASS",
+      "single_hidden_exit": "PASS",
+      "geometry_and_pickup_symmetry": "PASS with player-one/hidden-exit exceptions",
+      "spawn_to_spawn_and_health_route_distances": "D4 invariant",
+      "bfg_present": true,
+      "sha256": "60a874e6389cec4d649d6bf767d146ad2289b1602fb4b4d24162506799b0c8f6"
+    },
+    {
+      "map": "MAP05",
+      "things": {
+        "1": 1,
+        "11": 8,
+        "82": 16,
+        "2011": 8,
+        "2012": 16,
+        "2049": 16
+      },
+      "classic_format_and_indices": "PASS",
+      "single_hidden_exit": "PASS",
+      "geometry_and_pickup_symmetry": "PASS with player-one/hidden-exit exceptions",
+      "spawn_to_spawn_and_health_route_distances": "D4 invariant",
+      "bfg_present": false,
+      "sha256": "5f28232a40ac1aeb0b759e981ced2044d24a913a1f10d1f7942c005cf342cd4f"
+    }
+  ],
+  "five_distinct_valid_licensed_midi_tracks": true,
+  "symmetry_exceptions": [
+    "Single player-one test start",
+    "Single hidden exit action"
+  ],
+  "rotation_metadata": "MAP01 -> MAP02 -> MAP03 -> MAP04 -> MAP05 -> MAP01 via UMAPINFO",
+  "MAP01_MAP02_exact_v05_map_lumps_preserved": true
+}

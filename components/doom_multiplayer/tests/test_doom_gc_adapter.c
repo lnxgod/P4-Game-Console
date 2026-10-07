@@ -26,7 +26,7 @@ static p4_mp_group_start_t lobby_start;
 int64_t esp_timer_get_time(void)
 { struct timespec t; assert(clock_gettime(CLOCK_MONOTONIC,&t)==0); return (int64_t)t.tv_sec*1000000+t.tv_nsec/1000; }
 void vTaskDelay(unsigned ms) { usleep(ms*1000U); }
-void p4_doom_gc_engine_begin(uint8_t count,uint8_t map) { assert(count==4 && map==26); }
+void p4_doom_gc_engine_begin(uint8_t count,uint8_t map) { assert(count==4 && map==29); }
 static uint8_t chat(unsigned tick,unsigned slot) { return (uint8_t)(0x80U+((tick+slot)%127U)); }
 static int8_t move(unsigned tick,unsigned slot) { return (int8_t)((tick+slot)%40U); }
 void D_ReceiveTic(ticcmd_t *commands,boolean *mask)
@@ -136,7 +136,7 @@ static void run(uint8_t slot)
         .session_id=7,.self_peer_id=100U+slot,.remote_peer_id=slot?100:101,.route_id=slot?1:2,
         .local_player_slot=slot,.player_count=4,.input_delay_tics=2,.session_seed=1,
         .setup={.game=P4_DOOM_MP_GAME_GAME_CHANGERS_AI,.mode=P4_DOOM_MP_MODE_ALTDEATH,
-            .episode=1,.map=26,.skill=3,.no_monsters=true}};
+            .episode=1,.map=29,.skill=3,.no_monsters=true}};
     const p4_doom_p4mp_transport_t transport={.set_handler=set_handler,.send_to=send_to,.poll=poll,.connected=connected};
     if (handoff_case) enter_from_lobby(&session);
     assert(p4_doom_gc_prepare(&session,&config,&transport)==ESP_OK);

@@ -41,7 +41,7 @@ Leave the console at the launcher during content transfer.
 Exact data identities and acquisition sources live in
 [`third_party/game-data.json`](../../../third_party/game-data.json). Keep the
 shareware notices and WAD outside Git. Engine source is GPL-covered; see
-[third-party policy](../../../third_party/README.md). The original Pure Hell
+[third-party policy](../../../third_party/README.md). The original Pure Hades
 publication exception does not authorize committing Doom's IWAD.
 
 ## Source and evidence
