@@ -55,9 +55,28 @@ class SDKSetupTests(unittest.TestCase):
         )
         install.chmod(0o755)
         (cls.upstream / "export.sh").write_text(
+            # Model the pinned v5.5.3 export.sh path-detection contract. Bash
+            # can identify its sourced file; POSIX shells require a forced path.
+            "idf_path=.\n"
+            "if [ -n \"${BASH_SOURCE-}\" ]; then\n"
+            "    idf_path=$(dirname \"${BASH_SOURCE[0]}\")\n"
+            "elif [ -n \"${IDF_PATH-}\" ] && [ -n \"${IDF_PATH_FORCE-}\" ]; then\n"
+            "    idf_path=$IDF_PATH\n"
+            "fi\n"
+            "if [ ! -f \"$idf_path/tools/idf.py\" ] ||\n"
+            "   [ ! -f \"$idf_path/tools/idf_tools.py\" ] ||\n"
+            "   [ ! -f \"$idf_path/tools/activate.py\" ]; then\n"
+            "    printf 'Could not automatically detect IDF_PATH\\n' >&2\n"
+            "    return 1\n"
+            "fi\n"
+            "if [ -n \"${TEST_EXPORT_FAILURE-}\" ]; then return 7; fi\n"
+            "printf '%s\\n' \"$idf_path\" > \"$TEST_EXPORT_SDK_LOG\"\n"
             "printf '%s\\n' \"${IDF_TOOLS_PATH-<unset>}\" > \"$TEST_EXPORT_LOG\"\n"
             "export PATH=\"$TEST_BIN:$PATH\"\n"
         )
+        (cls.upstream / "tools").mkdir()
+        for tool in ("idf.py", "idf_tools.py", "activate.py"):
+            (cls.upstream / "tools" / tool).write_text("# inert SDK fixture\n")
         cls.git(cls.upstream, "submodule", "add", "-q", cls.component.as_uri(), "component")
         cls.git(cls.upstream / "component", "checkout", "-q", cls.component_commit)
         cls.git(cls.upstream, "add", ".")
@@ -94,10 +113,12 @@ class SDKSetupTests(unittest.TestCase):
         self.git_log = base / "git.jsonl"
         self.install_log = base / "install.json"
         self.export_log = base / "export.txt"
+        self.export_sdk_log = base / "export-sdk.txt"
         self.env = dict(self.git_env, HOME=str(self.home), PATH=f"{self.bin}:{os.defpath}",
                         TEST_REAL_GIT=REAL_GIT, TEST_UPSTREAM=self.upstream.as_uri(),
                         TEST_GIT_LOG=str(self.git_log), TEST_INSTALL_LOG=str(self.install_log),
-                        TEST_EXPORT_LOG=str(self.export_log), TEST_BIN=str(self.bin))
+                        TEST_EXPORT_LOG=str(self.export_log), TEST_EXPORT_SDK_LOG=str(self.export_sdk_log),
+                        TEST_BIN=str(self.bin))
         (self.bin / "python3").symlink_to(sys.executable)
         git_stub = self.bin / "git"
         git_stub.write_text(
@@ -133,11 +154,12 @@ class SDKSetupTests(unittest.TestCase):
         return subprocess.run(["sh", str(self.project / "scripts/install-esp-idf.sh")],
                               env=self.env, text=True, capture_output=True)
 
-    def activate_sdk(self):
+    def activate_sdk(self, shell="sh", *, conditional=False):
+        invocation = "if p4_activate_idf; then exit 0; else exit 9; fi" if conditional else "p4_activate_idf"
         return subprocess.run(
-            ["sh", "-c", 'P4_SCRIPT_DIR=$1; . "$P4_SCRIPT_DIR/lib/project-env.sh"; p4_activate_idf',
+            [shell, "-c", 'P4_SCRIPT_DIR=$1; . "$P4_SCRIPT_DIR/lib/project-env.sh"; ' + invocation,
              "test", str(self.project / "scripts")],
-            env=self.env, text=True, capture_output=True,
+            cwd=self.project, env=self.env, text=True, capture_output=True,
         )
 
     def calls(self):
@@ -184,6 +206,32 @@ class SDKSetupTests(unittest.TestCase):
         self.assert_success(self.setup_sdk())
         self.assertEqual(json.loads(self.install_log.read_text())["sdk"], str(moved))
         self.assertFalse(any(call[0] == "clone" for call in self.calls()))
+
+    def test_dash_activation_from_project_forces_the_validated_sdk(self):
+        dash = shutil.which("dash")
+        if dash is None:
+            self.skipTest("dash is required for Ubuntu shell regression")
+        sdk = self.existing_sdk()
+        self.env.update(P4_IDF_PATH=str(sdk), IDF_PATH=str(self.project / "wrong SDK"),
+                        IDF_PATH_FORCE="")
+        self.assert_success(self.activate_sdk(dash))
+        self.assertEqual(self.export_sdk_log.read_text().removesuffix("\n"), str(sdk))
+
+    def test_bash_activation_from_project_uses_the_validated_sdk(self):
+        bash = shutil.which("bash")
+        if bash is None:
+            self.skipTest("Bash is required for sourced-file regression")
+        sdk = self.existing_sdk()
+        self.env["P4_IDF_PATH"] = str(sdk)
+        self.assert_success(self.activate_sdk(bash))
+        self.assertEqual(self.export_sdk_log.read_text().removesuffix("\n"), str(sdk))
+
+    def test_export_failure_is_rejected_even_inside_a_shell_conditional(self):
+        self.existing_sdk()
+        self.env["TEST_EXPORT_FAILURE"] = "1"
+        result = self.activate_sdk(conditional=True)
+        self.assertEqual(result.returncode, 9, result.stdout + result.stderr)
+        self.assertFalse(self.export_log.exists())
 
     def test_mismatched_discovered_sdk_is_rejected_without_fallback(self):
         self.existing_sdk()

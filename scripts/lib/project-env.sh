@@ -105,9 +105,19 @@ p4_activate_idf() {
     p4_verify_idf_checkout "$P4_RESOLVED_IDF_PATH" || return
     p4_configure_idf_tools_path
 
+    # POSIX shells such as Ubuntu's dash cannot infer the sourced file's path.
+    # Force Espressif's export script to use the SDK we already validated.
+    IDF_PATH="$P4_RESOLVED_IDF_PATH"
+    IDF_PATH_FORCE=1
+    export IDF_PATH IDF_PATH_FORCE
+
     # Espressif's export script intentionally sets the SDK environment.
     # shellcheck disable=SC1090
     . "$P4_RESOLVED_IDF_PATH/export.sh" >/dev/null
+    P4_IDF_EXPORT_STATUS=$?
+    if [ "$P4_IDF_EXPORT_STATUS" -ne 0 ]; then
+        return "$P4_IDF_EXPORT_STATUS"
+    fi
     export P4_RESOLVED_IDF_PATH
 
     P4_ACTIVE_IDF_VERSION=$(idf.py --version | awk '{print $2}' | sed 's/^v//')
