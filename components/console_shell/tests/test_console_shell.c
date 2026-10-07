@@ -1043,14 +1043,14 @@ static void test_window_manager_visual_contract(void)
     const uint64_t olimex_system_hash = UINT64_C(0x552b449074ff213b);
 #elif CONSOLE_SHELL_TARGET_WIDTH == 800U && \
     CONSOLE_SHELL_TARGET_HEIGHT == 480U
-    /* OS 0.79 version text is included in these complete-frame fixtures. */
-    const uint64_t desktop_hash = UINT64_C(0x4f8e1e6ecad8f204);
-    const uint64_t elecrow_system_hash = UINT64_C(0xcaf23d69a79499e7);
-    const uint64_t olimex_system_hash = UINT64_C(0x4ae663331755abf9);
+    /* OS 0.81 version text is included in these complete-frame fixtures. */
+    const uint64_t desktop_hash = UINT64_C(0x28fcda66b48f6e72);
+    const uint64_t elecrow_system_hash = UINT64_C(0x7748ba89e405bff5);
+    const uint64_t olimex_system_hash = UINT64_C(0x90f8571d812a979b);
 #else
-    const uint64_t desktop_hash = UINT64_C(0xe2d898f0b992ffc7);
-    const uint64_t elecrow_system_hash = UINT64_C(0x9685ccb9e9118cd9);
-    const uint64_t olimex_system_hash = UINT64_C(0x9037d6aa06629f12);
+    const uint64_t desktop_hash = UINT64_C(0xb85de0e59fd92879);
+    const uint64_t elecrow_system_hash = UINT64_C(0x8c5c7e507cc8a93f);
+    const uint64_t olimex_system_hash = UINT64_C(0x9bbe22446eabd3d0);
 #endif
     uint16_t *const frame = calloc(
         (size_t)CONSOLE_SHELL_WIDTH * CONSOLE_SHELL_HEIGHT,
@@ -1552,6 +1552,57 @@ static void test_multiplayer_start_lockout(void)
             &shell, frame, CONSOLE_SHELL_WIDTH));
         free(frame);
     }
+}
+
+static void test_multiplayer_long_title_labels(void)
+{
+    console_shell_t shell;
+    CHECK(console_shell_init(&shell, s_apps, TEST_APP_COUNT));
+    shell.page = CONSOLE_PAGE_MULTIPLAYER;
+    shell.active_app_id = APP_DOOM;
+    shell.runtime = (console_shell_runtime_info_t){
+        .game_storage_state = CONSOLE_STORAGE_READY,
+        .multiplayer_game_ready = true,
+        .multiplayer_can_start = true,
+        .multiplayer_settings_editable = true,
+        .multiplayer_game_selection = UINT8_MAX - 2U,
+        .multiplayer_game_count = UINT8_MAX,
+        .multiplayer_game_title =
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJK",
+    };
+    const console_shell_runtime_info_t long_title = shell.runtime;
+    const size_t frame_bytes = (size_t)CONSOLE_SHELL_WIDTH *
+        CONSOLE_SHELL_HEIGHT * sizeof(uint16_t);
+    uint16_t *const frame = malloc(frame_bytes);
+    uint16_t *const reference = malloc(frame_bytes);
+    CHECK(frame != NULL && reference != NULL);
+    if (frame != NULL && reference != NULL) {
+        /* The full start hint must match its fitting-title rendering. */
+        shell.multiplayer_view = CONSOLE_MULTIPLAYER_VIEW_HOST;
+        CHECK(console_shell_render_rgb565(
+            &shell, frame, CONSOLE_SHELL_WIDTH));
+        shell.runtime.multiplayer_game_title[18] = '\0';
+        CHECK(console_shell_render_rgb565(
+            &shell, reference, CONSOLE_SHELL_WIDTH));
+        CHECK(memcmp(frame, reference, frame_bytes) == 0);
+
+        /* Leave room for the complete three-digit game index and count. */
+        shell.runtime = long_title;
+        shell.multiplayer_view = CONSOLE_MULTIPLAYER_VIEW_HOST_SETTINGS;
+        CHECK(console_shell_render_rgb565(
+            &shell, frame, CONSOLE_SHELL_WIDTH));
+        shell.runtime.multiplayer_game_title[22] = '\0';
+        CHECK(console_shell_render_rgb565(
+            &shell, reference, CONSOLE_SHELL_WIDTH));
+        CHECK(memcmp(frame, reference, frame_bytes) == 0);
+        shell.runtime = long_title;
+        --shell.runtime.multiplayer_game_count;
+        CHECK(console_shell_render_rgb565(
+            &shell, reference, CONSOLE_SHELL_WIDTH));
+        CHECK(memcmp(frame, reference, frame_bytes) != 0);
+    }
+    free(reference);
+    free(frame);
 }
 
 static void test_desktop_pages(void)
@@ -2525,6 +2576,7 @@ int main(void)
     test_storage_diagnostics_and_repair_confirmation();
     test_controller_setup_actions();
     test_multiplayer_start_lockout();
+    test_multiplayer_long_title_labels();
     test_desktop_pages();
     test_navigation_and_launch();
     test_system_cartridge_folders();

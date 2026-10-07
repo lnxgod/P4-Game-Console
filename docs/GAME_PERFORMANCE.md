@@ -18,6 +18,12 @@ repair readability. Optimize the measured native update/render/presentation
 cost instead. Keep an unmet native cadence or readability gate open until it
 passes; a fallback benchmark cannot close it. Preserve existing fallback source
 and bounded ABI tests for explicitly requested legacy maintenance.
+
+Blast Circuit 0.2.9 has an explicit owner exception accepting approximately
+19 FPS for the exact package, OS 0.77 and Tab5 unit recorded in
+[its acceptance report](../games/blast_circuit/NATIVE_READABILITY_TESTING.json).
+This exception permits keeping that measured candidate; it does not change
+the general 30 FPS floor or qualify other packages, OS builds or units.
 Native C is the supported authoring route, including custom software 2D/3D
 engines and raycasters. A language or engine choice does not guarantee cadence;
 measure the real P4 candidate. Native games have no script-renderer ceiling.
@@ -103,9 +109,11 @@ without a framebuffer copy. A committed frame stays immutable until the
 backend consumes its source; bounded admission and reuse fences prevent an
 in-flight frame from being overwritten. The OS refreshes the game surface
 pointer when it acquires the next lease. Drain and join the worker before
-freeing buffers, unloading the cartridge or returning display ownership to the
-launcher. A failed join retains the worker and its resources until safe
-shutdown. If worker allocation requires synchronous recovery, preserve the
+freeing OS-owned buffers/context or returning display ownership to the
+launcher. The native backend retains only OS-owned callbacks and pixel
+buffers, so cartridge unload does not invalidate an in-flight frame. A failed
+join retains the worker and its resources until safe shutdown. If worker
+allocation requires synchronous recovery, preserve the
 same direct 768x480 surface; no low-resolution fallback is allowed.
 
 SMP configuration and worker creation do not prove useful parallel execution

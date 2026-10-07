@@ -8,7 +8,10 @@ import tempfile
 import unittest
 
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(os.environ.get(
+    "P4_CONSOLE_TEST_SOURCE_ROOT", Path(__file__).resolve().parents[2]
+)).resolve()
+BASE = Path(os.environ.get("P4_CONSOLE_BASE", ROOT)).resolve()
 CONSOLE = ROOT / "apps/console_os/main/console_os_main.c"
 MAIN_CMAKE = ROOT / "apps/console_os/main/CMakeLists.txt"
 APP_CMAKE = ROOT / "apps/console_os/CMakeLists.txt"
@@ -103,7 +106,9 @@ int main(void)
             executable = cls.directory / board
             command = [os.environ.get("CC", "cc"), "-std=c11", "-Wall", "-Wextra",
                        "-Werror", "-I", str(ROOT / "components/p4_game_api/include"),
-                       "-I", str(CONSOLE.parent)]
+                       "-I", str(BASE / "components/p4_game_api/include"),
+                       "-I", str(CONSOLE.parent),
+                       "-I", str(BASE / "apps/console_os/main")]
             command += [f"-D{macro}={int(macro == active_macro)}"
                         for macro in BOARDS.values()]
             command += [str(path), "-o", str(executable)]

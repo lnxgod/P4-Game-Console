@@ -15,6 +15,17 @@ ROOT = Path(__file__).resolve().parents[2]
 HEADER = ROOT / "components/platform_game_storage/include/platform/doom_arena_content.h"
 
 
+def require_ignored(path):
+    if (ROOT / ".git").exists() or (ROOT / ".git").is_symlink():
+        subprocess.run(["git", "check-ignore", "-q", str(path)], cwd=ROOT, check=True)
+        return
+    spec = importlib.util.spec_from_file_location(
+        "arena_data_policy", Path(__file__).resolve().parents[1] / "prepare-game-data.py")
+    policy = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(policy)
+    policy.require_ignored(path, root=ROOT)
+
+
 def bundle():
     return json.loads((ROOT / "third_party/game-data.json").read_text())["game_changers_ai_bundle"]
 
@@ -73,8 +84,7 @@ def check_input_location(entry):
         if entry["local_path"] not in policy["repository_asset_exceptions"]:
             raise ValueError("Unlisted repository asset")
     else:
-        subprocess.run(["git", "check-ignore", "-q", str(ROOT / entry["local_path"])],
-                       cwd=ROOT, check=True)
+        require_ignored(ROOT / entry["local_path"])
 
 
 def fetch(data):
@@ -183,7 +193,7 @@ def main():
         # Complete preflight before copying anything; refuse tracked destinations.
         for f in data["files"]:
             target = args.stage.resolve() / f["directory"].lstrip("/") / f["filename"]
-            subprocess.run(["git", "check-ignore", "-q", str(target)], cwd=ROOT, check=True)
+            require_ignored(target)
             if target.is_symlink() or (target.exists() and (not target.is_file() or hashlib.sha256(target.read_bytes()).hexdigest() != f["sha256"])):
                 raise ValueError(f"Conflicting existing content: {target}")
         for f in data["files"]:

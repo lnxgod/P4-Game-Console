@@ -12,7 +12,9 @@ import subprocess
 import tempfile
 import unittest
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(os.environ.get(
+    "P4_CONSOLE_TEST_SOURCE_ROOT", Path(__file__).resolve().parents[2]
+)).resolve()
 BASE = Path(os.environ.get("P4_CONSOLE_BASE", ROOT)).resolve()
 SOURCE = (ROOT / "apps/console_os/main/console_os_main.c").read_text()
 MACRO = "P4_CONSOLE_NATIVE_VIDEO_WORKER"

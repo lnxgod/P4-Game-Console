@@ -5,7 +5,7 @@
 This guide describes one Doom-based game mode in the monorepo. Console OS
 is the shared platform that hosts it; Pure Hades is one of its content packs.
 
-M5Stack Tab5 compact-content candidate for Console OS **0.79**. This is a special selection inside
+M5Stack Tab5 compact-content integration candidate for Console OS **0.81**. This is a special selection inside
 **Multiplayer**, with no separate launcher tile. Ordinary Doom shareware and
 Chex Quest retain their separate content and two-player adapters. Installation and physical acceptance are recorded separately below.
 
@@ -68,10 +68,13 @@ kills; holding Use across the timeout cannot immediately undo the break.
 
 A departed or timed-out guest is removed at a host-authored tic. The remaining
 players continue. Host shutdown ends the session; there is no host migration.
-This is the accepted **connected break/return fallback**: new or physically
-disconnected consoles must join in the initial lobby. True live admission into
-an already-running world is not implemented. Bluetooth and the serial relay
-retain their existing two-console scope; this four-slot mode uses local Wi-Fi.
+The current candidate also implements bounded late admission and guest return
+using host checkpoints and replay. Matching content and an available eligible
+seat are required. Repeated join, leave and rejoin during a running match still
+need final two-device acceptance on the merged firmware. The connected
+break/return path remains separate from a disconnected guest's rejoin.
+Bluetooth and the serial relay retain their existing two-console scope; this
+four-slot mode uses local Wi-Fi.
 
 ## Exact content and storage
 
@@ -178,8 +181,9 @@ python3 scripts/p4-usb-content.py game-changers-ai \
 ```
 
 Use the guarded Tab5 installation workflow for firmware; this command installs
-content only and requires the matching 0.79 compact-content candidate firmware
-on every peer. Older firmware does not admit the new Arena content IDs.
+content only and requires matching compact-content firmware on every peer.
+Use 0.80 or a successor: 0.79 admitted the content IDs but retained the wrong
+startup VFS size, which prevented gameplay startup with the compact base.
 
 ## Synchronization and validation
 
@@ -189,7 +193,9 @@ commands; the fixed host publishes ordered four-slot batches and membership.
 The 40-byte payload fits the existing 64-byte GAME_MESSAGE boundary. Source
 routes, sequence windows, acknowledgments and bounded retries handle loss and
 duplicates. Heartbeats continue while a missing guest stalls input. Runtime
-JOIN cannot allocate a new member.
+JOIN uses a separate bounded admission path to allocate an eligible unused
+seat; returning guests use their existing seat and resume ticket. Checkpoint
+restore and authoritative replay catch a guest up before activation.
 
 Votes use two reserved chat bytes in that same ordered tic stream, with bounded
 opcodes, a generation token in a disjoint byte range and a three-tic partial-command lifetime. No second
@@ -242,6 +248,20 @@ All consoles need the 0.58 firmware and replacement content bundle together.
 The old Pure Hell bundle is incompatible with protocol 5. The earlier 0.53 receipts remain historical host/build evidence. The prior
 [implementation receipt](../test-runs/2026-10-05-game-changers-ai-doom-implementation.json)
 is historical and predates the supplied PWAD/voting work.
+
+## Tab5 0.80 startup checkpoint and 0.81 integration candidate
+
+The [0.80 checkpoint](ARENA_HANDOFF_080.md) records verified compact content
+on both Tab5 cards and a guarded 0.80 flash on A. A reached Arena gameplay at
+an observed native 768×480 surface. Its brief stationary capture measured
+approximately **13.4 FPS**, below the 30 FPS release floor. Codec and music
+telemetry were active; audible music and effects were not confirmed. B remained
+on 0.79 at that checkpoint.
+
+Version 0.81 integrates that checkpoint with the core repository. Its device
+installation, repeated live join/leave/rejoin, input responsiveness, overlay
+dismissal, sustained cadence and audible sound need their own exact-artifact
+evidence. The earlier startup pass does not close those acceptance gates.
 
 ## Tab5 0.65 two-unit runtime result
 

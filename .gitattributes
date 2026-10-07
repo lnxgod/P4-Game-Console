@@ -7,3 +7,13 @@ third_party/doomgeneric-p4.patch -whitespace
 
 # Keep this hash-admitted original pack byte-for-byte on every host.
 /game-data/pure-hell/v0.5/* -text -whitespace
+
+# Source ZIPs keep converted runtime art and all notices/provenance. Original
+# authoring media remains in canonical Git and the matching art-source archive.
+# Keep these patterns aligned with clone-lite.sh and package-source.py.
+/games/*/assets/*.[pP][nN][gG] export-ignore
+/games/*/assets/**/*.[pP][nN][gG] export-ignore
+/design/*.[pP][nN][gG] export-ignore
+/design/**/*.[pP][nN][gG] export-ignore
+/design/*.[gG][iI][fF] export-ignore
+/design/**/*.[gG][iI][fF] export-ignore

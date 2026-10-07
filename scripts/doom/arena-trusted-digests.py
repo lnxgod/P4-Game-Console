@@ -8,6 +8,7 @@ claim that every block on the current card has already been consumed/verified.
 from pathlib import Path
 import argparse
 import hashlib
+import importlib.util
 import types
 import json
 import os
@@ -56,7 +57,12 @@ def leaves(root,metadata,entry):
     if entry.get('repository_asset'):
         require(entry['local_path'] in metadata['policy']['repository_asset_exceptions'],'Unlisted repository asset')
     else:
-        subprocess.run(['git','check-ignore','-q',str(path)],cwd=root,check=True)
+        if (root/'.git').exists() or (root/'.git').is_symlink():
+            subprocess.run(['git','check-ignore','-q',str(path)],cwd=root,check=True)
+        else:
+            spec=importlib.util.spec_from_file_location('arena_data_policy',Path(__file__).resolve().parents[1]/'prepare-game-data.py')
+            policy=importlib.util.module_from_spec(spec);spec.loader.exec_module(policy)
+            policy.require_ignored(path,root=root)
     flags=os.O_RDONLY|os.O_NONBLOCK|os.O_NOFOLLOW
     fd=os.open(path,flags)
     try:

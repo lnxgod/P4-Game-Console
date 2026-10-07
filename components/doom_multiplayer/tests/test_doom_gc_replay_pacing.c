@@ -148,7 +148,7 @@ static unsigned run_case(unsigned peers,unsigned poll_ms,unsigned queue,unsigned
     for (unsigned i=1;i<=peers;++i) {
         if (guest[i].played<minimum) minimum=guest[i].played;
         if (guest[i].played>maximum) maximum=guest[i].played;
-        
+
     }
     assert(gc.journal.next_tick==BACKLOG+live && live>=207);
     printf("peers=%u host_ms=%u mailbox=%u loss=%u reorder=%u unique_min=%u unique_max=%u drops=%u max_host_batch=%u immediate_ready=%u\n",

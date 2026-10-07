@@ -134,7 +134,9 @@ playable build: direct native 768×480 RGB565, a 60 FPS target and actual-device
 descriptor. Canonical 320×200 touch coordinates are input units; preserved
 legacy rendering source is only for explicit legacy maintenance and diagnostics.
 A locally tested or installed candidate is not yet a performance-qualified release. Keep unmeasured candidates/WIP honestly labelled;
-record exact package, OS, unit and sustained active-play cadence before claiming
+Blast Circuit 0.2.9 retains an explicit owner exception accepting approximately
+19 FPS on the recorded OS 0.77/unit candidate; this does not lower the general
+30 FPS floor. Record exact package, OS, unit and sustained active-play cadence before claiming
 release readiness. Action games must move continuously and respond fluidly on the tablet; visible
 whole-tile jumps, repeated stalls and unfinished demo-like play fail the release
 bar. Keep grid rules internal and interpolate visible actors. Card and board

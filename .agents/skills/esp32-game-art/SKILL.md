@@ -46,3 +46,9 @@ glyph readability, transparency fringes and animation continuity.
 Use `esp32-test-game` for real SDL play and focused sanitizer checks.
 Artwork and host timings cannot qualify the device frame rate. Record actual
 P4 cadence and physical feedback separately before declaring release quality.
+
+For native cartridges, require `video-highres` in the manifest and
+`P4_GAME_CAP_VIDEO_HIGH_RES` in the C descriptor. Verify the actual runtime
+`surface=768x480` on the exact package/OS/unit. Target 60 presented FPS and
+qualify the device 30 FPS release floor separately from host art review.
+Preserve missing or failed device readability/cadence acceptance.

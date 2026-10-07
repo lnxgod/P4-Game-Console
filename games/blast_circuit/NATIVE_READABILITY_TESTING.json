@@ -770,5 +770,14 @@
       "person_optical_play_acceptance": "pending"
     },
     "release_qualified": false
+  },
+  "previous_upstream_host_candidate_report": {
+    "source_commit": "e7f22b2d3fa242cebf21e6f52a28a7ed73526376",
+    "repository": "https://github.com/openai/P4-Game-Console",
+    "path": "games/blast_circuit/NATIVE_READABILITY_TESTING.json",
+    "version": "0.2.8",
+    "sha256": "143d0b4c3f46fdec0fe68e91307ba2f0d93f0cffd71eecda3b876df986500598",
+    "bytes": 15502,
+    "note": "Prior report remains in Git history; its host-only evidence is not physical acceptance of 0.2.9."
   }
 }

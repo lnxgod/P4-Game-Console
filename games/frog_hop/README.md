@@ -65,16 +65,26 @@ The native and fallback HUD retains FROG HOP above clearly labelled score, lives
 
 `build-host/presentation-pass/frog_hop/` binds native/fallback title, gameplay, pause and header-limit captures, focused sanitizer1/1, SDL5/5, pinned RV32 assembly and a 2,000-frame active CPU trace. Native p95/p99/max: **0.441/0.461/0.530 ms**; fallback max: **0.121 ms**. Both sizes change1,615frames; game-over waits are deliberately static. These are desktop CPU measurements, not hardware frame-rate acceptance.
 
-## Native Tab5 validation (1.1.1)
+## Maintained Tab5 native rendering
 
-The released descriptor requires `video-highres`, so services without that
-capability cannot start it and the runtime rejects a 320×200 surface. Preserved
-legacy checks use explicit local descriptor copies. The focused ASan/UBSan
-suite and SDL smoke passed at 768×480 for this revision. Default previews render
-directly into the native surface.
+Current package version: **1.1.1**. The native manifest and C descriptor both
+require `video-highres`. Maintained Tab5 play renders directly into a **768×480
+RGB565** surface. Canonical **320×200** coordinates remain input units for touch
+and controls. The retained fallback renderer and earlier fallback guidance are
+for explicitly selected legacy diagnostics.
 
-These are host checks. The target is 60 FPS, with a measured physical-device
-release floor of 30 FPS at 768×480. Panel readability, input, sound and device
-cadence remain subject to exact-package, OS and Tab5 acceptance; a host CPU
-timing or capture does not qualify that floor. Earlier test records retain
-the results for their recorded sources and artifacts.
+The target is **60 FPS** with an actual-device release floor of **30 FPS**.
+Acceptance requires verification of the actual runtime surface and readable
+opening/title, busy gameplay, pause, and results views on the exact Tab5 unit,
+with the package and Console OS identities recorded. Those device readability
+and cadence checks remain pending until measured; host captures and CPU timing
+do not establish device acceptance.
+
+`tools/render_hires.c` captures native 768×480 views by default using the actual
+required-capability descriptor. Pass `--legacy` after the output prefix to add
+explicitly labeled 320×200 diagnostic captures through a temporary legacy
+descriptor copy.
+
+Checkpoint `41dfbe6` records focused ASan/UBSan and native SDL smoke checks
+for its source revision. These historical host results do not qualify the
+merged Console OS or establish physical device acceptance.

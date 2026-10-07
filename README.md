@@ -5,6 +5,10 @@ development tools and AI skills in one repository.** The primary device is the
 **M5Stack Tab5**. Open this repository to build the console, play or create a
 game, work on a port, or improve the shared platform.
 
+This private development copy preserves the public project's history and
+notices. See [internal development](docs/INTERNAL_DEVELOPMENT.md) for provenance
+and authenticated installation.
+
 **Console OS** is the launcher and system platform, currently branded
 *Game Changers AI OS* on the device. **Doom Arena by Game Changers** is
 one Doom-based game mode that runs inside it. **Pure Hades** is a map pack used
@@ -108,12 +112,45 @@ storage route is not implemented. Keep the card in the Tab5 and transfer games
 through its USB-C connection. See the
 [storage status](.agents/skills/esp32-setup/references/tab5-storage.md).
 
-From the repository root:
+For installation, use the lightweight checkout and precompiled build. Large
+art-authoring images stay available in Git but are omitted from this checkout:
+
+```sh
+gh auth login --hostname github.com
+gh auth setup-git --hostname github.com
+p4_clone_helper="$(mktemp)"
+gh api --hostname github.com \
+  'repos/openai/P4-Game-Console/contents/scripts/clone-lite.sh?ref=main' \
+  --header 'Accept: application/vnd.github.raw+json' > "$p4_clone_helper"
+sh "$p4_clone_helper" https://github.com/openai/P4-Game-Console.git p4console
+rm "$p4_clone_helper"
+cd p4console
+make prebuilt               # Download and verify this exact revision's CI build
+make install-tools         # Small USB-tool environment; no SDK or compiler
+. .tools/install-python/bin/activate
+make prepare-game-data     # Fetch and verify missing Doom shareware locally
+```
+
+CI produces a commit-specific Tab5 firmware/game package on `main`, plus a
+compact source archive and a separate optional art-source archive. The lite
+source archive is about **22 MiB compressed** for the initial measured tree;
+it retains the source, converted art, runtime assets, licenses and skills.
+Restore authoring images with `git sparse-checkout disable` when needed.
+
+Prebuilt packages live under `build-host/prebuilt/tab5/<source-commit>/` and
+include firmware, its update package and `content/GAMES/`. They exclude WADs,
+recovery images and development games. A missing exact-revision release causes
+an explicit error; the downloader never substitutes an older OS. See
+[prebuilt installation](docs/INSTALL_PREBUILT.md) for guarded flashing,
+game transfer, offline CI artifacts and verification limits.
+
+For firmware development or a revision without a CI package, build from source:
 
 ```sh
 make setup                  # Install the pinned tools if they are absent
 make verify
 make prepare-game-data      # Fetch and verify missing Doom shareware locally
+python3 scripts/doom/arena-content.py --fetch  # Prepare pinned compact Arena inputs
 make console-os-tab5-idf
 ```
 
@@ -133,7 +170,9 @@ factory image and install through the exact-unit guarded workflow. Firmware
 builds do not flash a device. Default setup includes the native game bundle and
 Doom shareware; Chex Quest is optional and requires an explicit choice.
 
-For a Tab5 already running compatible Console OS, select its actual USB-C port:
+For a Tab5 already running compatible Console OS, select its actual USB-C port.
+Use the fetched package's `content/` directory for a prebuilt game bundle, or
+the following `sd-card/` directory after a source build:
 
 ```sh
 python3 scripts/p4-transfer.py push-bundle \

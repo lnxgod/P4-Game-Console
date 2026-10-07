@@ -181,3 +181,11 @@ launcher artwork is an illustration; gameplay captures come from the C renderer.
 `tools/compile_marble_lighting.py` reproduces `src/generated/marble_lighting.inc`
 from the original integer shading equations. This is an exact performance
 lookup, not replacement artwork. The original ImageGen material is unchanged.
+
+## Product library removal
+
+The owner removed Tide Maze from the product/default library on 2026-10-07
+after failed tilt/gameplay and lag acceptance. The manifest is disabled.
+Preserve its source, package/save identity and historical failed acceptance.
+Development installation requires an explicit opt-in; source reworks do not
+supersede that failure or qualify a release.

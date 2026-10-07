@@ -6881,7 +6881,8 @@ static void draw_multiplayer_host(const console_shell_t *shell,
     } else if (shell->runtime.multiplayer_launch_syncing) {
         strcpy(launch, "STARTING TOGETHER...");
     } else if (shell->runtime.multiplayer_can_start) {
-        (void)snprintf(launch, sizeof(launch), "START %s - A / TAP",
+        /* Keep the action hint inside the 34-character launch label. */
+        (void)snprintf(launch, sizeof(launch), "START %.18s - A / TAP",
                        shell->runtime.multiplayer_game_title);
     } else if (shell->runtime.multiplayer_lobby_phase ==
                CONSOLE_MULTIPLAYER_LOBBY_HOSTING) {
@@ -6949,8 +6950,9 @@ static void draw_multiplayer(const console_shell_t *shell,
               COLOR_CYAN, 1U, 10U);
     fill_rect(pixels, stride, 75, 53, 237, 1, COLOR_GROUP);
     char game[32];
+    /* Reserve eight of the 30 displayed characters for the index/count. */
     (void)snprintf(
-        game, sizeof(game), "%s %u/%u",
+        game, sizeof(game), "%.22s %u/%u",
         shell->runtime.multiplayer_game_title[0] == '\0'
             ? "NO GAME" : shell->runtime.multiplayer_game_title,
         (unsigned)shell->runtime.multiplayer_game_selection + 1U,

@@ -78,10 +78,15 @@ monitoring and verified content transfer; externally powered H2 is the
 runtime-switch controller-host/USB-Drive connector. Neither its USB-C shape nor
 host-mode firmware establishes H2 VBUS source capability.
 
+Before a firmware write, follow [Waveshare's guarded-write contract](../../esp32-waveshare/SKILL.md):
+require matching exact-unit authorization and a recorded guarded route for the
+candidate artifact, current predecessor and live partition layout. The historical
+`0x20000` app offset is usable only when that route proves the matching layout.
+
 For the two recorded development units, resolve each H1 port to its stored
-identity, reuse its registered factory backup, write the verified app at
-`0x20000` and flash sequentially. Never run simultaneous CH343 writes: a parallel
-two-board attempt dropped a port and is not an accepted install method. Require
-esptool's post-write hash verification before resetting each unit. A new unit
+identity, reuse its registered factory backup and flash sequentially. Never run
+simultaneous CH343 writes: a parallel two-board attempt dropped a port and is
+not an accepted install method. Require esptool's post-write hash verification
+before resetting each unit. A new unit
 needs its own complete factory backup and hashed live-device binding before
 its first project write.

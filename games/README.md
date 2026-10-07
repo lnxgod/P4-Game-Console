@@ -20,6 +20,8 @@ The [performance contract](../docs/GAME_PERFORMANCE.md) targets 60 FPS and
 requires a measured actual-device release floor of 30 FPS at 768×480. Native
 capabilities, host timings and large captures do not establish that floor;
 verify the runtime surface and preserve exact package, OS and Tab5 evidence.
+Blast Circuit 0.2.9 has a recorded owner exception accepting approximately
+19 FPS on its measured OS 0.77/unit candidate; the general floor stays 30 FPS.
 
 ## Games
 
@@ -100,11 +102,10 @@ as Red Dragon need their exact paired OS lineage; follow the SDK's
 A compatible game-only update normally needs no OS reflash. First-time OS
 installation belongs to [ESP32 - Set Up](../.agents/skills/esp32-setup/SKILL.md).
 
-The updated required-native cartridges make the existing OS 0.77 select
-768×480 even when its older per-title experiment settings are present.
-Installing a cartridge leaves the installed OS at 0.77; a new OS build takes
-effect only after its separate guarded firmware flash. Source/build removal
-of those downgrade settings is not evidence that a device has that firmware.
+The updated required-native cartridges select 768×480 on a compatible OS.
+A cartridge update preserves the installed firmware; the shared presenter
+changes take effect only after a separate guarded OS flash. See Blast Circuit
+for the exact installed package, OS, unit and owner-accepted 19 FPS result.
 
 ## Developer installs
 

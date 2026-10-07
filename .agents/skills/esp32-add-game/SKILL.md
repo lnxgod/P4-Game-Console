@@ -246,6 +246,6 @@ Byte Buddy, Red Dragon, Skyline Leap and Tide Maze require an explicit
 `make install-dev GAME=<slug> PORT=<port>`; see the
 [developer install guide](../../../games/README.md#developer-installs).
 Tide Maze is disabled and removed from the product library at the owner's
-request; preserve its failed device acceptance. Feature Blast Circuit, with
-Wacky Wheels as an installed fallback. Preserve hidden games' source, package
-IDs and saves.
+request; preserve its source, package/save identity and failed device
+acceptance. Feature Blast Circuit, with Wacky Wheels as an installed fallback.
+Preserve hidden games' source, package IDs and saves.

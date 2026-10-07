@@ -230,16 +230,22 @@ conversion details and provenance live beside the packed icon. The game name
 stays visible beside player status during play. Existing touch actions and
 setup choices remain direct; no extra launch confirmation is added.
 
-## Native Tab5 validation (1.8.2)
+## Current maintained Tab5 contract
 
-The released descriptor requires `video-highres`, so services without that
-capability cannot start it and the runtime rejects a 320×200 surface. Preserved
-legacy checks use explicit local descriptor copies. The focused ASan/UBSan
-suite and SDL smoke passed at 768×480 for this revision. Default previews render
-directly into the native surface.
+Version **1.8.2** requires `video-highres` in both `game.json` and the C
+descriptor. Maintained Tab5 gameplay renders each frame directly into a
+**768×480 RGB565** surface. Canonical 320×200 touch coordinates are input
+units only; they do not select a render resolution. Any 320×200 fallback
+guidance retained above applies only to explicitly requested legacy diagnostics.
 
-These are host checks. The target is 60 FPS, with a measured physical-device
-release floor of 30 FPS at 768×480. Panel readability, input, sound and device
-cadence remain subject to exact-package, OS and Tab5 acceptance; a host CPU
-timing or capture does not qualify that floor. Earlier test records retain
-the results for their recorded sources and artifacts.
+The global target is **60 FPS**, with an **actual-device 30 FPS release floor**.
+Acceptance requires the exact cartridge/package, Console OS artifact and Tab5
+unit, the observed runtime surface, and cadence measured during busy gameplay.
+Readable title/ready, play, pause and results views must be checked on that same
+device. These physical readability and cadence gates remain pending until
+measured for this exact candidate. A merge or firmware installation does not
+close these physical acceptance gates.
+
+Checkpoint `41dfbe6` records focused ASan/UBSan and native SDL smoke checks
+for its source revision. These historical host results do not qualify the
+merged Console OS or establish physical device acceptance.

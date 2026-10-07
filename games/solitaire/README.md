@@ -86,16 +86,21 @@ traces and complete update/audio/render timings are recorded in
 budget; these CPU measurements exclude display transfer and do not certify
 30 FPS on the ESP32-P4 hardware.
 
-## Native Tab5 validation (1.1.1)
+## Maintained Tab5 native rendering
 
-The released descriptor requires `video-highres`, so services without that
-capability cannot start it and the runtime rejects a 320×200 surface. Preserved
-legacy checks use explicit local descriptor copies. The focused ASan/UBSan
-suite and SDL smoke passed at 768×480 for this revision. Default previews render
-directly into the native surface.
+Current package version: **1.1.1**. The native manifest and C descriptor both
+require `video-highres`. Maintained Tab5 play renders directly into a **768×480
+RGB565** surface. Canonical **320×200** coordinates remain input units for touch
+and controls. The retained fallback renderer and earlier fallback guidance are
+for explicitly selected legacy diagnostics.
 
-These are host checks. The target is 60 FPS, with a measured physical-device
-release floor of 30 FPS at 768×480. Panel readability, input, sound and device
-cadence remain subject to exact-package, OS and Tab5 acceptance; a host CPU
-timing or capture does not qualify that floor. Earlier test records retain
-the results for their recorded sources and artifacts.
+The target is **60 FPS** with an actual-device release floor of **30 FPS**.
+Acceptance requires verification of the actual runtime surface and readable
+opening/title, busy gameplay, pause, and results views on the exact Tab5 unit,
+with the package and Console OS identities recorded. Those device readability
+and cadence checks remain pending until measured; host captures and CPU timing
+do not establish device acceptance.
+
+Checkpoint `41dfbe6` records focused ASan/UBSan and native SDL smoke checks
+for its source revision. These historical host results do not qualify the
+merged Console OS or establish physical device acceptance.

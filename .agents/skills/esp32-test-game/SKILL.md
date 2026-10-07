@@ -72,8 +72,9 @@ build unless the user explicitly asks only for diagnosis.
 ## Inspect high-resolution presentation
 
 Follow `docs/GAME_ART.md`. Every maintained Tab5 game must render directly at
-768x480 RGB565. Verify required high resolution in the manifest and compiled
-C descriptor, then inspect the actual selected framebuffer dimensions. A
+768x480 RGB565. Verify required `video-highres` in the manifest and required
+`P4_GAME_CAP_VIDEO_HIGH_RES` in the compiled C descriptor, then inspect the
+actual selected framebuffer dimensions. A
 320x200 render, per-title OS downgrade or enlarged completed low-resolution
 frame fails native presentation acceptance. Route a mode mismatch through
 **Fix Console** before adapting textures to the wrong resolution.
@@ -121,23 +122,29 @@ installation as release qualification.
 
 For a multicore service change, follow `docs/GAME_PERFORMANCE.md`. The maintained
 Tab5 candidate keeps game/update/render on core 0, PPA presentation on core 1 at
-priority 2, and native audio output on core 1 at priority 4. Test its two native
-PSRAM framebuffer leases with rotating pointers: each callback renders the
-complete current surface, never caches its pixel pointer across frames, and
-leaves committed source pixels immutable until backend consumption. Run shared
-service tests for source lifetime, bounded producer/consumer admission,
-backpressure, stop/restart, failure paths and joined teardown, with race
-detection where available. Verify synchronous recovery retains direct 768x480.
+priority 2, and native audio output on core 1 at priority 4. Console OS owns
+exactly two native PSRAM framebuffer leases. Read the supplied pixel pointer
+and stride each frame; they may change on every frame. Render the complete
+current frame, never cache the pixel pointer across callbacks, and leave a
+committed source immutable until backend consumption. Preserve bounded
+admission, backpressure, reuse fences and drained/joined teardown before freeing
+OS-owned buffers/context or returning display ownership to the launcher.
+The native backend retains only OS-owned callbacks and pixel buffers, so
+cartridge unload does not invalidate an in-flight frame. A failed join
+retains the worker and its resources until safe shutdown. Synchronous
+recovery preserves
+direct 768x480; never add a low-resolution fallback.
 
-Bind device evidence to the exact OS, package and unit. Record actual core IDs
-and priorities, completed-backend frame intervals and concurrent stage timing
-showing game/render work overlapping presentation. Preserve queue/backend
-timeouts, hard errors, audio queue rejections, underruns, clipping and stack
-reserve. Cover busy gameplay, title/ready, pause and results transitions.
-Accepted submissions and backend completions have separate counters; preserve
-any missing physical scanout evidence. Host synchronization tests and worker
-creation leave device cadence, readability and the achieved 30 FPS floor
-pending until measured on the named hardware.
+Test rotating leases, source lifetime, concurrent producer/consumer work,
+backpressure, stop/restart and failure paths with race detection where available.
+On the exact OS/package/unit, record actual core IDs/priorities, completed-backend
+frame intervals and concurrent stage timing showing game/update/render work
+overlapping presentation. Keep accepted submissions, backend completions and
+physical scanout evidence distinct. Include queue/backend timeouts, hard errors,
+audio queue rejections, underruns, clipping, write failures and stack reserve.
+Exercise busy play, title/ready, pause and results, plus synchronous native
+recovery. Worker creation and host tests leave achieved device 30 FPS and
+readability pending; this implementation remains a candidate until measured.
 
 Local play can validate game rules, RGB565 drawing through the shared API,
 normalized keyboard and mouse input, lifecycle behavior, tone-mixer requests,

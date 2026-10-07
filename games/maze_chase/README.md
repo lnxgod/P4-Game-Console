@@ -97,16 +97,28 @@ checks, benchmark, package and per-unit transfer evidence for that historical
 OS 0.51 game-only update. Version 1.1.2 is a separate required-native cartridge;
 physical fluidity acceptance remains pending.
 
-## Native Tab5 validation (1.1.2)
+## Maintained Tab5 native rendering
 
-The released descriptor requires `video-highres`, so services without that
-capability cannot start it and the runtime rejects a 320×200 surface. Preserved
-legacy checks use explicit local descriptor copies. The focused ASan/UBSan
-suite and SDL smoke passed at 768×480 for this revision. Default previews render
-directly into the native surface.
+Current package version: **1.1.2**. The native manifest and C descriptor both
+require `video-highres`. Maintained Tab5 play renders directly into a **768×480
+RGB565** surface. Canonical **320×200** coordinates remain input units for touch
+and controls. The retained fallback renderer and earlier fallback guidance are
+for explicitly selected legacy diagnostics.
 
-These are host checks. The target is 60 FPS, with a measured physical-device
-release floor of 30 FPS at 768×480. Panel readability, input, sound and device
-cadence remain subject to exact-package, OS and Tab5 acceptance; a host CPU
-timing or capture does not qualify that floor. Earlier test records retain
-the results for their recorded sources and artifacts.
+The target is **60 FPS** with an actual-device release floor of **30 FPS**.
+Acceptance requires verification of the actual runtime surface and readable
+opening/title, busy gameplay, pause, and results views on the exact Tab5 unit,
+with the package and Console OS identities recorded. Those device readability
+and cadence checks remain pending until measured; host captures and CPU timing
+do not establish device acceptance.
+
+`tools/render_hires.c` captures native 768×480 views by default using the actual
+required-capability descriptor. Pass `--legacy` after the output prefix to add
+explicitly labeled 320×200 diagnostic captures through a temporary legacy
+descriptor copy.
+
+`tools/render_preview.c` also captures native 768×480 by default.
+
+Checkpoint `41dfbe6` records focused ASan/UBSan and native SDL smoke checks
+for its source revision. These historical host results do not qualify the
+merged Console OS or establish physical device acceptance.

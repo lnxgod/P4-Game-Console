@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import collections
 import hashlib
+import importlib.util
 import json
 import os
 import tempfile
@@ -261,7 +262,14 @@ def analyze(recipe_bytes=None):
 def install_generated(path, content):
     """Create only under ignored storage, never overwrite different input bytes."""
     path = Path(path).absolute()
-    subprocess.run(["git", "check-ignore", "-q", str(path)], cwd=ROOT, check=True)
+    if (ROOT / ".git").exists() or (ROOT / ".git").is_symlink():
+        subprocess.run(["git", "check-ignore", "-q", str(path)], cwd=ROOT, check=True)
+    else:
+        spec = importlib.util.spec_from_file_location(
+            "arena_data_policy", Path(__file__).resolve().parents[1] / "prepare-game-data.py")
+        policy = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(policy)
+        policy.require_ignored(path, root=ROOT)
     if path.is_symlink() or (path.exists() and (not path.is_file() or path.read_bytes() != content)):
         raise ValueError(f"Conflicting existing content: {path}")
     if path.is_file():

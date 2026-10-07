@@ -6,6 +6,24 @@ DOOM_FRAMES ?= 8
 DOOMGENERIC_SOURCE ?=
 GAME ?= space_invaders
 
+.PHONY: prebuilt install-tools install-path-host
+prebuilt:
+	python3 scripts/fetch-prebuilt.py
+
+install-tools:
+	./scripts/setup-install-tools.sh
+
+install-path-host:
+	python3 scripts/tests/test-fetch-prebuilt.py
+	python3 scripts/tests/test-tab5-prebuilt-install.py
+	python3 scripts/tests/test-tab5-install.py
+	python3 scripts/tests/test-tab5-release.py
+	python3 scripts/tests/test-lite-source.py
+	python3 scripts/tests/test-install-tools.py
+	python3 scripts/tests/test-prepare-game-data.py
+	python3 scripts/tests/test-sdk-setup.py
+	sh scripts/tests/test-project-env.sh
+
 .PHONY: setup verify build check backup flash flash-app monitor doom-provenance doom-vendor doom-host doom-smoke doom-idf doom-audio-host doom-audio-idf doom-multiplayer-host platform-board-host platform-audio-host platform-audio-factory-host platform-battery-host platform-touch-host platform-game-storage-host platform-save-seal-host h1-usb-drive-control-host doom-touch-host doom-touch-audio-host doom-touch-audio-idf console-shell-host console-os-host play-console-os p4-ansi-host p4-bbs-host p4-desktop-host p4-game-api-host p4-game-save-host p4-signal-scan-host p4-game-package-host p4-os-update-package-host p4-game-platform-host p4-content-host p4-multiplayer-host p4-multiplayer-registry-host p4-ble-radio-handoff-host lord-realm-e2e-host maze-chase-host space-invaders-host frog-hop-host byte-buddy-host skyline-leap-host solitaire-host p4-yahtzee-host calculator-host input-test-host av-test-host play-game game-registry-check game-sdk-host board-port-check console-os-idf console-os-elecrow-idf console-os-olimex-idf console-os-waveshare-idf gamepad-host gamepad-idf install-olimex-sd-card install-waveshare-sd-card
 
 setup:

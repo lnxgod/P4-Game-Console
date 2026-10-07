@@ -1,0 +1,2098 @@
+{
+  "schema": 1,
+  "recorded_at_utc": "2026-10-07T22:03:58.157901+00:00",
+  "purpose": "Host validation of the isolated native-resolution/readability commit source; evidence is bound to this tested snapshot, not a merged or deployed OS.",
+  "tested_source": {
+    "base_commit": "51aefe10080498c3e95e9b78a8b0ecd553e00b5f",
+    "root": "build-host/native-readability-commit/head",
+    "pre_receipt_overlay_count": 139,
+    "pre_receipt_overlay_manifest": {
+      "path": "build-host/native-readability-commit/pre-receipt-overrides-manifest.json",
+      "bytes": 22284,
+      "sha256": "778bd53fabb16d3d3e57e3150dfe5d40b9358a6629c6466eccfdb1f21a309c15",
+      "local_ignored_evidence": true
+    },
+    "overlay_integrity_pass": true,
+    "overlay_files": [
+      {
+        "path": ".agents/skills/esp32-add-game/SKILL.md",
+        "sha256": "831edd1e5d569e8ad4b1002e8bf8c9f0f0dead148b20f2e0c27081757139a8a4",
+        "bytes": 17463
+      },
+      {
+        "path": ".agents/skills/esp32-fix-console/SKILL.md",
+        "sha256": "c54d1051e114b222946aceebe0d5df034ee29986aa113553191ddd703dbcf1d6",
+        "bytes": 15731
+      },
+      {
+        "path": ".agents/skills/esp32-game-art/SKILL.md",
+        "sha256": "08ad2496dd05b3247c23c2808902c866627ec4dd9d8d8e145821e90a5fb9c0bc",
+        "bytes": 3337
+      },
+      {
+        "path": ".agents/skills/esp32-make-game/SKILL.md",
+        "sha256": "ae5dbedfdc75825b3824a26d4953c45bab2c338757ea2a4cfd7ab2adef2e16e4",
+        "bytes": 19255
+      },
+      {
+        "path": ".agents/skills/esp32-setup/SKILL.md",
+        "sha256": "9ad894c88135620e36c3deaf2992f257792ca0ba17afb64460110080e92a0c47",
+        "bytes": 12456
+      },
+      {
+        "path": ".agents/skills/esp32-start/SKILL.md",
+        "sha256": "62b06d661d609118e9bec563ee25a12e0a44405084ba918585d41abcef8f2814",
+        "bytes": 6426
+      },
+      {
+        "path": ".agents/skills/esp32-test-game/SKILL.md",
+        "sha256": "93fb534789bf06e7599fcb246ff371eb2f4950e53d719fcf0e29bc18537a43b5",
+        "bytes": 10004
+      },
+      {
+        "path": "AGENTS.md",
+        "sha256": "488b7f7c1f293b00bd991cedcd702e28273bc2b6ba599204160376b721116282",
+        "bytes": 10214
+      },
+      {
+        "path": "Makefile",
+        "sha256": "926c69e1d7b23f9245ab51b2463a7dc48d7e16e09cbbc4a0deb50bd2a6ca5324",
+        "bytes": 19665
+      },
+      {
+        "path": "README.md",
+        "sha256": "01f8907f0f3baed0f5a292532709deccf1ccebe3a5adf0392e8d99e2c0b24882",
+        "bytes": 14439
+      },
+      {
+        "path": "apps/console_os/CMakeLists.txt",
+        "sha256": "54053ff867e10b13679174ab06e0e802216efb3071fdc779e0c5caf104472049",
+        "bytes": 38083
+      },
+      {
+        "path": "apps/console_os/app-metadata.json",
+        "sha256": "95e30e3141f62295ca4969f0d22aaab11433e35fb9affeff75c38b166427f20b",
+        "bytes": 15431
+      },
+      {
+        "path": "apps/console_os/main/CMakeLists.txt",
+        "sha256": "0157d22f6cd21eda62d9bacc8a244d9be848fa22b7f6b43b512232d2f83ac105",
+        "bytes": 8234
+      },
+      {
+        "path": "apps/console_os/main/cartridge_video.h",
+        "sha256": "a7a7ac7621e7fcbf448d7e2aee83de0b2fd361559ad8cfbd566f73b843fc4db4",
+        "bytes": 1338
+      },
+      {
+        "path": "apps/console_os/main/console_os_main.c",
+        "sha256": "dbdaf562ca6b7307c85c3ccdf60f717d71bb6c39d9baade9d597efca85b1b397",
+        "bytes": 418818
+      },
+      {
+        "path": "components/p4_game_api/include/p4/cartridge.h",
+        "sha256": "d0cfaf70c9d3e251fee36c04c26a8f3489cf68eba09b325fc3b9c7cb79dfd9ef",
+        "bytes": 5029
+      },
+      {
+        "path": "components/p4_game_api/src/draw.c",
+        "sha256": "c8ceff2bce9c4055a1309e1065863d4bce9484cdfecdf24a5b38f62ce513c939",
+        "bytes": 13254
+      },
+      {
+        "path": "components/p4_game_api/tests/CMakeLists.txt",
+        "sha256": "bd13d9a72f99081211743717fa7368d238fdfdf66aba2facd3a5960a84a1afc1",
+        "bytes": 5024
+      },
+      {
+        "path": "components/p4_game_api/tests/test_cartridge_rotating_surface.c",
+        "sha256": "e90dad8718d5ff32eb650e09e4515aa5a66055f5e34c9ad28b03020f6cfc0dc0",
+        "bytes": 4153
+      },
+      {
+        "path": "components/p4_game_platform/CMakeLists.txt",
+        "sha256": "b5a67b77ff7b312cbee88ca01542934e2ac737f5662c38bdf7eff2c6524d7fdc",
+        "bytes": 1602
+      },
+      {
+        "path": "components/p4_game_platform/include/p4/video_presenter.h",
+        "sha256": "3814aa5b4abc8398a44fb6052d99283bae756926aeaaeb4c7538fbf6c1c5f6b9",
+        "bytes": 4477
+      },
+      {
+        "path": "components/p4_game_platform/src/video_presenter.c",
+        "sha256": "c2f04a128f953db027d8a74c27c4f5cc6db0191451e5c7dc6fc491aa38f76633",
+        "bytes": 12045
+      },
+      {
+        "path": "components/p4_game_platform/tests/CMakeLists.txt",
+        "sha256": "a83ce36cca6c0f13added7747675a0d6f5763f023163c03155000a94fbc43e30",
+        "bytes": 3013
+      },
+      {
+        "path": "components/p4_game_platform/tests/test_video_presenter.c",
+        "sha256": "4a135415a9984085cf565a13fa2c4a15e99569fd94971095c299137a664ff494",
+        "bytes": 20318
+      },
+      {
+        "path": "components/platform_display/CMakeLists.txt",
+        "sha256": "92d7b947c89a9b5771774abc7cde65cad4f6fb055f83adcec82bcf87f30a12bb",
+        "bytes": 2857
+      },
+      {
+        "path": "components/platform_display/include/platform/display_worker.h",
+        "sha256": "907ca395d70c1f07a7a3c2032663da6c64bcfcff11494f9be84c905eb471685b",
+        "bytes": 2879
+      },
+      {
+        "path": "components/platform_display/include/platform/display_worker_esp.h",
+        "sha256": "f9a4247eb8a737b2bad3e426d66afd29c846b55ec1684fdca7a9382242d32ec3",
+        "bytes": 374
+      },
+      {
+        "path": "components/platform_display/src/display_worker.c",
+        "sha256": "b30b3e8f94b346fef462eea7f7b9b8f348e8b836d8eef3c4186ab3ec3ed74c1f",
+        "bytes": 7824
+      },
+      {
+        "path": "components/platform_display/src/display_worker_esp.c",
+        "sha256": "dcd10837715620ca0b07cbd1b84f2096090e7e9fdd0fa4d192267ff479b90421",
+        "bytes": 2833
+      },
+      {
+        "path": "docs/GAME_ART.md",
+        "sha256": "5fa48d7e86071b4ec09bd5af50503fe03e82b26e179f59038e9e93e46b50bf88",
+        "bytes": 8868
+      },
+      {
+        "path": "docs/GAME_LIBRARY.md",
+        "sha256": "95eb696116cfcfbaf47be40d99d872b14bec60a10eb25382e34c546c2cf73afb",
+        "bytes": 11381
+      },
+      {
+        "path": "docs/GAME_PERFORMANCE.md",
+        "sha256": "3f67d6bceabd77f8fc2a7cadecac2c5dd62ae6734cffbd5a01ca4eb9f9616c77",
+        "bytes": 11948
+      },
+      {
+        "path": "docs/GAME_SDK.md",
+        "sha256": "36090a06fc0093a35fdd44a6fb0fe408dde2633f7fd0c444dd39ccce68050c55",
+        "bytes": 41737
+      },
+      {
+        "path": "games/README.md",
+        "sha256": "104d0eb54c2bb9d8588df6d864363552c298a04a728d9c68a757fbd5a1e60276",
+        "bytes": 9462
+      },
+      {
+        "path": "games/av_test/CMakeLists.txt",
+        "sha256": "7cbef80773f45e1f3e302a89f8e3b3b0b267481324194b1267d28a8f95f54b61",
+        "bytes": 1132
+      },
+      {
+        "path": "games/av_test/README.md",
+        "sha256": "ccaa7abba5f4b34f605ef25d8eeb85ff7437a96a3959b35fdda3901cae802b4d",
+        "bytes": 2512
+      },
+      {
+        "path": "games/av_test/game.json",
+        "sha256": "7078cfb63332c4c7ee0621efdb2885adbba497f0e6d2ddb24743c52c3bc2d902",
+        "bytes": 662
+      },
+      {
+        "path": "games/av_test/src/av_test.c",
+        "sha256": "4efa7dada6f208f4458dd0edef30601b3d75d2854961f497a62f7db457ecbd68",
+        "bytes": 8214
+      },
+      {
+        "path": "games/blast_circuit/CMakeLists.txt",
+        "sha256": "31e506ea2d7b42992efdc2be9eb96d105622e3450c86892bc4543b899f05ed10",
+        "bytes": 1307
+      },
+      {
+        "path": "games/blast_circuit/NATIVE_READABILITY_TESTING.json",
+        "sha256": "cbd55bbab4ff8fee081204df8cf488e92424f5bdd9812834cbbc099d41e18b1a",
+        "bytes": 36718
+      },
+      {
+        "path": "games/blast_circuit/README.md",
+        "sha256": "01f029ecca5e9f1ff9fe1fc88e3cd32e21f831aa912df4204f2a1661b8dd9f86",
+        "bytes": 22090
+      },
+      {
+        "path": "games/blast_circuit/game.json",
+        "sha256": "127e92672fb539db2f79173d869eca7e4c79015904af85b182cfac61fec0b152",
+        "bytes": 1154
+      },
+      {
+        "path": "games/blast_circuit/src/blast_circuit.c",
+        "sha256": "cc7b910607c1d102cb59442a9f9f1958b8c1b0e6c9f7c6b2c0947b579ecd78a1",
+        "bytes": 7270
+      },
+      {
+        "path": "games/blast_circuit/src/blast_circuit_audio.c",
+        "sha256": "5210cdb56bd57066d933ea9e5a3e8159f6600cfa71c063ebdafcd9c2a8550063",
+        "bytes": 10691
+      },
+      {
+        "path": "games/blast_circuit/src/blast_circuit_render.c",
+        "sha256": "3a7c5796cbd8f32af5ed5da4a78d8d3e4cc6416f04873b34c2ba4afeed1c1749",
+        "bytes": 28990
+      },
+      {
+        "path": "games/blast_circuit/tests/test_blast_circuit.c",
+        "sha256": "3854751ac238b7c8dc915b275886b6e6f69448574f6dfc813a80b4876b4c2014",
+        "bytes": 26341
+      },
+      {
+        "path": "games/blast_circuit/tests/test_features.c",
+        "sha256": "518817efea147fb551480ef4ba8923128770436802fc3f191f87da980e292808",
+        "bytes": 18012
+      },
+      {
+        "path": "games/calculator/CMakeLists.txt",
+        "sha256": "c3a3ef67c455b8a8e30dca479a6df1f6a0edd194893d598fb4fac4c0f441eca8",
+        "bytes": 1342
+      },
+      {
+        "path": "games/calculator/README.md",
+        "sha256": "38d122bdfad560c4a7377c0610ce8308c8a9a1d8c4f74e680a5a8607ff2e6881",
+        "bytes": 2531
+      },
+      {
+        "path": "games/calculator/game.json",
+        "sha256": "92cde25c8bad0b8eff7a18f9f54a5573cf33330aa02053850d31a84ec3a08a07",
+        "bytes": 655
+      },
+      {
+        "path": "games/calculator/src/calculator.c",
+        "sha256": "a2723295fcf804d6f5e3109c4e09a28569f4644da1466355f899bfd54279ce3c",
+        "bytes": 13688
+      },
+      {
+        "path": "games/calculator/tests/CMakeLists.txt",
+        "sha256": "4448133197fb8036f524e151700d1ef85ca713a841134d008883d87ee09c28fc",
+        "bytes": 1517
+      },
+      {
+        "path": "games/calculator/tests/test_calculator.c",
+        "sha256": "27041d8a353612684a64247d6aefa5c9f971fa2c1b26e2d97d450be1c422a872",
+        "bytes": 4341
+      },
+      {
+        "path": "games/calculator/tests/test_utility_native.c",
+        "sha256": "58ce31ba25fd1f4e58b5c5be05315af290e038c1627586df8b587d02689100d2",
+        "bytes": 8666
+      },
+      {
+        "path": "games/checkers/CMakeLists.txt",
+        "sha256": "d126e0b80bdd22b16eb64b14945ac6fb74104c67c0c1802d3dab0613172bb3cd",
+        "bytes": 1239
+      },
+      {
+        "path": "games/checkers/README.md",
+        "sha256": "f48bbca23e3d1643ff378e199a15c218a0f7c078764da5d74c13becbab7dbfd3",
+        "bytes": 6448
+      },
+      {
+        "path": "games/checkers/game.json",
+        "sha256": "f2d21e41edd7e80b7532500b6e9fc2aecc8897f6da016ae1b081aa719947236e",
+        "bytes": 930
+      },
+      {
+        "path": "games/checkers/src/checkers.c",
+        "sha256": "0ab8331577a8ddd5d45805659e44c923728d0a2a1b0082d359389ebafa9de042",
+        "bytes": 19607
+      },
+      {
+        "path": "games/checkers/tests/legacy_surface.h",
+        "sha256": "879a3a940317041dd1e17089533f9b10f13c5aae6b2a5021a3c22b8dcd6f648e",
+        "bytes": 1307
+      },
+      {
+        "path": "games/checkers/tests/test_checkers.c",
+        "sha256": "64c68391ff19b55da2a5961dd10d7ef8c2ed24d657ff7d394a7e40cf53d59974",
+        "bytes": 23257
+      },
+      {
+        "path": "games/checkers/tests/test_presentation.c",
+        "sha256": "3f473c55421e4d607e0e2bc67986cb3aee4c8d12999eb1609b98ac4050663ed6",
+        "bytes": 3829
+      },
+      {
+        "path": "games/color_clash/CMakeLists.txt",
+        "sha256": "dec1e25bf8fc438c11a9ebba79dcd730f36335aebaa2963ef4f394d95e3dd6e1",
+        "bytes": 1275
+      },
+      {
+        "path": "games/color_clash/README.md",
+        "sha256": "a028a097ba589c3d10bc7e4943b71227b441b908c17367cf58182a0d3e2d6491",
+        "bytes": 13165
+      },
+      {
+        "path": "games/color_clash/game.json",
+        "sha256": "b765d87491abe230d63996152ce4345c61a3fb70c4d8eb94d345d0614463248f",
+        "bytes": 1014
+      },
+      {
+        "path": "games/color_clash/src/color_clash.c",
+        "sha256": "9324defd34a2508325edde68948e75d7b0bf226d18ea0060a82c4842e26784b1",
+        "bytes": 60316
+      },
+      {
+        "path": "games/color_clash/tests/test_color_clash.c",
+        "sha256": "f2a7b32f193d25690f34573f375840367307e10037ddebc1021126b1543e008a",
+        "bytes": 59231
+      },
+      {
+        "path": "games/color_clash/tests/test_game_start.h",
+        "sha256": "b2f0bbb3e812e95fa298627bce404d50eb9e2d870ffd1dc8be21577d22a6c301",
+        "bytes": 1494
+      },
+      {
+        "path": "games/color_clash/tests/test_presentation.c",
+        "sha256": "2cbe95f2760214214f52054fc34cb754a9252ca0101a99a8b6f82d54a43beccb",
+        "bytes": 4266
+      },
+      {
+        "path": "games/color_clash/tests/test_touch_drag.c",
+        "sha256": "cf47ae49b1beb995bba55d2707f0bc17c26c92dfb91e7279634df29ee5c3088f",
+        "bytes": 5428
+      },
+      {
+        "path": "games/frog_hop/CMakeLists.txt",
+        "sha256": "d6ce60c77101d71d996eb4b6fe0b32742d0c51fac156c80b4488c9862bfc8084",
+        "bytes": 1590
+      },
+      {
+        "path": "games/frog_hop/README.md",
+        "sha256": "1242759b5857aa4f581919262867e9cecef271936e8a3ad03329d61e407995e2",
+        "bytes": 8115
+      },
+      {
+        "path": "games/frog_hop/game.json",
+        "sha256": "153d50af640e388bdd7508a363501a5af83b568d5efa8763d671169f7af68db0",
+        "bytes": 714
+      },
+      {
+        "path": "games/frog_hop/src/frog_hop.c",
+        "sha256": "35de13e6d6477771905bfc2bd8533f7d260a2ca9194daae0f4dde0f322c03d21",
+        "bytes": 26517
+      },
+      {
+        "path": "games/frog_hop/tests/test_frog_hop.c",
+        "sha256": "b6885bc469e27b2d80dfafa385664830279a1b26c9469588fd921a1f376e34f5",
+        "bytes": 11006
+      },
+      {
+        "path": "games/frog_hop/tools/render_hires.c",
+        "sha256": "9b2e0ba6055667f1540cde07afb2d61fe92c4c679fce555e26cd8579d2bc9a9e",
+        "bytes": 3481
+      },
+      {
+        "path": "games/input_test/CMakeLists.txt",
+        "sha256": "e3eb809e1f17c1d34d34f80654ce281f9e10d3b084a9dddef2f77cfb36c84321",
+        "bytes": 1162
+      },
+      {
+        "path": "games/input_test/README.md",
+        "sha256": "9ef2df931d8f15f799c3f780e1aab64a2941bd91d99e3fdbf53fd05f166ac758",
+        "bytes": 2462
+      },
+      {
+        "path": "games/input_test/game.json",
+        "sha256": "ea13fc845eb73f90d6fc6874f6c79ca5d1888679f92b174b346058bb075d11bf",
+        "bytes": 643
+      },
+      {
+        "path": "games/input_test/src/input_test.c",
+        "sha256": "b223d9d6282666b224668ab5199742814d0fe67ad5e6d29cb74caa3e6234ea5f",
+        "bytes": 7092
+      },
+      {
+        "path": "games/maze_chase/CMakeLists.txt",
+        "sha256": "d82a92babfc10bbd7bc3136ff1652982015beb969b004c96f1c3c328d9a4adeb",
+        "bytes": 1881
+      },
+      {
+        "path": "games/maze_chase/README.md",
+        "sha256": "e982c3ac2c648cedc2afd209ba0e83c1f3598cea28802e81efcadfeee5057a6c",
+        "bytes": 9023
+      },
+      {
+        "path": "games/maze_chase/game.json",
+        "sha256": "394c5a27501cc801d91e1614d74b2d2631c2ebfc4b369c618817f357d74f4dde",
+        "bytes": 725
+      },
+      {
+        "path": "games/maze_chase/src/maze_chase.c",
+        "sha256": "3d6d95787609b8c4d16bd19e549764f8d13f138fdbeed7e3d2e9ddcee8f9200d",
+        "bytes": 35597
+      },
+      {
+        "path": "games/maze_chase/tests/test_maze_chase.c",
+        "sha256": "3629e2a7be5e77f5aa86ba2a4aa65f43d435ec2d7e25d126e4020d2e15d6fd3d",
+        "bytes": 19044
+      },
+      {
+        "path": "games/maze_chase/tests/test_touch_pipeline.c",
+        "sha256": "666f8895051897d9133f9f55bc5ba8db028bdd64c56fe48a1b3e56966388b4b1",
+        "bytes": 4207
+      },
+      {
+        "path": "games/maze_chase/tools/render_hires.c",
+        "sha256": "df9556eb0aa42fce4336ec1383daa8db2332c7ec1ba4996c04f40fc777c4633e",
+        "bytes": 4386
+      },
+      {
+        "path": "games/maze_chase/tools/render_preview.c",
+        "sha256": "b610062bc21d92e632fe6c6de9c00d85c39667e69d18fdc16abda6eac48a1dd1",
+        "bytes": 2756
+      },
+      {
+        "path": "games/p4_air_hockey/CMakeLists.txt",
+        "sha256": "d508efffa88048d71be4666d145af36dfee56c6cd0b273729d0d0d418f70c6ec",
+        "bytes": 1299
+      },
+      {
+        "path": "games/p4_air_hockey/README.md",
+        "sha256": "47a3dfef437b6524c0658244c2d9f0c26b90e16c91ed647ab741e25b97a4f55f",
+        "bytes": 9639
+      },
+      {
+        "path": "games/p4_air_hockey/game.json",
+        "sha256": "1178bab3fd60a9beeb7258386f4956ce594851461c59373f0f0c6e6882770249",
+        "bytes": 992
+      },
+      {
+        "path": "games/p4_air_hockey/src/p4_air_hockey.c",
+        "sha256": "0eacbab38e2f119f0c9965319afdddbfd85c0a2668c4e62d36897b9b244e3a51",
+        "bytes": 17285
+      },
+      {
+        "path": "games/p4_air_hockey/tests/legacy_surface.h",
+        "sha256": "879a3a940317041dd1e17089533f9b10f13c5aae6b2a5021a3c22b8dcd6f648e",
+        "bytes": 1307
+      },
+      {
+        "path": "games/p4_air_hockey/tests/test_p4_air_hockey.c",
+        "sha256": "e241faa2ded81f2cd6d2077f19b7df94789b1c4f9db634916636c98bfba741c3",
+        "bytes": 25901
+      },
+      {
+        "path": "games/p4_air_hockey/tests/test_presentation.c",
+        "sha256": "d4b52af7a9285ca927f1c2aa78076d3e2feacf5d9c6a4e42cf5213c5aac36796",
+        "bytes": 7438
+      },
+      {
+        "path": "games/p4_rummy/CMakeLists.txt",
+        "sha256": "d6003a9c0bce325925adb56d28057ca7bab25624456789d90539cca9cc53767a",
+        "bytes": 1239
+      },
+      {
+        "path": "games/p4_rummy/README.md",
+        "sha256": "94703a0ee3966b6ae67f95eb7e8532ac911d85adb4e83948719a5b94a3319942",
+        "bytes": 10290
+      },
+      {
+        "path": "games/p4_rummy/game.json",
+        "sha256": "9c3678c96891133813583b645e12ae6dbb2242fc524fe6168877401963b45161",
+        "bytes": 960
+      },
+      {
+        "path": "games/p4_rummy/src/p4_rummy.c",
+        "sha256": "e0da0658e300ad8104bb414aeb2f36eee9e2b19e871be67135b5ad68e05c37ab",
+        "bytes": 51876
+      },
+      {
+        "path": "games/p4_rummy/tests/test_game_start.h",
+        "sha256": "031d57327a4008a6e9cd199c6c0abec689816d41513313f5c5d763090bc29db4",
+        "bytes": 1488
+      },
+      {
+        "path": "games/p4_rummy/tests/test_p4_rummy.c",
+        "sha256": "db272b56c83b1964f21553a708d3e75082ebb65d1c7c60538f60a808a4fd02c7",
+        "bytes": 44930
+      },
+      {
+        "path": "games/p4_rummy/tests/test_presentation.c",
+        "sha256": "036d05fc96e6f2af353209d00a4c585c9bdb1ed150de75a61cf715535f78c571",
+        "bytes": 3985
+      },
+      {
+        "path": "games/p4_rummy/tests/test_touch_drag.c",
+        "sha256": "ac3fa6991da1af3a26f3990de46470429b24a680d9e0dd9e2fcd63e4521f0bdf",
+        "bytes": 5146
+      },
+      {
+        "path": "games/p4_yahtzee/CMakeLists.txt",
+        "sha256": "ca220b344441642a25034c319761d1ec8cb8d7e3fe3486d7057b42f605726db0",
+        "bytes": 1291
+      },
+      {
+        "path": "games/p4_yahtzee/README.md",
+        "sha256": "3c034af8fe7ac64dc60c215572cc99515f93d15e45ab29daa6ac9309ee207a59",
+        "bytes": 9691
+      },
+      {
+        "path": "games/p4_yahtzee/game.json",
+        "sha256": "678d6254991bde0a968491e3328b1c8b2a1a92e63ff1d0d886dfa935b394f63a",
+        "bytes": 971
+      },
+      {
+        "path": "games/p4_yahtzee/src/p4_yahtzee.c",
+        "sha256": "af2fdf0edb6a70014457c840fde0328406f3ed5e64289e658a4669c2f4db44f9",
+        "bytes": 26773
+      },
+      {
+        "path": "games/p4_yahtzee/tests/legacy_surface.h",
+        "sha256": "879a3a940317041dd1e17089533f9b10f13c5aae6b2a5021a3c22b8dcd6f648e",
+        "bytes": 1307
+      },
+      {
+        "path": "games/p4_yahtzee/tests/test_p4_yahtzee.c",
+        "sha256": "ff601dbb5d57792c3fe873c645a2355f0e7a9b6e4c0426c04f017f41a516c415",
+        "bytes": 38615
+      },
+      {
+        "path": "games/p4_yahtzee/tests/test_presentation.c",
+        "sha256": "f3171de96cddaeca65fb3856aadf6714187dcff6f1d59ac1a8961c7f58bff787",
+        "bytes": 4021
+      },
+      {
+        "path": "games/p4_yahtzee/tools/render_preview.c",
+        "sha256": "bfa79b0a7a025024561a9911d3f9231d418fa48553dd110d15b7788b3dd815c1",
+        "bytes": 3644
+      },
+      {
+        "path": "games/solitaire/CMakeLists.txt",
+        "sha256": "f3070091af19ce2d41c48150360dcfd46ad57f302162c2453bd5aa5f89af1526",
+        "bytes": 1188
+      },
+      {
+        "path": "games/solitaire/README.md",
+        "sha256": "fec78677bb6efc5417bf263c91c992eea9cbd42bb9db5385be3a5bf2f3d679ac",
+        "bytes": 5500
+      },
+      {
+        "path": "games/solitaire/game.json",
+        "sha256": "066de84a3b26979bfd5614a7b164318da609882a51fd3c0dc62aaf7d365f3ce0",
+        "bytes": 714
+      },
+      {
+        "path": "games/solitaire/src/solitaire.c",
+        "sha256": "cf7c0aa4167e425d51bca963e5035321fa0dd2a49c01cfd6e609bff0d70c7b69",
+        "bytes": 36897
+      },
+      {
+        "path": "games/solitaire/tests/test_presentation.c",
+        "sha256": "fdd5e6b26d48fa3656218167f23a190b8ffbc9fa90239f784f8b6a325956213b",
+        "bytes": 6226
+      },
+      {
+        "path": "games/solitaire/tests/test_solitaire.c",
+        "sha256": "28d6bf30fb666798496575043c60f74358e60d19ef1167301dc5e7c2e0b92c19",
+        "bytes": 14571
+      },
+      {
+        "path": "games/space_invaders/CMakeLists.txt",
+        "sha256": "b833afb10c5217c9db0732c13b2fd73a27a232bcaeff058ef9e4c3389332f208",
+        "bytes": 1947
+      },
+      {
+        "path": "games/space_invaders/README.md",
+        "sha256": "e7aee2ca4c408d313b3c33a13ac315b91a056e8f81cae42b4afc79fa985599b1",
+        "bytes": 9795
+      },
+      {
+        "path": "games/space_invaders/game.json",
+        "sha256": "f0d097e87c168adb0b8c0908ec19efd6935d3b2c969e3669fc8467b7ff222954",
+        "bytes": 743
+      },
+      {
+        "path": "games/space_invaders/src/space_invaders.c",
+        "sha256": "e2baac5ddebb1a65d58ecca682c74d38f4dc0bd21defb19760226a7a924efb4f",
+        "bytes": 37250
+      },
+      {
+        "path": "games/space_invaders/tests/test_space_invaders.c",
+        "sha256": "d3b7682658b9a5e94523653eae3974ab5fa58785a13a31df08a9c22e0423c65c",
+        "bytes": 24238
+      },
+      {
+        "path": "games/space_invaders/tools/render_hires.c",
+        "sha256": "964131f3c2aa548bf3a4f82af0e817ab4a3b175d02db30e2b59f1071d0ed31c6",
+        "bytes": 4434
+      },
+      {
+        "path": "games/space_invaders/tools/render_preview.c",
+        "sha256": "ff120c84b23b3bbcaa2cddb46dbd84cbb678f1926b20489076fe2312f0b1ebdb",
+        "bytes": 3533
+      },
+      {
+        "path": "games/texas_holdem/CMakeLists.txt",
+        "sha256": "5da7dc36ab460c902bd224cb6bdc45f5b6a27e993f0f0ba8dd527acff068a140",
+        "bytes": 1287
+      },
+      {
+        "path": "games/texas_holdem/README.md",
+        "sha256": "72d492dee5138020ac6a26cffa5c7ca4d5c168f891567dbce304db7edf5da129",
+        "bytes": 7255
+      },
+      {
+        "path": "games/texas_holdem/game.json",
+        "sha256": "c8175d95a668954e699b4678b2f028e52f6ef05ba0b51e7725f6970e3281c328",
+        "bytes": 996
+      },
+      {
+        "path": "games/texas_holdem/src/texas_holdem.c",
+        "sha256": "7ed1f8f57fc7f2feb59333a00a15a725e0e01937f36465ac55447a5f188568ac",
+        "bytes": 25039
+      },
+      {
+        "path": "games/texas_holdem/tests/test_presentation.c",
+        "sha256": "6bd91dfbec53c31a402413a136cfe739f87c1027370af3c4e7c482fa80ec6ee3",
+        "bytes": 4066
+      },
+      {
+        "path": "games/texas_holdem/tests/test_texas_holdem.c",
+        "sha256": "816944c1cc5378e3bad2b2615cdbb8f24865772807f00d8bb601e6f715a53b2c",
+        "bytes": 41598
+      },
+      {
+        "path": "games/tide_maze/README.md",
+        "sha256": "20baeb8295831abf7ccc83c97254ea409e1f95d18ec9c70fa07431365c18a87d",
+        "bytes": 7856
+      },
+      {
+        "path": "games/tide_maze/game.json",
+        "sha256": "1f647fdb6a6978bb9f11e7fcaed03c1c02c77337a63927395f4591d10c39a862",
+        "bytes": 1073
+      },
+      {
+        "path": "hardware/test-runs/2026-10-07-tab5-native-readability-and-removal.json",
+        "sha256": "82fa4f64f2d9ae15436ef9344ce245e0f43d5cc9bafc1ac021913e883c3fac06",
+        "bytes": 26422
+      },
+      {
+        "path": "scripts/generate-game-registry.py",
+        "sha256": "bb2788bb90782b12b172f14d1c378cc9076db235db1bd9a2bc821b23a3220c03",
+        "bytes": 13335
+      },
+      {
+        "path": "scripts/new-game.py",
+        "sha256": "2c8f98e742a275f4cae6c77486d1ebca516ac5043c215b16132b2b68c8b6776a",
+        "bytes": 20804
+      },
+      {
+        "path": "scripts/tests/test-console-native-resolution.py",
+        "sha256": "23cbcc750125b3e2dca700e12ea774f1a1731a6825ddc073238f4972f9e37c88",
+        "bytes": 9815
+      },
+      {
+        "path": "scripts/tests/test-game-registry.py",
+        "sha256": "0c3e5c0967992a5f391c024b2132b8db740a69d8d05f041303a6ab0a0d2c08d8",
+        "bytes": 13107
+      },
+      {
+        "path": "scripts/tests/test-game-release.py",
+        "sha256": "f5f60c8e4a2bb9f7d02427cfa507279b4e2c83161abf104ab66a9797122a184e",
+        "bytes": 2990
+      },
+      {
+        "path": "scripts/tests/test-native-video-worker-gate.py",
+        "sha256": "511481aa0861ce0b1b1cd00522e5a1b4706f5ec019bc69bbad57518ae2e92fdd",
+        "bytes": 16028
+      },
+      {
+        "path": "scripts/tests/test-new-game.py",
+        "sha256": "cd3a8713ec5c142c425de1e0a38c832a7a26763f5e1a144d3b3355db19112408",
+        "bytes": 11724
+      }
+    ],
+    "tracked_source_mutated_by_validation_agent": false
+  },
+  "host_validation": {
+    "pass": true,
+    "unique_library_checks": 24,
+    "game_local_ctest_passed": 26,
+    "generic_sdl_ctest_passed": 15,
+    "isolated_component_ctest_passed": 5,
+    "audited_ctest_total": 46,
+    "audited_ctest_total_scope": "26 game-local + 15 selected generic SDL + 4 platform + 1 rotating-surface; does not add repeated preflight tests from the IDF build.",
+    "enabled_title_count": 14,
+    "game_local_results": [
+      {
+        "name": "game-av_test",
+        "pass": true,
+        "ctest_passed": 0,
+        "sanitizers": [
+          "address",
+          "undefined"
+        ],
+        "log": {
+          "path": "build-host/native-readability-commit/tests/game-av_test.log",
+          "bytes": 1868,
+          "sha256": "772aaa351eb0ab08e4fffbc8567a9bc730198fdd6f641fb276eaeebbc52266d5",
+          "local_ignored_evidence": true
+        },
+        "scope": "Compile-only game-local target; sanitizer runtime coverage is in the separate generic SDL suite"
+      },
+      {
+        "name": "game-blast_circuit",
+        "pass": true,
+        "ctest_passed": 3,
+        "sanitizers": [
+          "address",
+          "undefined"
+        ],
+        "log": {
+          "path": "build-host/native-readability-commit/tests/game-blast_circuit.log",
+          "bytes": 3573,
+          "sha256": "d44e3fa523a70bacc71abcd84c08656cc96419b3654606324f2560ea9e347150",
+          "local_ignored_evidence": true
+        }
+      },
+      {
+        "name": "game-calculator",
+        "pass": true,
+        "ctest_passed": 2,
+        "sanitizers": [
+          "address",
+          "undefined"
+        ],
+        "log": {
+          "path": "build-host/native-readability-commit/tests/game-calculator.log",
+          "bytes": 3237,
+          "sha256": "0f336750f025f9bef8a7989a43b7cd025f9c050150bacc54fb505fc31d883494",
+          "local_ignored_evidence": true
+        }
+      },
+      {
+        "name": "game-checkers",
+        "pass": true,
+        "ctest_passed": 2,
+        "sanitizers": [
+          "address",
+          "undefined"
+        ],
+        "log": {
+          "path": "build-host/native-readability-commit/tests/game-checkers.log",
+          "bytes": 3012,
+          "sha256": "6925875791f6d83b33a6509879f623eaab2f2b2649a7e37e6df24fde990ef41e",
+          "local_ignored_evidence": true
+        }
+      },
+      {
+        "name": "game-color_clash",
+        "pass": true,
+        "ctest_passed": 3,
+        "sanitizers": [
+          "address",
+          "undefined"
+        ],
+        "log": {
+          "path": "build-host/native-readability-commit/tests/game-color_clash.log",
+          "bytes": 3346,
+          "sha256": "14344830af12ac43ee4be353e8b5ea4f15e501dce88b939e3693b5222149ec3c",
+          "local_ignored_evidence": true
+        }
+      },
+      {
+        "name": "game-frog_hop",
+        "pass": true,
+        "ctest_passed": 1,
+        "sanitizers": [
+          "address",
+          "undefined"
+        ],
+        "log": {
+          "path": "build-host/native-readability-commit/tests/game-frog_hop.log",
+          "bytes": 2733,
+          "sha256": "7f41658718e1a09217a575dcfad2d5760191d995016848d94785601d0cdc5257",
+          "local_ignored_evidence": true
+        }
+      },
+      {
+        "name": "game-input_test",
+        "pass": true,
+        "ctest_passed": 0,
+        "sanitizers": [
+          "address",
+          "undefined"
+        ],
+        "log": {
+          "path": "build-host/native-readability-commit/tests/game-input_test.log",
+          "bytes": 1889,
+          "sha256": "2a441ccc8160decd92e1786bb809d0787bd9614dd7d790b7d254b94bd3b4adf7",
+          "local_ignored_evidence": true
+        },
+        "scope": "Compile-only game-local target; sanitizer runtime coverage is in the separate generic SDL suite"
+      },
+      {
+        "name": "game-maze_chase",
+        "pass": true,
+        "ctest_passed": 3,
+        "sanitizers": [
+          "address",
+          "undefined"
+        ],
+        "log": {
+          "path": "build-host/native-readability-commit/tests/game-maze_chase.log",
+          "bytes": 3812,
+          "sha256": "00a951b8b836ed86fed6a9eaf0e8cfc72ec06476c859f774c8d3a239af8f3d45",
+          "local_ignored_evidence": true
+        }
+      },
+      {
+        "name": "game-p4_air_hockey",
+        "pass": true,
+        "ctest_passed": 2,
+        "sanitizers": [
+          "address",
+          "undefined"
+        ],
+        "log": {
+          "path": "build-host/native-readability-commit/tests/game-p4_air_hockey.log",
+          "bytes": 3121,
+          "sha256": "cc6d1eb60a558037725c7efe684487f7994360a7e6709a5e4d086c272c0246b1",
+          "local_ignored_evidence": true
+        }
+      },
+      {
+        "name": "game-p4_rummy",
+        "pass": true,
+        "ctest_passed": 3,
+        "sanitizers": [
+          "address",
+          "undefined"
+        ],
+        "log": {
+          "path": "build-host/native-readability-commit/tests/game-p4_rummy.log",
+          "bytes": 3274,
+          "sha256": "193e1ff4a3def47e16cb3049d9494e7ca10c7c9d84ba20b0385a5a5cc1d2896b",
+          "local_ignored_evidence": true
+        }
+      },
+      {
+        "name": "game-p4_yahtzee",
+        "pass": true,
+        "ctest_passed": 2,
+        "sanitizers": [
+          "address",
+          "undefined"
+        ],
+        "log": {
+          "path": "build-host/native-readability-commit/tests/game-p4_yahtzee.log",
+          "bytes": 3193,
+          "sha256": "4b01ea12b12281754a9af8bca9babcd32775a74d55b1e444f91ba5728a6c42c9",
+          "local_ignored_evidence": true
+        }
+      },
+      {
+        "name": "game-solitaire",
+        "pass": true,
+        "ctest_passed": 2,
+        "sanitizers": [
+          "address",
+          "undefined"
+        ],
+        "log": {
+          "path": "build-host/native-readability-commit/tests/game-solitaire.log",
+          "bytes": 2881,
+          "sha256": "e3c60437b4bf39ceac56cbf5c8a6dba13c3de5563c45cfcc26f72ffe9bc7ed27",
+          "local_ignored_evidence": true
+        }
+      },
+      {
+        "name": "game-space_invaders",
+        "pass": true,
+        "ctest_passed": 1,
+        "sanitizers": [
+          "address",
+          "undefined"
+        ],
+        "log": {
+          "path": "build-host/native-readability-commit/tests/game-space_invaders.log",
+          "bytes": 2976,
+          "sha256": "121e76c823f51c93437c650c0b4aba2dda201f62481bbb160fb2ae695374feb9",
+          "local_ignored_evidence": true
+        }
+      },
+      {
+        "name": "game-texas_holdem",
+        "pass": true,
+        "ctest_passed": 2,
+        "sanitizers": [
+          "address",
+          "undefined"
+        ],
+        "log": {
+          "path": "build-host/native-readability-commit/tests/game-texas_holdem.log",
+          "bytes": 3098,
+          "sha256": "b2ed9ce1a3e3575edfd83adbddba728492b7b6d63eb8776a55b44c602a4b0c69",
+          "local_ignored_evidence": true
+        }
+      }
+    ],
+    "sdl_results": [
+      {
+        "name": "sdl-av_test",
+        "pass": true,
+        "ctest_passed": 5,
+        "sanitizers": [
+          "address",
+          "undefined"
+        ],
+        "log": {
+          "path": "build-host/native-readability-commit/tests/sdl-av_test-retry.log",
+          "bytes": 7048,
+          "sha256": "c1bd60751ae12d282849893574639c584aaf89db2203af3811756c7f28c5134d",
+          "local_ignored_evidence": true
+        }
+      },
+      {
+        "name": "sdl-blast_circuit",
+        "pass": true,
+        "ctest_passed": 5,
+        "sanitizers": [
+          "address",
+          "undefined"
+        ],
+        "log": {
+          "path": "build-host/native-readability-commit/tests/sdl-blast_circuit-retry.log",
+          "bytes": 9007,
+          "sha256": "738cbd49235975b16e2878346adc4e944dba7069a17a5cde684e974c5ca997d3",
+          "local_ignored_evidence": true
+        }
+      },
+      {
+        "name": "sdl-input_test",
+        "pass": true,
+        "ctest_passed": 5,
+        "sanitizers": [
+          "address",
+          "undefined"
+        ],
+        "log": {
+          "path": "build-host/native-readability-commit/tests/sdl-input_test-retry.log",
+          "bytes": 7081,
+          "sha256": "e9732a76c7694dec4c4cbb71ec4d665ef141cb183dc2bbf4bfdafa1f2c430045",
+          "local_ignored_evidence": true
+        }
+      }
+    ],
+    "library_checks": [
+      {
+        "name": "blast-exact-installed-package-match",
+        "pass": true,
+        "commands": []
+      },
+      {
+        "name": "blast-package",
+        "pass": true,
+        "evidence": {
+          "path": "build-host/native-readability-commit/tests/blast-package.log",
+          "bytes": 1069,
+          "sha256": "ef53d7cd9619e3f7672c238a95a4eca255d74463979716d6b4225a15f80ff52f",
+          "local_ignored_evidence": true
+        },
+        "commands": [
+          [
+            "python3",
+            "scripts/build-game-package.py",
+            "--manifest",
+            "games/blast_circuit/game.json",
+            "--compiler",
+            "/Users/whatzer/Documents/ChatGPT/p4console/.tools/espressif/tools/riscv32-esp-elf/esp-14.2.0_20251107/riscv32-esp-elf/bin/riscv32-esp-elf-gcc",
+            "--strip",
+            "/Users/whatzer/Documents/ChatGPT/p4console/.tools/espressif/tools/riscv32-esp-elf/esp-14.2.0_20251107/riscv32-esp-elf/bin/riscv32-esp-elf-strip",
+            "--output",
+            "/Users/whatzer/Documents/ChatGPT/p4console/build-host/native-readability-commit/tests/BLAST_CIRCUIT.P4G"
+          ]
+        ]
+      },
+      {
+        "name": "game-av_test",
+        "pass": true,
+        "evidence": {
+          "path": "build-host/native-readability-commit/tests/game-av_test.log",
+          "bytes": 1868,
+          "sha256": "772aaa351eb0ab08e4fffbc8567a9bc730198fdd6f641fb276eaeebbc52266d5",
+          "local_ignored_evidence": true
+        },
+        "commands": [
+          [
+            "cmake",
+            "-S",
+            "games/av_test",
+            "-B",
+            "/Users/whatzer/Documents/ChatGPT/p4console/build-host/native-readability-commit/tests/game-av_test",
+            "-G",
+            "Ninja"
+          ],
+          [
+            "cmake",
+            "--build",
+            "/Users/whatzer/Documents/ChatGPT/p4console/build-host/native-readability-commit/tests/game-av_test",
+            "--parallel",
+            "1"
+          ]
+        ]
+      },
+      {
+        "name": "game-blast_circuit",
+        "pass": true,
+        "evidence": {
+          "path": "build-host/native-readability-commit/tests/game-blast_circuit.log",
+          "bytes": 3573,
+          "sha256": "d44e3fa523a70bacc71abcd84c08656cc96419b3654606324f2560ea9e347150",
+          "local_ignored_evidence": true
+        },
+        "commands": [
+          [
+            "cmake",
+            "-S",
+            "games/blast_circuit",
+            "-B",
+            "/Users/whatzer/Documents/ChatGPT/p4console/build-host/native-readability-commit/tests/game-blast_circuit",
+            "-G",
+            "Ninja"
+          ],
+          [
+            "cmake",
+            "--build",
+            "/Users/whatzer/Documents/ChatGPT/p4console/build-host/native-readability-commit/tests/game-blast_circuit",
+            "--parallel",
+            "1"
+          ],
+          [
+            "ctest",
+            "--test-dir",
+            "/Users/whatzer/Documents/ChatGPT/p4console/build-host/native-readability-commit/tests/game-blast_circuit",
+            "--output-on-failure"
+          ]
+        ]
+      },
+      {
+        "name": "game-calculator",
+        "pass": true,
+        "evidence": {
+          "path": "build-host/native-readability-commit/tests/game-calculator.log",
+          "bytes": 3237,
+          "sha256": "0f336750f025f9bef8a7989a43b7cd025f9c050150bacc54fb505fc31d883494",
+          "local_ignored_evidence": true
+        },
+        "commands": [
+          [
+            "cmake",
+            "-S",
+            "games/calculator",
+            "-B",
+            "/Users/whatzer/Documents/ChatGPT/p4console/build-host/native-readability-commit/tests/game-calculator",
+            "-G",
+            "Ninja"
+          ],
+          [
+            "cmake",
+            "--build",
+            "/Users/whatzer/Documents/ChatGPT/p4console/build-host/native-readability-commit/tests/game-calculator",
+            "--parallel",
+            "1"
+          ],
+          [
+            "ctest",
+            "--test-dir",
+            "/Users/whatzer/Documents/ChatGPT/p4console/build-host/native-readability-commit/tests/game-calculator",
+            "--output-on-failure"
+          ]
+        ]
+      },
+      {
+        "name": "game-checkers",
+        "pass": true,
+        "evidence": {
+          "path": "build-host/native-readability-commit/tests/game-checkers.log",
+          "bytes": 3012,
+          "sha256": "6925875791f6d83b33a6509879f623eaab2f2b2649a7e37e6df24fde990ef41e",
+          "local_ignored_evidence": true
+        },
+        "commands": [
+          [
+            "cmake",
+            "-S",
+            "games/checkers",
+            "-B",
+            "/Users/whatzer/Documents/ChatGPT/p4console/build-host/native-readability-commit/tests/game-checkers",
+            "-G",
+            "Ninja"
+          ],
+          [
+            "cmake",
+            "--build",
+            "/Users/whatzer/Documents/ChatGPT/p4console/build-host/native-readability-commit/tests/game-checkers",
+            "--parallel",
+            "1"
+          ],
+          [
+            "ctest",
+            "--test-dir",
+            "/Users/whatzer/Documents/ChatGPT/p4console/build-host/native-readability-commit/tests/game-checkers",
+            "--output-on-failure"
+          ]
+        ]
+      },
+      {
+        "name": "game-color_clash",
+        "pass": true,
+        "evidence": {
+          "path": "build-host/native-readability-commit/tests/game-color_clash.log",
+          "bytes": 3346,
+          "sha256": "14344830af12ac43ee4be353e8b5ea4f15e501dce88b939e3693b5222149ec3c",
+          "local_ignored_evidence": true
+        },
+        "commands": [
+          [
+            "cmake",
+            "-S",
+            "games/color_clash",
+            "-B",
+            "/Users/whatzer/Documents/ChatGPT/p4console/build-host/native-readability-commit/tests/game-color_clash",
+            "-G",
+            "Ninja"
+          ],
+          [
+            "cmake",
+            "--build",
+            "/Users/whatzer/Documents/ChatGPT/p4console/build-host/native-readability-commit/tests/game-color_clash",
+            "--parallel",
+            "1"
+          ],
+          [
+            "ctest",
+            "--test-dir",
+            "/Users/whatzer/Documents/ChatGPT/p4console/build-host/native-readability-commit/tests/game-color_clash",
+            "--output-on-failure"
+          ]
+        ]
+      },
+      {
+        "name": "game-frog_hop",
+        "pass": true,
+        "evidence": {
+          "path": "build-host/native-readability-commit/tests/game-frog_hop.log",
+          "bytes": 2733,
+          "sha256": "7f41658718e1a09217a575dcfad2d5760191d995016848d94785601d0cdc5257",
+          "local_ignored_evidence": true
+        },
+        "commands": [
+          [
+            "cmake",
+            "-S",
+            "games/frog_hop",
+            "-B",
+            "/Users/whatzer/Documents/ChatGPT/p4console/build-host/native-readability-commit/tests/game-frog_hop",
+            "-G",
+            "Ninja"
+          ],
+          [
+            "cmake",
+            "--build",
+            "/Users/whatzer/Documents/ChatGPT/p4console/build-host/native-readability-commit/tests/game-frog_hop",
+            "--parallel",
+            "1"
+          ],
+          [
+            "ctest",
+            "--test-dir",
+            "/Users/whatzer/Documents/ChatGPT/p4console/build-host/native-readability-commit/tests/game-frog_hop",
+            "--output-on-failure"
+          ]
+        ]
+      },
+      {
+        "name": "game-input_test",
+        "pass": true,
+        "evidence": {
+          "path": "build-host/native-readability-commit/tests/game-input_test.log",
+          "bytes": 1889,
+          "sha256": "2a441ccc8160decd92e1786bb809d0787bd9614dd7d790b7d254b94bd3b4adf7",
+          "local_ignored_evidence": true
+        },
+        "commands": [
+          [
+            "cmake",
+            "-S",
+            "games/input_test",
+            "-B",
+            "/Users/whatzer/Documents/ChatGPT/p4console/build-host/native-readability-commit/tests/game-input_test",
+            "-G",
+            "Ninja"
+          ],
+          [
+            "cmake",
+            "--build",
+            "/Users/whatzer/Documents/ChatGPT/p4console/build-host/native-readability-commit/tests/game-input_test",
+            "--parallel",
+            "1"
+          ]
+        ]
+      },
+      {
+        "name": "game-maze_chase",
+        "pass": true,
+        "evidence": {
+          "path": "build-host/native-readability-commit/tests/game-maze_chase.log",
+          "bytes": 3812,
+          "sha256": "00a951b8b836ed86fed6a9eaf0e8cfc72ec06476c859f774c8d3a239af8f3d45",
+          "local_ignored_evidence": true
+        },
+        "commands": [
+          [
+            "cmake",
+            "-S",
+            "games/maze_chase",
+            "-B",
+            "/Users/whatzer/Documents/ChatGPT/p4console/build-host/native-readability-commit/tests/game-maze_chase",
+            "-G",
+            "Ninja"
+          ],
+          [
+            "cmake",
+            "--build",
+            "/Users/whatzer/Documents/ChatGPT/p4console/build-host/native-readability-commit/tests/game-maze_chase",
+            "--parallel",
+            "1"
+          ],
+          [
+            "ctest",
+            "--test-dir",
+            "/Users/whatzer/Documents/ChatGPT/p4console/build-host/native-readability-commit/tests/game-maze_chase",
+            "--output-on-failure"
+          ]
+        ]
+      },
+      {
+        "name": "game-p4_air_hockey",
+        "pass": true,
+        "evidence": {
+          "path": "build-host/native-readability-commit/tests/game-p4_air_hockey.log",
+          "bytes": 3121,
+          "sha256": "cc6d1eb60a558037725c7efe684487f7994360a7e6709a5e4d086c272c0246b1",
+          "local_ignored_evidence": true
+        },
+        "commands": [
+          [
+            "cmake",
+            "-S",
+            "games/p4_air_hockey",
+            "-B",
+            "/Users/whatzer/Documents/ChatGPT/p4console/build-host/native-readability-commit/tests/game-p4_air_hockey",
+            "-G",
+            "Ninja"
+          ],
+          [
+            "cmake",
+            "--build",
+            "/Users/whatzer/Documents/ChatGPT/p4console/build-host/native-readability-commit/tests/game-p4_air_hockey",
+            "--parallel",
+            "1"
+          ],
+          [
+            "ctest",
+            "--test-dir",
+            "/Users/whatzer/Documents/ChatGPT/p4console/build-host/native-readability-commit/tests/game-p4_air_hockey",
+            "--output-on-failure"
+          ]
+        ]
+      },
+      {
+        "name": "game-p4_rummy",
+        "pass": true,
+        "evidence": {
+          "path": "build-host/native-readability-commit/tests/game-p4_rummy.log",
+          "bytes": 3274,
+          "sha256": "193e1ff4a3def47e16cb3049d9494e7ca10c7c9d84ba20b0385a5a5cc1d2896b",
+          "local_ignored_evidence": true
+        },
+        "commands": [
+          [
+            "cmake",
+            "-S",
+            "games/p4_rummy",
+            "-B",
+            "/Users/whatzer/Documents/ChatGPT/p4console/build-host/native-readability-commit/tests/game-p4_rummy",
+            "-G",
+            "Ninja"
+          ],
+          [
+            "cmake",
+            "--build",
+            "/Users/whatzer/Documents/ChatGPT/p4console/build-host/native-readability-commit/tests/game-p4_rummy",
+            "--parallel",
+            "1"
+          ],
+          [
+            "ctest",
+            "--test-dir",
+            "/Users/whatzer/Documents/ChatGPT/p4console/build-host/native-readability-commit/tests/game-p4_rummy",
+            "--output-on-failure"
+          ]
+        ]
+      },
+      {
+        "name": "game-p4_yahtzee",
+        "pass": true,
+        "evidence": {
+          "path": "build-host/native-readability-commit/tests/game-p4_yahtzee.log",
+          "bytes": 3193,
+          "sha256": "4b01ea12b12281754a9af8bca9babcd32775a74d55b1e444f91ba5728a6c42c9",
+          "local_ignored_evidence": true
+        },
+        "commands": [
+          [
+            "cmake",
+            "-S",
+            "games/p4_yahtzee",
+            "-B",
+            "/Users/whatzer/Documents/ChatGPT/p4console/build-host/native-readability-commit/tests/game-p4_yahtzee",
+            "-G",
+            "Ninja"
+          ],
+          [
+            "cmake",
+            "--build",
+            "/Users/whatzer/Documents/ChatGPT/p4console/build-host/native-readability-commit/tests/game-p4_yahtzee",
+            "--parallel",
+            "1"
+          ],
+          [
+            "ctest",
+            "--test-dir",
+            "/Users/whatzer/Documents/ChatGPT/p4console/build-host/native-readability-commit/tests/game-p4_yahtzee",
+            "--output-on-failure"
+          ]
+        ]
+      },
+      {
+        "name": "game-solitaire",
+        "pass": true,
+        "evidence": {
+          "path": "build-host/native-readability-commit/tests/game-solitaire.log",
+          "bytes": 2881,
+          "sha256": "e3c60437b4bf39ceac56cbf5c8a6dba13c3de5563c45cfcc26f72ffe9bc7ed27",
+          "local_ignored_evidence": true
+        },
+        "commands": [
+          [
+            "cmake",
+            "-S",
+            "games/solitaire",
+            "-B",
+            "/Users/whatzer/Documents/ChatGPT/p4console/build-host/native-readability-commit/tests/game-solitaire",
+            "-G",
+            "Ninja"
+          ],
+          [
+            "cmake",
+            "--build",
+            "/Users/whatzer/Documents/ChatGPT/p4console/build-host/native-readability-commit/tests/game-solitaire",
+            "--parallel",
+            "1"
+          ],
+          [
+            "ctest",
+            "--test-dir",
+            "/Users/whatzer/Documents/ChatGPT/p4console/build-host/native-readability-commit/tests/game-solitaire",
+            "--output-on-failure"
+          ]
+        ]
+      },
+      {
+        "name": "game-space_invaders",
+        "pass": true,
+        "evidence": {
+          "path": "build-host/native-readability-commit/tests/game-space_invaders.log",
+          "bytes": 2976,
+          "sha256": "121e76c823f51c93437c650c0b4aba2dda201f62481bbb160fb2ae695374feb9",
+          "local_ignored_evidence": true
+        },
+        "commands": [
+          [
+            "cmake",
+            "-S",
+            "games/space_invaders",
+            "-B",
+            "/Users/whatzer/Documents/ChatGPT/p4console/build-host/native-readability-commit/tests/game-space_invaders",
+            "-G",
+            "Ninja"
+          ],
+          [
+            "cmake",
+            "--build",
+            "/Users/whatzer/Documents/ChatGPT/p4console/build-host/native-readability-commit/tests/game-space_invaders",
+            "--parallel",
+            "1"
+          ],
+          [
+            "ctest",
+            "--test-dir",
+            "/Users/whatzer/Documents/ChatGPT/p4console/build-host/native-readability-commit/tests/game-space_invaders",
+            "--output-on-failure"
+          ]
+        ]
+      },
+      {
+        "name": "game-texas_holdem",
+        "pass": true,
+        "evidence": {
+          "path": "build-host/native-readability-commit/tests/game-texas_holdem.log",
+          "bytes": 3098,
+          "sha256": "b2ed9ce1a3e3575edfd83adbddba728492b7b6d63eb8776a55b44c602a4b0c69",
+          "local_ignored_evidence": true
+        },
+        "commands": [
+          [
+            "cmake",
+            "-S",
+            "games/texas_holdem",
+            "-B",
+            "/Users/whatzer/Documents/ChatGPT/p4console/build-host/native-readability-commit/tests/game-texas_holdem",
+            "-G",
+            "Ninja"
+          ],
+          [
+            "cmake",
+            "--build",
+            "/Users/whatzer/Documents/ChatGPT/p4console/build-host/native-readability-commit/tests/game-texas_holdem",
+            "--parallel",
+            "1"
+          ],
+          [
+            "ctest",
+            "--test-dir",
+            "/Users/whatzer/Documents/ChatGPT/p4console/build-host/native-readability-commit/tests/game-texas_holdem",
+            "--output-on-failure"
+          ]
+        ]
+      },
+      {
+        "name": "generate-game-registry",
+        "pass": true,
+        "evidence": {
+          "path": "build-host/native-readability-commit/tests/generate-game-registry.log",
+          "bytes": 1346,
+          "sha256": "f2339b0654e2add3de44c0905f8a012c5490597b7b1cb6cb3acb1789c50c3e57",
+          "local_ignored_evidence": true
+        },
+        "commands": [
+          [
+            "python3",
+            "scripts/generate-game-registry.py",
+            "--games-root",
+            "games",
+            "--check",
+            "--require-native-resolution"
+          ]
+        ]
+      },
+      {
+        "name": "sdl-av_test",
+        "pass": true,
+        "evidence": {
+          "path": "build-host/native-readability-commit/tests/sdl-av_test-retry.log",
+          "bytes": 7048,
+          "sha256": "c1bd60751ae12d282849893574639c584aaf89db2203af3811756c7f28c5134d",
+          "local_ignored_evidence": true
+        },
+        "commands": [
+          [
+            "cmake",
+            "-S",
+            "tools/p4-game-host",
+            "-B",
+            "/Users/whatzer/Documents/ChatGPT/p4console/build-host/native-readability-commit/tests/sdl-av_test",
+            "-G",
+            "Ninja",
+            "-DP4_GAME=av_test"
+          ],
+          [
+            "cmake",
+            "--build",
+            "/Users/whatzer/Documents/ChatGPT/p4console/build-host/native-readability-commit/tests/sdl-av_test",
+            "--parallel",
+            "2"
+          ],
+          [
+            "ctest",
+            "--test-dir",
+            "/Users/whatzer/Documents/ChatGPT/p4console/build-host/native-readability-commit/tests/sdl-av_test",
+            "--output-on-failure"
+          ]
+        ]
+      },
+      {
+        "name": "sdl-blast_circuit",
+        "pass": true,
+        "evidence": {
+          "path": "build-host/native-readability-commit/tests/sdl-blast_circuit-retry.log",
+          "bytes": 9007,
+          "sha256": "738cbd49235975b16e2878346adc4e944dba7069a17a5cde684e974c5ca997d3",
+          "local_ignored_evidence": true
+        },
+        "commands": [
+          [
+            "cmake",
+            "-S",
+            "tools/p4-game-host",
+            "-B",
+            "/Users/whatzer/Documents/ChatGPT/p4console/build-host/native-readability-commit/tests/sdl-blast_circuit",
+            "-G",
+            "Ninja",
+            "-DP4_GAME=blast_circuit"
+          ],
+          [
+            "cmake",
+            "--build",
+            "/Users/whatzer/Documents/ChatGPT/p4console/build-host/native-readability-commit/tests/sdl-blast_circuit",
+            "--parallel",
+            "2"
+          ],
+          [
+            "ctest",
+            "--test-dir",
+            "/Users/whatzer/Documents/ChatGPT/p4console/build-host/native-readability-commit/tests/sdl-blast_circuit",
+            "--output-on-failure"
+          ]
+        ]
+      },
+      {
+        "name": "sdl-input_test",
+        "pass": true,
+        "evidence": {
+          "path": "build-host/native-readability-commit/tests/sdl-input_test-retry.log",
+          "bytes": 7081,
+          "sha256": "e9732a76c7694dec4c4cbb71ec4d665ef141cb183dc2bbf4bfdafa1f2c430045",
+          "local_ignored_evidence": true
+        },
+        "commands": [
+          [
+            "cmake",
+            "-S",
+            "tools/p4-game-host",
+            "-B",
+            "/Users/whatzer/Documents/ChatGPT/p4console/build-host/native-readability-commit/tests/sdl-input_test",
+            "-G",
+            "Ninja",
+            "-DP4_GAME=input_test"
+          ],
+          [
+            "cmake",
+            "--build",
+            "/Users/whatzer/Documents/ChatGPT/p4console/build-host/native-readability-commit/tests/sdl-input_test",
+            "--parallel",
+            "2"
+          ],
+          [
+            "ctest",
+            "--test-dir",
+            "/Users/whatzer/Documents/ChatGPT/p4console/build-host/native-readability-commit/tests/sdl-input_test",
+            "--output-on-failure"
+          ]
+        ]
+      },
+      {
+        "name": "test-console-native-resolution",
+        "pass": true,
+        "evidence": {
+          "path": "build-host/native-readability-commit/tests/test-console-native-resolution.log",
+          "bytes": 175,
+          "sha256": "aeffb721a66f3c34762ca5d9687c867d73fd60906254268b62bd4741b4448c19",
+          "local_ignored_evidence": true
+        },
+        "commands": [
+          [
+            "python3",
+            "scripts/tests/test-console-native-resolution.py"
+          ]
+        ]
+      },
+      {
+        "name": "test-game-registry",
+        "pass": true,
+        "evidence": {
+          "path": "build-host/native-readability-commit/tests/test-game-registry.log",
+          "bytes": 86,
+          "sha256": "74e6c58b5e49e750c66ee9a1d994034dbf31c3566a0da3fdd52737edf6b3cad9",
+          "local_ignored_evidence": true
+        },
+        "commands": [
+          [
+            "python3",
+            "scripts/tests/test-game-registry.py"
+          ]
+        ]
+      },
+      {
+        "name": "test-game-release",
+        "pass": true,
+        "evidence": {
+          "path": "build-host/native-readability-commit/tests/test-game-release.log",
+          "bytes": 159,
+          "sha256": "fbeba42c37bff37984b3d18669c5f8b2cae4d77dc72266f06c091c417dd16435",
+          "local_ignored_evidence": true
+        },
+        "commands": [
+          [
+            "python3",
+            "scripts/tests/test-game-release.py"
+          ]
+        ]
+      },
+      {
+        "name": "test-new-game",
+        "pass": true,
+        "evidence": {
+          "path": "build-host/native-readability-commit/tests/test-new-game.log",
+          "bytes": 84,
+          "sha256": "13b646a154e76be75be1316a2ff9e89018ec603b610381e4927da05c6ea7c194",
+          "local_ignored_evidence": true
+        },
+        "commands": [
+          [
+            "python3",
+            "scripts/tests/test-new-game.py"
+          ]
+        ]
+      }
+    ],
+    "environment_retry": {
+      "initial_failure": "Three SDL configurations could not locate pkg-config; no test assertion failed.",
+      "resolution": "Add pinned .tools/host-sdl3-3.4.18/bin to PATH; rerun only the failed SDL configurations.",
+      "resolved": true,
+      "source_changes_required": false
+    },
+    "components": {
+      "pass": true,
+      "base_commit": "51aefe10080498c3e95e9b78a8b0ecd553e00b5f",
+      "source_file_count": 92,
+      "overlaid_file_count": 13,
+      "platform_ctest_passed": 4,
+      "cartridge_rotating_surface_ctest_passed": 1,
+      "sanitizers": [
+        "address",
+        "undefined"
+      ],
+      "source_manifest": {
+        "path": "build-host/native-readability-commit/tests/isolated-component-source-manifest.json",
+        "bytes": 17291,
+        "sha256": "261858315168792613ef7c2da12c93c1e6e77afe3a70044f57683af5ac357502",
+        "local_ignored_evidence": true
+      },
+      "results": {
+        "path": "build-host/native-readability-commit/tests/isolated-component-test-results.json",
+        "bytes": 4437,
+        "sha256": "228dd88044e4626e7f851de0e4214c5eeb40b281c16898b5f9d4e5e6d5280f15",
+        "local_ignored_evidence": true
+      }
+    },
+    "reconstruction_gates": {
+      "pass": true,
+      "test_methods": 8,
+      "tests": [
+        {
+          "script": "test-native-video-worker-gate.py",
+          "test_methods": 3,
+          "exit_code": 0,
+          "asan_ubsan": true,
+          "log": "native-video-worker-gate.log"
+        },
+        {
+          "script": "test-console-native-resolution.py",
+          "test_methods": 5,
+          "exit_code": 0,
+          "log": "console-native-resolution.log"
+        }
+      ],
+      "scope": "HEAD reconstruction and override checks. This earlier gate used unchanged live headers as fallback; it did not build the whole live Console OS source.",
+      "results": {
+        "path": "build-host/native-readability-commit/tests/reconstruction-gate-results.json",
+        "bytes": 1881,
+        "sha256": "46dd3b25822776ba327b50c51bec518d9a7ff03f19631b320e64d8c6fef69e2e",
+        "local_ignored_evidence": true
+      }
+    },
+    "native_sample_capture": {
+      "title": "frog_hop",
+      "direct_surface_width": 768,
+      "direct_surface_height": 480,
+      "capture_count": 4,
+      "pass": true,
+      "visual_review": "Native host gameplay capture inspected: title/HUD, frog, cars, logs and touch labels are distinguishable and readable.",
+      "sanitizers": [
+        "address",
+        "undefined"
+      ],
+      "proof": {
+        "path": "build-host/native-readability-commit/tests/native-capture-proof.json",
+        "bytes": 1489,
+        "sha256": "b8102fddcdc65a7beff01fb050c471d8a291f5a86f7ec1847c8f0ce95bb605ec",
+        "local_ignored_evidence": true
+      },
+      "hardware_acceptance": false
+    }
+  },
+  "blast_exact_package": {
+    "version": "0.2.9",
+    "bytes": 463948,
+    "sha256": "261aa298185b2ca277f2665821fb6708682712019ff940c0526e4a5611f699b9",
+    "matches_previously_installed_package_byte_for_byte": true,
+    "source_closure_sha256": "7d7a2b239d8c88c0e38cdf69da434a540aa97887380460c07eae2438c0d15738",
+    "source_closure_file_count": 37,
+    "source_closure_evidence": {
+      "path": "build-host/native-readability-commit/tests/blast-isolated-source-closure.json",
+      "bytes": 7615,
+      "sha256": "193466106fca86357da9f818708517f9f78127153bc8803f2261c9f60bfd0b60",
+      "local_ignored_evidence": true
+    },
+    "new_device_write_performed_for_this_validation": false,
+    "existing_device_receipt": "hardware/test-runs/2026-10-07-tab5-native-readability-and-removal.json"
+  },
+  "tab5_firmware_candidate": {
+    "command": "make console-os-tab5-idf",
+    "build_exit_code": 0,
+    "version": "0.59",
+    "version_reason": "Retains the tested base HEAD version; this is an isolated build candidate, not an installed 0.59 release.",
+    "esp_idf_version": "5.5.3",
+    "toolchain_lock": {
+      "path": "build-host/native-readability-commit/head/toolchain.lock.json",
+      "bytes": 755,
+      "sha256": "6c45009fd4ba924dac63e442d4bcdbff134cf81037cadb8f2d12209c41564a55",
+      "local_ignored_evidence": true
+    },
+    "image": {
+      "path": "build-host/native-readability-commit/head/apps/console_os/build-tab5/p4_console_os.bin",
+      "bytes": 4327216,
+      "sha256": "b462f359902e86f6ad46c85157edcb5b7779ad5b3f3be940adb4aa1346fcce96",
+      "local_ignored_evidence": true
+    },
+    "update_package": {
+      "path": "build-host/native-readability-commit/head/apps/console_os/build-tab5/P4UPDATE.P4U",
+      "bytes": 4327472,
+      "sha256": "bb27e9f0521d464711cb35ecb10dd7b8c2a9f74c7d1e4fe52e7dfd13382d99e9",
+      "local_ignored_evidence": true
+    },
+    "verifier": {
+      "ble_multiplayer_enabled": true,
+      "board": "m5stack-tab5",
+      "charger_control_enabled": true,
+      "content_bundle_verified": false,
+      "flash_authorized": false,
+      "hardware_verified": false,
+      "image_bytes": 4327216,
+      "image_sha256": "b462f359902e86f6ad46c85157edcb5b7779ad5b3f3be940adb4aa1346fcce96",
+      "native_cartridges": null,
+      "result": "tab5-build-candidate-verified",
+      "usb_host_enabled": true,
+      "version": "0.59",
+      "wifi_multiplayer_enabled": true
+    },
+    "build_log": {
+      "path": "build-host/native-readability-commit/isolated-tab5-build.log",
+      "bytes": 249716,
+      "sha256": "ade5d53092759203ea02a2bbd7b5d3dddb27d2e76c00c576c4e102a7bdcb94b1",
+      "local_ignored_evidence": true
+    },
+    "flashed": false,
+    "hardware_verified": false,
+    "dualcore_presenter_status": "Host-tested and firmware-built candidate; not flashed and not measured on device."
+  },
+  "physical_acceptance_limits": {
+    "maintained_native_surface": "768x480 RGB565",
+    "target_presented_fps": 60,
+    "global_actual_device_floor_fps": 30,
+    "dualcore_candidate_actual_device_floor": "pending; candidate not flashed",
+    "other_native_titles_actual_device_floor": "pending; host checks do not qualify device cadence",
+    "blast_0_2_9": "Historical installed candidate measured approximately 19 FPS on OS 0.77 and accepted by the owner as a specific exception; it does not satisfy or alter the global 30 FPS floor. See the owning device receipt.",
+    "physical_scanout_and_person_viewed_play": "not established by this host validation",
+    "engine_ports": "Outside the 14 native-title scope; preserve separate engine acceptance and native-conversion limits."
+  },
+  "local_evidence": [
+    {
+      "path": "build-host/native-readability-commit/isolated-tab5-build.log",
+      "bytes": 249716,
+      "sha256": "ade5d53092759203ea02a2bbd7b5d3dddb27d2e76c00c576c4e102a7bdcb94b1",
+      "local_ignored_evidence": true
+    },
+    {
+      "path": "build-host/native-readability-commit/tests/blast-isolated-source-closure.json",
+      "bytes": 7615,
+      "sha256": "193466106fca86357da9f818708517f9f78127153bc8803f2261c9f60bfd0b60",
+      "local_ignored_evidence": true
+    },
+    {
+      "path": "build-host/native-readability-commit/tests/blast-package.log",
+      "bytes": 1069,
+      "sha256": "ef53d7cd9619e3f7672c238a95a4eca255d74463979716d6b4225a15f80ff52f",
+      "local_ignored_evidence": true
+    },
+    {
+      "path": "build-host/native-readability-commit/tests/console-native-resolution.log",
+      "bytes": 104,
+      "sha256": "66cdd630f315d5fd2f4c72590f9cd26ad63b2e0f4a5b29ae96f1b89d67c5e2fa",
+      "local_ignored_evidence": true
+    },
+    {
+      "path": "build-host/native-readability-commit/tests/frog_hop-native-gameplay-768.png",
+      "bytes": 196595,
+      "sha256": "57fd12cb701d62385c4c1ba84346d16f78f1d0450cc9633cb6f47887317aac13",
+      "local_ignored_evidence": true
+    },
+    {
+      "path": "build-host/native-readability-commit/tests/frog_hop-native-gameplay-768.ppm",
+      "bytes": 1105935,
+      "sha256": "f0b5261de6f63a16557034e82c0d294a6eabd1c6765b494e6ae8a95be3ed4d02",
+      "local_ignored_evidence": true
+    },
+    {
+      "path": "build-host/native-readability-commit/tests/frog_hop-native-header-limits-768.ppm",
+      "bytes": 1105935,
+      "sha256": "8a0771320078c183dbc921761dc8f7bd2681b420fce896e2ae6b89893c141ded",
+      "local_ignored_evidence": true
+    },
+    {
+      "path": "build-host/native-readability-commit/tests/frog_hop-native-opening-768.ppm",
+      "bytes": 1105935,
+      "sha256": "94a7d4bcf747ed3bf505408b7040646f163bd214896481a8a293eaa5453e1064",
+      "local_ignored_evidence": true
+    },
+    {
+      "path": "build-host/native-readability-commit/tests/frog_hop-native-paused-768.ppm",
+      "bytes": 1105935,
+      "sha256": "bdda280994f75c39e3f22c3c9a8b5fd1e764449d4c26dafc199ad5cc124da6d5",
+      "local_ignored_evidence": true
+    },
+    {
+      "path": "build-host/native-readability-commit/tests/game-av_test.log",
+      "bytes": 1868,
+      "sha256": "772aaa351eb0ab08e4fffbc8567a9bc730198fdd6f641fb276eaeebbc52266d5",
+      "local_ignored_evidence": true
+    },
+    {
+      "path": "build-host/native-readability-commit/tests/game-blast_circuit.log",
+      "bytes": 3573,
+      "sha256": "d44e3fa523a70bacc71abcd84c08656cc96419b3654606324f2560ea9e347150",
+      "local_ignored_evidence": true
+    },
+    {
+      "path": "build-host/native-readability-commit/tests/game-calculator.log",
+      "bytes": 3237,
+      "sha256": "0f336750f025f9bef8a7989a43b7cd025f9c050150bacc54fb505fc31d883494",
+      "local_ignored_evidence": true
+    },
+    {
+      "path": "build-host/native-readability-commit/tests/game-checkers.log",
+      "bytes": 3012,
+      "sha256": "6925875791f6d83b33a6509879f623eaab2f2b2649a7e37e6df24fde990ef41e",
+      "local_ignored_evidence": true
+    },
+    {
+      "path": "build-host/native-readability-commit/tests/game-color_clash.log",
+      "bytes": 3346,
+      "sha256": "14344830af12ac43ee4be353e8b5ea4f15e501dce88b939e3693b5222149ec3c",
+      "local_ignored_evidence": true
+    },
+    {
+      "path": "build-host/native-readability-commit/tests/game-frog_hop.log",
+      "bytes": 2733,
+      "sha256": "7f41658718e1a09217a575dcfad2d5760191d995016848d94785601d0cdc5257",
+      "local_ignored_evidence": true
+    },
+    {
+      "path": "build-host/native-readability-commit/tests/game-input_test.log",
+      "bytes": 1889,
+      "sha256": "2a441ccc8160decd92e1786bb809d0787bd9614dd7d790b7d254b94bd3b4adf7",
+      "local_ignored_evidence": true
+    },
+    {
+      "path": "build-host/native-readability-commit/tests/game-maze_chase.log",
+      "bytes": 3812,
+      "sha256": "00a951b8b836ed86fed6a9eaf0e8cfc72ec06476c859f774c8d3a239af8f3d45",
+      "local_ignored_evidence": true
+    },
+    {
+      "path": "build-host/native-readability-commit/tests/game-p4_air_hockey.log",
+      "bytes": 3121,
+      "sha256": "cc6d1eb60a558037725c7efe684487f7994360a7e6709a5e4d086c272c0246b1",
+      "local_ignored_evidence": true
+    },
+    {
+      "path": "build-host/native-readability-commit/tests/game-p4_rummy.log",
+      "bytes": 3274,
+      "sha256": "193e1ff4a3def47e16cb3049d9494e7ca10c7c9d84ba20b0385a5a5cc1d2896b",
+      "local_ignored_evidence": true
+    },
+    {
+      "path": "build-host/native-readability-commit/tests/game-p4_yahtzee.log",
+      "bytes": 3193,
+      "sha256": "4b01ea12b12281754a9af8bca9babcd32775a74d55b1e444f91ba5728a6c42c9",
+      "local_ignored_evidence": true
+    },
+    {
+      "path": "build-host/native-readability-commit/tests/game-solitaire.log",
+      "bytes": 2881,
+      "sha256": "e3c60437b4bf39ceac56cbf5c8a6dba13c3de5563c45cfcc26f72ffe9bc7ed27",
+      "local_ignored_evidence": true
+    },
+    {
+      "path": "build-host/native-readability-commit/tests/game-space_invaders.log",
+      "bytes": 2976,
+      "sha256": "121e76c823f51c93437c650c0b4aba2dda201f62481bbb160fb2ae695374feb9",
+      "local_ignored_evidence": true
+    },
+    {
+      "path": "build-host/native-readability-commit/tests/game-texas_holdem.log",
+      "bytes": 3098,
+      "sha256": "b2ed9ce1a3e3575edfd83adbddba728492b7b6d63eb8776a55b44c602a4b0c69",
+      "local_ignored_evidence": true
+    },
+    {
+      "path": "build-host/native-readability-commit/tests/generate-game-registry.log",
+      "bytes": 1346,
+      "sha256": "f2339b0654e2add3de44c0905f8a012c5490597b7b1cb6cb3acb1789c50c3e57",
+      "local_ignored_evidence": true
+    },
+    {
+      "path": "build-host/native-readability-commit/tests/isolated-cartridge-build.log",
+      "bytes": 1212,
+      "sha256": "5cea83f26c0c1988d7de107d60c5903fb0fda24b8083499b14af02e5c956fa47",
+      "local_ignored_evidence": true
+    },
+    {
+      "path": "build-host/native-readability-commit/tests/isolated-cartridge-configure.log",
+      "bytes": 498,
+      "sha256": "204621f8efbc691cd47cd9b69a52aa10b192335636c5acdc43b46d60228e5ea1",
+      "local_ignored_evidence": true
+    },
+    {
+      "path": "build-host/native-readability-commit/tests/isolated-cartridge-ctest.log",
+      "bytes": 479,
+      "sha256": "fb1f01a53b83e21474ccc66175d1ce804105082559677119f42e005e3b1d0e11",
+      "local_ignored_evidence": true
+    },
+    {
+      "path": "build-host/native-readability-commit/tests/isolated-component-source-manifest.json",
+      "bytes": 17291,
+      "sha256": "261858315168792613ef7c2da12c93c1e6e77afe3a70044f57683af5ac357502",
+      "local_ignored_evidence": true
+    },
+    {
+      "path": "build-host/native-readability-commit/tests/isolated-component-test-results.json",
+      "bytes": 4437,
+      "sha256": "228dd88044e4626e7f851de0e4214c5eeb40b281c16898b5f9d4e5e6d5280f15",
+      "local_ignored_evidence": true
+    },
+    {
+      "path": "build-host/native-readability-commit/tests/isolated-platform-build.log",
+      "bytes": 2172,
+      "sha256": "b05c05983a11953ba9b944e527776a00ea4c4b7ae86bdc928362ce8b4b913063",
+      "local_ignored_evidence": true
+    },
+    {
+      "path": "build-host/native-readability-commit/tests/isolated-platform-configure.log",
+      "bytes": 616,
+      "sha256": "9ec12bd61bce3b282fdc911711f104ed56b03905300f0b4c78b6b5c067057233",
+      "local_ignored_evidence": true
+    },
+    {
+      "path": "build-host/native-readability-commit/tests/isolated-platform-ctest.log",
+      "bytes": 798,
+      "sha256": "760800333ad0f73f38518f6e04e41c40fca731ffc0b18054a29c92c37656c5ab",
+      "local_ignored_evidence": true
+    },
+    {
+      "path": "build-host/native-readability-commit/tests/library-results.json",
+      "bytes": 25950,
+      "sha256": "602ae65343033fefc09620f4996fea3246f8cf6a3dd6d2c238c1c092d43b489b",
+      "local_ignored_evidence": true
+    },
+    {
+      "path": "build-host/native-readability-commit/tests/native-capture-proof.json",
+      "bytes": 1489,
+      "sha256": "b8102fddcdc65a7beff01fb050c471d8a291f5a86f7ec1847c8f0ce95bb605ec",
+      "local_ignored_evidence": true
+    },
+    {
+      "path": "build-host/native-readability-commit/tests/native-video-worker-gate.log",
+      "bytes": 101,
+      "sha256": "49fa17abdb4bb33bd0de437a83e89a234e385cdd5c26e06d3ddbb461d16983f6",
+      "local_ignored_evidence": true
+    },
+    {
+      "path": "build-host/native-readability-commit/tests/reconstruction-gate-results.json",
+      "bytes": 1881,
+      "sha256": "46dd3b25822776ba327b50c51bec518d9a7ff03f19631b320e64d8c6fef69e2e",
+      "local_ignored_evidence": true
+    },
+    {
+      "path": "build-host/native-readability-commit/tests/sdl-av_test-retry.log",
+      "bytes": 7048,
+      "sha256": "c1bd60751ae12d282849893574639c584aaf89db2203af3811756c7f28c5134d",
+      "local_ignored_evidence": true
+    },
+    {
+      "path": "build-host/native-readability-commit/tests/sdl-av_test.log",
+      "bytes": 1234,
+      "sha256": "50f78050d0005664ebdd230a55fc90cfd646c69c785a5d8f017f368d64df2e1f",
+      "local_ignored_evidence": true
+    },
+    {
+      "path": "build-host/native-readability-commit/tests/sdl-blast_circuit-retry.log",
+      "bytes": 9007,
+      "sha256": "738cbd49235975b16e2878346adc4e944dba7069a17a5cde684e974c5ca997d3",
+      "local_ignored_evidence": true
+    },
+    {
+      "path": "build-host/native-readability-commit/tests/sdl-blast_circuit.log",
+      "bytes": 1246,
+      "sha256": "544e4b19532a7f9f422ff4e30c82f731dc3c00d05779865afb68f0dc6f5fefbe",
+      "local_ignored_evidence": true
+    },
+    {
+      "path": "build-host/native-readability-commit/tests/sdl-input_test-retry.log",
+      "bytes": 7081,
+      "sha256": "e9732a76c7694dec4c4cbb71ec4d665ef141cb183dc2bbf4bfdafa1f2c430045",
+      "local_ignored_evidence": true
+    },
+    {
+      "path": "build-host/native-readability-commit/tests/sdl-input_test.log",
+      "bytes": 1240,
+      "sha256": "627eed3b2c2a13e8355eace380dc26e4af0f0dc7e8a8a269358e936a61123296",
+      "local_ignored_evidence": true
+    },
+    {
+      "path": "build-host/native-readability-commit/tests/test-console-native-resolution.log",
+      "bytes": 175,
+      "sha256": "aeffb721a66f3c34762ca5d9687c867d73fd60906254268b62bd4741b4448c19",
+      "local_ignored_evidence": true
+    },
+    {
+      "path": "build-host/native-readability-commit/tests/test-game-registry.log",
+      "bytes": 86,
+      "sha256": "74e6c58b5e49e750c66ee9a1d994034dbf31c3566a0da3fdd52737edf6b3cad9",
+      "local_ignored_evidence": true
+    },
+    {
+      "path": "build-host/native-readability-commit/tests/test-game-release.log",
+      "bytes": 159,
+      "sha256": "fbeba42c37bff37984b3d18669c5f8b2cae4d77dc72266f06c091c417dd16435",
+      "local_ignored_evidence": true
+    },
+    {
+      "path": "build-host/native-readability-commit/tests/test-new-game.log",
+      "bytes": 84,
+      "sha256": "13b646a154e76be75be1316a2ff9e89018ec603b610381e4927da05c6ea7c194",
+      "local_ignored_evidence": true
+    }
+  ]
+}

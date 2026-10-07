@@ -9,7 +9,10 @@ import hashlib
 import importlib.util
 import io
 import json
+import os
 from pathlib import Path
+import shutil
+import subprocess
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -80,6 +83,89 @@ class DataPreparationTests(unittest.TestCase):
 
     def assert_no_staging(self):
         self.assertEqual(list(self.root.rglob(".prepare-game-data-*")), [])
+
+    def git(self, *args):
+        executable = shutil.which("git")
+        if executable is None:
+            self.skipTest("Git is required for ignore-rule fixtures")
+        env = {key: value for key, value in os.environ.items() if not key.startswith("GIT_")}
+        env.update(GIT_CONFIG_NOSYSTEM="1", GIT_CONFIG_GLOBAL=os.devnull)
+        return subprocess.run([executable, *args], cwd=self.root, env=env,
+                              capture_output=True, text=True, check=True)
+
+    def source_archive(self, *, stamped=True, ignored=True):
+        self.git("init", "--quiet", "--template=")
+        # A parent checkout must neither authorize an unstamped archive nor
+        # supply ignore rules when the archive's own rule excludes nothing.
+        (self.root / ".gitignore").write_text("*\n")
+        self.root = self.root / "source archive"
+        self.root.mkdir()
+        (self.root / ".gitignore").write_text("*.[Ww][Aa][Dd]\n" if ignored else "")
+        if stamped:
+            (self.root / ".p4-source.json").write_text(json.dumps({
+                "schema": 1, "source_commit": "a" * 40}))
+
+    def prepare_with_ignore_rules(self):
+        with patch.object(data, "ROOT", self.root):
+            return data.prepare(self.manifest, self.root, opener=self.open)
+
+    def test_stamped_source_archive_uses_its_own_ignore_rules_without_root_metadata(self):
+        self.source_archive()
+        result = self.prepare_with_ignore_rules()
+        self.assertEqual(result["files"][0]["status"], "downloaded")
+        self.assertEqual(self.path("doom1.wad").read_bytes(), self.doom)
+        self.assertFalse((self.root / ".git").exists())
+        self.assert_no_staging()
+
+    def test_unstamped_archive_does_not_inherit_parent_git_checkout(self):
+        self.source_archive(stamped=False)
+        with self.assertRaisesRegex(data.PreparationError, "valid source archive stamp"):
+            self.prepare_with_ignore_rules()
+        self.assertEqual(self.calls, [])
+        self.assertFalse((self.root / "local-data").exists())
+        self.assertFalse((self.root / ".git").exists())
+
+    def test_stamped_archive_rejects_unignored_destination_despite_parent_rules(self):
+        self.source_archive(ignored=False)
+        with self.assertRaisesRegex(data.PreparationError, "not Git-ignored"):
+            self.prepare_with_ignore_rules()
+        self.assertEqual(self.calls, [])
+        self.assertFalse((self.root / "local-data").exists())
+        self.assertFalse((self.root / ".git").exists())
+
+    def test_source_archive_stamp_is_strict_and_bounded(self):
+        self.source_archive()
+        stamp = self.root / ".p4-source.json"
+        cases = ["[]", "{}", '{"schema": true, "source_commit": "' + "a" * 40 + '"}',
+                 json.dumps({"schema": 2, "source_commit": "a" * 40}),
+                 json.dumps({"schema": 1, "source_commit": "a" * 39}),
+                 json.dumps({"schema": 1, "source_commit": "a" * 40, "extra": 1}),
+                 '{"schema": 1, "schema": 1, "source_commit": "' + "a" * 40 + '"}',
+                 " " * 1025, "not JSON"]
+        for raw in cases:
+            with self.subTest(stamp=raw[:80]):
+                stamp.write_text(raw)
+                with self.assertRaises(data.PreparationError):
+                    self.prepare_with_ignore_rules()
+                self.assertEqual(self.calls, [])
+                self.assertFalse((self.root / "local-data").exists())
+                self.assertFalse((self.root / ".git").exists())
+        target = self.root / "stamp-target.json"
+        target.write_text(json.dumps({"schema": 1, "source_commit": "a" * 40}))
+        stamp.unlink()
+        stamp.symlink_to(target)
+        with self.assertRaisesRegex(data.PreparationError, "regular file"):
+            self.prepare_with_ignore_rules()
+
+    def test_normal_git_checkout_still_rejects_tracked_destination(self):
+        self.git("init", "--quiet", "--template=")
+        (self.root / ".gitignore").write_text("*.wad\n")
+        self.existing("doom1.wad", self.doom)
+        self.git("add", "-f", "local-data/doom/doom1.wad")
+        with self.assertRaisesRegex(data.PreparationError, "not Git-ignored"):
+            self.prepare_with_ignore_rules()
+        self.assertEqual(self.calls, [])
+        self.assertEqual(self.path("doom1.wad").read_bytes(), self.doom)
 
     def test_fresh_default_is_verified_and_reused_without_network(self):
         result = self.run_prepare()

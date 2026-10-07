@@ -56,7 +56,7 @@ def validate_live(esp, identity):
     return {'identity_sha256': actual, 'revision': f'v{major}.{minor}', 'flash_bytes': 16777216}
 
 
-def prepare(auth, unit):
+def prepare(auth, unit, prebuilt=None):
     require(auth['board'] == 'm5stack-tab5' and auth['install_authorized'] is True,
             'missing explicit Tab5 installation authorization')
     require(auth['operation'] in ('first-console-os-layout', 'app-only'), 'unsupported installation scope')
@@ -73,12 +73,28 @@ def prepare(auth, unit):
             'authorization and backup manifest differ')
     recovery = (ROOT / backup['file']).read_bytes()
     require(len(recovery) == 16777216 and sha(recovery) == backup['sha256'], 'backup corrupt or incomplete')
-    spec = importlib.util.spec_from_file_location('tab5_verify', ROOT / 'scripts/verify-console-os-tab5.py')
-    verifier = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(verifier)
     firmware_only = auth.get("firmware_only", False)
     require(not firmware_only or auth["operation"] == "app-only", "firmware-only requires app-only installation")
-    verified = verifier.verify(BUILD, firmware_only=firmware_only)
+    if prebuilt is None:
+        spec = importlib.util.spec_from_file_location('tab5_verify', ROOT / 'scripts/verify-console-os-tab5.py')
+        verifier = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(verifier)
+        verified = verifier.verify(BUILD, firmware_only=firmware_only)
+        artifact_root = BUILD
+    else:
+        # The pinned export manifest records CI's full ELF/toolchain verification.
+        # Local device authorization separately binds this manifest and every image.
+        sys.path.insert(0, str(ROOT / 'scripts'))
+        from p4_prebuilt import validate_release
+        spec = importlib.util.spec_from_file_location('tab5_fetch_source', ROOT / 'scripts/fetch-prebuilt.py')
+        fetcher = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(fetcher)
+        portable = validate_release(prebuilt, expected_source_commit=fetcher.source_commit(ROOT), source_root=ROOT)
+        require(auth.get('prebuilt_manifest_sha256') == portable['manifest_sha256'],
+                'prebuilt manifest differs from exact-artifact authorization')
+        require(not firmware_only, 'prebuilt release contains the complete standard bundle')
+        verified = portable['verification']
+        artifact_root = pathlib.Path(portable['build_dir'])
     require(verified["usb_host_enabled"] == auth.get("usb_host_enabled", False),
             "USB host selection differs from exact-artifact authorization")
     require(verified["charger_control_enabled"] == auth.get("charger_control_enabled", False),
@@ -91,7 +107,7 @@ def prepare(auth, unit):
     for offset, relative in LAYOUT.items():
         entry = auth['artifacts'][offset]
         require(entry['file'] == str(pathlib.Path('apps/console_os/build-tab5') / relative), 'artifact path differs')
-        data = (ROOT / entry['file']).read_bytes()
+        data = (artifact_root / relative).read_bytes()
         require(0 < len(data) <= LIMITS[offset], 'artifact crosses allowed flash range')
         require(len(data) == entry['bytes'] and sha(data) == entry['sha256'], 'artifact hash or size differs')
         if offset in ('0x2000', '0x20000'):
@@ -120,6 +136,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--authorization', type=pathlib.Path, required=True)
     parser.add_argument('--authorization-sha256', required=True)
+    parser.add_argument('--prebuilt', type=pathlib.Path,
+                        help='verified exact-revision release directory; no ESP-IDF required')
     parser.add_argument('--unit', choices=('A', 'B'), required=True)
     parser.add_argument('--port')
     parser.add_argument('--verification', choices=('device-checksum', 'full-readback'),
@@ -132,14 +150,14 @@ def main():
     raw = args.authorization.read_bytes()
     require(sha(raw) == args.authorization_sha256, 'authorization digest differs')
     auth = json.loads(raw)
-    identity, recovery, artifacts, predecessor = prepare(auth, args.unit)
+    identity, recovery, artifacts, predecessor = prepare(auth, args.unit, args.prebuilt)
     print(f'Tab5 {args.unit}: artifact and complete backup verified', flush=True)
     if not args.install:
         return
     require(args.port is not None and pathlib.Path(args.port).is_char_device(), 'explicit live serial port required')
     import esptool
     import serial
-    require(esptool.__version__ == '4.12.0', 'use the pinned IDF Python environment (esptool 4.12.0)')
+    require(esptool.__version__ == '4.12.0', 'use make install-tools or the pinned IDF Python environment (esptool 4.12.0)')
     run = pathlib.Path(tempfile.mkdtemp(prefix=f'tab5-{args.unit.lower()}-install-', dir=ROOT / 'hardware/backups'))
     staged = {}
     for offset, data in artifacts.items():
@@ -153,6 +171,8 @@ def main():
                'port': args.port, 'write_started': False, 'readback_verified': False,
                'verification_method': args.verification, 'checksum_verified': False,
                'boot_ready': False, 'physical_acceptance': 'pending'}
+    if args.prebuilt is not None:
+        receipt['prebuilt_manifest_sha256'] = auth['prebuilt_manifest_sha256']
     esp = None
     def save():
         (run / 'receipt.json').write_text(json.dumps(receipt, indent=2) + '\n')

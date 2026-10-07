@@ -73,6 +73,7 @@ if(COMMAND idf_component_register)
             DEPENDS
                 "${P4_ARENA_ROOT}/scripts/doom/arena-trusted-digests.py"
                 "${P4_ARENA_ROOT}/scripts/doom/arena-content.py"
+                "${P4_ARENA_ROOT}/scripts/prepare-game-data.py"
                 "${P4_ARENA_ROOT}/third_party/game-data.json"
                 "${CMAKE_CURRENT_LIST_DIR}/include/platform/doom_arena_content.h"
                 "${P4_ARENA_ROOT}/local-data/doom/arena-compact-v1/ARENA2.WAD"

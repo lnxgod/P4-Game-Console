@@ -31,7 +31,8 @@ same swatch used in the arena.
 
 Three focused 0.2.9 game tests pass with sanitizers, exact renderer/audio
 comparisons pass, and the pinned cartridge build stays within its size and
-stack frame limits. Five generic-host checks are retained from 0.2.8.
+stack frame limits. Five generic-host checks also pass for the isolated
+0.2.9 build; the merge validation binds their unchanged source inputs.
 Clean on-device loop windows measured **19.09–19.50 FPS**. The owner explicitly
 accepted this approximately 19 FPS candidate for commit; it **does not meet
 the global 30 FPS release floor**, which remains unchanged. The final scale-1
