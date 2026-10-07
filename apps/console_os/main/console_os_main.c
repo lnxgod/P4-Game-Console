@@ -44,6 +44,7 @@
 #include "p4/content_transfer.h"
 #include "p4/desktop.h"
 #include "p4/doom_multiplayer.h"
+#include "p4/doom_arena.h"
 #include "p4/draw.h"
 #include "p4/file_transfer.h"
 #include "p4/game.h"
