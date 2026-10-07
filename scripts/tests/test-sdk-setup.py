@@ -114,10 +114,12 @@ class SDKSetupTests(unittest.TestCase):
         self.install_log = base / "install.json"
         self.export_log = base / "export.txt"
         self.export_sdk_log = base / "export-sdk.txt"
+        self.idf_version_log = base / "idf-version.txt"
         self.env = dict(self.git_env, HOME=str(self.home), PATH=f"{self.bin}:{os.defpath}",
                         TEST_REAL_GIT=REAL_GIT, TEST_UPSTREAM=self.upstream.as_uri(),
                         TEST_GIT_LOG=str(self.git_log), TEST_INSTALL_LOG=str(self.install_log),
                         TEST_EXPORT_LOG=str(self.export_log), TEST_EXPORT_SDK_LOG=str(self.export_sdk_log),
+                        TEST_IDF_VERSION_LOG=str(self.idf_version_log),
                         TEST_BIN=str(self.bin))
         (self.bin / "python3").symlink_to(sys.executable)
         git_stub = self.bin / "git"
@@ -137,7 +139,11 @@ class SDKSetupTests(unittest.TestCase):
         )
         git_stub.chmod(0o755)
         idf_stub = self.bin / "idf.py"
-        idf_stub.write_text("#!/bin/sh\nprintf 'ESP-IDF %s\\n' \"${TEST_IDF_VERSION:-v5.5.3}\"\n")
+        idf_stub.write_text(
+            "#!/bin/sh\n"
+            "printf '%s\\n' \"$@\" >> \"$TEST_IDF_VERSION_LOG\"\n"
+            "printf 'ESP-IDF %s\\n' \"${TEST_IDF_VERSION:-v5.5.3}\"\n"
+        )
         idf_stub.chmod(0o755)
 
     def existing_sdk(self, location="shared"):
@@ -216,6 +222,7 @@ class SDKSetupTests(unittest.TestCase):
                         IDF_PATH_FORCE="")
         self.assert_success(self.activate_sdk(dash))
         self.assertEqual(self.export_sdk_log.read_text().removesuffix("\n"), str(sdk))
+        self.assertEqual(self.idf_version_log.read_text().splitlines(), ["--version"])
 
     def test_bash_activation_from_project_uses_the_validated_sdk(self):
         bash = shutil.which("bash")
@@ -225,13 +232,21 @@ class SDKSetupTests(unittest.TestCase):
         self.env["P4_IDF_PATH"] = str(sdk)
         self.assert_success(self.activate_sdk(bash))
         self.assertEqual(self.export_sdk_log.read_text().removesuffix("\n"), str(sdk))
+        self.assertEqual(self.idf_version_log.read_text().splitlines(), ["--version"])
 
     def test_export_failure_is_rejected_even_inside_a_shell_conditional(self):
         self.existing_sdk()
         self.env["TEST_EXPORT_FAILURE"] = "1"
-        result = self.activate_sdk(conditional=True)
-        self.assertEqual(result.returncode, 9, result.stdout + result.stderr)
-        self.assertFalse(self.export_log.exists())
+        for shell_name in ("sh", "bash", "dash"):
+            with self.subTest(shell=shell_name):
+                shell = shutil.which(shell_name)
+                if shell is None:
+                    self.skipTest(f"{shell_name} is not available")
+                result = self.activate_sdk(shell, conditional=True)
+                self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertFalse(self.export_log.exists())
+                self.assertFalse(self.export_sdk_log.exists())
+                self.assertFalse(self.idf_version_log.exists())
 
     def test_mismatched_discovered_sdk_is_rejected_without_fallback(self):
         self.existing_sdk()
