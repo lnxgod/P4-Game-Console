@@ -1,6 +1,6 @@
 ---
 name: esp32-elecrow-sound
-description: Add, change, diagnose, flash, or test speaker sound on the Elecrow ESP32-P4 10 in variant (10.1-inch DHE04310D). Use for the factory speaker-TX I2S1/GPIO30 path, the factory PDM clock side effect, Doom sound effects, silent audio, clicks/pops, volume, DMA underruns, amplifier shutdown, or audio runtime acceptance. Do not invent an ES8311 register sequence for the pinned factory behavior.
+description: "Use for explicitly requested legacy Elecrow ESP32-P4 10 in variant (10.1-inch DHE04310D) speaker-service work: factory I2S1/GPIO30/PDM initialization, silent audio, clicks/pops, volume, DMA underruns or acoustic acceptance. Ordinary game audio through stable P4 APIs uses Make Game and Test Game."
 ---
 
 # ESP32 - Elecrow Sound
@@ -10,9 +10,9 @@ speaker TX branch distinct from the PDM receiver that the complete factory
 audio initializer also starts; do not infer a codec transaction from schematic
 labels when the exact factory source is the requested behavior.
 
-If a game only calls the existing P4 tone API, use `$esp32-add-game` and its
-focused game tests. Do not run this factory-audio workflow unless the request
-changes the platform audio path or diagnoses actual device sound.
+If a game only calls the existing P4 audio APIs, use `$esp32-make-game` and
+`$esp32-test-game` for authoring and focused tests. Do not run this
+factory-audio workflow unless the request changes the platform audio path or diagnoses actual device sound.
 
 ## Load the exact contract
 
@@ -38,7 +38,8 @@ exception to another unit, PCB revision, or general pin map.
 
 The repository already records that exception for the bound tablet identity
 `4ea036…`: Doom SFX and recognizable MUS music were operator-confirmed, and
-Console OS Game API v1 has an active exact-unit factory-audio release. Do not
+an exact-unit factory-audio release was recorded for the historical Console
+OS Game API v1 artifact. Do not
 describe this tablet's audio as runtime-blocked. A changed artifact still needs
 its own immutable release and guarded install route; the exception remains
 non-reusable and does not authorize another unit.
@@ -62,8 +63,10 @@ non-reusable and does not authorize another unit.
 - Native Console OS games request `P4_GAME_CAP_AUDIO_TONE`,
   `P4_GAME_CAP_AUDIO_STREAM`, or both. Stream clients submit 1–256 already
   mixed 16 kHz PCM16-stereo frames; the host copies whole accepted blocks into
-  its fixed 512-frame FIFO and is the only code that writes the platform
-  adapter. A full FIFO returns `false`; games drop/degrade rather than spin.
+  the shared FIFO bounded by `P4_GAME_AUDIO_STREAM_BUFFER_FRAMES` in
+  `components/p4_game_api/include/p4/audio.h` (currently 2048 frames). The host
+  is the only code that writes the platform adapter. A full FIFO returns
+  `false`; games drop/degrade rather than spin.
 - On the exact-unit E6 path, mix validated Doom WAD MUS lumps with native 16 kHz
   effects above the stable platform boundary using the bounded procedural synth.
   It requires no external MIDI hardware, codec traffic, or SoundFont and does
@@ -141,7 +144,8 @@ Do not repeat an unchanged build or image. After the focused checks pass, use
 one hardware acceptance for the changed acoustic behavior and repeat only when
 the firmware or test conditions change.
 
-Require the final ELF/map audit to prove the app-facing adapter is the only
+For the combined Doom integration, require the final ELF/map audit to prove
+the app-facing adapter is the only
 caller of every `platform_audio_factory_*` entry point, the runtime gate bytes
 match the authorization, USB is absent, and no external codec transaction path
 entered the graph. If the complete factory initializer is selected, also prove
@@ -149,17 +153,31 @@ the exact PDM RX GPIO24/GPIO26 graph and prohibit consuming microphone data.
 
 ## Install and qualify sound
 
-Use only the guarded app-partition route for the exact bound unit:
+Read [the recorded installation history](../esp32-elecrow-test/references/current-unit.md)
+and follow `$esp32-elecrow-test` for a current-layout, exact-artifact sound
+successor. Changed audio requires its separately recorded audio release,
+exact-unit authorization and guarded installer route before a write. A past
+factory-audio or display acceptance does not supply these records.
+
+The command below is preserved historical E5 touch-only replay at `0x10000`,
+with audio disabled; it cannot qualify sound. Use it only for an explicitly
+requested, authorized replay of its exact original source, artifact, unit and
+layout. Never reuse it on the recorded dual-OTA `0x20000` layout or change its
+frozen gate to install an audio-enabled successor:
 
 ```sh
 make flash-app APP=doom_embedded_touch_audio PORT=/dev/cu.<port>
 ```
 
-Require one retained UART descriptor from live identity/security/flash/partition
+If no matching successor authorization and guarded route is recorded, stop
+before writing and prepare them separately. For an authorized successor,
+require one retained UART descriptor from live identity/security/flash/partition
 checks through write, complete padded-span readback, and one post-readback
 launch. Capture afterward without transmitting or resetting.
 
-Runtime evidence must show:
+For an audio-enabled Doom E6-style successor, runtime evidence must show the
+following. Console OS candidates use their own reviewed launcher/audio startup
+contract; acoustic acceptance remains separate:
 
 - exact composite/touch/audio gate values `1/1/1`;
 - `SOUND_READY` with exact PDM-RX-first/TX-second initialization, the complete

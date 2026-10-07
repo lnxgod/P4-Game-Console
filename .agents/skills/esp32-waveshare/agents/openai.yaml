@@ -1,6 +1,6 @@
 interface:
   display_name: "ESP32 - Waveshare"
   short_description: "Maintain the older Waveshare 4.3 console"
-  default_prompt: "Use $esp32-waveshare to help with waveshare for this console."
+  default_prompt: "Use $esp32-waveshare to maintain or diagnose firmware on the legacy Waveshare ESP32-P4-WIFI6-Touch-LCD-4.3 board."
 policy:
   allow_implicit_invocation: true

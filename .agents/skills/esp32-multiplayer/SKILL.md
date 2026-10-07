@@ -1,6 +1,6 @@
 ---
 name: esp32-multiplayer
-description: Create or add multiplayer to P4 Console OS games using the existing OS-owned P4MP session. Use automatically for linked-console, co-op, versus, Host/Join or synchronized native-game requests alongside the game-authoring skill. Distinguish same-device play from networked play; games own rules and bounded messages, not controller drivers, lobbies or transports.
+description: Use when creating, changing, diagnosing or testing linked-console multiplayer in native P4 Console OS games, including Host/Join, linked-console co-op or versus, turn synchronization, bounded game messages, multiplayer manifests and offline or peer-loss behavior. Same-device play stays with Make Game; OS transport or pairing changes use Fix Console.
 ---
 
 # ESP32 - Multiplayer

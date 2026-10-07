@@ -1,6 +1,6 @@
 ---
 name: esp32-waveshare-sound
-description: Qualify and extend the Waveshare ESP32-P4-WIFI6-Touch-LCD-4.3 ES8311/ES7210 audio path.
+description: "Use for explicitly requested legacy Waveshare ESP32-P4-WIFI6-Touch-LCD-4.3 ES8311/ES7210 audio-service changes, speaker faults or acoustic qualification."
 ---
 
 # ESP32 - Waveshare Sound
@@ -20,7 +20,7 @@ Preserve the profile's exact I2C/I2S pins, master clock, amplifier polarity,
 muted startup and ordered shutdown. The ES7210's presence does not establish a
 supported microphone service. Check the existing audio service's host tests
 and build the consuming Waveshare target after a service change; ordinary
-game audio uses focused game tests. Record delivery counters and acoustic
+game audio uses `$esp32-make-game` and `$esp32-test-game`. Record delivery counters and acoustic
 feedback separately for each named artifact/unit. Do not require a fresh board
 bring-up for games using the already implemented audio API.
 

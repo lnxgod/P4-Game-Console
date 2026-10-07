@@ -544,9 +544,13 @@ two native-API paths:
    `p4_game_submit_pcm16_stereo()`.
 
 Each accepted stream call copies 1–256 frames of already-mixed signed 16 kHz
-PCM16 stereo into a fixed 512-frame FIFO; the caller may reuse its buffer as
-soon as the call returns. Stream audio and tones are saturating-mixed before
-Console OS writes the shared backend. A `false` result means the optional
+PCM16 stereo into a bounded Console OS-owned FIFO; the caller may reuse its
+buffer as soon as the call returns. Its current capacity is defined by
+`P4_GAME_AUDIO_STREAM_BUFFER_FRAMES` in
+[`p4/audio.h`](../components/p4_game_api/include/p4/audio.h); see
+[the audio scheduling contract](GAME_PERFORMANCE.md)
+for producer timing and buffering behavior. Stream audio and tones are
+saturating-mixed before Console OS writes the shared backend. A `false` result means the optional
 service is unavailable, the request is invalid, or the FIFO is full. Drop or
 degrade that block—never busy-wait inside a game callback. In every game,
 `stop` must call `p4_game_stop_audio()` (directly or through the provided game

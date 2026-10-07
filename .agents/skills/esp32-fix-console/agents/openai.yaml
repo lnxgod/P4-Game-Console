@@ -1,6 +1,6 @@
 interface:
   display_name: "ESP32 - Fix Console"
   short_description: "Build, fix and test the Tab5 console OS"
-  default_prompt: "Use $esp32-fix-console to build, flash, diagnose, or extend a supported ESP32-P4 console safely."
+  default_prompt: "Use $esp32-fix-console to diagnose or change the Tab5 Console OS and its shared platform services."
 policy:
   allow_implicit_invocation: true

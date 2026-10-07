@@ -1,25 +1,21 @@
 ---
 name: esp32-add-game
-description: Create, port, modify, package, install, or test storage-installed games for P4 Console OS. Use for games/*, P4 Game API v1, game.json manifests, .P4G cartridges, launcher metadata, native 768x480 RGB565 rendering with 320x200 fallback, normalized controls, tone audio, Game Manager installation or removal, or adding a game to the Program Manager catalog.
+description: Use when packaging, validating, installing, updating, removing or cataloging native C .P4G games for P4 Console OS, including game.json package and launcher metadata, resource sidecars, storage transfer and Game Manager registration. Gameplay/source authoring uses Make Game; local preview uses Test Game.
 ---
 
 # ESP32 - Add Game
 
-Build games against the stable P4 Game API, then install their `.P4G` files
-through the Elecrow `P4 GAMES` USB volume, an Olimex/Waveshare microSD bundle,
-or the Waveshare H1 / Tab5 native USB verified live-transfer paths. Keep Console OS in charge of
-hardware, storage, and lifecycle services so adding or removing a game never
-requires an OS reflash.
+Package games against the stable P4 Game API, then install their `.P4G` files
+through M5Stack Tab5 native USB-C with the microSD card left inserted. Tab5 is
+the default maintained target: `m5stack-tab5`, `make console-os-tab5-idf`.
+Keep Console OS in charge of hardware, storage and lifecycle services; compatible
+game-only updates do not require an OS reflash.
 
-M5Stack Tab5 is the primary target: `m5stack-tab5`,
-`make console-os-tab5-idf`, native USB-C transfer with the card left inserted.
-Target names are exact: `elecrow-crowpanel-advanced-10` is the Elecrow 10 in
-device, `olimex-esp32-p4-pc` is the Olimex ESP32-P4-PC Rev.B development board,
-and `waveshare-esp32-p4-wifi6-touch-lcd-4.3` is the Waveshare 4.3 in console.
-A package remains board-independent, but its Console OS build and copy workflow
-must match the physical target. Any new target must first appear in
-`hardware/boards/console-os-port-contract.json`; never infer a board from its
-display connector or reuse another board's identity.
+Use [Legacy installation](references/legacy-installation.md) only for explicitly
+requested Elecrow, Olimex or Waveshare maintenance. Packages are board-independent,
+but the Console OS build, physical identity and transfer route must match.
+Any new target must first appear in `hardware/boards/console-os-port-contract.json`;
+never infer a board from its display connector or reuse another board's identity.
 
 Use `$esp32-make-game` for free-form gameplay/source authoring and
 `$esp32-test-game` for the SDL3 edit-play loop. Add
@@ -53,26 +49,12 @@ changes or diagnoses that platform boundary. Ordinary drawing, normalized
 button handling, and tone playback through existing `p4/` APIs do not require
 board bring-up or peripheral diagnostics.
 
-## Create or modify a game
+## Prepare a cartridge
 
-For a new game, inspect the plan before creating files:
-
-```sh
-python3 scripts/new-game.py "Star Hop" --folder GAMES/ARCADE --dry-run
-python3 scripts/new-game.py "Star Hop" --folder GAMES/ARCADE
-python3 scripts/new-game.py "Card Table" --folder GAMES/CARDS --high-res
-```
-
-The generator chooses a free non-retired launcher ID, never overwrites a game,
-and starts with `enabled: false`. Preview drafts with `make play-game GAME=<slug>`.
-Publish only after the quality checks in `docs/GAME_LIBRARY.md` pass. It creates the manifest and CMake entry at the game root, runtime code
-under `src/`, and a README. Add deterministic host tests under `tests/` and an
-optional preview tool under `tools/` as the game grows; follow an existing game
-for their CMake wiring.
-
-For an existing game, preserve its public ID unless the task intentionally
-creates a different title. Prefer small, deterministic game-state transitions
-that can be exercised without display, audio, USB, or filesystem hardware.
+Use `$esp32-make-game` for a new title or source change. For scaffold commands and
+initial manifest wiring, read [Cartridge preparation](references/cartridge-preparation.md).
+Keep new scaffolds unpublished (`enabled: false`) until `docs/GAME_LIBRARY.md`
+quality checks pass; preserve public IDs, retired identities and save identities.
 
 ## Cartridge-owned launcher presentation
 
@@ -173,40 +155,9 @@ report unrelated failures without expanding the task.
 
 For protected games, first apply [Protected game payloads](../../../docs/GAME_SDK.md#protected-game-payloads). Red Dragon requires the exact payload approved by the installed OS; a fresh category-only rebuild can change linked shared code. Use its paired artifact, preserve its save identity, and verify registration after transfer. Ordinary package validation is not a protected-lineage check.
 
-The board-specific Console OS builds write each enabled cartridge to:
-
-```text
-apps/console_os/build-tab5/sd-card/GAMES/<PACKAGE>.P4G
-apps/console_os/build/game-storage-seed/GAMES/<PACKAGE>.P4G
-apps/console_os/build-olimex-esp32-p4-pc/sd-card/GAMES/<PACKAGE>.P4G
-apps/console_os/build-waveshare-landscape/sd-card/GAMES/<PACKAGE>.P4G
-```
-
-To install or update on Elecrow, connect the laptop to J16, copy the `.P4G`
-file into `GAMES/` on `P4 GAMES`, verify the destination byte count or hash,
-and eject cleanly. On Olimex, power the board off, move the microSD card to a
-laptop reader, copy the cartridge into `GAMES/`, verify it, eject, reinstall,
-and power on. The Olimex USB-C programming port is not storage and live card
-removal is unsupported.
-
-On Waveshare, keep controller-host mode as the default. Open the on-device USB
-Drive app to stop Host/HID, unmount the card, and hand H2 to TinyUSB MSC. After
-the FAT32 `P4GAMES` volume appears, run
-`make install-waveshare-sd-card SD_MOUNT=/Volumes/P4GAMES`, eject it cleanly,
-and return from USB Drive mode so Console OS remounts and rescans. A powered-off
-card-reader copy is also valid. Never let the Mac and Console OS own the
-filesystem at the same time. Open Game Manager to refresh and launch the game.
-Do not flash the OS for a game-only update.
-
-Prefer H1 when the badge is running and only a cartridge needs to move. The
-default transfer class is `p4g`:
-
-```sh
-python3 scripts/p4-transfer.py push /absolute/path/GAME.P4G \
-  --port /dev/cu.wchusbserial...
-python3 scripts/p4-transfer.py push /absolute/path/GAME.P4G \
-  --port /dev/cu.wchusbserial... --no-replace
-```
+The Tab5 Console OS build writes enabled cartridges to
+`apps/console_os/build-tab5/sd-card/GAMES/<PACKAGE>.P4G`. Use the matching
+legacy output and transfer route only for an explicitly requested legacy board.
 
 The host rejects unsafe names, oversize files, malformed package geometry, API
 mismatches, and payload-digest failures before sending. Console OS repeats the
@@ -215,25 +166,26 @@ under `/GAMES`; a successful P4G upload invalidates and reloads the native game
 catalog without rebooting. Use `--class exchange` only for the separate
 File Transfer exchange area, never to bypass native cartridge validation.
 
-On M5Stack Tab5 use `make console-os-tab5-idf`, then keep the card in the
-powered tablet and use its connected USB-C Serial/JTAG port:
+On Tab5, keep the card in the powered tablet and use its connected USB-C
+Serial/JTAG port. For a one-game update, push only that game's validated `.P4G`:
 
 ```sh
-python scripts/p4-transfer.py push-bundle apps/console_os/build-tab5/sd-card --port /dev/cu.usbmodem1101
-python scripts/p4-usb-content.py doom --port /dev/cu.usbmodem1101
+python3 scripts/p4-transfer.py push apps/console_os/build-tab5/sd-card/GAMES/CHECKERS.P4G \
+  --port <port>
 ```
 
-Use the explicit current port for A or B, not an assumed enumeration order.
-`push-bundle` validates and installs native `.P4G` and `.P4R` resources over one
-connection. Individual resources use `push --class p4r`. Each format has its own
-directory and validator; never use `exchange` to bypass it. Native USB may
-reboot on open on macOS; the tools
-tolerate startup. Content activation reboots; native file
-activation refreshes the appropriate catalog. USB Drive/MSC remains disabled on
-Tab5. The default USB-A HID/XUSB candidate has a separate board-owned host-power
-path; consult the Tab5 board document for exact-artifact and named-controller
-acceptance. Native USB-C content transfer does not depend on USB-A host mode.
-Do not ask for a card reader when the USB path is available.
+Replace `CHECKERS.P4G` with the requested package and use the explicit current
+port for the intended unit, not an assumed enumeration order. If the game has a
+matching `.P4R`, validate and push that resource first with `--class p4r`; see
+[Bundles and resources](references/bundles-and-resources.md). Use `push-bundle`
+only for a requested bundle installation, and provision Doom data only when
+that content is requested or required by the selected setup.
+
+Native USB may reboot on open on macOS; the tools tolerate startup. Cartridge
+activation refreshes the catalog. USB Drive/MSC remains disabled on Tab5.
+USB-C transfer does not depend on USB-A host mode and does not require a card
+reader when this path is available. Consult `docs/boards/M5STACK_TAB5.md` for
+USB-A host-power and exact-artifact/controller acceptance.
 
 For a hardware acceptance, perform one named run that launches the changed
 game, exercises its changed behavior, and returns to the launcher with Back.

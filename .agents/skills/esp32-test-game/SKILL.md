@@ -75,8 +75,9 @@ Follow `docs/GAME_ART.md`. New and upgraded games should negotiate 768x480,
 with guarded render coverage for the 320x200 fallback and padded strides.
 Inspect native-size captures of gameplay, menus and results; check text bounds,
 card overlap, texture contrast, selected states and sprites at screen edges.
-The SDL runner follows the manifest; a large window alone does not prove that
-the game draws native detail. Test canonical 320x200 touch hit regions against
+The SDL runner selects its surface from the compiled game descriptor; keep
+that descriptor aligned with the manifest. A large window alone does not prove
+that the game draws native detail. Test canonical 320x200 touch hit regions against
 the visible high-resolution controls. Record asset bytes and cartridge size.
 
 Follow the canonical [ESP32-P4 performance contract](../../../docs/GAME_PERFORMANCE.md)
@@ -97,8 +98,12 @@ Before handing a changed game to the firmware workflow, report:
 
 Use `local-play-tested` only after interactive play is explicitly confirmed.
 Use `host-tested` for automated sanitizer/unit success without implying that a
-person played the game. Never allow an unplayed or failing local candidate to
-advance to a guarded device install.
+person played the game. Require confirmed interactive play before a routine
+gameplay installation. An explicitly requested diagnostic device installation
+may follow `$esp32-add-game` after applicable host checks; record missing play,
+keep scaffolds disabled, and label the unplayed result as a candidate. Never
+bypass sanitizer, invalid manifest/ELF/package or lifecycle failures, or treat that
+installation as release qualification.
 
 ## Keep acceptance claims honest
 

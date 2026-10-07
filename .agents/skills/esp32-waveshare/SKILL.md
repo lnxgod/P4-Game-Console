@@ -1,6 +1,6 @@
 ---
 name: esp32-waveshare
-description: Build, port, diagnose, and qualify firmware for the Waveshare ESP32-P4-WIFI6-Touch-LCD-4.3 board.
+description: "Use for explicitly requested legacy Waveshare ESP32-P4-WIFI6-Touch-LCD-4.3 firmware maintenance, board-service changes, diagnosis or exact-unit qualification."
 ---
 
 # ESP32 - Waveshare
@@ -10,12 +10,13 @@ Elecrow 10 in variant. Read `hardware/board-profiles/waveshare-esp32-p4-wifi6-to
 `docs/WAVESHARE_P4_WIFI6_TOUCH_LCD_4_3_PORT.md`, `toolchain.lock.json`,
 `AGENTS.md`, and `docs/HARDWARE.md` before changing board-facing code.
 
-The repository now contains backed-up, hash-bound evidence for two exact
-development units plus named display, touch, audio, SD, H1 transfer, H2 USB
-Host, controller, BLE, and Console OS runs. That evidence authorizes only the
-resources in the Waveshare profile and only those recorded units. Preserve the
-normal first-write backup gate for every newly connected unit. Never enable an
-Elecrow pin map under a Waveshare build flag.
+The repository contains backed-up, hash-bound exact-unit evidence plus named
+display, touch, audio, SD, H1 transfer, H2 USB Host, controller, BLE, and Console
+OS runs. Each dated record applies only to its named resources, artifact and
+units. Reconcile the current board documentation, manifest and retained ledger;
+do not infer live state or a new artifact authorization from past acceptance.
+Preserve the normal first-write backup gate for every newly connected unit.
+Never enable an Elecrow pin map under a Waveshare build flag.
 
 ## Port boundary
 
@@ -39,12 +40,23 @@ Elecrow pin map under a Waveshare build flag.
 
 ## Build and install
 
-The controller-first Console OS build is:
+The controller-first local Console OS build target is:
 
 ```sh
 ./scripts/build.sh console_os waveshare-esp32-p4-wifi6-touch-lcd-4.3-usb-host
+```
+
+The preserved release verifier below requires the original `0.42` source
+contract. Use it only when reproducing that historical baseline, not as a
+passing qualifier for a changed current candidate:
+
+```sh
 python3 scripts/verify-console-os-waveshare.py apps/console_os/build-waveshare-usb-host
 ```
+
+For a current candidate, run the focused component checks, record build
+evidence, and prepare matching scoped verification before a guarded install.
+Do not relax a historical release check or report it passed for newer source.
 
 H1 is the CH343 programming, monitoring, and content-transfer connector. It
 uses 115200 baud while idle and negotiates 921600 baud for bounded transfers.
@@ -53,12 +65,17 @@ controllers, while the USB Drive app explicitly stops Host/HID, unmounts FAT,
 and switches it to TinyUSB MSC. The Mac and Console OS must never own the SD
 filesystem concurrently.
 
-For the two already recorded development units, write only the verified app
-artifact at offset `0x20000`; a repeat factory backup is unnecessary. Resolve
-each H1 port to its stored identity before writing, flash the units
-sequentially, and require esptool hash verification. Parallel CH343 writes have
-caused a port drop and are not an accepted two-unit workflow. A new or unknown
-unit still requires the complete first-write backup from `AGENTS.md`.
+For an already backed-up exact unit, reuse its verified complete factory
+backup; do not repeat it routinely. Before writing, require a recorded guarded
+route matching the exact unit, candidate artifact, current predecessor and live
+partition layout, with recovery bytes and security checks. The recorded
+`0x20000` app offset is valid only when that route proves the matching layout.
+If no matching authorization and route exists, stop before writing and prepare
+a separately recorded successor authorization; do not repurpose a frozen
+installer. Resolve each H1 port to its stored identity, flash units sequentially,
+and require esptool hash verification. Parallel CH343 writes have caused a port
+drop and are not an accepted workflow. A new or unknown unit still requires the
+complete first-write backup from `AGENTS.md`.
 
 Native cartridges can be installed live without changing firmware:
 

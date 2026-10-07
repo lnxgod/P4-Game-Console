@@ -1,6 +1,6 @@
 ---
 name: esp32-setup
-description: "Set up and provision P4 Console OS from a fresh checkout: verify the pinned environment, prepare basic native games, automatically acquire verified Doom shareware, install through the exact-board route, and configure first boot. Ask about microSD; current Tab5 game storage is SD-only. Offer Chex only with explicit selection and SD. Use esp32-add-game for game-only updates."
+description: "Set up or provision P4 Console OS with native games and Doom shareware. Use for initial Tab5 installation, storage selection and first boot; other boards require explicitly requested legacy maintenance. Use esp32-add-game for compatible game-only updates."
 ---
 
 # ESP32 - Set Up
@@ -8,6 +8,8 @@ description: "Set up and provision P4 Console OS from a fresh checkout: verify t
 Use this skill first for an OS installation or first-time console setup in this
 repository. It coordinates the board-specific build, content and guarded install
 workflows; it does not replace their device bindings or hardware checks.
+M5Stack Tab5 is the maintained target; use other boards only for explicitly
+requested legacy maintenance.
 
 ## Establish the installation choices
 
@@ -139,11 +141,20 @@ for the same permission again.
 For the current Tab5 SD route, use the locked environment and:
 ```sh
 make console-os-tab5-idf
-python scripts/verify-console-os-tab5.py apps/console_os/build-tab5
 ```
+This target already runs the focused Tab5 artifact verifier. Use the standalone
+verifier when inspecting an existing build rather than repeating it by default.
+Preserve chosen peripheral feature selections when preparing a successor for
+an existing exact-unit authorization; use the matching
+[platform route](../esp32-fix-console/SKILL.md).
+
 Use `scripts/flash-console-os-tab5.py` with the exact unit, authorization digest
-and port as documented in `docs/boards/M5STACK_TAB5.md`. After a verified install,
-load content over the connected native USB-C cable:
+and port as documented in `docs/boards/M5STACK_TAB5.md`. Its current guarded
+route supports registered units A and B only. A new Tab5 needs its own backup,
+identity binding and guarded onboarding support; never relabel it as A/B or
+inherit another unit's authorization. Continue local preparation until its
+write route is supported. After a verified install, load content over the
+connected native USB-C cable:
 ```sh
 python scripts/p4-transfer.py push-bundle apps/console_os/build-tab5/sd-card --port <explicit-port>
 python scripts/p4-usb-content.py doom --port <explicit-port>
@@ -155,11 +166,15 @@ python scripts/p4-usb-content.py chex --port <explicit-port>
 These are existing **SD-backed** commands, not proof of a no-SD route. Use the
 documented successor commands once internal storage support exists.
 
-Complete focused package/build checks and exact write readback. Bind each
-protected cartridge, including Red Dragon, to the compatible OS lineage before
-transfer; keep required `.P4R` resources with their cartridges. Record the exact
-OS, game/data hashes, unit and transfer receipts. A failed optional Chex WAD or
-patch transfer leaves Chex incomplete, even when the other file succeeded.
+Complete focused package/build checks. Routine authorized Tab5 firmware writes
+use device checksum verification; use `--verification full-readback` only for
+recovery, diagnostics or an explicit request, and record the method that ran.
+Content transfers retain verified device readback receipts. Bind any selected
+or already-installed protected cartridge, including Red Dragon, to the
+compatible OS lineage; keep required `.P4R` resources with their cartridges.
+This does not add development games to a standard installation. Record the
+exact OS, game/data hashes, unit and transfer receipts. A failed optional Chex
+WAD or patch transfer leaves Chex incomplete, even when the other file succeeded.
 
 ## Complete initial configuration and acceptance
 

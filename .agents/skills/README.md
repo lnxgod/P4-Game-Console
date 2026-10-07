@@ -15,7 +15,7 @@ space-free identifiers.
 | [ESP32 - Make Game](esp32-make-game/SKILL.md) | `$esp32-make-game` | Make or change a native console game |
 | [ESP32 - Game Art](esp32-game-art/SKILL.md) | `$esp32-game-art` | Draw game art, sprites and launcher pictures |
 | [ESP32 - Add Game](esp32-add-game/SKILL.md) | `$esp32-add-game` | Package, install or update console games |
-| [ESP32 - Test Game](esp32-test-game/SKILL.md) | `$esp32-test-game` | Play and check games on your computer |
+| [ESP32 - Test Game](esp32-test-game/SKILL.md) | `$esp32-test-game` | Play-test native games on your computer |
 | [ESP32 - Multiplayer](esp32-multiplayer/SKILL.md) | `$esp32-multiplayer` | Let friends play on connected consoles |
 | [ESP32 - Fix Console](esp32-fix-console/SKILL.md) | `$esp32-fix-console` | Build, fix and test the Tab5 console OS |
 | [ESP32 - Controllers](esp32-controllers/SKILL.md) | `$esp32-controllers` | Connect and fix USB or Bluetooth controllers |
@@ -44,8 +44,8 @@ The folders, skill IDs, UI names and maintained links have all been renamed.
 Old acceptance records retain their original paths and hashes as historical
 evidence. Frozen recovery installers retain their original inventory keys and
 must be reproduced with their exact historical source revision; these renames
-do not issue a new hardware authorization. When an older conversation uses one of these names, select its
-replacement; do not recreate a second copy of the skill.
+do not issue a new hardware authorization. When an older conversation uses
+one of these names, select its replacement; do not recreate a second copy of the skill.
 
 | Previous name | Current skill |
 | --- | --- |

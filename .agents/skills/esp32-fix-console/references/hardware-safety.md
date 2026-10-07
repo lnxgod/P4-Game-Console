@@ -1,12 +1,17 @@
 # Hardware safety gates
 
-## Before writing firmware
+## Before a new unit's first project write
 
 - Read and hash the full external flash.
 - Store the binary outside Git and its byte count/hash in `hardware/backups/manifest.json`.
 - Bind the backup to the physical unit with the SHA-256 of its normalized base identity. Never store or print the raw identifier.
 - Confirm the detected flash size before reading or restoring.
 - Start with pin-independent firmware when the exact PCB profile is unresolved.
+
+For an exact unit already registered in the manifest, verify and reuse its
+recorded backup rather than repeating the factory read. Preserve current data
+affected by a layout migration. Use firmware supported by the selected board;
+the current Tab5 build route supports Console OS, not legacy `bringup` apps.
 
 ## Before enabling a peripheral
 
@@ -28,4 +33,4 @@ USB data connectivity does not imply host-power capability. A valid host fixture
 
 ## Recovery
 
-Prefer a targeted app/partition write over an erase. Routine authorized Tab5 successors use device checksum verification; full readback is optional for recovery or diagnostics. Other boards keep their exact installer verification contract. If recovery is required, require the live identity hash to match the backup, identify the exact flash offsets from the saved partition table, and make restoration a separate, explicit operation.
+Prefer a targeted app/partition write over an erase. Routine authorized Tab5 successors use device checksum verification; use full readback only for recovery, diagnostics or an explicit request, and record which method ran. Other boards keep their exact installer verification contract. If recovery is required, require the live identity hash to match the backup, identify the exact flash offsets from the saved partition table, and make restoration a separate, explicit operation.
