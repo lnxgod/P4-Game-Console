@@ -23,7 +23,7 @@ Start with the [Tab5 guide](docs/boards/M5STACK_TAB5.md) for hardware status or
   resource contracts.
 - Doom with verified game data, plus an optional Chex Quest installation.
   The [Game Changers AI Doom mode](docs/GAME_CHANGERS_AI_DOOM.md) adds arena
-  selection and voting with the original [Pure Hell pack](game-data/pure-hell/README.md).
+  selection and voting with the five-map [Pure Hades pack](game-data/pure-hades/README.md).
 - OS-owned controller and multiplayer services shared by games. See
   [controllers](docs/CONTROLLERS.md) and [multiplayer](docs/MULTIPLAYER.md) for
   implemented transports and exact acceptance limits. Tab5 Bluetooth controller
@@ -80,7 +80,7 @@ python3 scripts/p4-usb-content.py doom --port /dev/cu.usbmodem...
 
 The transfer tools validate content before activation. Keep downloaded game data,
 firmware binaries, and factory backups in ignored local storage. The committed
-original Pure Hell pack has its own notices; that does not permit committing
+Pure Hades pack has its own notices; that does not permit committing
 commercial Doom data. See the [content library](docs/CONTENT_LIBRARY.md).
 
 ## Make and test games

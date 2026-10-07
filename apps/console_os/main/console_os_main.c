@@ -3924,7 +3924,7 @@ static esp_err_t configure_multiplayer_local_offer(void)
             offer.player_capacity=4;
             setup.mode=P4_DOOM_MP_MODE_ALTDEATH;
             setup.episode=1;
-            if (setup.game!=s_multiplayer_local_setup.game || setup.map<1 || setup.map>26) setup.map=1;
+            if (setup.game!=s_multiplayer_local_setup.game || setup.map<1 || setup.map>P4_DOOM_ARENA_SELECTIONS) setup.map=1;
             setup.no_monsters=true;
             setup.fast_monsters=false;
             setup.respawn_monsters=false;
@@ -3933,7 +3933,7 @@ static esp_err_t configure_multiplayer_local_offer(void)
         offer.mode = P4_MP_GAME_MODE_LOCKSTEP;
         offer.input_delay_tics = 2U;
         offer.tick_rate_hz = P4_DOOM_MP_TICK_RATE_HZ;
-        offer.game_protocol = multiplayer_selected_game_is_arena() ? 4U : CONSOLE_DOOM_MULTIPLAYER_PROTOCOL;
+        offer.game_protocol = multiplayer_selected_game_is_arena() ? 5U : CONSOLE_DOOM_MULTIPLAYER_PROTOCOL;
         strcpy(offer.game_id, multiplayer_selected_game_is_arena() ? "org.p4console.gamechangersai" : multiplayer_selected_game_is_chex()
             ? "org.p4console.chexquest" : "org.p4console.doom");
         const uint8_t *const content_sha256 =
@@ -4458,7 +4458,7 @@ static void handle_multiplayer_config_action(
     case CONSOLE_MULTIPLAYER_OPTION_MAP:
         requested.map = multiplayer_cycle_range(
             requested.map, 1U,
-            multiplayer_selected_game_is_arena() ? 26U : multiplayer_selected_game_is_chex()
+            multiplayer_selected_game_is_arena() ? P4_DOOM_ARENA_SELECTIONS : multiplayer_selected_game_is_chex()
                 ? P4_DOOM_MP_MAX_CHEX_MAP : P4_DOOM_MP_MAX_MAP,
             delta);
         break;

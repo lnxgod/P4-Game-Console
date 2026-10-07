@@ -23,7 +23,7 @@ extern boolean p4_doom_gc_active(void);
 
 extern patch_t *hu_font[HU_FONTSIZE];
 static p4_doom_arena_t arena;
-static int map_lumps[26], music_lumps[26];
+static int map_lumps[P4_DOOM_ARENA_SELECTIONS], music_lumps[P4_DOOM_ARENA_SELECTIONS];
 static uint8_t queued[2], queue_count, menu_row, picker;
 static boolean panel_open, picker_open;
 static void reload_arena(void);
@@ -32,12 +32,12 @@ void P4_DoomArenaWadLoaded(const char *filename,int first,int count)
 {
     if (!p4_doom_gc_active()) return;
     const char *name=strrchr(filename,'/'); name=name ? name+1 : filename;
-    const bool pure=strcasecmp(name,"purehell.wad")==0;
+    const bool pure=strcasecmp(name,"purehades.wad")==0;
     const bool dwango=strcasecmp(name,"dwango5.wad")==0;
     if (!pure && !dwango) return;
-    if (first<0 || count!=(pure?24:317) || (unsigned)(first+count)>numlumps)
+    if (first<0 || count!=(pure?71:317) || (unsigned)(first+count)>numlumps)
         I_Error("Arena WAD directory mismatch");
-    const unsigned maps=pure?2U:24U, base=pure?0U:2U;
+    const unsigned maps=pure?5U:24U, base=pure?0U:5U;
     for (unsigned m=0;m<maps;++m) {
         char marker[9], music[9];
         (void)snprintf(marker,sizeof(marker),"MAP%02u",m+1U);
@@ -63,7 +63,7 @@ int P4_DoomArenaMapLump(int vanilla)
 {
     if (!P4_DoomArenaActive()) return vanilla;
     const uint8_t selection=arena.maps[arena.map_index];
-    if (selection<1 || selection>26 || map_lumps[selection-1U]<=0) I_Error("Arena map unavailable");
+    if (selection<1 || selection>P4_DOOM_ARENA_SELECTIONS || map_lumps[selection-1U]<=0) I_Error("Arena map unavailable");
     return map_lumps[selection-1U];
 }
 
@@ -71,7 +71,7 @@ int P4_DoomArenaMusicLump(int vanilla)
 {
     if (!P4_DoomArenaActive()) return vanilla;
     const uint8_t selection=arena.maps[arena.map_index];
-    if (selection<1 || selection>26 || music_lumps[selection-1U]<=0) I_Error("Arena music unavailable");
+    if (selection<1 || selection>P4_DOOM_ARENA_SELECTIONS || music_lumps[selection-1U]<=0) I_Error("Arena music unavailable");
     return music_lumps[selection-1U];
 }
 
@@ -85,9 +85,9 @@ void P4_DoomArenaBuildCommand(ticcmd_t *command)
 static bool queue_vote(uint8_t opcode)
 {
     if (queue_count || !arena.players[consoleplayer].active) return false;
-    if (opcode>=0x81 && opcode<=0x9a && (arena.vote_map || arena.vote_cooldown)) return false;
+    if (opcode>=0x81 && opcode<=0x9d && (arena.vote_map || arena.vote_cooldown)) return false;
     if ((opcode==0xf0 || opcode==0xf1) && !arena.vote_map) return false;
-    queued[0]=opcode; queued[1]=(uint8_t)(0x80U|arena.vote_generation); queue_count=2;
+    queued[0]=opcode; queued[1]=(uint8_t)(0xa0U+arena.vote_generation); queue_count=2;
     return true;
 }
 
@@ -242,7 +242,7 @@ boolean P4_DoomArenaMenuKey(int key)
         else { panel_open=false; menuactive=false; }
     } else if (key==key_menu_up || key==key_menu_down || key==key_menu_left || key==key_menu_right) {
         const bool previous=key==key_menu_up || key==key_menu_left;
-        if (picker_open) picker=(uint8_t)(previous ? (picker==1?26:picker-1) : (picker==26?1:picker+1));
+        if (picker_open) picker=(uint8_t)(previous ? (picker==1?P4_DOOM_ARENA_SELECTIONS:picker-1) : (picker==P4_DOOM_ARENA_SELECTIONS?1:picker+1));
         else menu_row=(uint8_t)((menu_row+(previous?4U:1U))%5U);
     } else if (key==key_menu_forward || key==key_menu_confirm) {
         if (picker_open) {
@@ -264,7 +264,7 @@ boolean P4_DoomArenaMenuDraw(void)
     if (picker_open) {
         text_line(24,88,"CHOOSE AN ARENA");
         text_line(24,106,p4_doom_arena_label(picker));
-        char position[32]; (void)snprintf(position,sizeof(position),"%u / 26  -  UP / DOWN",(unsigned)picker);
+        char position[32]; (void)snprintf(position,sizeof(position),"%u / %u  -  UP / DOWN",(unsigned)picker,(unsigned)P4_DOOM_ARENA_SELECTIONS);
         text_line(24,121,position);
         text_line(24,141,"CONFIRM TO PROPOSE / BACK");
         if (arena.vote_map) text_line(24,155,"WAIT FOR THE CURRENT VOTE");

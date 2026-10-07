@@ -27,8 +27,8 @@ int main(void)
     locked=false; assert(platform_readonly_blob_register(&config)==ESP_ERR_INVALID_STATE); locked=true;
     fail_read=true; assert(platform_readonly_blob_register(&config)==ESP_FAIL); fail_read=false;
     assert(platform_readonly_blob_register(&config)==ESP_OK && last_file==2);
-    const char *names[]={"/freedoom2.wad","/purehell.wad","/dwango5.wad"};
-    const off_t sizes[]={PLATFORM_GAME_STORAGE_FREEDOOM2_WAD_BYTES,PLATFORM_GAME_STORAGE_PUREHELL_WAD_BYTES,PLATFORM_GAME_STORAGE_DWANGO5_WAD_BYTES};
+    const char *names[]={"/freedoom2.wad","/purehades.wad","/dwango5.wad"};
+    const off_t sizes[]={PLATFORM_GAME_STORAGE_FREEDOOM2_WAD_BYTES,PLATFORM_GAME_STORAGE_PUREHADES_WAD_BYTES,PLATFORM_GAME_STORAGE_DWANGO5_WAD_BYTES};
     int fd[3]; uint8_t data[8];
     for(unsigned i=0;i<3;++i) {
         assert(ops->open_p(ctx,names[i],O_WRONLY,0)==-1 && errno==EROFS);
@@ -51,7 +51,7 @@ int main(void)
     assert(platform_readonly_blob_unregister()==ESP_OK);
     config.file_name="doom1.wad"; config.size_bytes=(size_t)PLATFORM_GAME_STORAGE_DOOM_WAD_BYTES;
     assert(platform_readonly_blob_register(&config)==ESP_OK);
-    assert(ops->open_p(ctx,"purehell.wad",O_RDONLY,0)==-1 && errno==ENOENT);
+    assert(ops->open_p(ctx,"purehades.wad",O_RDONLY,0)==-1 && errno==ENOENT);
     int normal=ops->open_p(ctx,"doom1.wad",O_RDONLY,0); assert(normal>=0);
     assert(ops->read_p(ctx,normal,data,4)==4 && !memcmp(data,"IWAD",4));
     assert(ops->close_p(ctx,normal)==0 && platform_readonly_blob_unregister()==ESP_OK);

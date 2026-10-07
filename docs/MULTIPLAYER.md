@@ -331,8 +331,8 @@ the shared native-game handoff is a separate path.
 
 See [mode behavior, storage, tests and limitations](GAME_CHANGERS_AI_DOOM.md).
 This source/build candidate does not extend historical two-board radio evidence
-to four physical consoles. The supplied Pure Hell two-map loop is the default;
-the host can select either Pure Hell arena or DWANGO 5 MAP01–24. The in-game
+to four physical consoles. The Pure Hades five-map loop is the default;
+the host can select any Pure Hades arena or DWANGO 5 MAP01–24. The in-game
 menu proposes a map and takes a strict-majority vote through synchronized tic
 commands, preserving visit scores. All consoles admit the same exact three-WAD
 bundle with notices. Physical acceptance remains pending.

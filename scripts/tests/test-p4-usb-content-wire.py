@@ -52,15 +52,17 @@ class WireTests(unittest.TestCase):
 class ArenaBundleTests(unittest.TestCase):
     def test_bundle_has_unique_wire_ids_and_three_separate_wads(self):
         entries = wire.ARENA_BUNDLE['files']
-        self.assertEqual(len(entries), 11)
-        self.assertEqual(len({f['usb_kind'] for f in entries}), 11)
+        self.assertEqual(len(entries), 16)
+        self.assertEqual(len({f['usb_kind'] for f in entries}), 16)
         self.assertTrue(all(f['usb_kind'] > 4 for f in entries))
-        self.assertEqual([f['filename'] for f in entries[:3]], ['FREEDOOM2.WAD', 'PUREHELL.WAD', 'DWANGO5.WAD'])
+        self.assertEqual([f['filename'] for f in entries[:3]], ['FREEDOOM2.WAD', 'PUREHADES.WAD', 'DWANGO5.WAD'])
     def test_all_inputs_preflight_before_serial_and_notices_are_required(self):
         with patch.object(wire, 'validate_content') as validate, patch.object(wire.serial, 'Serial') as serial:
             files = wire.arena_inputs(Path('/base.wad'), Path('/pure'), Path('/dwango'))
-            self.assertEqual(validate.call_count, 11)
+            self.assertEqual(validate.call_count, 16)
             self.assertEqual(files[2][1], Path('/dwango/DWANGO5.WAD'))
+            self.assertEqual(files[3][1], Path('/pure/licenses/Freedoom-0.13.0-COPYING.txt'))
+            self.assertEqual(files[8][1], Path('/pure/music/tracklist.json'))
             self.assertEqual(files[-1][1].parent, Path('/dwango'))
             serial.assert_not_called()
             validate.side_effect = [None]*5 + [wire.TransferError('missing credits')]

@@ -123,12 +123,12 @@ static const char CHEX_DEH_SHA256_HEX[] =
 static const char *const QUAKE_DIRECTORIES[] = {
     "/GAMES", "/GAMES/QUAKE", "/GAMES/QUAKE/ID1",
 };
-static const char *const ARENA_DIRECTORIES[] = {"/GCADOOM"};
+static const char *const ARENA_DIRECTORIES[] = {"/GCADOOM", "/GCADOOM/licenses", "/GCADOOM/music"};
 static const content_spec_t CONTENT_SPECS[] = {
 #define GCA_SPEC(id, symbol, dir, name, size, hash) { \
     .kind=id, .bytes=size, .sha256_hex=hash, .label="arena-" #symbol, \
     .directory_suffix=dir, .target_name=name, .temporary_name="GCA" #id ".TMP", \
-    .required_directories=ARENA_DIRECTORIES, .required_directory_count=1 },
+    .required_directories=ARENA_DIRECTORIES, .required_directory_count=sizeof(ARENA_DIRECTORIES)/sizeof(ARENA_DIRECTORIES[0]) },
     P4_GCA_CONTENT_FILES(GCA_SPEC)
 #undef GCA_SPEC
     {

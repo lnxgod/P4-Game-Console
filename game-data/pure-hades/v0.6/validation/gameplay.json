@@ -1,0 +1,361 @@
+{
+  "maps": [
+    {
+      "map": "MAP01",
+      "weapon_collected_and_fired": 8,
+      "ammo_before": [
+        50,
+        36,
+        0,
+        0
+      ],
+      "ammo_after": [
+        50,
+        32,
+        0,
+        0
+      ],
+      "deathmatch_starts": [
+        {
+          "mode": 1,
+          "four_players_spawned": true,
+          "positions": [
+            [
+              377.0854187011719,
+              377.0801239013672
+            ],
+            [
+              0.002838134765625,
+              886.2177886962891
+            ],
+            [
+              377.0801239013672,
+              -377.0870056152344
+            ],
+            [
+              886.2177886962891,
+              -0.0044403076171875
+            ]
+          ]
+        },
+        {
+          "mode": 2,
+          "four_players_spawned": true,
+          "positions": [
+            [
+              377.0854187011719,
+              377.0801239013672
+            ],
+            [
+              0.002838134765625,
+              886.2177886962891
+            ],
+            [
+              377.0801239013672,
+              -377.0870056152344
+            ],
+            [
+              886.2177886962891,
+              -0.0044403076171875
+            ]
+          ]
+        }
+      ],
+      "hidden_exit_next_map_vanilla": 2,
+      "finale_old_switches_inert": false
+    },
+    {
+      "map": "MAP02",
+      "weapon_collected_and_fired": 4,
+      "ammo_before": [
+        50,
+        0,
+        0,
+        9
+      ],
+      "ammo_after": [
+        50,
+        0,
+        0,
+        4
+      ],
+      "deathmatch_starts": [
+        {
+          "mode": 1,
+          "four_players_spawned": true,
+          "positions": [
+            [
+              377.0854187011719,
+              377.0801239013672
+            ],
+            [
+              0.002838134765625,
+              886.2177886962891
+            ],
+            [
+              377.0801239013672,
+              -377.0870056152344
+            ],
+            [
+              886.2177886962891,
+              -0.0044403076171875
+            ]
+          ]
+        },
+        {
+          "mode": 2,
+          "four_players_spawned": true,
+          "positions": [
+            [
+              377.0854187011719,
+              377.0801239013672
+            ],
+            [
+              0.002838134765625,
+              886.2177886962891
+            ],
+            [
+              377.0801239013672,
+              -377.0870056152344
+            ],
+            [
+              886.2177886962891,
+              -0.0044403076171875
+            ]
+          ]
+        }
+      ],
+      "hidden_exit_next_map_vanilla": 3,
+      "finale_old_switches_inert": false
+    },
+    {
+      "map": "MAP03",
+      "weapon_collected_and_fired": 5,
+      "ammo_before": [
+        50,
+        0,
+        180,
+        0
+      ],
+      "ammo_after": [
+        50,
+        0,
+        151,
+        0
+      ],
+      "deathmatch_starts": [
+        {
+          "mode": 1,
+          "four_players_spawned": true,
+          "positions": [
+            [
+              377.0854187011719,
+              377.0801239013672
+            ],
+            [
+              0.002838134765625,
+              886.2177886962891
+            ],
+            [
+              377.0801239013672,
+              -377.0870056152344
+            ],
+            [
+              886.2177886962891,
+              -0.0044403076171875
+            ]
+          ]
+        },
+        {
+          "mode": 2,
+          "four_players_spawned": true,
+          "positions": [
+            [
+              377.0854187011719,
+              377.0801239013672
+            ],
+            [
+              0.002838134765625,
+              886.2177886962891
+            ],
+            [
+              377.0801239013672,
+              -377.0870056152344
+            ],
+            [
+              886.2177886962891,
+              -0.0044403076171875
+            ]
+          ]
+        }
+      ],
+      "hidden_exit_next_map_vanilla": 4,
+      "finale_old_switches_inert": false
+    },
+    {
+      "map": "MAP04",
+      "weapon_collected_and_fired": 8,
+      "ammo_before": [
+        50,
+        36,
+        0,
+        0
+      ],
+      "ammo_after": [
+        50,
+        32,
+        0,
+        0
+      ],
+      "deathmatch_starts": [
+        {
+          "mode": 1,
+          "four_players_spawned": true,
+          "positions": [
+            [
+              -377.08160400390625,
+              377.0854187011719
+            ],
+            [
+              377.0801239013672,
+              -377.0870056152344
+            ],
+            [
+              377.0854187011719,
+              377.0801239013672
+            ],
+            [
+              0.002838134765625,
+              886.2177886962891
+            ]
+          ]
+        },
+        {
+          "mode": 2,
+          "four_players_spawned": true,
+          "positions": [
+            [
+              -377.08160400390625,
+              377.0854187011719
+            ],
+            [
+              377.0801239013672,
+              -377.0870056152344
+            ],
+            [
+              377.0854187011719,
+              377.0801239013672
+            ],
+            [
+              0.002838134765625,
+              886.2177886962891
+            ]
+          ]
+        }
+      ],
+      "hidden_exit_next_map_vanilla": 5,
+      "finale_old_switches_inert": false
+    },
+    {
+      "map": "MAP05",
+      "weapon_collected_and_fired": 8,
+      "ammo_before": [
+        50,
+        36,
+        0,
+        0
+      ],
+      "ammo_after": [
+        50,
+        32,
+        0,
+        0
+      ],
+      "deathmatch_starts": [
+        {
+          "mode": 1,
+          "four_players_spawned": true,
+          "positions": [
+            [
+              -377.08160400390625,
+              377.0854187011719
+            ],
+            [
+              377.0801239013672,
+              -377.0870056152344
+            ],
+            [
+              -0.0044403076171875,
+              -886.2190856933594
+            ],
+            [
+              886.2177886962891,
+              -0.0044403076171875
+            ]
+          ]
+        },
+        {
+          "mode": 2,
+          "four_players_spawned": true,
+          "positions": [
+            [
+              -377.08160400390625,
+              377.0854187011719
+            ],
+            [
+              377.0801239013672,
+              -377.0870056152344
+            ],
+            [
+              -0.0044403076171875,
+              -886.2190856933594
+            ],
+            [
+              886.2177886962891,
+              -0.0044403076171875
+            ]
+          ]
+        }
+      ],
+      "hidden_exit_next_map_vanilla": 6,
+      "finale_old_switches_inert": true
+    }
+  ],
+  "scope": "Unmodified Chocolate Doom 3.1.1; ordinary recorded inputs and engine-written saves. No cheats, teleports or gameplay patches.",
+  "chaos_extra_weapons": [
+    {
+      "weapon": "chainsaw",
+      "owned": true,
+      "selected_and_fired": true
+    },
+    {
+      "weapon": "chaingun",
+      "owned": true,
+      "selected_and_fired": true
+    },
+    {
+      "weapon": "rocket",
+      "owned": true,
+      "selected_and_fired": true
+    },
+    {
+      "weapon": "plasma",
+      "owned": true,
+      "selected_and_fired": true
+    }
+  ],
+  "chaos_bfg_gate_masks": [
+    0,
+    1,
+    3,
+    7,
+    15
+  ],
+  "chaos_single_shotgun_fired": true,
+  "chaos_bfg_fired": {
+    "cells_before": 300,
+    "cells_after": 180
+  },
+  "result": "PASS",
+  "wad_sha256": "ab027fbeebe20787214a3bc1239bba73271030dc284cd108c20ae8bc73752fc8"
+}

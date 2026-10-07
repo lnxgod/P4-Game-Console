@@ -1,6 +1,6 @@
 # Game Changers AI multiplayer arena
 
-M5Stack Tab5 candidate, Console OS **0.56**. This is a special selection inside
+M5Stack Tab5 candidate, Console OS **0.57**. This is a special selection inside
 **Multiplayer**, with no separate launcher tile. Ordinary Doom shareware and
 Chex Quest retain their separate content and two-player adapters. Installation and physical acceptance are recorded separately below.
 
@@ -18,12 +18,12 @@ the exact arena bundle on microSD. The host is both a player and the server:
 one host plus up to three guests, two to four total. There is no separate fifth,
 non-playing server.
 
-The host's **Map** setting offers 26 choices:
+The host's **Map** setting offers 29 choices:
 
-- **Pure Hell: Shotguns** (default): supplied v0.5 MAP01, then MAP02 rockets,
-  then MAP01, indefinitely. Both ordinary and secret exits follow this loop;
-  there is no MAP03 or commercial finale.
-- **Pure Hell: Rockets**: start with MAP02, then the same two-map loop.
+- **Pure Hades MAP01–MAP05**: Shotguns (default), Rockets, Plasma, Pure Chaos,
+  and Double-Barrel Finale. Start at any of the five maps, then loop through
+  the pack indefinitely. Both ordinary and secret exits wrap MAP05 to MAP01.
+  The finale has no BFG or obsolete BFG switches.
 - **DWANGO 5 MAP01–MAP24**: start at the selected map, advance through that
   pack, and wrap MAP24 to MAP01. Both exit types stay inside the pack.
 
@@ -62,21 +62,28 @@ The three unchanged input WADs are:
 | File | Bytes | SHA-256 |
 | --- | ---: | --- |
 | FREEDOOM2.WAD | 28,787,748 | `a8772e088847032510d97ba2312406a6998f21cbab44d4ff10696faa9c0ecd4b` |
-| PUREHELL.WAD | 875,026 | `b0e8ab211fe263bdf263b219cd0f3584cac0071ec1cf3ce73defa843f00a3663` |
+| PUREHADES.WAD | 2,313,392 | `ab027fbeebe20787214a3bc1239bba73271030dc284cd108c20ae8bc73752fc8` |
 | DWANGO5.WAD | 2,109,396 | `2b7658f126321fc2ccf953dbbe8d585b4162350080b9715b46fc617d32cdb13a` |
 
-Pure Hell comes from the supplied v0.5 Shotguns/Rockets/Metal archive. Its two
-embedded MIDI lumps are the supplied **Beasts of Horizon** by Josephus
-“DH4050” Astartes, matching the pinned Freedoom 0.13.0 music. The original
-standalone MIDI, Freedoom COPYING and credits, Pure Hell README/build manifest,
-and DWANGO5.TXT/FILE_ID.DIZ accompany the WADs under `/GCADOOM`: **11 files** in
-all. Startup exact-hashes every required file, including the notices.
+Pure Hades v0.6 replaces Pure Hell. Its authoritative source is
+[lnxgod/pure-hades](https://github.com/lnxgod/pure-hades/tree/142c6ff56ff8fb9eee40e6b2ea7875a0424337e8).
+The exact release, Python map sources, original music, artwork and notices are
+vendored in [this monorepo](../game-data/pure-hades/README.md). Maps and music
+use CC BY-SA 4.0, original Python source uses MIT, and Freedoom-derived artwork
+retains its BSD notices. All 44 upstream files are hash-pinned in
+`third_party/pure-hades.json`; the WAD is reproducible from those sources.
 
-DWANGO 5 was acquired from the [Doom2.net archive](https://www.doom2.net/doom2/wads/DWANGO5.ZIP).
+The USB bundle contains **16 required files**: three WADs plus the pack README,
+manifest, credits, tracklist and licenses, and both DWANGO notices. Notices
+retain their `licenses/` and `music/` paths under `/GCADOOM`. The five map MIDI
+tracks are embedded in the WAD; the full source pack also carries their original
+standalone files. Startup exact-hashes every required file, including notices.
+
+DWANGO 5 comes from the [Doom2.net archive](https://www.doom2.net/doom2/wads/DWANGO5.ZIP).
 Its archive digest, original credits and local paths are pinned in
 `third_party/game-data.json`. Freedoom and DWANGO remain ignored local inputs.
-[Pure Hell v0.5](../game-data/pure-hell/v0.5/PUREHELL.WAD) and its original
-MIDI, notices and build manifest are included with the owner’s authorization.
+Pure Hell is no longer selectable or provisioned. An old inactive `PUREHELL.WAD`
+on an existing SD card is not loaded by this firmware.
 No WAD is embedded in firmware. This integration does not grant redistribution
 rights to DWANGO or its music.
 
@@ -84,21 +91,21 @@ The engine loads Freedoom Phase 2 plus both PWADs. It records each admitted
 pack's map/music indices and isolates DWANGO's global lump names in memory.
 Selecting a DWANGO arena selects its geometry and map music explicitly, while
 Freedoom supplies textures, sounds, skies and interface graphics. DWANGO's old
-global sound/graphic replacements do not overwrite Pure Hell. The input files
+global sound/graphic replacements do not overwrite Pure Hades. The input files
 remain byte-for-byte unchanged. General DeHackEd/Boom/MBF/UDMF/ACS compatibility
 and arbitrary user WAD selection are not implied.
 
 The room identity hashes the three ordered WAD digests, with a versioned
-prefix: `6fbdec7a25f87088884382706fbe2c73dba284c3139ee04f1113d7fb7bba3960`.
-The special mode advertises protocol 4; ordinary Doom keeps protocol 3.
+prefix: `363c69fd5b0ae3faa5360d96624414e6dabd2d4c9c86d1eab518899d8095358b`.
+The special mode advertises protocol 5; ordinary Doom keeps protocol 3.
 The generated content header and USB admission table share the pinned metadata.
 
 The base WAD cannot fit beside the engine's 6 MiB zone in Tab5's 32 MiB PSRAM.
 The OS therefore retains read-only streams under its storage lease, hashes each
 whole WAD and records SHA-256 per 4096-byte block during the same pass. Runtime
 cache misses verify those digests. Corruption/short reads permanently fail the
-reader. Three digest tables and block caches total about **255 KiB**, rather
-than retaining 30 MiB of WAD snapshots. Ordinary Doom/Chex keep their existing
+reader. Three digest tables and block caches total about **266 KiB**, rather
+than retaining 32 MiB of WAD snapshots. Ordinary Doom/Chex keep their existing
 immutable PSRAM snapshots. USB/content writes remain excluded during play.
 
 From a fresh clone, fetch the pinned external files and stage the complete
@@ -108,7 +115,7 @@ size and SHA-256 checks; conflicting existing files are never overwritten.
 - [Freedoom 0.13.0 ZIP](https://github.com/freedoom/freedoom/releases/download/v0.13.0/freedoom-0.13.0.zip)
   ([official checksums](https://github.com/freedoom/freedoom/releases/download/v0.13.0/freedoom-0.13.0-CHECKSUM)); use **freedoom2.wad**.
 - [DWANGO 5 ZIP](https://www.doom2.net/doom2/wads/DWANGO5.ZIP); preserve both notices.
-- [Pure Hell pack in this repository](../game-data/pure-hell/README.md).
+- [Pure Hades pack in this repository](../game-data/pure-hades/README.md).
 
 Run:
 
@@ -124,7 +131,7 @@ reboots through the existing service:
 ```sh
 python3 scripts/p4-usb-content.py game-changers-ai \
   local-data/doom/freedoom2.wad \
-  --pack game-data/pure-hell/v0.5 \
+  --pack game-data/pure-hades/v0.6 \
   --dwango local-data/doom/arena-inbox/dwango5 --port /dev/cu.<tab5>
 ```
 
@@ -142,7 +149,7 @@ duplicates. Heartbeats continue while a missing guest stalls input. Runtime
 JOIN cannot allocate a new member.
 
 Votes use two reserved chat bytes in that same ordered tic stream, with bounded
-opcodes, a generation token and a three-tic partial-command lifetime. No second
+opcodes, a generation token in a disjoint byte range and a three-tic partial-command lifetime. No second
 transport or server is introduced. Departures, idle rules, vote counts and map
 transitions run on identical 35 Hz simulation tics. The visit ledger is separate
 from vanilla's per-level frags. The engine skips respawning in the old world
@@ -158,10 +165,10 @@ Automated evidence includes:
   including high-bit vote bytes, selected-map propagation, guest departure and
   host shutdown.
 - Full engine address-sanitizer exercise: four seats, 15-second idle/fire rules,
-  fresh return, ordinary/secret Pure Hell looping, controller-menu proposal,
+  fresh return, ordinary/secret five-map Pure Hades looping, controller-menu proposal,
   majority switch, all 24 DWANGO maps and wraparound, and voting back to Pure
-  Hell with the same score/visit/membership. Selected map/music lumps and Pure
-  Hell weapon populations are checked. Separate starts cover Pure Hell MAP02
+  Hades with the same score/visit/membership. Selected map/music lumps and Pure
+  Hades weapon populations are checked. Separate starts cover Pure Hades MAP05
   and DWANGO MAP24.
 - Exact input/header checks, three admitted WAD directory validators and
   complete local bundle staging. USB preflight tests cover required notices and
@@ -176,23 +183,24 @@ Reproduce the full engine test with the pinned host compiler/SDK:
 P4_DOOM_ASAN=1 P4_DOOM_ARENA_HOST_TEST=1 scripts/doom/build-host.sh
 P4_DOOM_MAX_FRAMES=100000 build-host/doom/doom-arena-headless \
   -iwad local-data/doom/freedoom2.wad \
-  -file game-data/pure-hell/v0.5/PUREHELL.WAD \
+  -file game-data/pure-hades/v0.6/PUREHADES.WAD \
         local-data/doom/arena-inbox/dwango5/DWANGO5.WAD -warp 1 -skill 3
 ```
 
-The [arena content receipt](../test-runs/2026-10-05-game-changers-ai-arena-content.json)
+The historical [arena content receipt](../test-runs/2026-10-05-game-changers-ai-arena-content.json)
 binds exact sources, inputs, logs and firmware. These are automated host tests
 and captured-frame inspection, not interactive gameplay or physical acceptance.
 Four Tab5s still need discovery/startup, controls, sound, SD latency, memory
 headroom, sustained frame cadence, and loss/recovery checks. A build does not
 qualify the device's 30 FPS release floor.
 
-The release branch is `codex/doom-arena-release`, based on the native 0.55
-release. The earlier 0.53 receipts remain historical host/build evidence. The prior
+The Pure Hades successor is based on the merged multiplayer reliability fixes.
+All consoles need the 0.57 firmware and replacement content bundle together.
+The old Pure Hell bundle is incompatible with protocol 5. The earlier 0.53 receipts remain historical host/build evidence. The prior
 [implementation receipt](../test-runs/2026-10-05-game-changers-ai-doom-implementation.json)
 is historical and predates the supplied PWAD/voting work.
 
-## Installed Tab5 0.56 successor
+## Historical Tab5 0.56 installation (Pure Hell)
 
 [The exact installation record](../test-runs/2026-10-06-doom-arena-install.json)
 covers the two connected, separately backed-up Tab5s: A/ST7121 and B/ST7123.

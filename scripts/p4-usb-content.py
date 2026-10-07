@@ -115,7 +115,7 @@ def arena_inputs(iwad: Path, pack: Path, dwango: Path):
     result = []
     for entry in ARENA_BUNDLE["files"]:
         spec = CONTENT_SPECS[entry["command"]]
-        path = iwad if entry["symbol"] == "BASE" else (dwango if entry["symbol"].startswith("DWANGO") else pack) / entry["filename"]
+        path = iwad if entry["symbol"] == "BASE" else (dwango if entry["symbol"].startswith("DWANGO") else pack) / entry.get("pack_path", entry["filename"])
         result.append((spec, path.resolve()))
     # No serial connection or device writes until every local input passes.
     for spec, path in result:
@@ -347,10 +347,10 @@ def parser() -> argparse.ArgumentParser:
             "input", nargs="?", type=Path, default=spec.default_path
         )
         content.add_argument("--port")
-    arena = subparsers.add_parser("game-changers-ai", help="install the verified Freedoom + Pure Hell + DWANGO 5 bundle and notices")
+    arena = subparsers.add_parser("game-changers-ai", help="install the verified Freedoom + Pure Hades + DWANGO 5 bundle and notices")
     arena.add_argument("input", nargs="?", type=Path, default=CONTENT_SPECS["freedoom2"].default_path)
     arena.add_argument("--dwango", type=Path, default=CONTENT_SPECS["dwango5"].default_path.parent)
-    arena.add_argument("--pack", type=Path, default=CONTENT_SPECS["pure-hell"].default_path.parent)
+    arena.add_argument("--pack", type=Path, default=CONTENT_SPECS["pure-hades"].default_path.parent)
     arena.add_argument("--port")
     chex = subparsers.add_parser(
         "chex",
