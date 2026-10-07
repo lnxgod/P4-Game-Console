@@ -72,6 +72,12 @@ static void music_tick(bc_audio_t *a)
         if(!break_down && step==28U) a->drum_left[3]=bc_drum_specs[3].frames;
     }
 }
+// All callers pass bounded mixer products, so negation cannot reach INT_MIN.
+// Keep signed division's truncation toward zero while avoiding an RV32 DIV.
+static inline __attribute__((always_inline)) int signed_shift(int value,unsigned bits)
+{
+    return value<0?-(int)((unsigned)(-value)>>bits):(int)((unsigned)value>>bits);
+}
 static int music_voice(bc_music_voice_t *v,unsigned voice,unsigned theme)
 {
     if(v->age>=v->frames) return 0;
@@ -86,9 +92,9 @@ static int music_voice(bc_music_voice_t *v,unsigned voice,unsigned theme)
     const int16_t *wave=voice==1U?bc_wave_bass:voice>=2U?bc_wave_keys:
                         theme==2U?bc_wave_glass_lead:bc_wave_lead;
     const unsigned index=(v->phase>>8U)&255U,fraction=v->phase&255U;
-    const int value=((int)wave[index]*(int)(256U-fraction)+(int)wave[(index+1U)&255U]*(int)fraction)/256;
+    const int value=signed_shift((int)wave[index]*(int)(256U-fraction)+(int)wave[(index+1U)&255U]*(int)fraction,8U);
     v->phase=(v->phase+v->step)&65535U;
-    return (value*(int)envelope/1024)*(int)v->velocity/(voice>=2U?1024:512);
+    return signed_shift(signed_shift(value*(int)envelope,10U)*(int)v->velocity,voice>=2U?10U:9U);
 }
 static void music_sample(bc_audio_t *a,unsigned theme,int *left,int *right)
 {
@@ -104,12 +110,14 @@ static void music_sample(bc_audio_t *a,unsigned theme,int *left,int *right)
         percussion+=bc_drum_data[bc_drum_specs[d].offset+offset];
     }
     const int echo=a->delay[a->delay_at];
-    const unsigned side=((unsigned)a->delay_at+BC_MUSIC_DELAY/2U)%BC_MUSIC_DELAY;
+    unsigned side=(unsigned)a->delay_at+BC_MUSIC_DELAY/2U;
+    if(side>=BC_MUSIC_DELAY) side-=BC_MUSIC_DELAY;
     const int early=a->delay[side];
-    a->delay[a->delay_at]=(int16_t)(lead/3+echo/4);
-    a->delay_at=(uint16_t)(((unsigned)a->delay_at+1U)%BC_MUSIC_DELAY);
-    *left=lead+bass+key1+key2/2+key3/3+percussion+early/2;
-    *right=lead+bass+key1/3+key2/2+key3+percussion+echo/2;
+    a->delay[a->delay_at]=(int16_t)(lead/3+signed_shift(echo,2U));
+    a->delay_at=(uint16_t)((unsigned)a->delay_at+1U);
+    if(a->delay_at==BC_MUSIC_DELAY) a->delay_at=0U;
+    *left=lead+bass+key1+signed_shift(key2,1U)+key3/3+percussion+signed_shift(early,1U);
+    *right=lead+bass+key1/3+signed_shift(key2,1U)+key3+percussion+signed_shift(echo,1U);
     const bc_track_t *track=&bc_tracks[a->music_track];
     const uint32_t position=(uint32_t)a->music_tick*track->tick_frames+a->music_frame;
     const uint32_t total=(uint32_t)track->ticks*track->tick_frames;
@@ -118,7 +126,9 @@ static void music_sample(bc_audio_t *a,unsigned theme,int *left,int *right)
     uint32_t fade=1600U;
     if(position<fade) fade=position;
     if(total-position-1U<fade) fade=total-position-1U;
-    *left=*left*(int)fade/1600;*right=*right*(int)fade/1600;
+    if(fade!=1600U) {
+        *left=*left*(int)fade/1600;*right=*right*(int)fade/1600;
+    }
     if(++a->music_frame==track->tick_frames) {
         a->music_frame=0U;
         if(++a->music_tick==track->ticks) {
@@ -167,6 +177,7 @@ void bc_audio_update(p4_game_context_t *c,bc_state_t *s,uint32_t elapsed)
     const bool quiet=s->world.phase==BC_PAUSED || s->world.phase==BC_LOST || s->world.phase==BC_WAIT || s->world.phase==BC_TRANSFER;
     const bool battle=s->world.phase==BC_PLAY || s->world.phase==BC_READY;
     const int target=quiet?0:battle?128:76;
+    const unsigned theme=s->world.theme%BC_THEMES;
     unsigned remaining=elapsed*16U;
     while(remaining) {
         const unsigned frames=remaining>256U?256U:remaining;
@@ -175,8 +186,10 @@ void bc_audio_update(p4_game_context_t *c,bc_state_t *s,uint32_t elapsed)
             if(a->music_gain<target) ++a->music_gain;
             else if(a->music_gain>target) --a->music_gain;
             int left,right;
-            music_sample(a,s->world.theme%BC_THEMES,&left,&right);
-            left=left*a->music_gain/128;right=right*a->music_gain/128;
+            music_sample(a,theme,&left,&right);
+            if(a->music_gain!=128) {
+                left=signed_shift(left*a->music_gain,7U);right=signed_shift(right*a->music_gain,7U);
+            }
             int effects=0;
             for(unsigned n=0;n<active_count;++n) {
                 const unsigned voice=active[n];

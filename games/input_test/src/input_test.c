@@ -8,6 +8,14 @@
 #include "p4/draw.h"
 #include "p4/game.h"
 #include "p4/input.h"
+#include "p4/card_art.h"
+
+/* Draw the canonical layout directly at native resolution; touch points remain
+ * canonical input units. Legacy diagnostic surfaces retain their own path. */
+#define p4_draw_fill_rect p4_card_fill
+#define p4_draw_rect p4_card_outline
+#define p4_draw_fill_circle p4_card_circle
+#define p4_draw_text p4_card_text
 
 typedef struct {
     p4_game_input_t input;
@@ -103,10 +111,15 @@ static bool game_render(p4_game_context_t *context,
         return false;
     }
     const input_test_state_t *const state = context->state;
+    const bool native = surface->width == P4_GAME_SURFACE_HIGH_RES_WIDTH;
     p4_draw_clear(surface, UINT16_C(0x0008));
     p4_draw_fill_rect(surface, 0, 0, 320, 19, UINT16_C(0x001F));
-    p4_draw_text(surface, 8, 6, "INPUT MONITOR", UINT16_C(0xFFFF), 1U, 13U);
-    p4_draw_text(surface, 222, 6, "BACK EXITS", UINT16_C(0xBDF7), 1U, 10U);
+    p4_draw_text(surface, native ? 109 : 8, 6, "INPUT MONITOR",
+                 UINT16_C(0xFFFF), 1U, 13U);
+    if (!native) {
+        p4_draw_text(surface, 222, 6, "BACK EXITS",
+                     UINT16_C(0xBDF7), 1U, 10U);
+    }
 
     static const struct {
         const char *label;
@@ -151,8 +164,15 @@ static bool game_render(p4_game_context_t *context,
         p4_draw_fill_circle(surface, x, y, 5, UINT16_C(0x0008));
         p4_draw_fill_circle(surface, x, y, 2, UINT16_C(0xFFFF));
     }
-    p4_draw_text(surface, 8, 141, "START CLEARS EVENT COUNT",
-                 UINT16_C(0xBDF7), 1U, 24U);
+    if (native) {
+        p4_draw_text(surface, 160, 116, "START CLEARS",
+                     UINT16_C(0xBDF7), 1U, 12U);
+        p4_draw_text(surface, 160, 129, "EVENT COUNT",
+                     UINT16_C(0xBDF7), 1U, 11U);
+    } else {
+        p4_draw_text(surface, 8, 141, "START CLEARS EVENT COUNT",
+                     UINT16_C(0xBDF7), 1U, 24U);
+    }
     p4_game_draw_standard_controls(
         surface, UINT16_C(0x7BEF), UINT16_C(0x07FF),
         state->input.held);
@@ -171,7 +191,8 @@ const p4_game_descriptor_t p4_input_test_game = {
     .title = "Input Monitor",
     .subtitle = "Check buttons and touch",
     .accent_rgb565 = UINT16_C(0x07FF),
-    .required_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS,
+    .required_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS |
+                             P4_GAME_CAP_VIDEO_HIGH_RES,
     .optional_capabilities = 0U,
     .state_bytes = sizeof(input_test_state_t),
     .start = game_start,

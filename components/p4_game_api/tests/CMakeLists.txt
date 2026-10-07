@@ -98,3 +98,15 @@ target_compile_features(p4_mesh_tests PRIVATE c_std_11)
 target_compile_options(p4_mesh_tests PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Werror -fsanitize=address,undefined -fno-omit-frame-pointer)
 target_link_options(p4_mesh_tests PRIVATE -fsanitize=address,undefined)
 add_test(NAME p4_mesh_tests COMMAND p4_mesh_tests)
+
+add_executable(p4_cartridge_rotating_surface_tests
+    test_cartridge_rotating_surface.c ../runtime/cartridge_main.c)
+target_link_libraries(p4_cartridge_rotating_surface_tests PRIVATE p4_game_api)
+target_compile_definitions(p4_cartridge_rotating_surface_tests PRIVATE
+    P4_GAME_ENTRY_SYMBOL=p4_test_rotating_game)
+target_compile_features(p4_cartridge_rotating_surface_tests PRIVATE c_std_11)
+target_compile_options(p4_cartridge_rotating_surface_tests PRIVATE
+    -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Werror
+    -fsanitize=address,undefined -fno-omit-frame-pointer)
+target_link_options(p4_cartridge_rotating_surface_tests PRIVATE -fsanitize=address,undefined)
+add_test(NAME p4_cartridge_rotating_surface_tests COMMAND p4_cartridge_rotating_surface_tests)

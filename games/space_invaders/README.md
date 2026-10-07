@@ -63,3 +63,25 @@ The board-independent cartridge is built through `make console-os-tab5-idf` for 
 The presentation pass adds no raster asset bytes and keeps the existing native/fallback art. Focused sanitizer coverage verifies frozen title gameplay/RNG, A and Start launch, canonical Play and Exit through the actual mapper, held launch suppression across repeated update slices, release-to-fire, invalid/dragged-in title touches, direct retry, and Back priority. Existing held-fire, shield, collision, interpolation and padded-stride regressions remain passing. The final focused suite is 1/1 and SDL suite 5/5.
 
 `build-host/presentation-pass/space_invaders/` contains exact-source title/play/pause/result captures at both sizes, pinned RV32 assembly, package log and active 2,000-frame CPU benchmarks. The trace now presses A, releases at frame1 and begins combat controls at frame2; 1,884 native and 1,881 fallback frames change. Native p95/p99/max: **0.118/0.151/0.355 ms**; fallback max: **0.063 ms**. All frames are below33.333ms on the Mac CPU; this is not device FPS. Latest interactive acceptance and hardware limitations remain in `LOCAL_TESTING.json`.
+
+## Maintained Tab5 native rendering
+
+Current package version: **1.1.1**. The native manifest and C descriptor both
+require `video-highres`. Maintained Tab5 play renders directly into a **768×480
+RGB565** surface. Canonical **320×200** coordinates remain input units for touch
+and controls. The retained fallback renderer and earlier fallback guidance are
+for explicitly selected legacy diagnostics.
+
+The target is **60 FPS** with an actual-device release floor of **30 FPS**.
+Acceptance requires verification of the actual runtime surface and readable
+opening/title, busy gameplay, pause, and results views on the exact Tab5 unit,
+with the package and Console OS identities recorded. Those device readability
+and cadence checks remain pending until measured; host captures and CPU timing
+do not establish device acceptance.
+
+`tools/render_hires.c` captures native 768×480 views by default using the actual
+required-capability descriptor. Pass `--legacy` after the output prefix to add
+explicitly labeled 320×200 diagnostic captures through a temporary legacy
+descriptor copy.
+
+`tools/render_preview.c` also captures native 768×480 by default.

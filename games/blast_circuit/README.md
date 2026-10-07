@@ -18,26 +18,32 @@ The 17×13 field requires direct 768×480 rendering on maintained Tab5. Canonica
 tests cover legacy clipping compatibility only. Solo play
 fills the other three seats with bots. First to three round wins takes the match.
 
-Version **0.2.8** is a host-tested native-readability cartridge candidate
+Version **0.2.9** is a native-readability cartridge candidate
 (`enabled: true`) included in generated bundles. The requested SNES Bomberman
 benchmark remains a quality target, not an established equivalence.
 No commercial game code, sprites, maps, music or sound samples are included.
 
-This revision requires `video-highres` in both manifest and C descriptor, so
-the existing Tab5 optional-resolution experiment cannot select a 320×200
-framebuffer for it. Walkable floors use quiet theme colors; players, bombs and
-pickups receive dark outlines. Material artwork, rules, saves, controls and
-multiplayer protocol remain unchanged. The workshop FLOOR brush shows the
+This revision requires `video-highres` in both manifest and C descriptor.
+The exact installed cartridge's Tab5 runtime log confirms a 768×480 game
+surface on Console OS 0.77. Walkable floors use quiet theme colors; players,
+bombs and pickups receive dark outlines. The workshop FLOOR brush shows the
 same swatch used in the arena.
 
-All three focused game tests and five generic-host tests pass with sanitizers;
-native opening, arena, material/hazard, pause, workshop and result captures
-were inspected. The pinned RISC-V cartridge build is within its size and stack
-frame limits. Exact evidence is in
-[NATIVE_READABILITY_TESTING.json](NATIVE_READABILITY_TESTING.json).
-Fresh interactive play and physical native readability/cadence are still
-pending. Earlier local/device evidence below is history for older artifacts,
-not acceptance of this revision. No device was changed for this update.
+Three focused 0.2.9 game tests pass with sanitizers, exact renderer/audio
+comparisons pass, and the pinned cartridge build stays within its size and
+stack frame limits. Five generic-host checks also pass for the isolated
+0.2.9 build; the merge validation binds their unchanged source inputs.
+Clean on-device loop windows measured **19.09–19.50 FPS**. The owner explicitly
+accepted this approximately 19 FPS candidate for commit; it **does not meet
+the global 30 FPS release floor**, which remains unchanged. The final scale-1
+panel-buffer image was reviewed by the testing agent: quiet floors, distinct
+outlined bots, bombs/crates/hazards and legible timer/score labels were visible.
+That single image does not prove continuous gameplay or physical display
+readability. Person-viewed optical play and sustained/presented-frame cadence
+remain pending. Exact package, OS, hashed unit, timing and capture evidence is
+in [NATIVE_READABILITY_TESTING.json](NATIVE_READABILITY_TESTING.json) and the
+[device receipt](../../hardware/test-runs/2026-10-07-tab5-native-readability-and-removal.json).
+Earlier local/device evidence below remains history for older artifacts.
 
 ## Play and create
 

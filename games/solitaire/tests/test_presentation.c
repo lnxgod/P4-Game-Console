@@ -25,7 +25,8 @@ static int save_frame(const p4_game_surface_t *surface,unsigned stage)
 }
 int main(void)
 {
-    CHECK((p4_solitaire_game.optional_capabilities&P4_GAME_CAP_VIDEO_HIGH_RES)!=0U);
+    CHECK((p4_solitaire_game.required_capabilities&P4_GAME_CAP_VIDEO_HIGH_RES)!=0U);
+    CHECK((p4_solitaire_game.optional_capabilities&P4_GAME_CAP_VIDEO_HIGH_RES)==0U);
     for(unsigned high=0;high<2U;++high){
         const unsigned width=high?768U:320U,height=high?480U:200U,stride=width+7U;
         const size_t count=(size_t)stride*height+32U;
@@ -33,7 +34,14 @@ int main(void)
         void *state=calloc(1U,p4_solitaire_game.state_bytes);CHECK(state!=NULL);
         const p4_game_services_t services={.available_capabilities=P4_GAME_CAP_VIDEO|P4_GAME_CAP_CONTROLS|(high?P4_GAME_CAP_VIDEO_HIGH_RES:0U)};
         p4_game_instance_t instance={0};
-        CHECK(p4_game_instance_start(&instance,&p4_solitaire_game,&services,state,p4_solitaire_game.state_bytes));
+        /* The copy lives until stop; only this explicit legacy branch permits 320x200. */
+        p4_game_descriptor_t legacy = p4_solitaire_game;
+        legacy.required_capabilities &= ~(uint32_t)P4_GAME_CAP_VIDEO_HIGH_RES;
+        legacy.optional_capabilities |= P4_GAME_CAP_VIDEO_HIGH_RES;
+        if (!high) {
+            CHECK(!p4_game_instance_start(&instance,&p4_solitaire_game,&services,state,p4_solitaire_game.state_bytes));
+        }
+        CHECK(p4_game_instance_start(&instance,high?&p4_solitaire_game:&legacy,&services,state,p4_solitaire_game.state_bytes));
         p4_game_surface_t surface={.pixels=allocation+16U,.width=(uint16_t)width,.height=(uint16_t)height,.stride_pixels=stride};
         for(unsigned stage=0;stage<7U;++stage){
             if(stage==3U){

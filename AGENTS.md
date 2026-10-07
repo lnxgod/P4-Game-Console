@@ -132,10 +132,11 @@ artifact/evidence update. For SD-backed firmware use `DOOM1.WAD`,
 `docs/DOOM.md`. Never push WADs, generated WAD assembly, WAD-bearing firmware
 binaries, or local recovery images to GitHub.
 
-Standard installs exclude disabled games and `GAMES/WIP`. Byte Buddy, Red Dragon
-and Skyline Leap are development-only; use `make install-dev GAME=<slug>
-PORT=<port>` only on explicit opt-in. Keep Tide Maze available per the owner’s
-request and preserve its open acceptance notes. See
+Standard installs exclude disabled games and `GAMES/WIP`. Byte Buddy, Red Dragon,
+Skyline Leap and Tide Maze are development-only; use `make install-dev GAME=<slug>
+PORT=<port>` only on explicit opt-in. Tide Maze was removed from the product
+library at the owner’s request; preserve its source, save identity and failed
+acceptance notes. See
 [developer installs](games/README.md#developer-installs).
 
 Routine authorized Tab5 app flashes use device checksum verification; do not

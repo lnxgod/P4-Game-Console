@@ -2,7 +2,7 @@
   "schema": 1,
   "format": "p4-native-elf-v1",
   "api_version": 1,
-  "version": "2.2.0",
+  "version": "2.2.1",
   "package_file": "P4_RUMMY.P4G",
   "component": "p4_rummy",
   "sources": [
@@ -19,12 +19,12 @@
   "accent_rgb565": "0x5fea",
   "required_capabilities": [
     "video",
-    "controls"
+    "controls",
+    "video-highres"
   ],
   "optional_capabilities": [
     "audio-tone",
-    "multiplayer-session",
-    "video-highres"
+    "multiplayer-session"
   ],
   "license": "MIT",
   "assets": "original-imagegen-felt-and-card-backs-plus-native-resolution-code-cards-suits-and-crisp-ui",

@@ -7,6 +7,7 @@
  */
 
 #include "cartridge_timing.h"
+#include "cartridge_video.h"
 #include <stdbool.h>
 #include <ctype.h>
 #include <inttypes.h>
@@ -101,34 +102,19 @@
 #if P4_CONSOLE_WIFI_MULTIPLAYER
 #include "platform/multiplayer_wifi.h"
 #endif
-/* Native fixed-ABI frame copies regressed measured Tab5 Air cadence. Keep
- * the worker available for explicit experiments; select once at launch. */
+/* Native games render into worker leases directly. Core 0 owns callbacks;
+ * core 1 consumes an immutable prior frame without a full-frame copy. */
 #ifndef P4_CONSOLE_NATIVE_VIDEO_WORKER
-#define P4_CONSOLE_NATIVE_VIDEO_WORKER 0
+#define P4_CONSOLE_NATIVE_VIDEO_WORKER 1
 #endif
 #if P4_CONSOLE_NATIVE_VIDEO_WORKER != 0 && P4_CONSOLE_NATIVE_VIDEO_WORKER != 1
 #error "P4_CONSOLE_NATIVE_VIDEO_WORKER must be 0 or 1"
 #endif
-/* Explicit Tab5 Air Hockey fallback experiment; selected once at launch. */
-#ifndef P4_CONSOLE_NATIVE_AIR_LOW_RES
-#define P4_CONSOLE_NATIVE_AIR_LOW_RES 0
-#endif
-#if P4_CONSOLE_NATIVE_AIR_LOW_RES != 0 && P4_CONSOLE_NATIVE_AIR_LOW_RES != 1
-#error "P4_CONSOLE_NATIVE_AIR_LOW_RES must be 0 or 1"
-#endif
-/* Explicit Tab5 Tide/Blast fallback experiment; selected once at launch. */
-#ifndef P4_CONSOLE_NATIVE_TIDE_BLAST_LOW_RES
-#define P4_CONSOLE_NATIVE_TIDE_BLAST_LOW_RES 0
-#endif
-#if P4_CONSOLE_NATIVE_TIDE_BLAST_LOW_RES != 0 && P4_CONSOLE_NATIVE_TIDE_BLAST_LOW_RES != 1
-#error "P4_CONSOLE_NATIVE_TIDE_BLAST_LOW_RES must be 0 or 1"
-#endif
-/* Explicit Tab5 Checkers fallback experiment; selected once at launch. */
-#ifndef P4_CONSOLE_NATIVE_CHECKERS_LOW_RES
-#define P4_CONSOLE_NATIVE_CHECKERS_LOW_RES 0
-#endif
-#if P4_CONSOLE_NATIVE_CHECKERS_LOW_RES != 0 && P4_CONSOLE_NATIVE_CHECKERS_LOW_RES != 1
-#error "P4_CONSOLE_NATIVE_CHECKERS_LOW_RES must be 0 or 1"
+/* Reject stale diagnostic flags instead of silently rendering at 320x200. */
+#if CONFIG_P4_BOARD_M5STACK_TAB5 && \
+    (P4_CONSOLE_NATIVE_AIR_LOW_RES || P4_CONSOLE_NATIVE_TIDE_BLAST_LOW_RES || \
+     P4_CONSOLE_NATIVE_CHECKERS_LOW_RES)
+#error "Tab5 requires native 768x480 game rendering; low-resolution overrides are retired"
 #endif
 #ifndef P4_CONSOLE_SIGNAL_SCAN
 #define P4_CONSOLE_SIGNAL_SCAN 0
@@ -1442,6 +1428,28 @@ _Static_assert((int)CONSOLE_SHELL_MAX_CONTACTS ==
                "console contact bound must match the touch service");
 #endif
 
+static bool native_game_surface(
+    const platform_game_catalog_entry_t *game,
+    uint16_t *width, uint16_t *height)
+{
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    const cartridge_video_policy_t policy = CARTRIDGE_VIDEO_TAB5;
+#elif CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+    const cartridge_video_policy_t policy = CARTRIDGE_VIDEO_LEGACY_HIGH_RES;
+#else
+    const cartridge_video_policy_t policy = CARTRIDGE_VIDEO_LEGACY;
+#endif
+    return game != NULL && game->valid && cartridge_video_select(policy,
+        game->package.required_capabilities, game->package.optional_capabilities,
+        width, height);
+}
+
+static bool native_game_video_supported(const platform_game_catalog_entry_t *game)
+{
+    uint16_t width = 0U, height = 0U;
+    return native_game_surface(game, &width, &height);
+}
+
 static bool append_app(const console_app_descriptor_t *app)
 {
     if (app == NULL || s_app_count >= CONSOLE_SHELL_MAX_APPS) {
@@ -1501,7 +1509,7 @@ static bool build_app_registry(void)
                 game->package.required_capabilities |
                 game->package.optional_capabilities),
             .page = CONSOLE_PAGE_EXTERNAL,
-            .enabled = true,
+            .enabled = native_game_video_supported(game),
         };
         if (!append_app(&launcher)) {
             return false;
@@ -9017,6 +9025,7 @@ typedef struct {
     p4_game_platform_audio_t audio;
     p4_game_audio_worker_t *audio_worker;
 #if CONFIG_P4_BOARD_M5STACK_TAB5
+    p4_cartridge_host_v1_t *host;
     p4_game_video_presenter_t *video_presenter;
     p4_game_video_stats_t video_stats;
 #endif
@@ -9364,16 +9373,19 @@ static void cartridge_video_snapshot(cartridge_run_context_t *context)
                              context->video_stats.wait_timeouts;
     context->display_ack_misses = misses > UINT32_MAX ? UINT32_MAX : (uint32_t)misses;
 }
+static int cartridge_video_close(cartridge_run_context_t *context);
 static bool cartridge_video_open(cartridge_run_context_t *context,
-                                 size_t width, size_t height)
+                                 p4_cartridge_host_v1_t *host)
 {
+    context->host = host;
     if (!P4_CONSOLE_NATIVE_VIDEO_WORKER) {
         ESP_LOGI(TAG, "P4_CONSOLE_OS VIDEO_MODE app=%s mode=synchronous reason=native-worker-disabled",
                  context->game_id);
         return true; /* Zero-initialized presenter stays NULL for this launch. */
     }
     const p4_game_video_config_t config = {
-        .width = width, .height = height, .backend_context = context,
+        .width = host->surface.width, .height = host->surface.height,
+        .backend_context = context,
         .backend_submit = cartridge_video_backend,
         .backend_timeout_error = ESP_ERR_TIMEOUT,
         .now_us = cartridge_video_now_us,
@@ -9391,13 +9403,26 @@ static bool cartridge_video_open(cartridge_run_context_t *context,
                  context->game_id, result);
         return false;
     }
-    ESP_LOGI(TAG, "P4_CONSOLE_OS VIDEO_WORKER_START app=%s game_core=%d worker_core=1 priority=2 native_audio_priority=4 source=fixed-abi-copy width=%u height=%u",
-             context->game_id, xPortGetCoreID(), (unsigned)width, (unsigned)height);
+    const int acquired = p4_game_video_presenter_acquire(context->video_presenter,
+        &host->surface.pixels, &host->surface.stride_pixels,
+        CONSOLE_SUBMIT_TIMEOUT_MS);
+    if (acquired != DW_OK) {
+        ESP_LOGE(TAG, "P4_CONSOLE_OS VIDEO_WORKER_LEASE_FAILED app=%s error=%d action=reject-launch",
+                 context->game_id, acquired);
+        (void)cartridge_video_close(context);
+        return false;
+    }
+    ESP_LOGI(TAG, "P4_CONSOLE_OS VIDEO_WORKER_START app=%s game_core=%d worker_core=1 priority=2 native_audio_priority=4 source=rotating-lease width=%u height=%u",
+             context->game_id, xPortGetCoreID(), (unsigned)host->surface.width,
+             (unsigned)host->surface.height);
     return true;
 }
 static int cartridge_video_close(cartridge_run_context_t *context)
 {
     if (!context->video_presenter) return DW_OK;
+    /* The cartridge no longer has a writable frame. Stop cancels an initial
+     * or next-frame lease, then drains the immutable committed source. */
+    context->host->surface.pixels = NULL;
     /* A pending backend owns its full submit budget; join needs additional
      * scheduling margin, as in the existing Doom display worker teardown. */
     const uint32_t join_timeout_ms = 1000U;
@@ -9495,10 +9520,21 @@ static bool cartridge_present(void *opaque)
     }
 #if CONFIG_P4_BOARD_M5STACK_TAB5
     if (context->video_presenter) {
-        const int video_result = p4_game_video_presenter_present(
-            context->video_presenter, s_pixels, context->high_res_video
-                ? P4_GAME_SURFACE_HIGH_RES_WIDTH : P4_GAME_SURFACE_WIDTH,
+        /* Invalidate the borrowed pointer before publishing its lease. A
+         * timeout may happen before commit or after the first-frame barrier;
+         * cancel safely handles either case without touching an active frame. */
+        context->host->surface.pixels = NULL;
+        const int video_result = p4_game_video_presenter_commit(
+            context->video_presenter,
             CONSOLE_SUBMIT_TIMEOUT_MS, CONSOLE_SUBMIT_TIMEOUT_MS);
+        int lease_result = video_result;
+        if (video_result == DW_TIMEOUT)
+            lease_result = p4_game_video_presenter_cancel(context->video_presenter);
+        if (lease_result == DW_OK) {
+            lease_result = p4_game_video_presenter_acquire(context->video_presenter,
+                &context->host->surface.pixels, &context->host->surface.stride_pixels,
+                CONSOLE_SUBMIT_TIMEOUT_MS);
+        }
         if (context->frame_clock.started)
             cartridge_phase_record(&context->present_phase,
                                     esp_timer_get_time() - present_start);
@@ -9508,8 +9544,13 @@ static bool cartridge_present(void *opaque)
             (previous_misses == 0U || context->display_ack_misses / 300U != previous_misses / 300U))
             ESP_LOGW(TAG, "P4_CONSOLE_OS CARTRIDGE_FRAME_ACK_MISSED app=%s action=continue backlight_preserved=1 count=%lu mode=worker",
                 context->game_id, (unsigned long)context->display_ack_misses);
-        return (video_result == DW_OK || video_result == DW_TIMEOUT) &&
-            context->video_stats.hard_error == DW_OK;
+        if (lease_result != DW_OK || context->video_stats.hard_error != DW_OK) {
+            context->host->surface.pixels = NULL;
+            ESP_LOGE(TAG, "P4_CONSOLE_OS VIDEO_WORKER_LEASE_FAILED app=%s error=%d hard_error=%d action=stop-cartridge",
+                context->game_id, lease_result, context->video_stats.hard_error);
+            return false;
+        }
+        return true; /* Rendering resumes only with a new writable lease. */
     }
 #endif
     esp_err_t result;
@@ -9780,52 +9821,17 @@ static esp_err_t run_stored_game(
     }
     const uint32_t capabilities = game->package.required_capabilities |
         game->package.optional_capabilities;
-    const bool high_res_requested =
-        (capabilities & P4_GAME_CAP_VIDEO_HIGH_RES) != 0U;
-#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 || CONFIG_P4_BOARD_M5STACK_TAB5
-#if CONFIG_P4_BOARD_M5STACK_TAB5 && P4_CONSOLE_NATIVE_AIR_LOW_RES
-    const bool air_low_res =
-        strcmp(game->package.id, "org.p4console.p4-air-hockey") == 0 &&
-        (game->package.required_capabilities & P4_GAME_CAP_VIDEO_HIGH_RES) == 0U &&
-        (game->package.optional_capabilities & P4_GAME_CAP_VIDEO_HIGH_RES) != 0U;
-#else
-    const bool air_low_res = false;
-#endif
-#if CONFIG_P4_BOARD_M5STACK_TAB5 && P4_CONSOLE_NATIVE_TIDE_BLAST_LOW_RES
-    const bool tide_blast_low_res =
-        (strcmp(game->package.id, "org.p4console.tide-maze") == 0 ||
-         strcmp(game->package.id, "org.p4console.blast-circuit") == 0) &&
-        (game->package.required_capabilities & P4_GAME_CAP_VIDEO_HIGH_RES) == 0U &&
-        (game->package.optional_capabilities & P4_GAME_CAP_VIDEO_HIGH_RES) != 0U;
-#else
-    const bool tide_blast_low_res = false;
-#endif
-#if CONFIG_P4_BOARD_M5STACK_TAB5 && P4_CONSOLE_NATIVE_CHECKERS_LOW_RES
-    const bool checkers_low_res =
-        strcmp(game->package.id, "org.p4console.checkers") == 0 &&
-        (game->package.required_capabilities & P4_GAME_CAP_VIDEO_HIGH_RES) == 0U &&
-        (game->package.optional_capabilities & P4_GAME_CAP_VIDEO_HIGH_RES) != 0U;
-#else
-    const bool checkers_low_res = false;
-#endif
-    const bool high_res_video =
-        high_res_requested && !air_low_res && !tide_blast_low_res && !checkers_low_res;
-#else
-    if ((game->package.required_capabilities &
-         P4_GAME_CAP_VIDEO_HIGH_RES) != 0U) {
+    uint16_t surface_width = 0U;
+    uint16_t surface_height = 0U;
+    if (!native_game_surface(game, &surface_width, &surface_height)) {
         ESP_LOGW(TAG,
                  "P4_CONSOLE_OS CARTRIDGE_UNSUPPORTED app=%s "
-                 "capability=video-highres",
+                 "capability=video-highres reason=surface-contract",
                  game->package.id);
         return ESP_ERR_NOT_SUPPORTED;
     }
-    const bool high_res_video = false;
-    (void)high_res_requested;
-#endif
-    const uint16_t surface_width = high_res_video
-        ? P4_GAME_SURFACE_HIGH_RES_WIDTH : P4_GAME_SURFACE_WIDTH;
-    const uint16_t surface_height = high_res_video
-        ? P4_GAME_SURFACE_HIGH_RES_HEIGHT : P4_GAME_SURFACE_HEIGHT;
+    const bool high_res_video =
+        surface_width == P4_GAME_SURFACE_HIGH_RES_WIDTH;
     if (protected_game_lineage_check(&game->package) ==
         P4_PROTECTED_GAME_REJECTED) {
         ESP_LOGE(TAG,
@@ -9886,15 +9892,6 @@ static esp_err_t run_stored_game(
         }
     }
     p4_game_input_mapper_init(&context->input_mapper);
-#if CONFIG_P4_BOARD_M5STACK_TAB5
-    if (!cartridge_video_open(context, surface_width, surface_height)) {
-        if (multiplayer_ready) native_multiplayer_end();
-        cartridge_audio_close(context);
-        (void)cartridge_save_close(context->save, game->package.id);
-        heap_caps_free(context);
-        return ESP_ERR_INVALID_STATE;
-    }
-#endif
 #if P4_CONSOLE_SIGNAL_SCAN
     const bool signal_scan_ready = platform_signal_scan_ready();
 #else
@@ -9976,6 +9973,15 @@ static esp_err_t run_stored_game(
         .multiplayer_profile = multiplayer_ready
             ? &game->package.multiplayer_profile : NULL,
     };
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    if (!cartridge_video_open(context, &host)) {
+        if (multiplayer_ready) native_multiplayer_end();
+        cartridge_audio_close(context);
+        (void)cartridge_save_close(context->save, game->package.id);
+        heap_caps_free(context);
+        return ESP_ERR_INVALID_STATE;
+    }
+#endif
     ESP_LOGI(TAG,
              "P4_CONSOLE_OS CARTRIDGE_START app=%s file=%s api=1 "
              "source=%s runtime=psram-elf audio=%s signals=%s saves=%s "

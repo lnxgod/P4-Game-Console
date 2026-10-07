@@ -21,12 +21,13 @@ package = module('package', ROOT / 'scripts/build-game-package.py')
 fixtures = module('fixtures', ROOT / 'scripts/tests/test-game-registry.py')
 
 class ReleaseTests(unittest.TestCase):
-    def test_current_selection_and_retained_tide_maze(self):
+    def test_current_selection_excludes_removed_tide_maze(self):
         standard = {m['component'] for m in registry.discover(ROOT / 'games')}
         dev = {m['component'] for m in registry.discover(ROOT / 'games', dev_only=True)}
-        self.assertEqual(dev, {'byte_buddy', 'lord', 'skyline_leap'})
+        self.assertEqual(dev, {'byte_buddy', 'lord', 'skyline_leap', 'tide_maze'})
         self.assertFalse(standard & dev)
-        self.assertTrue({'blast_circuit', 'tide_maze'} <= standard)
+        self.assertIn('blast_circuit', standard)
+        self.assertNotIn('tide_maze', standard)
 
     def test_enabled_wip_and_disabled_normal_folder_need_opt_in(self):
         with tempfile.TemporaryDirectory() as temporary:

@@ -96,7 +96,7 @@ static void departure_case(int kind, uint8_t survivor, uint16_t width)
         services[slot].multiplayer_read_status = departure_status;
         services[slot].multiplayer_send = departure_send;
         if (width == 768U) services[slot].available_capabilities |= P4_GAME_CAP_VIDEO_HIGH_RES;
-        CHECK(p4_game_instance_start(&instances[slot], &p4_p4_yahtzee_game,
+        CHECK(test_start_game(&instances[slot], &p4_p4_yahtzee_game,
             &services[slot], &states[slot], sizeof(states[slot])));
     }
     CHECK(update_empty(&instances[0], 16U));
@@ -190,7 +190,7 @@ static void pair_start(lifecycle_pair_t *pair, bool pump)
         pair->services[slot] = network_services(&pair->link.endpoints[slot]);
         pair->services[slot].multiplayer_read_status = departure_status;
         pair->services[slot].multiplayer_send = departure_send;
-        CHECK(p4_game_instance_start(&pair->instances[slot], &p4_p4_yahtzee_game,
+        CHECK(test_start_game(&pair->instances[slot], &p4_p4_yahtzee_game,
             &pair->services[slot], &pair->states[slot], sizeof(pair->states[slot])));
     }
     if (pump) {
@@ -389,7 +389,7 @@ static void initial_wait_and_send_failure(void)
         p4_game_instance_stop(&pair.instances[slot]);
         loss_kind[slot] = 5;
         zero_generation = true;
-        CHECK(p4_game_instance_start(&pair.instances[slot], &p4_p4_yahtzee_game,
+        CHECK(test_start_game(&pair.instances[slot], &p4_p4_yahtzee_game,
             &pair.services[slot], &pair.states[slot], sizeof(pair.states[slot])));
         CHECK(pair.states[slot].phase == P4_YAHTZEE_MENU);
         CHECK(update_button(&pair.instances[slot], P4_BUTTON_DOWN));
@@ -471,7 +471,7 @@ static void first_snapshot_roster(void)
     /* A valid but different three-player host roster must not overwrite the guest binding. */
     pair.link.player_count = 3U;
     p4_game_instance_stop(&pair.instances[0]);
-    CHECK(p4_game_instance_start(&pair.instances[0], &p4_p4_yahtzee_game,
+    CHECK(test_start_game(&pair.instances[0], &p4_p4_yahtzee_game,
         &pair.services[0], &pair.states[0], sizeof(pair.states[0])));
     CHECK(update_empty(&pair.instances[0], 16U));
     pair.link.player_count = 2U;
@@ -479,7 +479,7 @@ static void first_snapshot_roster(void)
     CHECK(pair.states[1].player_count == 2U && !pair.states[1].network_started);
     CHECK(!pair.states[1].network_error && pair.states[1].phase == P4_YAHTZEE_NETWORK_WAIT);
     p4_game_instance_stop(&pair.instances[0]);
-    CHECK(p4_game_instance_start(&pair.instances[0], &p4_p4_yahtzee_game,
+    CHECK(test_start_game(&pair.instances[0], &p4_p4_yahtzee_game,
         &pair.services[0], &pair.states[0], sizeof(pair.states[0])));
     CHECK(update_empty(&pair.instances[0], 16U));
     CHECK(update_empty(&pair.instances[1], 16U));

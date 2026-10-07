@@ -7,6 +7,21 @@
 #include <string.h>
 static int failures;
 #define CHECK(c) do { if(!(c)){fprintf(stderr,"FAIL %s:%d: %s\n",__FILE__,__LINE__,#c);++failures;} } while(0)
+/* Explicit legacy renderer fixture; retained storage outlives every instance.
+ * Maintained native admission continues to use p4_maze_chase_game unchanged. */
+static const p4_game_descriptor_t *legacy_descriptor(void)
+{
+    static p4_game_descriptor_t descriptor;
+    static bool initialized;
+    if (!initialized) {
+        descriptor = p4_maze_chase_game;
+        descriptor.required_capabilities &= ~(uint32_t)P4_GAME_CAP_VIDEO_HIGH_RES;
+        descriptor.optional_capabilities |= P4_GAME_CAP_VIDEO_HIGH_RES;
+        initialized = true;
+    }
+    return &descriptor;
+}
+
 static bool start_width(p4_game_instance_t *game,maze_chase_state_t *state,p4_audio_mixer_t *mixer,uint16_t width)
 {
     static p4_game_services_t services;
@@ -14,7 +29,13 @@ static bool start_width(p4_game_instance_t *game,maze_chase_state_t *state,p4_au
     services=(p4_game_services_t){.available_capabilities=P4_GAME_CAP_VIDEO|P4_GAME_CAP_CONTROLS|P4_GAME_CAP_AUDIO_TONE|(width==768U?P4_GAME_CAP_VIDEO_HIGH_RES:0U),
         .audio_context=mixer,.play_tone=p4_audio_mixer_service_play_tone,.stop_audio=p4_audio_mixer_service_stop};
     *game=(p4_game_instance_t){0};
-    return p4_game_instance_start(game,&p4_maze_chase_game,&services,state,sizeof(*state));
+    CHECK((p4_maze_chase_game.required_capabilities & P4_GAME_CAP_VIDEO_HIGH_RES) != 0U);
+    CHECK((p4_maze_chase_game.optional_capabilities & P4_GAME_CAP_VIDEO_HIGH_RES) == 0U);
+    if (width != 768U) {
+        CHECK(!p4_game_instance_start(game,&p4_maze_chase_game,&services,state,sizeof(*state)));
+    }
+    return p4_game_instance_start(game,
+        width == 768U ? &p4_maze_chase_game : legacy_descriptor(),&services,state,sizeof(*state));
 }
 static bool start(p4_game_instance_t *game,maze_chase_state_t *state,p4_audio_mixer_t *mixer)
 {return start_width(game,state,mixer,768U);}

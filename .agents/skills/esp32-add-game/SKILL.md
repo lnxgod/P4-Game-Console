@@ -242,9 +242,10 @@ and distinguish native-size art, operator feedback and measured P4 cadence.
 ## Standard and development content
 
 Standard bundles exclude disabled manifests and every `GAMES/WIP` title.
-Byte Buddy, Red Dragon and Skyline Leap require an explicit
+Byte Buddy, Red Dragon, Skyline Leap and Tide Maze require an explicit
 `make install-dev GAME=<slug> PORT=<port>`; see the
 [developer install guide](../../../games/README.md#developer-installs).
-Tide Maze remains in the normal bundle by the owner's request; preserve its
-open device-lag acceptance. Feature Blast Circuit, with Wacky Wheels as an
-installed fallback. Preserve hidden games' source, package IDs and saves.
+Tide Maze is disabled and removed from the product library at the owner's
+request; preserve its source, package/save identity and failed device
+acceptance. Feature Blast Circuit, with Wacky Wheels as an installed fallback.
+Preserve hidden games' source, package IDs and saves.

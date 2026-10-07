@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 
+#include "test_game_start.h"
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -535,7 +536,7 @@ static bool test_meld_controls(void)
     const p4_game_services_t services = local_services(&audio);
     p4_game_instance_t instance = {0};
     p4_rummy_state_t state;
-    CHECK(p4_game_instance_start(
+    CHECK(test_start_game(
         &instance, &p4_p4_rummy_game, &services, &state, sizeof(state)));
     state.phase = P4_RUMMY_PHASE_DISCARD;
     state.current_player = 0U;
@@ -562,7 +563,7 @@ static bool test_meld_controls(void)
 
     p4_game_instance_t touch_instance = {0};
     p4_rummy_state_t touch_state;
-    CHECK(p4_game_instance_start(
+    CHECK(test_start_game(
         &touch_instance, &p4_p4_rummy_game, &services,
         &touch_state, sizeof(touch_state)));
     touch_state.phase = P4_RUMMY_PHASE_DISCARD;
@@ -592,7 +593,7 @@ static bool test_touch_pile_and_targeted_layoff(void)
     const p4_game_services_t services = local_services(&audio);
     p4_game_instance_t pile_instance = {0};
     p4_rummy_state_t pile_state;
-    CHECK(p4_game_instance_start(
+    CHECK(test_start_game(
         &pile_instance, &p4_p4_rummy_game, &services,
         &pile_state, sizeof(pile_state)));
     pile_state.phase = P4_RUMMY_PHASE_DRAW;
@@ -630,7 +631,7 @@ static bool test_touch_pile_and_targeted_layoff(void)
 
     p4_game_instance_t layoff_instance = {0};
     p4_rummy_state_t layoff_state;
-    CHECK(p4_game_instance_start(
+    CHECK(test_start_game(
         &layoff_instance, &p4_p4_rummy_game, &services,
         &layoff_state, sizeof(layoff_state)));
     layoff_state.phase = P4_RUMMY_PHASE_DISCARD;
@@ -664,7 +665,7 @@ static bool test_cpu_and_local_lifecycle(void)
     const p4_game_services_t services = local_services(&audio);
     p4_game_instance_t instance = {0};
     p4_rummy_state_t state;
-    CHECK(p4_game_instance_start(
+    CHECK(test_start_game(
         &instance, &p4_p4_rummy_game, &services, &state, sizeof(state)));
     CHECK(state.phase == P4_RUMMY_PHASE_SETUP);
     CHECK(update_button(&instance, P4_BUTTON_A));
@@ -739,7 +740,7 @@ static bool test_cpu_and_local_lifecycle(void)
 
     p4_game_instance_t touch_instance = {0};
     p4_rummy_state_t touch_state;
-    CHECK(p4_game_instance_start(
+    CHECK(test_start_game(
         &touch_instance, &p4_p4_rummy_game, &services,
         &touch_state, sizeof(touch_state)));
     CHECK(tap(&touch_instance, 180U, 102U));
@@ -768,7 +769,7 @@ static bool start_network_table(
     for (uint8_t player = 0U; player < player_count; ++player) {
         services[player] = network_services(
             &audio[player], &link->endpoints[player]);
-        CHECK(p4_game_instance_start(
+        CHECK(test_start_game(
             &instances[player], &p4_p4_rummy_game, &services[player],
             &states[player], sizeof(states[player])));
         CHECK(states[player].network_mode);
@@ -1162,8 +1163,10 @@ int main(void)
 {
     if (!p4_game_descriptor_valid(&p4_p4_rummy_game) ||
         p4_p4_rummy_game.launcher_id != 118U ||
-        (p4_p4_rummy_game.optional_capabilities &
+        (p4_p4_rummy_game.required_capabilities &
          P4_GAME_CAP_VIDEO_HIGH_RES) == 0U ||
+        (p4_p4_rummy_game.optional_capabilities &
+         P4_GAME_CAP_VIDEO_HIGH_RES) != 0U ||
         !test_melds_and_deadwood() ||
         !test_rummy_500_scoring() ||
         !test_play_melds_and_go_out() ||

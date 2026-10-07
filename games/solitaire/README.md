@@ -81,3 +81,18 @@ traces and complete update/audio/render timings are recorded in
 `PRESENTATION_TESTING.json`. The measured host runs stayed below the 33.333 ms
 budget; these CPU measurements exclude display transfer and do not certify
 30 FPS on the ESP32-P4 hardware.
+
+## Maintained Tab5 native rendering
+
+Current package version: **1.1.1**. The native manifest and C descriptor both
+require `video-highres`. Maintained Tab5 play renders directly into a **768×480
+RGB565** surface. Canonical **320×200** coordinates remain input units for touch
+and controls. The retained fallback renderer and earlier fallback guidance are
+for explicitly selected legacy diagnostics.
+
+The target is **60 FPS** with an actual-device release floor of **30 FPS**.
+Acceptance requires verification of the actual runtime surface and readable
+opening/title, busy gameplay, pause, and results views on the exact Tab5 unit,
+with the package and Console OS identities recorded. Those device readability
+and cadence checks remain pending until measured; host captures and CPU timing
+do not establish device acceptance.

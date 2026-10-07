@@ -182,10 +182,22 @@ def load_manifest(path: pathlib.Path) -> dict[str, Any]:
     return value
 
 
-def discover(games_root: pathlib.Path, *, dev_only: bool = False) -> list[dict[str, Any]]:
+def discover(
+    games_root: pathlib.Path, *, dev_only: bool = False,
+    require_native_resolution: bool = False,
+) -> list[dict[str, Any]]:
     if not games_root.is_dir():
         raise ManifestError(f"games root is not a directory: {games_root}")
     manifests = [load_manifest(path) for path in sorted(games_root.glob("*/game.json"))]
+    if require_native_resolution:
+        for manifest in manifests:
+            # The maintained release library requires native rendering. Keep
+            # disabled/WIP source and generic legacy ABI validation available.
+            if (not development_only(manifest) and
+                    "video-highres" not in manifest["required_capabilities"]):
+                fail(manifest["_path"],
+                     "maintained games must require video-highres for native "
+                     "768x480 rendering; optional video-highres is insufficient")
     retired_path = games_root / "retired.json"
     if retired_path.exists():
         try:
@@ -255,8 +267,13 @@ def main() -> int:
     parser.add_argument("--check", action="store_true")
     parser.add_argument("--dev-only", action="store_true",
                         help="select held-back games for the separate developer build")
+    parser.add_argument(
+        "--require-native-resolution", action="store_true",
+        help="require video-highres in the maintained release library")
     args = parser.parse_args()
-    manifests = discover(args.games_root.resolve(), dev_only=args.dev_only)
+    manifests = discover(
+        args.games_root.resolve(), dev_only=args.dev_only,
+        require_native_resolution=args.require_native_resolution)
     if not args.check and args.output_cmake is None:
         parser.error("generation requires --output-cmake")
     if args.output_cmake is not None:

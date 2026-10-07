@@ -1,0 +1,265 @@
+{
+  "schema": 1,
+  "recorded_at_utc": "2026-10-07T22:15:45.131057+00:00",
+  "purpose": "Validation of the resolved integration into current OpenAI main; historical device acceptance remains bound to its original OS/package/unit.",
+  "source": {
+    "repository": "https://github.com/openai/P4-Game-Console",
+    "target_main": "e7f22b2d3fa242cebf21e6f52a28a7ed73526376",
+    "incoming_scoped_commit": "944fed4607d52958c76f4c690f7f1a95dba5024e",
+    "resolved_changed_file_count_excluding_this_receipt": 129,
+    "resolved_changed_file_manifest_sha256": "a666a7810e29663212424a35cf2e75a2ce5c65909c85b2236c744c6d1a141013",
+    "manifest_recipe": "Sort changed paths relative to target_main, excluding this receipt. Each entry has path, Git mode, and SHA-256 of file bytes; hash JSON with sort_keys=True and separators=(comma,colon), no trailing newline.",
+    "build_source_note": "The local firmware was built before committing the resolved integration. Its embedded build ID is the target base; the resolved file digest binds the actual source inputs.",
+    "pinned_sdk_and_component_locks_unchanged": true,
+    "target_debug_ppa_progress_loader_and_game_lifecycle_preserved": true
+  },
+  "fresh_validation": {
+    "library_and_package_checks": {
+      "passed": true,
+      "count": 10,
+      "names": [
+        "generate-game-registry",
+        "test-console-native-resolution",
+        "test-game-registry",
+        "test-game-release",
+        "test-new-game",
+        "game-checkers",
+        "game-p4_air_hockey",
+        "game-p4_yahtzee",
+        "blast-package",
+        "blast-exact-installed-package-match"
+      ]
+    },
+    "game_sanitizer_ctests": {
+      "passed": true,
+      "count": 6,
+      "suites": [
+        {
+          "game": "checkers",
+          "passed": true,
+          "ctest_count": 2,
+          "ctests": [
+            "checkers_tests",
+            "checkers_presentation_tests"
+          ],
+          "sanitizers": [
+            "address",
+            "undefined"
+          ],
+          "sanitized_c_object_count": 15,
+          "sanitizer_flags_verified": true,
+          "build_recipe_sha256": "c56c2ab9243f4bc70631d72590b623b6de3ca16920d474f71b09200d7ca37e46",
+          "game_input_closure_sha256": "64374c5eec1df82d171a663f937d450d325930f881cef993281a083fb90edd69"
+        },
+        {
+          "game": "p4_air_hockey",
+          "passed": true,
+          "ctest_count": 2,
+          "ctests": [
+            "p4_air_hockey_tests",
+            "p4_air_hockey_presentation_tests"
+          ],
+          "sanitizers": [
+            "address",
+            "undefined"
+          ],
+          "sanitized_c_object_count": 15,
+          "sanitizer_flags_verified": true,
+          "build_recipe_sha256": "839e2c76cd828db99ec0c191d0529991e8ea1227f2a84678f03508a7264928fa",
+          "game_input_closure_sha256": "250610de2167a356d20e1047292dac8bd7dc7be052eef3e2a314ed42b02e3598"
+        },
+        {
+          "game": "p4_yahtzee",
+          "passed": true,
+          "ctest_count": 2,
+          "ctests": [
+            "p4_yahtzee_tests",
+            "p4_yahtzee_presentation_tests"
+          ],
+          "sanitizers": [
+            "address",
+            "undefined"
+          ],
+          "sanitized_c_object_count": 16,
+          "sanitizer_flags_verified": true,
+          "build_recipe_sha256": "09b6c60cc11c137083f2b15e93cdce482f6ce12497267b81c35db824378dbc07",
+          "game_input_closure_sha256": "17f9a07182645e08ea96130528bec71f7f637fe852917c28f5b52a65d232fb3b"
+        }
+      ]
+    },
+    "platform_and_rotating_cartridge_ctests": {
+      "passed": true,
+      "count": 5,
+      "sanitizers": [
+        "address",
+        "undefined"
+      ],
+      "evidence": {
+        "path": "build-host/native-readability-merge/tests/merged-component-test-results.json",
+        "bytes": 33591,
+        "sha256": "baab9f5048fbe028636682c8d75ade3b656030974b8ac918cb356bf1bc9e9237",
+        "local_ignored_evidence": true
+      }
+    },
+    "native_worker_gate": {
+      "passed": true,
+      "unittest_methods": 3,
+      "sanitizers": [
+        "address",
+        "undefined"
+      ]
+    },
+    "target_native_debug_lifetime": {
+      "passed": true,
+      "unittest_methods": 1
+    },
+    "ci_install_path_host": {
+      "passed": true,
+      "python_test_count": 99,
+      "shell_environment_checks_passed": true,
+      "evidence": {
+        "path": "build-host/native-readability-merge/tests/ci-install-path-host-result.json",
+        "bytes": 1992,
+        "sha256": "1787ecd2f6ee2dffd060035281ba0dc3c92439eb809c717918f84bfddd778435",
+        "local_ignored_evidence": true
+      }
+    },
+    "independent_integration_review": {
+      "actionable_blockers": 0
+    },
+    "library_raw_evidence": {
+      "path": "build-host/native-readability-merge/tests/library-results.json",
+      "bytes": 7354,
+      "sha256": "8e153de8db6ddc562477eaf86ddf987716e0aef56d758090da99192efb5bec5a",
+      "local_ignored_evidence": true
+    },
+    "target_preservation_evidence": {
+      "path": "build-host/native-readability-merge/tests/target-preservation-review.json",
+      "bytes": 2988,
+      "sha256": "d617170b2388c0fb5c906d96d05a37dd34354a3b4b8b49565b09e72e92e4fefe",
+      "local_ignored_evidence": true
+    }
+  },
+  "reused_validation": {
+    "rationale": "Game API, CP437, and generic SDL host inputs are identical to the isolated tested snapshot. Eleven games have identical owned C/header/CMake/manifest/fixture/asset inputs. Only Checkers, Air Hockey, and Yahtzee changed compiled/test inputs; their two CTests each were rebuilt and rerun above. README/evidence edits are excluded from compiled inputs.",
+    "historical_validation_receipt": "hardware/test-runs/2026-10-07-native-library-isolated-commit.json",
+    "shared_input_file_count": 60,
+    "shared_inputs_byte_identical": true,
+    "shared_input_closure_sha256": "488e5cc68b8a30cd098ad7c83efdd0499a27a35ab32120796a168c4053be435a",
+    "game_local_ctests": 20,
+    "generic_sdl_ctests": 15,
+    "unchanged_games": [
+      {
+        "game": "av_test",
+        "input_closure_sha256": "ba2065449d98033ae0a9bd42b25d296f0ee72af51fbf7ff1de8d0b420520fe6c"
+      },
+      {
+        "game": "blast_circuit",
+        "input_closure_sha256": "32342ca3e39f69bc73af2009179e6892197855cdcb3fc0c041e48c88fde594ce"
+      },
+      {
+        "game": "calculator",
+        "input_closure_sha256": "3a68fca4e5a9bffd458af5a66497dea0892ff2462a5bc3adb42a51b8cabcdc0a"
+      },
+      {
+        "game": "color_clash",
+        "input_closure_sha256": "48eb293675ecf7a55d6f33fbed5ab601b3cbad2dd5c91589b630d82fb252d9d2"
+      },
+      {
+        "game": "frog_hop",
+        "input_closure_sha256": "a0e5b09df2002b96b1c6bbd93543c11fcc30f5871c66ac5b4726c79a66f2208a"
+      },
+      {
+        "game": "input_test",
+        "input_closure_sha256": "8376af9583254a14a305052f2c3ce588fbf61a8053d3dd8dd536d3f95e64f22a"
+      },
+      {
+        "game": "maze_chase",
+        "input_closure_sha256": "cbb5d17261d205f5b5ea75e3091b7c1ce89a8e2a2e3b27bea328d5d7ade3d44d"
+      },
+      {
+        "game": "p4_rummy",
+        "input_closure_sha256": "8f2597ec0e4b48f0240f63d6118ccd90091e5634fab555a53581abd3103d56fe"
+      },
+      {
+        "game": "solitaire",
+        "input_closure_sha256": "5d88dd564aa2bb394a638ffe205e7a17ad13d5e3be618db58ed54d240056fa6a"
+      },
+      {
+        "game": "space_invaders",
+        "input_closure_sha256": "9a92e182f34a054432d3065a281eef84de30be441ef5bb8a735c8946a8c59fdc"
+      },
+      {
+        "game": "texas_holdem",
+        "input_closure_sha256": "eeaa09940f5304baa2d142724a2fd14a05710dd17c34d0481608096ac3f46afb"
+      }
+    ],
+    "source_closure_evidence": {
+      "path": "build-host/native-readability-merge/tests/merged-game-source-closure.json",
+      "bytes": 56834,
+      "sha256": "debbc9b57b29cd5a586a16b1dda7365b6c75067246c320805767da41627cfbda",
+      "local_ignored_evidence": true
+    },
+    "device_cadence_qualified_by_host_tests": false
+  },
+  "blast_exact_package": {
+    "version": "0.2.9",
+    "package": {
+      "path": "build-host/native-readability-merge/tests/BLAST_CIRCUIT.P4G",
+      "bytes": 463948,
+      "sha256": "261aa298185b2ca277f2665821fb6708682712019ff940c0526e4a5611f699b9",
+      "local_ignored_evidence": true
+    },
+    "rebuilt": true,
+    "matches_installed_and_isolated_package_sha256": true,
+    "expected_sha256": "261aa298185b2ca277f2665821fb6708682712019ff940c0526e4a5611f699b9",
+    "payload_bytes": 463692,
+    "payload_sha256": "d4e8c9e19019ecff1269cc0f9157634419f6b52cd0670e430b2ed26a30b59e5a",
+    "package_source_closure_file_count": 37,
+    "package_source_closure_sha256": "7d7a2b239d8c88c0e38cdf69da434a540aa97887380460c07eae2438c0d15738",
+    "package_source_closure_byte_identical": true,
+    "compiler": {
+      "path": "/Users/whatzer/Documents/ChatGPT/p4console/.tools/espressif/tools/riscv32-esp-elf/esp-14.2.0_20251107/riscv32-esp-elf/bin/riscv32-esp-elf-gcc",
+      "sha256": "69e796c3a3e35ab36b256209e2d40f21cc946bf842718b4fc6d45159208d7910",
+      "libgcc_path": "/Users/whatzer/Documents/ChatGPT/p4console/.tools/espressif/tools/riscv32-esp-elf/esp-14.2.0_20251107/riscv32-esp-elf/bin/../lib/gcc/riscv32-esp-elf/14.2.0/libgcc.a",
+      "libgcc_sha256": "f21c43a27a515e777bedbe995362cd62eca4b481b12eb6d459a8d4b0c74a11b5"
+    },
+    "compiler_and_libgcc_hashes_verified": true,
+    "strip_sha256": "5567f77d8b6ad46f23ef925fa61655aa56672aa5255f7646b9550c8a065e0afb"
+  },
+  "firmware": {
+    "command": "P4_IDF_PATH=$PWD/.tools/esp-idf-v5.5.3 IDF_TOOLS_PATH=$PWD/.tools/espressif P4_TAB5_FIRMWARE_ONLY=1 make console-os-tab5-idf",
+    "exit_code": 0,
+    "esp_idf": "v5.5.3",
+    "version": "0.78",
+    "image": {
+      "path": "apps/console_os/build-tab5/p4_console_os.bin",
+      "bytes": 4478448,
+      "sha256": "537a788af4f8d7b4e4b9148859c4d939cbe49da196e61cc9907e24d0832e872e"
+    },
+    "update": {
+      "path": "apps/console_os/build-tab5/P4UPDATE.P4U",
+      "bytes": 4478704,
+      "sha256": "64945201f7231751a31826fa2334bea009157e3fbb4d2a690e622f999a5004cd"
+    },
+    "verifier": "tab5-build-candidate-verified",
+    "firmware_only": true,
+    "content_bundle_verified": false,
+    "hardware_verified": false,
+    "flash_authorized": false,
+    "log": {
+      "path": "build-host/native-readability-merge/tab5-build.log",
+      "bytes": 254886,
+      "sha256": "11dbdb2303fcb024af0e94c83c973516a76ad48ad661a1f77784da7c55f39cc6",
+      "local_ignored_evidence": true
+    }
+  },
+  "acceptance_limits": {
+    "no_device_writes_during_integration": true,
+    "new_worker_device_cadence_and_multicore_overlap": "pending",
+    "physical_optical_readability": "pending",
+    "general_device_release_floor_fps": 30,
+    "historical_blast_owner_exception": "Approximately 19 FPS accepted only for exact Blast 0.2.9 / OS 0.77 / Tab5 A candidate in its acceptance report.",
+    "historical_device_receipt": "hardware/test-runs/2026-10-07-tab5-native-readability-and-removal.json"
+  }
+}

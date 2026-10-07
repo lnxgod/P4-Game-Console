@@ -8,6 +8,7 @@
 #include "p4_air_hockey_internal.h"
 
 extern const p4_game_descriptor_t p4_p4_air_hockey_game;
+#include "legacy_surface.h"
 
 enum {
     LINK_QUEUE = 64,
@@ -208,7 +209,7 @@ static void test_offline_lifecycle_and_render_bounds(void)
     };
     p4_game_instance_t instance = {0};
     p4_air_hockey_state_t state;
-    CHECK(p4_game_instance_start(&instance, &p4_p4_air_hockey_game,
+    CHECK(test_start_game(&instance, &p4_p4_air_hockey_game,
                                  &services, &state, sizeof(state)));
     CHECK(state.mode == P4_AIR_HOCKEY_OFFLINE);
     CHECK(state.ui_screen == P4_AIR_HOCKEY_UI_TITLE);
@@ -273,7 +274,7 @@ static void test_title_pause_and_gesture_lifecycle(void)
     };
     p4_game_instance_t instance = {0};
     p4_air_hockey_state_t state;
-    CHECK(p4_game_instance_start(&instance, &p4_p4_air_hockey_game, &services, &state, sizeof(state)));
+    CHECK(test_start_game(&instance, &p4_p4_air_hockey_game, &services, &state, sizeof(state)));
     const p4_air_hockey_pose_t initial = p4_air_hockey_render_pose(&state);
     for (unsigned n = 0U; n < 60U; ++n)
         CHECK(update(&instance, 0U, 0U, 100U) == P4_GAME_CONTINUE);
@@ -338,10 +339,10 @@ static void test_title_pause_and_gesture_lifecycle(void)
     CHECK(stops == 6U);
 
     /* Both visible title Exit and controller Back retain the OS lifecycle. */
-    CHECK(p4_game_instance_start(&instance, &p4_p4_air_hockey_game, &services, &state, sizeof(state)));
+    CHECK(test_start_game(&instance, &p4_p4_air_hockey_game, &services, &state, sizeof(state)));
     CHECK(update_touch(&instance, 208U, 130U, 16U) == P4_GAME_EXIT_TO_LAUNCHER);
     p4_game_instance_stop(&instance);
-    CHECK(p4_game_instance_start(&instance, &p4_p4_air_hockey_game, &services, &state, sizeof(state)));
+    CHECK(test_start_game(&instance, &p4_p4_air_hockey_game, &services, &state, sizeof(state)));
     CHECK(update(&instance, P4_BUTTON_BACK, P4_BUTTON_BACK, 16U) == P4_GAME_EXIT_TO_LAUNCHER);
     p4_game_instance_stop(&instance);
 }
@@ -355,7 +356,7 @@ static void test_active_performance_tape(void)
     const p4_game_services_t services = {.available_capabilities=P4_GAME_CAP_VIDEO|P4_GAME_CAP_CONTROLS};
     p4_air_hockey_state_t state;
     p4_game_instance_t instance={0};
-    CHECK(p4_game_instance_start(&instance,&p4_p4_air_hockey_game,&services,&state,sizeof(state)));
+    CHECK(test_start_game(&instance,&p4_p4_air_hockey_game,&services,&state,sizeof(state)));
     unsigned frame=0U, next_frame=0U, next_buttons=0U, buttons=0U, active=0U, moving=0U, title=0U;
     int next_x=-1,next_y=-1,x=-1,y=-1;
     uint32_t previous=0U;
@@ -400,10 +401,10 @@ static void test_two_console_host_authority_and_peer_loss(void)
     p4_game_instance_t client = {0};
     p4_air_hockey_state_t host_state;
     p4_air_hockey_state_t client_state;
-    CHECK(p4_game_instance_start(&host, &p4_p4_air_hockey_game,
+    CHECK(test_start_game(&host, &p4_p4_air_hockey_game,
                                  &host_services, &host_state,
                                  sizeof(host_state)));
-    CHECK(p4_game_instance_start(&client, &p4_p4_air_hockey_game,
+    CHECK(test_start_game(&client, &p4_p4_air_hockey_game,
                                  &client_services, &client_state,
                                  sizeof(client_state)));
     CHECK(host_state.network_role == P4_GAME_MULTIPLAYER_ROLE_HOST);
@@ -514,8 +515,8 @@ static void test_client_presentation_jitter(void)
     test_link_t link;init_link(&link);
     p4_game_services_t hs=network_services(&link.endpoint[0]),cs=network_services(&link.endpoint[1]);
     p4_game_instance_t host={0},client={0};p4_air_hockey_state_t h,c;
-    CHECK(p4_game_instance_start(&host,&p4_p4_air_hockey_game,&hs,&h,sizeof(h)));
-    CHECK(p4_game_instance_start(&client,&p4_p4_air_hockey_game,&cs,&c,sizeof(c)));
+    CHECK(test_start_game(&host,&p4_p4_air_hockey_game,&hs,&h,sizeof(h)));
+    CHECK(test_start_game(&client,&p4_p4_air_hockey_game,&cs,&c,sizeof(c)));
     h.phase=P4_AIR_HOCKEY_PLAY;h.puck_x=80*256;h.puck_y=100*256;
     p4_air_hockey_network_publish(&host.context,&h,true);client_tick(&client,&c,0U);
     CHECK(p4_air_hockey_render_pose(&c).puck_x==80*256);
@@ -554,9 +555,9 @@ static void test_rematch_request_survives_input_drain(void)
         p4_game_services_t cs = network_services(&link.endpoint[1]);
         p4_game_instance_t host = {0}, client = {0};
         p4_air_hockey_state_t h, c;
-        CHECK(p4_game_instance_start(&host, &p4_p4_air_hockey_game,
+        CHECK(test_start_game(&host, &p4_p4_air_hockey_game,
                                     &hs, &h, sizeof(h)));
-        CHECK(p4_game_instance_start(&client, &p4_p4_air_hockey_game,
+        CHECK(test_start_game(&client, &p4_p4_air_hockey_game,
                                     &cs, &c, sizeof(c)));
         h.phase = P4_AIR_HOCKEY_GAME_OVER;
         h.winner = 0U;
@@ -611,7 +612,7 @@ static void test_rematch_does_not_arm_during_play(void)
     p4_game_services_t hs = network_services(&link.endpoint[0]);
     p4_game_instance_t host = {0};
     p4_air_hockey_state_t h;
-    CHECK(p4_game_instance_start(&host, &p4_p4_air_hockey_game,
+    CHECK(test_start_game(&host, &p4_p4_air_hockey_game,
                                 &hs, &h, sizeof(h)));
     h.phase = P4_AIR_HOCKEY_PLAY;
     const uint8_t restart[P4_AIR_HOCKEY_INPUT_BYTES] = {

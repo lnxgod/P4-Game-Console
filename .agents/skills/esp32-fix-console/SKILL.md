@@ -64,7 +64,8 @@ Keep these boundaries intact:
   surface allocation when a game launches at 320×200. Correct the maintained
   path within the authorized task; never introduce or enable a resolution
   downgrade to repair readability/performance. Native cartridges require
-  high resolution in manifest and descriptor; fail cleanly when unavailable.
+  `video-highres` in the manifest and `P4_GAME_CAP_VIDEO_HIGH_RES` in the
+  C descriptor; fail cleanly when unavailable.
   Keep canonical 320×200 input units and board-owned panel scaling unchanged.
   Preserve legacy board/ABI source and recovery contracts for explicit legacy
   work. Skill policy and a host build do not prove the installed OS changed.
@@ -104,15 +105,31 @@ overwrite a shared working tree to manufacture a clean base.
 For OS interface, scrolling, versioning and firmware-only successors, read
 [core successor contracts](references/core-successors.md).
 
-For CPU or audio stutter, follow `docs/GAME_PERFORMANCE.md`'s multicore contract.
-Use both P4 application cores for independent work through shared OS services:
-game callbacks run on core 0 and native audio output on the core-1
-`p4_game_platform` audio worker. The C6 is the radio processor. Preserve single
-ownership, bounded copied commands, nonblocking callbacks and joined teardown
-before freeing resources. Test concurrency and failure paths, and record actual
-core IDs, queue/underrun/clipping counters, stack reserve and game cadence before
-claiming a device improvement. SMP configuration and host tests do not prove
-measured device core use.
+For a multicore service change, follow `docs/GAME_PERFORMANCE.md`. The maintained
+Tab5 candidate keeps game/update/render on core 0, PPA presentation on core 1 at
+priority 2, and native audio output on core 1 at priority 4. Console OS owns
+exactly two native PSRAM framebuffer leases. Read the supplied pixel pointer
+and stride each frame; they may change on every frame. Render the complete
+current frame, never cache the pixel pointer across callbacks, and leave a
+committed source immutable until backend consumption. Preserve bounded
+admission, backpressure, reuse fences and drained/joined teardown before freeing
+OS-owned buffers/context or returning display ownership to the launcher.
+The native backend retains only OS-owned callbacks and pixel buffers, so
+cartridge unload does not invalidate an in-flight frame. A failed join
+retains the worker and its resources until safe shutdown. Synchronous
+recovery preserves
+direct 768x480; never add a low-resolution fallback.
+
+Test rotating leases, source lifetime, concurrent producer/consumer work,
+backpressure, stop/restart and failure paths with race detection where available.
+On the exact OS/package/unit, record actual core IDs/priorities, completed-backend
+frame intervals and concurrent stage timing showing game/update/render work
+overlapping presentation. Keep accepted submissions, backend completions and
+physical scanout evidence distinct. Include queue/backend timeouts, hard errors,
+audio queue rejections, underruns, clipping, write failures and stack reserve.
+Exercise busy play, title/ready, pause and results, plus synchronous native
+recovery. Worker creation and host tests leave achieved device 30 FPS and
+readability pending; this implementation remains a candidate until measured.
 
 ## Guarded Tab5 installation and evidence
 

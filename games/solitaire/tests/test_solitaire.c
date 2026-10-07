@@ -28,8 +28,14 @@ static bool start_game(p4_game_instance_t *instance,
             P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS,
     };
     *instance = (p4_game_instance_t){0};
+    /* This suite preserves canonical touch and the explicit 320x200 legacy renderer.
+     * The presentation suite exercises required native admission and the actual descriptor. */
+    static p4_game_descriptor_t legacy;
+    legacy = p4_solitaire_game;
+    legacy.required_capabilities &= ~(uint32_t)P4_GAME_CAP_VIDEO_HIGH_RES;
+    legacy.optional_capabilities |= P4_GAME_CAP_VIDEO_HIGH_RES;
     return p4_game_instance_start(
-        instance, &p4_solitaire_game, &services, state, sizeof(*state));
+        instance, &legacy, &services, state, sizeof(*state));
 }
 
 static void release_touch(p4_game_instance_t *instance)

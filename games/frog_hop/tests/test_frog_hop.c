@@ -24,6 +24,21 @@ static int s_failures;
         } \
     } while (0)
 
+/* Explicit legacy renderer fixture; retained storage outlives every instance.
+ * Maintained native admission continues to use p4_frog_hop_game unchanged. */
+static const p4_game_descriptor_t *legacy_descriptor(void)
+{
+    static p4_game_descriptor_t descriptor;
+    static bool initialized;
+    if (!initialized) {
+        descriptor = p4_frog_hop_game;
+        descriptor.required_capabilities &= ~(uint32_t)P4_GAME_CAP_VIDEO_HIGH_RES;
+        descriptor.optional_capabilities |= P4_GAME_CAP_VIDEO_HIGH_RES;
+        initialized = true;
+    }
+    return &descriptor;
+}
+
 static uint32_t next_random(uint32_t *state)
 {
     *state = *state * UINT32_C(1664525) + UINT32_C(1013904223);
@@ -45,8 +60,15 @@ static bool start_game(p4_game_instance_t *instance, void *state_memory,
         .stop_audio = p4_audio_mixer_service_stop,
     };
     *instance = (p4_game_instance_t){0};
-    return p4_game_instance_start(instance, &p4_frog_hop_game, &services,
-                                  state_memory,
+    CHECK((p4_frog_hop_game.required_capabilities & P4_GAME_CAP_VIDEO_HIGH_RES) != 0U);
+    CHECK((p4_frog_hop_game.optional_capabilities & P4_GAME_CAP_VIDEO_HIGH_RES) == 0U);
+    if (width != 768U) {
+        CHECK(!p4_game_instance_start(instance, &p4_frog_hop_game, &services,
+                                     state_memory, p4_frog_hop_game.state_bytes));
+    }
+    return p4_game_instance_start(instance,
+                                  width == 768U ? &p4_frog_hop_game : legacy_descriptor(),
+                                  &services, state_memory,
                                   p4_frog_hop_game.state_bytes);
 }
 
@@ -145,7 +167,7 @@ static void test_collision_recovers(void)
     CHECK(state!=NULL);if(state==NULL)return;
     tone_probe_t probe={0};
     const p4_game_services_t services={
-        .available_capabilities=P4_GAME_CAP_VIDEO|P4_GAME_CAP_CONTROLS|P4_GAME_CAP_AUDIO_TONE,
+        .available_capabilities=P4_GAME_CAP_VIDEO|P4_GAME_CAP_CONTROLS|P4_GAME_CAP_AUDIO_TONE|P4_GAME_CAP_VIDEO_HIGH_RES,
         .audio_context=&probe,.play_tone=record_tone};
     p4_game_instance_t game={0};
     CHECK(p4_game_instance_start(&game,&p4_frog_hop_game,&services,state,p4_frog_hop_game.state_bytes));

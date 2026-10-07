@@ -33,13 +33,14 @@ USB-C while the card stays inserted; compatible cartridge updates need no
 OS reflash.
 
 [Blast Circuit](games/blast_circuit/README.md) is the featured native game: bomb
-battles, three arenas, bots and up to four linked players. Tide Maze remains
-available by the owner’s choice; its recorded device-lag acceptance is still open.
+battles, three arenas, bots and up to four linked players. Tide Maze was removed
+from the product library at the owner’s request; its disabled development source
+and failed device acceptance records remain available.
 
 ## Native game inventory
 
-There are **15 native game source directories**: 12 standard-install games
-and 3 hidden development games. Three additional native
+There are **15 native game source directories**: 11 standard-install games
+and 4 hidden development games. Three additional native
 packages are system utilities. These counts describe the checked-in manifests,
 not a claim that every title is release-qualified or installed on your unit.
 Each title links to its own controls, rules, assets and test notes.
@@ -56,7 +57,6 @@ Each title links to its own controls, rules, assets and test notes.
 | [Solitaire](games/solitaire/README.md) | Cards | Klondike with direct-touch cards and drag-and-drop. | Solo | Included |
 | [Space Invaders](games/space_invaders/README.md) | Arcade | Defend destructible shields against alien waves. | Solo | Included |
 | [Texas Hold'em](games/texas_holdem/README.md) | Cards | Poker with betting, all-ins and side pots. | 2–4 local human/CPU seats; 2–4 linked | Included |
-| [Tide Maze](games/tide_maze/README.md) | Arcade | Tilt a flooded marble maze and collect pearls. | Solo; 2 linked co-op | Included candidate; device lag acceptance open |
 | [Yahtzee](games/p4_yahtzee/README.md) | Tabletop | Roll, hold dice and fill the scorecard. | 2–4 pass-and-play or linked | Included |
 
 Held-back games are available only through an explicit developer install:
@@ -66,6 +66,7 @@ Held-back games are available only through an explicit developer install:
 | [Byte Buddy](games/byte_buddy/README.md) | WIP | Raise a dragon, explore Signal City and play activities. | Solo | Developer install only; requires resource sidecar |
 | [Red Dragon](games/lord/README.md) | WIP | A text-and-ANSI fantasy adventure with saved progression. | Solo; 2-player linked profile / realm features | Developer install only; protected OS pairing |
 | [Skyline Leap](games/skyline_leap/README.md) | WIP | A rooftop platformer retained for further development. | Solo | Developer install only; unfinished |
+| [Tide Maze](games/tide_maze/README.md) | Arcade | Tilt a flooded marble maze and collect pearls. | Solo; 2 linked co-op | Removed from product library; development only; lag acceptance failed |
 
 Linked player counts describe the implemented game profiles. Tab5 Local Wi-Fi
 supports up to four consoles where the game does; Bluetooth and USB serial

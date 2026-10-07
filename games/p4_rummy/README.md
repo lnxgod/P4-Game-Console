@@ -179,3 +179,19 @@ build-host/play-p4_rummy/p4_game_benchmark 2000 768 games/p4_rummy/tests/touch-p
 The same trace can be run with `320` for the fallback. This measures Mac CPU
 update, audio and rendering during continuous drag; display/device timing,
 physical touch, and linked-console acceptance remain separate checks.
+
+## Current maintained Tab5 contract
+
+Version **2.2.1** requires `video-highres` in both `game.json` and the C
+descriptor. Maintained Tab5 gameplay renders each frame directly into a
+**768×480 RGB565** surface. Canonical 320×200 touch coordinates are input
+units only; they do not select a render resolution. Any 320×200 fallback
+guidance retained above applies only to explicitly requested legacy diagnostics.
+
+The global target is **60 FPS**, with an **actual-device 30 FPS release floor**.
+Acceptance requires the exact cartridge/package, Console OS artifact and Tab5
+unit, the observed runtime surface, and cadence measured during busy gameplay.
+Readable title/ready, play, pause and results views must be checked on that same
+device. These physical readability and cadence gates remain pending until
+measured for this exact candidate. This isolated review source has not yet been
+rebuilt or device-tested; working-tree host tests do not verify it.

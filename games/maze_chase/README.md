@@ -91,3 +91,25 @@ The primary Tab5 build packages **370,576 bytes**, including the unchanged
 9,744-byte cartridge-owned launcher icon. `LOCAL_TESTING.json` binds the source,
 checks, benchmark, package and per-unit transfer evidence. This is a game-only
 update for the existing OS 0.51; physical fluidity acceptance remains pending.
+
+## Maintained Tab5 native rendering
+
+Current package version: **1.1.2**. The native manifest and C descriptor both
+require `video-highres`. Maintained Tab5 play renders directly into a **768×480
+RGB565** surface. Canonical **320×200** coordinates remain input units for touch
+and controls. The retained fallback renderer and earlier fallback guidance are
+for explicitly selected legacy diagnostics.
+
+The target is **60 FPS** with an actual-device release floor of **30 FPS**.
+Acceptance requires verification of the actual runtime surface and readable
+opening/title, busy gameplay, pause, and results views on the exact Tab5 unit,
+with the package and Console OS identities recorded. Those device readability
+and cadence checks remain pending until measured; host captures and CPU timing
+do not establish device acceptance.
+
+`tools/render_hires.c` captures native 768×480 views by default using the actual
+required-capability descriptor. Pass `--legacy` after the output prefix to add
+explicitly labeled 320×200 diagnostic captures through a temporary legacy
+descriptor copy.
+
+`tools/render_preview.c` also captures native 768×480 by default.

@@ -226,3 +226,19 @@ The cartridge owns its title and `assets/launcher.p4i` icon. Source artwork,
 conversion details and provenance live beside the packed icon. The game name
 stays visible beside player status during play. Existing touch actions and
 setup choices remain direct; no extra launch confirmation is added.
+
+## Current maintained Tab5 contract
+
+Version **1.8.2** requires `video-highres` in both `game.json` and the C
+descriptor. Maintained Tab5 gameplay renders each frame directly into a
+**768×480 RGB565** surface. Canonical 320×200 touch coordinates are input
+units only; they do not select a render resolution. Any 320×200 fallback
+guidance retained above applies only to explicitly requested legacy diagnostics.
+
+The global target is **60 FPS**, with an **actual-device 30 FPS release floor**.
+Acceptance requires the exact cartridge/package, Console OS artifact and Tab5
+unit, the observed runtime surface, and cadence measured during busy gameplay.
+Readable title/ready, play, pause and results views must be checked on that same
+device. These physical readability and cadence gates remain pending until
+measured for this exact candidate. This isolated review source has not yet been
+rebuilt or device-tested; working-tree host tests do not verify it.

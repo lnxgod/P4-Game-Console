@@ -9,6 +9,8 @@ typedef struct { atomic_uint samples, total_us, maximum_us; } phase_t;
 struct p4_game_video_presenter {
     p4_game_video_config_t config;
     display_worker_t *worker;
+    display_worker_lease_t lease;
+    uint64_t lease_queue_us;
     phase_t phases[PHASE_COUNT];
     atomic_uint accepted, completed, backend_timeouts, wait_timeouts;
     atomic_int hard_error, backend_core;
@@ -129,10 +131,64 @@ int p4_game_video_presenter_flush(p4_game_video_presenter_t *p, uint32_t timeout
     }
     return wait_result(p, result);
 }
+int p4_game_video_presenter_acquire(p4_game_video_presenter_t *p,
+    uint16_t **pixels, size_t *stride, uint32_t wait_ms)
+{
+    if (pixels) *pixels = NULL;
+    if (stride) *stride = 0U;
+    if (!p || !pixels || !stride || p->closing || p->lease.pixels)
+        return DW_INVALID;
+    const uint64_t began = p->config.now_us();
+    if (p->first_pending) {
+        const int result = p4_game_video_presenter_flush(p, wait_ms);
+        if (result != DW_OK) return result;
+    }
+    const uint64_t queue_start = p->config.now_us();
+    const int result = display_worker_acquire(p->worker, &p->lease,
+                                             remaining(p, began, wait_ms));
+    p->lease_queue_us = p->config.now_us() - queue_start;
+    if (result != DW_OK) {
+        record(p, QUEUE, p->lease_queue_us);
+        p->lease_queue_us = 0U;
+        return wait_result(p, result);
+    }
+    *pixels = p->lease.pixels;
+    *stride = p->config.width;
+    return DW_OK;
+}
+int p4_game_video_presenter_commit(p4_game_video_presenter_t *p,
+    uint32_t wait_ms, uint32_t submit_ms)
+{
+    if (!p || p->closing || !p->lease.pixels) return DW_INVALID;
+    const uint64_t began = p->config.now_us();
+    const int committed = display_worker_commit(p->worker, &p->lease,
+                                                 wait_ms, submit_ms);
+    record(p, QUEUE, p->lease_queue_us + p->config.now_us() - began);
+    p->lease_queue_us = 0U;
+    if (committed != DW_OK) return wait_result(p, committed);
+    add(p, &p->accepted, 1U);
+    if (!p->first_complete) {
+        p->first_pending = true;
+        const int result = p4_game_video_presenter_flush(p,
+                                                        remaining(p, began, wait_ms));
+        if (result != DW_OK) return result;
+        /* A consumed-but-timed-out backend frame is not barrier success. */
+        if (!p->first_complete) return DW_TIMEOUT;
+    }
+    return DW_OK;
+}
+int p4_game_video_presenter_cancel(p4_game_video_presenter_t *p)
+{
+    if (!p) return DW_INVALID;
+    const int result = p->lease.pixels
+        ? display_worker_cancel(p->worker, &p->lease) : DW_OK;
+    if (result == DW_OK) p->lease_queue_us = 0U;
+    return result;
+}
 int p4_game_video_presenter_present(p4_game_video_presenter_t *p,
     const uint16_t *source, size_t stride, uint32_t wait_ms, uint32_t submit_ms)
 {
-    if (!p || !source || p->closing || stride < p->config.width ||
+    if (!p || !source || p->closing || p->lease.pixels || stride < p->config.width ||
         stride > SIZE_MAX / sizeof(*source) / p->config.height) return DW_INVALID;
     const uint64_t began = p->config.now_us();
     if (p->first_pending) {
@@ -214,6 +270,8 @@ int p4_game_video_presenter_stop(p4_game_video_presenter_t **presenter,
     if (!presenter || !*presenter) return DW_INVALID;
     p4_game_video_presenter_t *p = *presenter;
     p->closing = true;
+    const int cancelled = p4_game_video_presenter_cancel(p);
+    if (cancelled != DW_OK) return cancelled;
     const int result = display_worker_stop(&p->worker, timeout);
     if (result != DW_OK) return result;
     if (final_stats) (void)p4_game_video_presenter_stats(p, final_stats);

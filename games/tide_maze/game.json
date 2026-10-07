@@ -24,7 +24,7 @@
   ],
   "license": "MIT",
   "assets": "native-projected-maze-water-and-marble; original-imagegen-water-material-and-launcher-art",
-  "enabled": true,
+  "enabled": false,
   "multiplayer": {
     "schema": 1,
     "style": "realtime",
