@@ -80,14 +80,15 @@ static void test_lifecycle_and_render_bounds(void)
     p4_game_instance_t instance = {0};
     const p4_game_services_t services = {
         .available_capabilities = P4_GAME_CAP_VIDEO |
-                                  P4_GAME_CAP_CONTROLS,
+                                  P4_GAME_CAP_CONTROLS |
+                                  P4_GAME_CAP_VIDEO_HIGH_RES,
     };
     CHECK(p4_game_instance_start(
         &instance, &p4_calculator_game, &services, &state, sizeof(state)));
     enum {
         GUARD = 19,
-        STRIDE = P4_GAME_SURFACE_WIDTH + 3,
-        WORDS = STRIDE * P4_GAME_SURFACE_HEIGHT,
+        STRIDE = P4_GAME_SURFACE_HIGH_RES_WIDTH + 3,
+        WORDS = STRIDE * P4_GAME_SURFACE_HIGH_RES_HEIGHT,
         TOTAL = GUARD + WORDS + GUARD,
     };
     uint16_t *const pixels = calloc(TOTAL, sizeof(*pixels));
@@ -99,13 +100,18 @@ static void test_lifecycle_and_render_bounds(void)
         p4_game_surface_t surface = {
             .pixels = pixels + GUARD,
             .stride_pixels = STRIDE,
-            .width = P4_GAME_SURFACE_WIDTH,
-            .height = P4_GAME_SURFACE_HEIGHT,
+            .width = P4_GAME_SURFACE_HIGH_RES_WIDTH,
+            .height = P4_GAME_SURFACE_HIGH_RES_HEIGHT,
         };
         CHECK(p4_game_instance_render(&instance, &surface));
         for (size_t index = 0U; index < GUARD; ++index) {
             CHECK(pixels[index] == UINT16_C(0xA55A));
             CHECK(pixels[GUARD + WORDS + index] == UINT16_C(0xA55A));
+        }
+        for (size_t y = 0U; y < P4_GAME_SURFACE_HIGH_RES_HEIGHT; ++y) {
+            for (size_t x = P4_GAME_SURFACE_HIGH_RES_WIDTH; x < STRIDE; ++x) {
+                CHECK(surface.pixels[y * STRIDE + x] == UINT16_C(0xA55A));
+            }
         }
         free(pixels);
     }

@@ -81,9 +81,9 @@
     ],
     "native_code_is_security_sandboxed": false,
     "uf2_supported": false,
-    "surface": "RGB565 320x200 default; optional negotiated 768x480",
-    "high_resolution_capability": "video-highres",
-    "touch_coordinate_space": "320x200 in both render modes",
+    "surface": "Maintained Tab5 requires direct native 768x480 RGB565; legacy board/ABI source contracts remain preserved for explicit legacy maintenance",
+    "high_resolution_capability": "video-highres required in enabled native manifests and C descriptors",
+    "touch_coordinate_space": "320x200 canonical input units independent of native rendering",
     "controls": [
       "up",
       "down",
@@ -121,7 +121,16 @@
     ],
     "seed_resources": [
       "BYTEBUD.P4R"
-    ]
+    ],
+    "native_video_presenter": {
+      "implementation": "Core 0 renders directly into one of two leased native PSRAM framebuffers; core 1 priority 2 presents the committed immutable buffer without copying it. Native audio remains core 1 priority 4.",
+      "source_status": "candidate; reconstructed host tests pass; exact firmware device qualification pending",
+      "buffer_bytes": 737280,
+      "buffer_count": 2,
+      "memory_bytes": 1474560,
+      "low_resolution_recovery_allowed": false,
+      "synchronous_native_recovery": true
+    }
   },
   "legacy_p4cart": {
     "game_manager_visible": false,

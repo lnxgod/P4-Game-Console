@@ -2,7 +2,7 @@
   "schema": 1,
   "format": "p4-native-elf-v1",
   "api_version": 1,
-  "version": "1.4.2",
+  "version": "1.4.3",
   "package_file": "P4_YAHTZEE.P4G",
   "component": "p4_yahtzee",
   "sources": [
@@ -19,13 +19,13 @@
   "accent_rgb565": "0x5fea",
   "required_capabilities": [
     "video",
-    "controls"
+    "controls",
+    "video-highres"
   ],
   "optional_capabilities": [
     "audio-tone",
     "multiplayer-session",
-    "dice-accessory",
-    "video-highres"
+    "dice-accessory"
   ],
   "multiplayer": {
     "schema": 1,

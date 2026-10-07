@@ -62,3 +62,23 @@ The board-independent cartridge is built through `make console-os-tab5-idf` for 
 The native and fallback HUD retains FROG HOP above clearly labelled score, lives and filled homes, alongside the round number. It stays inside the original18-canonical-pixel HUD; course geometry, touch controls, collisions and motion are unchanged. Real-source captures include UINT32_MAX score, round255 and all five homes to check worst-case spacing. No raster assets were added.
 
 `build-host/presentation-pass/frog_hop/` binds native/fallback title, gameplay, pause and header-limit captures, focused sanitizer1/1, SDL5/5, pinned RV32 assembly and a 2,000-frame active CPU trace. Native p95/p99/max: **0.441/0.461/0.530 ms**; fallback max: **0.121 ms**. Both sizes change1,615frames; game-over waits are deliberately static. These are desktop CPU measurements, not hardware frame-rate acceptance.
+
+## Maintained Tab5 native rendering
+
+Current package version: **1.1.1**. The native manifest and C descriptor both
+require `video-highres`. Maintained Tab5 play renders directly into a **768×480
+RGB565** surface. Canonical **320×200** coordinates remain input units for touch
+and controls. The retained fallback renderer and earlier fallback guidance are
+for explicitly selected legacy diagnostics.
+
+The target is **60 FPS** with an actual-device release floor of **30 FPS**.
+Acceptance requires verification of the actual runtime surface and readable
+opening/title, busy gameplay, pause, and results views on the exact Tab5 unit,
+with the package and Console OS identities recorded. Those device readability
+and cadence checks remain pending until measured; host captures and CPU timing
+do not establish device acceptance.
+
+`tools/render_hires.c` captures native 768×480 views by default using the actual
+required-capability descriptor. Pass `--legacy` after the output prefix to add
+explicitly labeled 320×200 diagnostic captures through a temporary legacy
+descriptor copy.

@@ -50,11 +50,49 @@ def run(*arguments: str) -> subprocess.CompletedProcess[str]:
 
 
 def main() -> None:
-    installed = run("--games-root", str(ROOT / "games"), "--check")
+    installed = run("--games-root", str(ROOT / "games"), "--check",
+                    "--require-native-resolution")
     assert installed.returncode == 0, installed.stderr
     installed_report = json.loads(installed.stdout)
     assert "org.p4console.p4-yahtzee" in \
         installed_report["multiplayer_games"]
+
+    for optional in ([], ["video-highres"]):
+        with tempfile.TemporaryDirectory() as temporary:
+            games = pathlib.Path(temporary) / "games"
+            games.mkdir()
+            low_resolution = manifest("low_resolution", 101)
+            low_resolution["optional_capabilities"] = optional
+            write_manifest(games, "low_resolution", low_resolution)
+            # Generic validation still supports the explicit legacy ABI.
+            generic = run("--games-root", str(games), "--check")
+            assert generic.returncode == 0, generic.stderr
+            maintained = run("--games-root", str(games), "--check",
+                             "--require-native-resolution")
+            assert maintained.returncode != 0
+            assert "must require video-highres" in maintained.stderr
+
+    with tempfile.TemporaryDirectory() as temporary:
+        games = pathlib.Path(temporary) / "games"
+        games.mkdir()
+        native = manifest("native", 102)
+        native["required_capabilities"].append("video-highres")
+        write_manifest(games, "native", native)
+        disabled = manifest("disabled", 103)
+        disabled["enabled"] = False
+        write_manifest(games, "disabled", disabled)
+        draft = manifest("draft", 104)
+        draft["folder"] = "GAMES/WIP"
+        write_manifest(games, "draft", draft)
+        maintained = run("--games-root", str(games), "--check",
+                         "--require-native-resolution")
+        assert maintained.returncode == 0, maintained.stderr
+        assert json.loads(maintained.stdout)["enabled_games"] == [native["id"]]
+        development = run("--games-root", str(games), "--check", "--dev-only",
+                          "--require-native-resolution")
+        assert development.returncode == 0, development.stderr
+        assert set(json.loads(development.stdout)["enabled_games"]) == {
+            disabled["id"], draft["id"]}
 
     with tempfile.TemporaryDirectory() as temporary:
         games = pathlib.Path(temporary) / "games"

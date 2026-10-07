@@ -326,7 +326,8 @@ play-game:
 	"build-host/play-$(GAME)/p4_game_host.app/Contents/MacOS/p4_game_host"
 
 game-registry-check:
-	python3 scripts/generate-game-registry.py --games-root games --check
+	python3 scripts/generate-game-registry.py --games-root games --check --require-native-resolution
+	python3 scripts/tests/test-console-native-resolution.py
 	python3 scripts/tests/test-game-registry.py
 	python3 scripts/tests/test-game-release.py
 	python3 scripts/tests/test-native-board-verifiers.py

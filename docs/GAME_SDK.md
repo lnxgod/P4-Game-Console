@@ -257,8 +257,10 @@ Include only headers under `components/p4_game_api/include/p4/`:
 actual wall-clock delta clamped to `1..P4_GAME_MAX_FRAME_DELTA_MS`, and does
 not issue catch-up bursts after a slow frame. Return
 `P4_GAME_EXIT_TO_LAUNCHER` when Back is pressed.
-`render` receives the caller-owned surface; supplied drawing primitives clip
-to its bounds.
+`render` borrows the current caller-owned surface; supplied drawing primitives
+clip to its bounds. Render the complete supplied frame. Console OS may rotate
+its pixels after presentation, so never retain the surface's pixels pointer
+between callbacks.
 
 The native cartridge entry is
 [`components/p4_game_api/runtime/cartridge_main.c`](../components/p4_game_api/runtime/cartridge_main.c).

@@ -587,7 +587,8 @@ static void maze_stop(p4_game_context_t *context){p4_game_stop_audio(context);}
 const p4_game_descriptor_t p4_maze_chase_game={
     .api_version=P4_GAME_API_VERSION,.launcher_id=100U,.id="org.p4console.maze-chase",.title="Maze Chase",
     .subtitle="Power up. Chase the spirits.",.accent_rgb565=UINT16_C(0xffe0),
-    .required_capabilities=P4_GAME_CAP_VIDEO|P4_GAME_CAP_CONTROLS,
-    .optional_capabilities=P4_GAME_CAP_AUDIO_TONE|P4_GAME_CAP_AUDIO_STREAM|P4_GAME_CAP_VIDEO_HIGH_RES,
+    .required_capabilities=P4_GAME_CAP_VIDEO|P4_GAME_CAP_CONTROLS |
+        P4_GAME_CAP_VIDEO_HIGH_RES,
+    .optional_capabilities=P4_GAME_CAP_AUDIO_TONE|P4_GAME_CAP_AUDIO_STREAM,
     .state_bytes=sizeof(maze_chase_state_t),.start=maze_start,.update=maze_update,.render=maze_render,.stop=maze_stop,
 };

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+#include "test_game_start.h"
 #include "color_clash_internal.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -55,7 +56,7 @@ int main(void)
         const unsigned width=high?768U:320U;
         const p4_game_services_t services={.available_capabilities=P4_GAME_CAP_VIDEO|P4_GAME_CAP_CONTROLS|(high?P4_GAME_CAP_VIDEO_HIGH_RES:0U)};
         p4_game_instance_t game={0};color_clash_state_t state;
-        CHECK(p4_game_instance_start(&game,&p4_color_clash_game,&services,&state,sizeof(state)));
+        CHECK(test_start_game(&game,&p4_color_clash_game,&services,&state,sizeof(state)));
         fixture(&state);pick(&game,&state,0U);touch(&game,55,60);CHECK(state.hand_dragging);
         capture(&game,width,0U);touch(&game,-1,-1);
         CHECK(state.hand_counts[0]==3U && state.discard_count==1U && state.selected_card==0U);

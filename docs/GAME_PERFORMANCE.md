@@ -18,6 +18,12 @@ repair readability. Optimize the measured native update/render/presentation
 cost instead. Keep an unmet native cadence or readability gate open until it
 passes; a fallback benchmark cannot close it. Preserve existing fallback source
 and bounded ABI tests for explicitly requested legacy maintenance.
+
+Blast Circuit 0.2.9 has an explicit owner exception accepting approximately
+19 FPS for the exact package, OS 0.77 and Tab5 unit recorded in
+[its acceptance report](../games/blast_circuit/NATIVE_READABILITY_TESTING.json).
+This exception permits keeping that measured candidate; it does not change
+the general 30 FPS floor or qualify other packages, OS builds or units.
 Native C is the supported authoring route, including custom software 2D/3D
 engines and raycasters. A language or engine choice does not guarantee cadence;
 measure the real P4 candidate. Native games have no script-renderer ceiling.
@@ -72,7 +78,12 @@ and their evidence, since an OS update alone does not replace that code.
 
 Console OS owns pacing, buffers, asynchronous display submission and safe
 reuse fences. Games render the complete supplied surface and use bounded
-non-blocking services. Do not add display waits, sleeps, DMA ownership or a
+non-blocking services. The supplied `surface.pixels` and stride belong to the
+current frame and may change on every frame. Read them from the supplied
+surface each time; do not cache the pixel pointer across callbacks or retain
+it after presentation. Render the complete current frame rather than relying
+on the contents of a previously borrowed buffer.
+Do not add display waits, sleeps, DMA ownership or a
 private frame loop to a game. Diagnose input/update/render/presentation phases
 at the shared boundary when needed; a proposed OS buffering fix is not proof
 that any installed unit has it or meets the frame budget.
@@ -81,21 +92,43 @@ that any installed unit has it or meets the frame budget.
 
 ### Use the P4's two cores through shared OS services
 
-Keep native game simulation, rendering and cartridge callbacks on the Console
-OS foreground core (core 0 on the Tab5 configuration). The Tab5 0.54 candidate
-uses `components/p4_game_platform/src/audio_worker.c` to mix and feed I2S from
-a bounded core-1 task. PCM/tone callbacks copy commands without waiting;
-the worker owns its mixer and board audio session until joined shutdown.
+The maintained Tab5 candidate keeps game/update/render callbacks on core 0.
+The shared native video presenter borrows rotating framebuffer leases for
+direct 768x480 RGB565 rendering and runs the PPA presentation backend on core 1
+at priority 2. Native audio output runs on core 1 at priority 4 through
+`components/p4_game_platform/src/audio_worker.c`. PCM/tone callbacks copy
+bounded commands without waiting; the audio worker owns its mixer and board
+audio session until joined shutdown.
 The C6 radio is a separate communications processor, not another game-rendering
 core. Do not add FreeRTOS tasks, I2S handles or board-specific affinity inside
 cartridges. Other independent work belongs in an appropriate shared service.
 
-SMP being enabled does not prove useful parallel execution. Record actual
-`AUDIO_WORKER game_core=0 audio_core=1` evidence, queue rejections, underruns,
-clipping, write failures and stack reserve alongside frame timings. Keep each
-mutable resource single-owned, copy bounded messages across cores, and join
-workers before closing peripherals, unloading cartridge code or freeing data.
-Never hold a queue/telemetry lock during I2S, display, SD or radio waits.
+The video worker owns exactly two native PSRAM framebuffers. The foreground
+borrows one writable lease, fills the entire current frame, and commits it
+without a framebuffer copy. A committed frame stays immutable until the
+backend consumes its source; bounded admission and reuse fences prevent an
+in-flight frame from being overwritten. The OS refreshes the game surface
+pointer when it acquires the next lease. Drain and join the worker before
+freeing OS-owned buffers/context or returning display ownership to the
+launcher. The native backend retains only OS-owned callbacks and pixel
+buffers, so cartridge unload does not invalidate an in-flight frame. A failed
+join retains the worker and its resources until safe shutdown. If worker
+allocation requires synchronous recovery, preserve the
+same direct 768x480 surface; no low-resolution fallback is allowed.
+
+SMP configuration and worker creation do not prove useful parallel execution
+or the device 30 FPS floor. On the exact OS/package/unit candidate, record
+actual game/video/audio core IDs and priorities, completed-backend frame
+intervals, and concurrent stage timing showing game/update/render work
+overlapping backend presentation. Keep accepted submissions, completed
+backend work and physical scanout evidence distinct. Include queue and backend
+timeouts, hard errors, audio queue rejections, underruns, clipping, write
+failures and stack reserve. Exercise busy gameplay, title/ready, pause and
+results transitions, plus stop/restart and synchronous native recovery. These
+source changes remain a candidate until device cadence and readability pass.
+Keep each mutable resource single-owned and join workers before closing
+peripherals or freeing data. Never hold a queue/telemetry lock during I2S,
+display, SD or radio waits.
 
 Budget PCM buffering against measured producer jitter: 512 frames at 16 kHz
 hold only 32 ms and necessarily overflow when a frame submits 39 ms of audio.

@@ -57,6 +57,8 @@ typedef void (*p4_cartridge_finished_fn)(
  *
  * A cartridge owns no hardware handles. It renders into `surface` and asks
  * the Console OS to poll sanitized input, present a frame, and play tones.
+ * The OS may rotate surface.pixels after present; render a complete frame
+ * into the current supplied surface and never retain its pixels pointer.
  * The table is intentionally small so stored games do not bind to ESP-IDF.
  */
 typedef struct {

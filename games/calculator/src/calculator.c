@@ -11,6 +11,13 @@
 #include "calculator_internal.h"
 #include "p4/draw.h"
 #include "p4/input.h"
+#include "p4/card_art.h"
+
+/* Scale geometry into native pixels before rasterization. Canonical touch
+ * coordinates and the explicitly requested legacy surface remain supported. */
+#define p4_draw_fill_rect p4_card_fill
+#define p4_draw_rect p4_card_outline
+#define p4_draw_text p4_card_text
 
 enum {
     CALCULATOR_MAX = 999999999,
@@ -22,6 +29,8 @@ enum {
     KEY_WIDTH = 44,
     KEY_HEIGHT = 20,
     KEY_GAP = 4,
+    NATIVE_KEY_TOP = 55,
+    NATIVE_KEY_HEIGHT = 16,
 };
 
 static const char *const s_key_labels[KEY_COUNT] = {
@@ -237,24 +246,26 @@ static bool activate_key(p4_game_context_t *context,
     return accepted;
 }
 
-static int touch_key(const p4_game_input_t *input)
+static int touch_key(const p4_game_input_t *input, bool native)
 {
     if (!input->touch_valid || input->touch_count == 0U) {
         return -1;
     }
     const int x = (int)input->touches[0].x;
     const int y = (int)input->touches[0].y;
-    if (x < KEY_LEFT || y < KEY_TOP) {
+    const int top = native ? NATIVE_KEY_TOP : KEY_TOP;
+    const int height = native ? NATIVE_KEY_HEIGHT : KEY_HEIGHT;
+    if (x < KEY_LEFT || y < top) {
         return -1;
     }
     const int column = (x - KEY_LEFT) / (KEY_WIDTH + KEY_GAP);
-    const int row = (y - KEY_TOP) / (KEY_HEIGHT + KEY_GAP);
+    const int row = (y - top) / (height + KEY_GAP);
     if (column < 0 || column >= KEY_COLUMNS || row < 0 || row >= KEY_ROWS) {
         return -1;
     }
     const int local_x = (x - KEY_LEFT) % (KEY_WIDTH + KEY_GAP);
-    const int local_y = (y - KEY_TOP) % (KEY_HEIGHT + KEY_GAP);
-    if (local_x >= KEY_WIDTH || local_y >= KEY_HEIGHT) {
+    const int local_y = (y - top) % (height + KEY_GAP);
+    if (local_x >= KEY_WIDTH || local_y >= height) {
         return -1;
     }
     return row * KEY_COLUMNS + column;
@@ -308,7 +319,10 @@ static p4_game_result_t game_update(
     }
     const bool touch_now = input->touch_valid && input->touch_count > 0U;
     if (touch_now && !state->touch_down) {
-        const int key = touch_key(input);
+        const bool native = context->services != NULL &&
+            (context->services->available_capabilities &
+             P4_GAME_CAP_VIDEO_HIGH_RES) != 0U;
+        const int key = touch_key(input, native);
         if (key >= 0) {
             state->cursor = (uint8_t)key;
             (void)activate_key(context, state, state->cursor);
@@ -337,10 +351,15 @@ static bool game_render(p4_game_context_t *context,
         return false;
     }
     const p4_calculator_state_t *const state = context->state;
+    const bool native = surface->width == P4_GAME_SURFACE_HIGH_RES_WIDTH;
     p4_draw_clear(surface, UINT16_C(0x18C3));
     p4_draw_fill_rect(surface, 0, 0, 320, 18, UINT16_C(0x0010));
-    p4_draw_text(surface, 9, 6, "CALCULATOR", UINT16_C(0xFFE0), 1U, 10U);
-    p4_draw_text(surface, 232, 6, "BACK EXITS", UINT16_C(0xBDF7), 1U, 10U);
+    p4_draw_text(surface, native ? 126 : 9, 6, "CALCULATOR",
+                 UINT16_C(0xFFE0), 1U, 10U);
+    if (!native) {
+        p4_draw_text(surface, 232, 6, "BACK EXITS",
+                     UINT16_C(0xBDF7), 1U, 10U);
+    }
 
     p4_draw_fill_rect(surface, 12, 24, 296, 28, UINT16_C(0x0000));
     p4_draw_rect(surface, 12, 24, 296, 28, UINT16_C(0xFFFF));
@@ -361,15 +380,17 @@ static bool game_render(p4_game_context_t *context,
         const int column = (int)(key % KEY_COLUMNS);
         const int row = (int)(key / KEY_COLUMNS);
         const int x = KEY_LEFT + column * (KEY_WIDTH + KEY_GAP);
-        const int y = KEY_TOP + row * (KEY_HEIGHT + KEY_GAP);
+        const int height = native ? NATIVE_KEY_HEIGHT : KEY_HEIGHT;
+        const int y = (native ? NATIVE_KEY_TOP : KEY_TOP) +
+            row * (height + KEY_GAP);
         const bool selected = key == state->cursor;
         const bool operation = column == 3 || key == 14U;
         const uint16_t fill = operation
             ? UINT16_C(0x3186) : UINT16_C(0x7BEF);
-        p4_draw_fill_rect(surface, x, y, KEY_WIDTH, KEY_HEIGHT, fill);
-        p4_draw_rect(surface, x, y, KEY_WIDTH, KEY_HEIGHT,
+        p4_draw_fill_rect(surface, x, y, KEY_WIDTH, height, fill);
+        p4_draw_rect(surface, x, y, KEY_WIDTH, height,
                      selected ? UINT16_C(0xFFE0) : UINT16_C(0xFFFF));
-        p4_draw_text(surface, x + 18, y + 7, s_key_labels[key],
+        p4_draw_text(surface, x + 18, y + (native ? 4 : 7), s_key_labels[key],
                      UINT16_C(0x0000), 1U, 1U);
     }
     p4_draw_text(surface, 214, 67, "DPAD MOVE", UINT16_C(0xFFFF), 1U, 9U);
@@ -395,7 +416,8 @@ const p4_game_descriptor_t p4_calculator_game = {
     .title = "Calculator",
     .subtitle = "A pocket calculator",
     .accent_rgb565 = UINT16_C(0xFFE0),
-    .required_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS,
+    .required_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS |
+                             P4_GAME_CAP_VIDEO_HIGH_RES,
     .optional_capabilities = P4_GAME_CAP_AUDIO_TONE,
     .state_bytes = sizeof(p4_calculator_state_t),
     .start = game_start,

@@ -91,8 +91,10 @@ Follow [library policy](../../../docs/GAME_LIBRARY.md),
 Keep each game's README current and link new titles from the root inventory
 and `games/README.md`. Drafts stay disabled until qualified; retired IDs stay
 reserved. Standard content excludes disabled games and `GAMES/WIP`; named
-developer installs require explicit opt-in. Preserve Tide Maze's availability
-and open device-lag acceptance, and Blast Circuit's featured status.
+developer installs require explicit opt-in. Tide Maze is disabled and removed
+from the product library at the owner's request; preserve its source,
+package/save identity and failed device acceptance. Preserve Blast Circuit's
+featured status.
 
 A build, enabled flag or upload does not prove physical play, speaker quality
 or P4 frame rate. Preserve failed/pending acceptance and exact artifact/unit

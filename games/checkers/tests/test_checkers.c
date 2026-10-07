@@ -10,6 +10,7 @@
 #include "p4/game.h"
 
 extern const p4_game_descriptor_t p4_checkers_game;
+#include "legacy_surface.h"
 
 #define CHECK(condition)                                                     \
     do {                                                                     \
@@ -306,7 +307,7 @@ static bool test_descriptor_lifecycle_controller_touch_and_render(void)
     const p4_game_services_t services = local_services(&audio);
     checkers_state_t state;
     p4_game_instance_t instance = {0};
-    CHECK(p4_game_instance_start(&instance, &p4_checkers_game, &services,
+    CHECK(test_start_game(&instance, &p4_checkers_game, &services,
                                  &state, sizeof(state)));
     CHECK(!state.network_mode);
     CHECK(audio.tones == 1U);
@@ -364,7 +365,7 @@ static bool test_descriptor_lifecycle_controller_touch_and_render(void)
 
     audio = (audio_mock_t){0};
     instance = (p4_game_instance_t){0};
-    CHECK(p4_game_instance_start(&instance, &p4_checkers_game, &services,
+    CHECK(test_start_game(&instance, &p4_checkers_game, &services,
                                  &state, sizeof(state)));
     input = (p4_game_input_t){
         .touch_valid = true,
@@ -403,9 +404,9 @@ static bool test_network_host_authority_and_peer_loss(void)
     checkers_state_t client_state;
     p4_game_instance_t host = {0};
     p4_game_instance_t client = {0};
-    CHECK(p4_game_instance_start(&host, &p4_checkers_game, &host_services,
+    CHECK(test_start_game(&host, &p4_checkers_game, &host_services,
                                  &host_state, sizeof(host_state)));
-    CHECK(p4_game_instance_start(&client, &p4_checkers_game,
+    CHECK(test_start_game(&client, &p4_checkers_game,
                                  &client_services,
                                  &client_state, sizeof(client_state)));
     CHECK(host_state.network_mode && host_state.network_started);
@@ -490,7 +491,7 @@ static bool test_direct_touch_drag_and_capture(void)
     const p4_game_services_t services = local_services(&audio);
     checkers_state_t state;
     p4_game_instance_t instance = {0};
-    CHECK(p4_game_instance_start(&instance, &p4_checkers_game, &services,
+    CHECK(test_start_game(&instance, &p4_checkers_game, &services,
                                  &state, sizeof(state)));
     const uint32_t synthetic = P4_BUTTON_RIGHT | P4_BUTTON_A |
         P4_BUTTON_B | P4_BUTTON_BACK | P4_BUTTON_START;
@@ -550,8 +551,8 @@ static bool test_network_flipped_drag(void)
     const p4_game_services_t hs = network_services(&host_audio, &link.endpoint[0]);
     const p4_game_services_t cs = network_services(&client_audio, &link.endpoint[1]);
     checkers_state_t h, c; p4_game_instance_t host = {0}, client = {0};
-    CHECK(p4_game_instance_start(&host, &p4_checkers_game, &hs, &h, sizeof(h)));
-    CHECK(p4_game_instance_start(&client, &p4_checkers_game, &cs, &c, sizeof(c)));
+    CHECK(test_start_game(&host, &p4_checkers_game, &hs, &h, sizeof(h)));
+    CHECK(test_start_game(&client, &p4_checkers_game, &cs, &c, sizeof(c)));
     CHECK(touch_step(&host, false, 0U, 0U, 0U));
     CHECK(touch_step(&client, false, 0U, 0U, 0U));
     CHECK(touch_step(&host, true, 36U, 78U, P4_BUTTON_A));
@@ -590,9 +591,9 @@ static bool snapshot_pair_start(snapshot_pair_t *pair, bool white_turn)
         &pair->host_audio, &pair->link.endpoint[0]);
     const p4_game_services_t cs = network_services(
         &pair->client_audio, &pair->link.endpoint[1]);
-    CHECK(p4_game_instance_start(&pair->host, &p4_checkers_game, &hs,
+    CHECK(test_start_game(&pair->host, &p4_checkers_game, &hs,
                                  &pair->h, sizeof(pair->h)));
-    CHECK(p4_game_instance_start(&pair->client, &p4_checkers_game, &cs,
+    CHECK(test_start_game(&pair->client, &p4_checkers_game, &cs,
                                  &pair->c, sizeof(pair->c)));
     if (!white_turn) {
         return true;

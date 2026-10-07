@@ -1,14 +1,5 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 
-option(P4_CONSOLE_NATIVE_AIR_LOW_RES
-       "Opt-in 320x200 Air Hockey experiment on Tab5" OFF)
-
-option(P4_CONSOLE_NATIVE_TIDE_BLAST_LOW_RES
-       "Opt-in 320x200 Tide Maze and Blast Circuit experiment on Tab5" OFF)
-
-option(P4_CONSOLE_NATIVE_CHECKERS_LOW_RES
-       "Opt-in 320x200 Checkers experiment on Tab5" OFF)
-
 set(P4_DOOM_TOUCH_AUDIO_MAIN
     "${CMAKE_CURRENT_LIST_DIR}/../../doom_embedded_touch_audio/main")
 set(P4_DOOM_GAMEPAD_AUDIO_MAIN
@@ -211,10 +202,12 @@ target_compile_definitions(${COMPONENT_LIB} PRIVATE
     CONSOLE_OS_ENABLE_RUNTIME_STATS=${P4_CONSOLE_RUNTIME_STATS_ENABLED}
 )
 if(P4_ACTIVE_BOARD_PROFILE STREQUAL "m5stack-tab5")
-    target_compile_definitions(${COMPONENT_LIB} PRIVATE
-        P4_CONSOLE_NATIVE_AIR_LOW_RES=$<BOOL:${P4_CONSOLE_NATIVE_AIR_LOW_RES}>
-        P4_CONSOLE_NATIVE_TIDE_BLAST_LOW_RES=$<BOOL:${P4_CONSOLE_NATIVE_TIDE_BLAST_LOW_RES}>
-        P4_CONSOLE_NATIVE_CHECKERS_LOW_RES=$<BOOL:${P4_CONSOLE_NATIVE_CHECKERS_LOW_RES}>)
+    foreach(retired_override P4_CONSOLE_NATIVE_AIR_LOW_RES
+            P4_CONSOLE_NATIVE_TIDE_BLAST_LOW_RES P4_CONSOLE_NATIVE_CHECKERS_LOW_RES)
+        if(${retired_override})
+            message(FATAL_ERROR "${retired_override} is retired: Tab5 requires native 768x480 rendering")
+        endif()
+    endforeach()
 endif()
 target_compile_features(${COMPONENT_LIB} PRIVATE c_std_11)
 target_compile_options(${COMPONENT_LIB} PRIVATE

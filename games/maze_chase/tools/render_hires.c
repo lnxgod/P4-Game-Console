@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Render exact game sources at both supported sizes for visual acceptance.
+// Render maintained native game sources; --legacy explicitly adds diagnostic captures.
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,7 +11,7 @@ static int capture(const char *prefix,const char *phase,p4_game_instance_t *inst
 {
     if(!p4_game_instance_render(instance,s))return 0;
     char path[512];
-    if(snprintf(path,sizeof(path),"%s-%s-%u.ppm",prefix,phase,s->width)<0)return 0;
+    if(snprintf(path,sizeof(path),"%s-%s%s-%u.ppm",prefix,s->width==320U?"legacy-":"",phase,s->width)<0)return 0;
     FILE *file=fopen(path,"wb");if(file==NULL)return 0;
     fprintf(file,"P6\n%u %u\n255\n",s->width,s->height);
     for(unsigned y=0;y<s->height;++y)for(unsigned x=0;x<s->width;++x){
@@ -23,16 +23,23 @@ static int capture(const char *prefix,const char *phase,p4_game_instance_t *inst
 }
 int main(int argc,char **argv)
 {
-    if(argc!=2){fprintf(stderr,"usage: %s OUTPUT_PREFIX\n",argv[0]);return 2;}
+    if(argc<2||argc>3||(argc==3&&strcmp(argv[2],"--legacy")!=0)){
+        fprintf(stderr,"usage: %s OUTPUT_PREFIX [--legacy]\n",argv[0]);return 2;}
+    const bool include_legacy=argc==3;
     int ok=1;
-    for(unsigned mode=0;mode<2U;++mode){
+    for(unsigned mode=include_legacy?0U:1U;mode<2U;++mode){
         const uint16_t w=mode?768U:320U,h=mode?480U:200U;
         uint16_t *pixels=calloc((size_t)w*h,sizeof(*pixels));void *state=calloc(1,p4_maze_chase_game.state_bytes);
         if(pixels==NULL||state==NULL){free(pixels);free(state);return 1;}
         p4_game_surface_t s={.pixels=pixels,.width=w,.height=h,.stride_pixels=w};
         p4_game_services_t services={.available_capabilities=P4_GAME_CAP_VIDEO|P4_GAME_CAP_CONTROLS|(mode?P4_GAME_CAP_VIDEO_HIGH_RES:0U)};
         p4_game_instance_t instance={0};
-        ok=ok&&p4_game_instance_start(&instance,&p4_maze_chase_game,&services,state,p4_maze_chase_game.state_bytes);
+        /* This scoped copy remains alive through stop and serves explicit legacy diagnostics only. */
+        p4_game_descriptor_t legacy=p4_maze_chase_game;
+        legacy.required_capabilities &= ~(uint32_t)P4_GAME_CAP_VIDEO_HIGH_RES;
+        legacy.optional_capabilities |= P4_GAME_CAP_VIDEO_HIGH_RES;
+        const p4_game_descriptor_t *descriptor=mode?&p4_maze_chase_game:&legacy;
+        ok=ok&&p4_game_instance_start(&instance,descriptor,&services,state,p4_maze_chase_game.state_bytes);
         ok=ok&&capture(argv[1],"opening",&instance,&s);
         p4_game_input_t input={.held=P4_BUTTON_A,.pressed=P4_BUTTON_A};
         ok=ok&&p4_game_instance_update(&instance,&input,16U)==P4_GAME_CONTINUE;

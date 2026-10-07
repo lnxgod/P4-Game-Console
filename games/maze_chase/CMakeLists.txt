@@ -15,7 +15,7 @@ if(COMMAND idf_component_register)
     )
 else()
     cmake_minimum_required(VERSION 3.16)
-    project(p4_maze_chase VERSION 1.1.1 LANGUAGES C)
+    project(p4_maze_chase VERSION 1.1.2 LANGUAGES C)
 
     add_subdirectory(
         "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api"

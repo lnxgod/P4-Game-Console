@@ -65,10 +65,23 @@ void p4_draw_fill_rect(p4_game_surface_t *surface,
     const unsigned end_y = (unsigned)bottom;
     for (unsigned row = (unsigned)top; row < end_y; ++row) {
         uint16_t *pixel = pixels + (size_t)row * stride + start_x;
-        uint16_t *const end = pixel + count;
-        do {
+        size_t remaining = count;
+        /* Peel one halfword so every wider store is naturally aligned. The
+         * may_alias type permits accessing the uint16_t surface as packed
+         * equal-color pairs without relying on strict-aliasing violations. */
+        if (((uintptr_t)pixel & 3U) != 0U) {
             *pixel++ = color;
-        } while (pixel != end);
+            --remaining;
+        }
+        typedef uint32_t pixel_pair_t __attribute__((__may_alias__));
+        pixel_pair_t *pairs = (pixel_pair_t *)(void *)pixel;
+        const uint32_t pair = (uint32_t)color | ((uint32_t)color << 16U);
+        const size_t pair_count = remaining / 2U;
+        pixel_pair_t *const pair_end = pairs + pair_count;
+        if (pair_count != 0U) {
+            do { *pairs++ = pair; } while (pairs != pair_end);
+        }
+        if ((remaining & 1U) != 0U) *(uint16_t *)(void *)pairs = color;
     }
 }
 

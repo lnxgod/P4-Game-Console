@@ -2,7 +2,7 @@
   "schema": 1,
   "format": "p4-native-elf-v1",
   "api_version": 1,
-  "version": "1.2.0",
+  "version": "1.2.1",
   "package_file": "TEXAS_HOLDEM.P4G",
   "component": "texas_holdem",
   "sources": [
@@ -19,12 +19,12 @@
   "accent_rgb565": "0x07ec",
   "required_capabilities": [
     "video",
-    "controls"
+    "controls",
+    "video-highres"
   ],
   "optional_capabilities": [
     "audio-tone",
-    "multiplayer-session",
-    "video-highres"
+    "multiplayer-session"
   ],
   "multiplayer": {
     "schema": 1,
