@@ -33,3 +33,17 @@ target_compile_options(p4_game_audio_concurrency_tests PRIVATE -Wall -Wextra -Wc
     -fsanitize=address,undefined -fno-omit-frame-pointer)
 target_link_options(p4_game_audio_concurrency_tests PRIVATE -fsanitize=address,undefined)
 add_test(NAME p4_game_audio_concurrency_tests COMMAND p4_game_audio_concurrency_tests)
+
+add_executable(p4_game_video_presenter_tests test_video_presenter.c
+    ../src/video_presenter.c ../../platform_display/src/display_worker.c)
+target_include_directories(p4_game_video_presenter_tests PRIVATE
+    ../include ../../platform_display/include)
+target_link_libraries(p4_game_video_presenter_tests PRIVATE Threads::Threads)
+target_compile_features(p4_game_video_presenter_tests PRIVATE c_std_11)
+if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
+    target_compile_options(p4_game_video_presenter_tests PRIVATE
+        -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Werror
+        -fsanitize=address,undefined -fno-omit-frame-pointer)
+    target_link_options(p4_game_video_presenter_tests PRIVATE -fsanitize=address,undefined)
+endif()
+add_test(NAME p4_game_video_presenter_tests COMMAND p4_game_video_presenter_tests)

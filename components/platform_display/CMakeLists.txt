@@ -2,6 +2,8 @@ if(COMMAND idf_component_register)
     idf_build_get_property(P4_ACTIVE_BOARD_PROFILE P4_BOARD_PROFILE)
     if(P4_ACTIVE_BOARD_PROFILE STREQUAL "m5stack-tab5")
         set(PLATFORM_DISPLAY_DRIVER_SOURCE "src/platform_display_tab5.c")
+        set(PLATFORM_DISPLAY_WORKER_SOURCES
+            src/display_worker.c src/display_worker_esp.c)
         set(PLATFORM_DISPLAY_DRIVER_REQUIREMENTS platform_tab5 esp_driver_ledc esp_driver_gpio esp_driver_ppa esp_mm
             espressif__esp_lcd_ili9881c espressif__esp_lcd_st7123)
     elseif(P4_ACTIVE_BOARD_PROFILE STREQUAL "olimex-esp32-p4-pc")
@@ -31,6 +33,7 @@ if(COMMAND idf_component_register)
         SRCS
             "${PLATFORM_DISPLAY_DRIVER_SOURCE}"
             "src/platform_display_layout.c"
+            ${PLATFORM_DISPLAY_WORKER_SOURCES}
         INCLUDE_DIRS "include"
         PRIV_INCLUDE_DIRS "src" "../platform_tab5/vendor"
         REQUIRES

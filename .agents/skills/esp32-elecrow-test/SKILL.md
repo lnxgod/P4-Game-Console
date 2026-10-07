@@ -1,6 +1,6 @@
 ---
 name: esp32-elecrow-test
-description: Build, verify, guarded-flash, recover, or manually qualify the P4 Console OS and native Game API games on the exact Elecrow ESP32-P4 10 in tablet. Use when a session is asked to test a Console OS build, put it on the tablet, validate Maze Chase or another game, check image/sprite rendering, touch, sound, return-to-launcher, or Doom regressions, or write honest hardware acceptance notes. Never substitute a generic idf.py flash for the exact-artifact route.
+description: "Use only for explicitly requested legacy Elecrow ESP32-P4 10 in tablet builds, exact-unit guarded installation/recovery, Console OS qualification, native-game device acceptance or Doom regressions. Tab5 validation uses Fix Console and its own board contract."
 ---
 
 # ESP32 - Elecrow Test

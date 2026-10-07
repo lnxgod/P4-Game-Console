@@ -12,6 +12,54 @@ static bool read_memory(void *p,size_t offset,void *out,size_t n)
 { memcpy(out,(uint8_t *)p+offset,n); return true; }
 static void put32(uint8_t *p,size_t n)
 { for (unsigned i=0;i<4;++i) p[i]=(uint8_t)(n>>(i*8U)); }
+typedef struct {
+    const uint8_t *data;
+    unsigned reads, progress, fail_read;
+} progress_fixture_t;
+static bool read_progress_fixture(void *context,size_t offset,void *out,size_t n)
+{
+    progress_fixture_t *fixture=context;
+    /* Each read models one slow block: every previous read must have yielded
+     * to the caller before the next SD read, including directory traversal. */
+    assert(fixture->progress==fixture->reads);
+    ++fixture->reads;
+    if (fixture->reads==fixture->fail_read) return false;
+    memcpy(out,fixture->data+offset,n);
+    return true;
+}
+static void note_progress(void *context)
+{
+    progress_fixture_t *fixture=context;
+    assert(fixture->progress+1==fixture->reads);
+    ++fixture->progress;
+}
+static void test_validation_progress(void)
+{
+    uint8_t *data=calloc(4,P4_VERIFIED_BLOCK_BYTES); assert(data);
+    const size_t size=4U*P4_VERIFIED_BLOCK_BYTES;
+    uint8_t digests[4*P4_VERIFIED_DIGEST_BYTES];
+    /* The header and three directory blocks force four separate SD reads.
+     * Empty IWAD lumps are legal; the entire fixture is covered by hashes. */
+    memcpy(data,"IWAD",4); put32(data+4,768); put32(data+8,P4_VERIFIED_BLOCK_BYTES);
+    for (size_t i=0;i<4;++i)
+        hash(data+i*P4_VERIFIED_BLOCK_BYTES,P4_VERIFIED_BLOCK_BYTES,digests+i*32);
+    for (unsigned fail=0;fail<=4;++fail) {
+        progress_fixture_t fixture={.data=data,.fail_read=fail};
+        p4_verified_reader_t reader={.context=&fixture,.read=read_progress_fixture,
+            .sha256=hash,.digests=digests,.size=size,.digest_bytes=sizeof(digests)};
+        assert(p4_verified_wad_validate_with_progress(
+            &reader,P4_WAD_IWAD,note_progress,&fixture)==(fail==0));
+        assert(fixture.reads==(fail==0 ? 4 : fail));
+        assert(fixture.progress==fixture.reads);
+        assert(reader.context==&fixture && reader.read==read_progress_fixture);
+    }
+    p4_verified_reader_t reader={.context=data,.read=read_memory,.sha256=hash,
+        .digests=digests,.size=size,.digest_bytes=sizeof(digests)};
+    assert(p4_verified_wad_validate_with_progress(&reader,P4_WAD_IWAD,NULL,NULL));
+    assert(reader.context==data && reader.read==read_memory);
+    assert(!p4_verified_wad_validate_with_progress(NULL,P4_WAD_IWAD,note_progress,NULL));
+    free(data);
+}
 static bool validate(uint8_t *data,size_t size,p4_wad_kind_t pwad)
 {
     const size_t blocks=(size+4095U)/4096U;
@@ -27,6 +75,7 @@ static bool validate(uint8_t *data,size_t size,p4_wad_kind_t pwad)
 }
 int main(int argc,char **argv)
 {
+    test_validation_progress();
     if (argc==4) {
         for (int i=1;i<4;++i) {
             FILE *f=fopen(argv[i],"rb"); assert(f);

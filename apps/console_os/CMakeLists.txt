@@ -2,7 +2,7 @@
 
 cmake_minimum_required(VERSION 3.16)
 
-set(PROJECT_VER "0.59")
+set(PROJECT_VER "0.80")
 
 if(NOT DEFINED P4_BOARD_PROFILE)
     set(P4_BOARD_PROFILE "m5stack-tab5")
@@ -60,6 +60,7 @@ set(EXTRA_COMPONENT_DIRS
     "${CMAKE_CURRENT_LIST_DIR}/../../components/doom_multiplayer"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_multiplayer"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_multiplayer_registry"
+    "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_midi"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_usb_content_transfer"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_os_update_package"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_frame_scheduler"
@@ -660,11 +661,16 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
     "${P4_REPOSITORY_ROOT}/scripts/generate-game-registry.py"
     "${P4_REPOSITORY_ROOT}/scripts/p4_game_release.py")
 set(P4_GENERATED_GAMES_CMAKE "${CMAKE_BINARY_DIR}/p4-games.cmake")
+set(P4_GAME_REGISTRY_RESOLUTION_ARGS)
+if(P4_BOARD_PROFILE STREQUAL "m5stack-tab5")
+    list(APPEND P4_GAME_REGISTRY_RESOLUTION_ARGS --require-native-resolution)
+endif()
 execute_process(
     COMMAND
         "${P4_IDF_PYTHON}"
         "${CMAKE_CURRENT_LIST_DIR}/../../scripts/generate-game-registry.py"
         --games-root "${CMAKE_CURRENT_LIST_DIR}/../../games"
+        ${P4_GAME_REGISTRY_RESOLUTION_ARGS}
         --output-cmake "${P4_GENERATED_GAMES_CMAKE}"
     RESULT_VARIABLE P4_GAME_MANIFEST_RESULT
     OUTPUT_VARIABLE P4_GAME_MANIFEST_REPORT

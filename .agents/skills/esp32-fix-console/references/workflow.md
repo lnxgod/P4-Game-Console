@@ -12,9 +12,14 @@ make verify
 ```
 
 `setup` is needed only when the pinned toolchain is absent. After that, run the
-smallest existing `*-host` target that covers the changed component and build
-only the affected app with `make build APP=<app>`. Documentation and skill-only
-changes need no firmware build. Run repo-wide `make check` only for an explicit
+smallest existing `*-host` target that covers the changed component. Tab5 uses
+`make console-os-tab5-idf`; its `build-tab5` artifact and focused verifier are
+part of that target. For an existing exact-unit authorization, preserve the
+chosen peripheral feature selections when preparing its successor. Legacy
+diagnostics need an explicitly matching board/app route from
+[legacy board maintenance](legacy-boards.md), not a generic command's default
+board. Documentation and skill-only changes need no firmware build. Run
+repo-wide `make check` only for an explicit
 request, a deliberate toolchain or dependency-lock migration, or a genuinely
 cross-cutting change spanning maintained applications. Do not repeat an
 unchanged build, flash, or hardware run.
@@ -23,7 +28,10 @@ Do not silently upgrade ESP-IDF or managed components to make a build pass.
 Change the lock deliberately, explain the migration, regenerate dependency
 locks, and rebuild every maintained app.
 
-## Application structure
+## Legacy diagnostic applications
+
+These apps remain legacy maintenance and provenance workflows. They are not
+Tab5 setup prerequisites; the current Tab5 build route supports Console OS.
 
 - `apps/bringup`: pin-independent chip, flash, PSRAM, heap, and console proof.
 - Later peripheral diagnostics: one narrow image per subsystem.
@@ -55,6 +63,8 @@ For a hardware run, record:
 - Git state and app name;
 - ESP-IDF and component lock versions;
 - serial port and power/fixture arrangement;
-- exact write/readback offsets, byte counts, hashes, acceptance markers, and pass/fail result.
+- exact write offsets, byte counts, artifact hashes, verification method,
+  acceptance markers and pass/fail result; include readback offsets and hashes
+  only when readback ran. A device checksum is not full readback evidence.
 
 Never record the raw base identity; the stored SHA-256 binding is sufficient for board matching.

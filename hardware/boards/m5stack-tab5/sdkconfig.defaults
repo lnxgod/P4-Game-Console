@@ -19,12 +19,21 @@ CONFIG_ESP_CONSOLE_UART_DEFAULT=n
 CONFIG_ESP_CONSOLE_SECONDARY_NONE=y
 CONFIG_ESP_CONSOLE_SECONDARY_USB_SERIAL_JTAG=n
 CONFIG_P4_MP_DIRECT_UART=n
+# Bound queued UDP datagrams while absorbing a burst between runtime polls.
+CONFIG_LWIP_UDP_RECVMBOX_SIZE=32
 CONFIG_DOOM_AUDIO_ENGINE_ADAPTER=y
 CONFIG_ESP_LCD_TOUCH_MAX_POINTS=5
 CONFIG_ESP_LCD_TOUCH_MAX_BUTTONS=0
 CONFIG_CODEC_I2C_BACKWARD_COMPATIBLE=n
 CONFIG_CODEC_ES8388_SUPPORT=y
 CONFIG_FATFS_FS_LOCK=8
+# Avoid repeated FAT-chain walks for Arena's random texture and sprite reads.
+# 2 + 2*ceil(28787748/512) words covers the largest pinned Arena WAD even
+# with one fragment per minimum-size cluster: 449824 bytes per read-only file.
+# The storage service's eight handles cap these PSRAM maps at 3598592 bytes.
+CONFIG_FATFS_USE_FASTSEEK=y
+CONFIG_FATFS_ALLOC_PREFER_EXTRAM=y
+CONFIG_FATFS_FAST_SEEK_BUFFER_SIZE=112456
 
 # Explicitly authorized battery charger repair, 2026-10-05.
 CONFIG_P4_TAB5_CHARGER_500MA=y

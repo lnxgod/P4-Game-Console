@@ -232,6 +232,60 @@ static void test_registry_validation(void)
     CHECK(!console_shell_init(&shell, invalid, 2U));
     invalid[1].folder_path = "games/arcade";
     CHECK(!console_shell_init(&shell, invalid, 2U));
+    invalid[1] = s_apps[1];
+    char reason[CONSOLE_SHELL_SUBTITLE_MAX_BYTES];
+    memset(reason, 'R', sizeof(reason));
+    invalid[1].disabled_reason = reason;
+    CHECK(!console_shell_init(&shell, invalid, 2U));
+    reason[sizeof(reason) - 1U] = '\0';
+    CHECK(console_shell_init(&shell, invalid, 2U));
+    invalid[1].disabled_reason = NULL;
+    CHECK(console_shell_init(&shell, invalid, 2U));
+}
+
+static void test_disabled_reason(void)
+{
+    console_app_descriptor_t app = s_apps[0];
+    app.enabled = false;
+    app.folder_path = "";
+    const size_t words = (size_t)CONSOLE_SHELL_WIDTH * CONSOLE_SHELL_HEIGHT;
+    uint16_t *const frame = malloc(words * sizeof(*frame));
+    uint16_t *const fallback = malloc(words * sizeof(*fallback));
+    uint16_t *const reference = malloc(words * sizeof(*reference));
+    CHECK(frame != NULL && fallback != NULL && reference != NULL);
+    if (frame == NULL || fallback == NULL || reference == NULL) {
+        free(frame);
+        free(fallback);
+        free(reference);
+        return;
+    }
+    console_shell_t shell;
+    CHECK(console_shell_init(&shell, &app, 1U));
+    CHECK(console_shell_render_native_cached_rgb565(
+        &shell, fallback, CONSOLE_SHELL_WIDTH));
+    char reason[CONSOLE_SHELL_SUBTITLE_MAX_BYTES] = "Update game for Tab5";
+    app.disabled_reason = reason;
+    CHECK(console_shell_render_native_cached_rgb565(
+        &shell, frame, CONSOLE_SHELL_WIDTH));
+    CHECK(memcmp(frame, fallback, words * sizeof(*frame)) != 0);
+    CHECK(tap(&shell, 50U, 60U).type == CONSOLE_ACTION_NONE);
+    CHECK(press_button(&shell, CONSOLE_BUTTON_ACCEPT).type !=
+          CONSOLE_ACTION_LAUNCH);
+    CHECK(shell.page == CONSOLE_PAGE_HOME && shell.active_app_id == 0U);
+    (void)strcpy(reason, "Install an update");
+    CHECK(console_shell_render_native_cached_rgb565(
+        &shell, frame, CONSOLE_SHELL_WIDTH));
+    console_shell_t fresh = shell;
+    CHECK(console_shell_render_rgb565(
+        &fresh, reference, CONSOLE_SHELL_WIDTH));
+    CHECK(memcmp(frame, reference, words * sizeof(*frame)) == 0);
+    app.disabled_reason = NULL;
+    CHECK(console_shell_render_native_cached_rgb565(
+        &shell, frame, CONSOLE_SHELL_WIDTH));
+    CHECK(memcmp(frame, fallback, words * sizeof(*frame)) == 0);
+    free(frame);
+    free(fallback);
+    free(reference);
 }
 
 static void test_launcher_scrolling(void)
@@ -989,14 +1043,14 @@ static void test_window_manager_visual_contract(void)
     const uint64_t olimex_system_hash = UINT64_C(0x552b449074ff213b);
 #elif CONSOLE_SHELL_TARGET_WIDTH == 800U && \
     CONSOLE_SHELL_TARGET_HEIGHT == 480U
-    /* OS 0.59 version text is included in these complete-frame fixtures. */
-    const uint64_t desktop_hash = UINT64_C(0x55ece127620a8f0a);
-    const uint64_t elecrow_system_hash = UINT64_C(0x6ac6641547d21a56);
-    const uint64_t olimex_system_hash = UINT64_C(0x68a2029eadab6fb8);
+    /* OS 0.79 version text is included in these complete-frame fixtures. */
+    const uint64_t desktop_hash = UINT64_C(0x4f8e1e6ecad8f204);
+    const uint64_t elecrow_system_hash = UINT64_C(0xcaf23d69a79499e7);
+    const uint64_t olimex_system_hash = UINT64_C(0x4ae663331755abf9);
 #else
-    const uint64_t desktop_hash = UINT64_C(0x74cfcfce1b42ada7);
-    const uint64_t elecrow_system_hash = UINT64_C(0x222c3f5321b22059);
-    const uint64_t olimex_system_hash = UINT64_C(0x514aa8b91e01e9f2);
+    const uint64_t desktop_hash = UINT64_C(0xe2d898f0b992ffc7);
+    const uint64_t elecrow_system_hash = UINT64_C(0x9685ccb9e9118cd9);
+    const uint64_t olimex_system_hash = UINT64_C(0x9037d6aa06629f12);
 #endif
     uint16_t *const frame = calloc(
         (size_t)CONSOLE_SHELL_WIDTH * CONSOLE_SHELL_HEIGHT,
@@ -2460,6 +2514,7 @@ int main(void)
     test_control_panel_paging_and_utility_return();
     test_refined_control_panel();
     test_registry_validation();
+    test_disabled_reason();
     test_render_bounds_and_stride();
     test_present_render_contract();
     test_native_home_scroll_cache();

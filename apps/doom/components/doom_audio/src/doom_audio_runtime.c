@@ -55,6 +55,66 @@ static atomic_bool s_music_playing;
 static atomic_bool s_music_paused;
 /* A constant static initializer is the C11 equivalent of ATOMIC_VAR_INIT. */
 static atomic_uint_least32_t s_worker_stack_hwm_bytes = UINT32_MAX;
+/* A single bounded desired-music mailbox is independent of SFX saturation.
+ * The critical section covers publication/admission and ownership transfer only;
+ * heap operations and the player remain outside it on their owning tasks. */
+typedef struct {
+    doom_audio_command_type_t type;
+    doom_audio_command_type_t pause_action;
+    doom_audio_command_type_t prior_pause_action;
+    bool stop_before_play;
+    doom_music_song_t *song;
+    bool looping;
+} music_request_t;
+
+static portMUX_TYPE s_music_request_lock = portMUX_INITIALIZER_UNLOCKED;
+static music_request_t s_music_request;
+
+static music_request_t take_music_request(void)
+{
+    portENTER_CRITICAL(&s_music_request_lock);
+    const music_request_t request = s_music_request;
+    s_music_request = (music_request_t){0};
+    portEXIT_CRITICAL(&s_music_request_lock);
+    return request;
+}
+
+static void discard_music_request(void)
+{
+    const music_request_t request = take_music_request();
+    doom_music_song_release(request.song);
+}
+
+static void apply_music_pause_action(doom_music_player_t *music,
+                                      doom_audio_command_type_t action)
+{
+    if (action == DOOM_AUDIO_COMMAND_MUSIC_PAUSE) {
+        doom_music_player_pause(music);
+    } else if (action == DOOM_AUDIO_COMMAND_MUSIC_RESUME) {
+        doom_music_player_resume(music);
+    }
+}
+
+static void process_music_request(doom_music_player_t *music)
+{
+    const music_request_t request = take_music_request();
+    if (request.type == DOOM_AUDIO_COMMAND_MUSIC_PLAY) {
+        /* Keep explicit controls meaningful even if replacement allocation
+         * fails and the player would otherwise retain the previous song. */
+        if (request.stop_before_play) {
+            doom_music_player_stop(music);
+        } else {
+            apply_music_pause_action(music, request.prior_pause_action);
+        }
+        (void)doom_music_player_start(music, request.song, request.looping);
+        doom_music_song_release(request.song);
+    } else if (request.type == DOOM_AUDIO_COMMAND_MUSIC_STOP) {
+        doom_music_player_stop(music);
+    }
+    apply_music_pause_action(music, request.type);
+    apply_music_pause_action(music, request.pause_action);
+}
+
 static SemaphoreHandle_t s_worker_gate;
 static SemaphoreHandle_t s_worker_done;
 static TaskHandle_t s_worker_task;
@@ -153,33 +213,10 @@ static void mark_voice_finished(size_t voice_index, uint32_t expected_state)
 }
 
 static void process_commands(doom_audio_mixer_t *mixer,
-                             doom_music_player_t *music,
                              uint32_t actual_state[DOOM_AUDIO_MAX_VOICES])
 {
     doom_audio_command_t command;
     while (doom_audio_command_ring_pop(&s_command_ring, &command)) {
-        if (command.type == DOOM_AUDIO_COMMAND_MUSIC_PLAY) {
-            const bool started = doom_music_player_start(
-                music, command.music_song, command.music_looping);
-            doom_music_song_release(command.music_song);
-            if (!started) {
-                atomic_store_explicit(
-                    &s_music_playing, false, memory_order_release);
-            }
-            continue;
-        }
-        if (command.type == DOOM_AUDIO_COMMAND_MUSIC_STOP) {
-            doom_music_player_stop(music);
-            continue;
-        }
-        if (command.type == DOOM_AUDIO_COMMAND_MUSIC_PAUSE) {
-            doom_music_player_pause(music);
-            continue;
-        }
-        if (command.type == DOOM_AUDIO_COMMAND_MUSIC_RESUME) {
-            doom_music_player_resume(music);
-            continue;
-        }
         const size_t voice_index = command.voice_index;
         if (voice_index >= (size_t)DOOM_AUDIO_MAX_VOICES) {
             continue;
@@ -230,16 +267,6 @@ static void publish_music_stats(const doom_music_player_t *music)
         &s_music_paused, stats.paused, memory_order_release);
 }
 
-static void release_queued_music_references(void)
-{
-    doom_audio_command_t command;
-    while (doom_audio_command_ring_pop(&s_command_ring, &command)) {
-        if (command.type == DOOM_AUDIO_COMMAND_MUSIC_PLAY) {
-            doom_music_song_release(command.music_song);
-        }
-    }
-}
-
 static void reconcile_stops(doom_audio_mixer_t *mixer,
                             uint32_t actual_state[DOOM_AUDIO_MAX_VOICES])
 {
@@ -287,7 +314,8 @@ static void worker_task(void *unused)
             &music,
             (uint8_t)atomic_load_explicit(
                 &s_music_volume, memory_order_relaxed));
-        process_commands(&mixer, &music, actual_state);
+        process_commands(&mixer, actual_state);
+        process_music_request(&music);
         reconcile_stops(&mixer, actual_state);
         if (!doom_audio_mixer_render(
                 &mixer, output, DOOM_AUDIO_WORKER_CHUNK_FRAMES)) {
@@ -317,7 +345,8 @@ static void worker_task(void *unused)
     }
 
     doom_music_player_stop(&music);
-    release_queued_music_references();
+    /* Admission is closed (not RUNNING) before this locked final detach. */
+    discard_music_request();
     publish_music_stats(&music);
     const int state =
         atomic_load_explicit(&s_runtime_state, memory_order_acquire);
@@ -332,6 +361,8 @@ static void worker_task(void *unused)
 
 static void reset_runtime_queues(void)
 {
+    /* A previous worker has joined; still detach rather than overwrite a ref. */
+    discard_music_request();
     doom_audio_command_ring_init(&s_command_ring);
     for (size_t voice_index = 0U;
          voice_index < (size_t)DOOM_AUDIO_MAX_VOICES; ++voice_index) {
@@ -570,25 +601,43 @@ static bool enqueue_music_command(doom_audio_command_type_t type,
                                   doom_music_song_t *song,
                                   bool looping)
 {
+    doom_music_song_t *displaced_song = NULL;
+    portENTER_CRITICAL(&s_music_request_lock);
     if (atomic_load_explicit(&s_runtime_state, memory_order_acquire) !=
         RUNTIME_RUNNING) {
+        portEXIT_CRITICAL(&s_music_request_lock);
         return false;
     }
-    const doom_audio_command_t command = {
-        .type = type,
-        .voice_index = 0U,
-        .volume = 0U,
-        .separation = 0U,
-        .desired_state = 0U,
-        .sample = NULL,
-        .music_song = song,
-        .music_looping = looping,
-    };
-    if (!doom_audio_command_ring_push(&s_command_ring, &command)) {
-        (void)atomic_fetch_add_explicit(
-            &s_commands_dropped, UINT32_C(1), memory_order_relaxed);
-        return false;
+    if (type == DOOM_AUDIO_COMMAND_MUSIC_PLAY ||
+        type == DOOM_AUDIO_COMMAND_MUSIC_STOP) {
+        displaced_song = s_music_request.song;
+        const bool stop_before_play =
+            s_music_request.type == DOOM_AUDIO_COMMAND_MUSIC_STOP ||
+            s_music_request.stop_before_play;
+        doom_audio_command_type_t prior_pause_action =
+            s_music_request.prior_pause_action;
+        if (s_music_request.type == DOOM_AUDIO_COMMAND_MUSIC_PAUSE ||
+            s_music_request.type == DOOM_AUDIO_COMMAND_MUSIC_RESUME) {
+            prior_pause_action = s_music_request.type;
+        } else if (s_music_request.pause_action != 0) {
+            prior_pause_action = s_music_request.pause_action;
+        }
+        s_music_request = (music_request_t){
+            .type = type,
+            .song = song,
+            .looping = looping,
+            .stop_before_play = type == DOOM_AUDIO_COMMAND_MUSIC_PLAY &&
+                                stop_before_play,
+            .prior_pause_action = type == DOOM_AUDIO_COMMAND_MUSIC_PLAY
+                ? prior_pause_action : 0,
+        };
+    } else if (s_music_request.type == DOOM_AUDIO_COMMAND_MUSIC_PLAY) {
+        s_music_request.pause_action = type;
+    } else if (s_music_request.type != DOOM_AUDIO_COMMAND_MUSIC_STOP) {
+        s_music_request.type = type;
     }
+    portEXIT_CRITICAL(&s_music_request_lock);
+    doom_music_song_release(displaced_song);
     (void)atomic_fetch_add_explicit(
         &s_commands_enqueued, UINT32_C(1), memory_order_relaxed);
     return true;

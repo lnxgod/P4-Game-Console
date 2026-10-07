@@ -2,6 +2,7 @@
 
 #include "doom/audio_runtime.h"
 #include "doom/audio_ring.h"
+#include "doom/music_synth.h"
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -41,6 +42,8 @@ static unsigned s_start_calls;
 static unsigned s_stop_calls;
 static unsigned s_safe_calls;
 static unsigned s_write_calls;
+static unsigned s_fail_write_after;
+static unsigned s_nonzero_samples;
 static UBaseType_t s_worker_stack_hwm_bytes;
 
 #define EXPECT_EQ(expected_, actual_)                                           \
@@ -76,6 +79,8 @@ static void reset_mocks(void)
     s_stop_calls = 0U;
     s_safe_calls = 0U;
     s_write_calls = 0U;
+    s_fail_write_after = 0U;
+    s_nonzero_samples = 0U;
     s_worker_stack_hwm_bytes = 1536U;
 }
 
@@ -189,9 +194,11 @@ esp_err_t platform_audio_write_frames(platform_audio_t *audio,
                                       size_t frame_count)
 {
     (void)audio;
-    (void)interleaved_pcm;
-    (void)frame_count;
+    for (size_t i = 0U; i < frame_count * 2U; ++i)
+        if (interleaved_pcm[i] != 0) ++s_nonzero_samples;
     ++s_write_calls;
+    if (s_fail_write_after != 0U && s_write_calls >= s_fail_write_after)
+        return ESP_FAIL;
     return ESP_OK;
 }
 
@@ -364,6 +371,37 @@ static void test_unclean_start_failure_requires_guarded_stop(void)
     EXPECT_EQ(ESP_OK, doom_audio_runtime_unbind());
 }
 
+static void test_queued_midi_survives_unregister(void)
+{
+    static const uint8_t midi[] = {
+        'M','T','h','d',0,0,0,6,0,0,0,1,0,96,
+        'M','T','r','k',0,0,0,8,
+        0,0x90,60,100, 96,0xff,0x2f,0
+    };
+    reset_mocks();
+    platform_audio_t audio = {.state = PLATFORM_AUDIO_STATE_READY_MUTED};
+    EXPECT_EQ(ESP_OK, bind_fixture(&audio));
+    EXPECT_EQ(ESP_OK, doom_audio_runtime_start());
+    doom_music_song_t *song = doom_music_song_create(midi, sizeof(midi));
+    EXPECT_EQ(true, song != NULL);
+    EXPECT_EQ(true, doom_audio_runtime_music_play(song, true));
+    doom_music_song_release(song); /* Engine unregisters before worker starts. */
+    s_fail_write_after = 4U; /* Bound the real worker by a simulated device error. */
+    TaskFunction_t const task = s_task;
+    s_task = NULL;
+    task(s_task_argument);
+    doom_audio_runtime_stats_t stats = {0};
+    EXPECT_EQ(ESP_OK, doom_audio_runtime_get_stats(&stats));
+    EXPECT_EQ(1, stats.music_songs_started);
+    EXPECT_EQ(1, stats.music_notes_started);
+    EXPECT_EQ(512, stats.music_mixed_frames);
+    EXPECT_EQ(0, stats.music_parse_failures);
+    EXPECT_EQ(true, s_nonzero_samples > 0U);
+    EXPECT_EQ(false, stats.music_playing);
+    EXPECT_EQ(ESP_OK, doom_audio_runtime_stop());
+    EXPECT_EQ(ESP_OK, doom_audio_runtime_unbind());
+}
+
 int main(void)
 {
     test_initial_stats_have_unsampled_worker_hwm();
@@ -375,6 +413,7 @@ int main(void)
     test_stop_voice_clears_active_state();
     test_ring_full_start_rollback_clears_active_state();
     test_unclean_start_failure_requires_guarded_stop();
+    test_queued_midi_survives_unregister();
     if (s_failures != 0U) {
         fprintf(stderr, "Doom audio runtime tests failed: %u\n", s_failures);
         return 1;

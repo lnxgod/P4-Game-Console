@@ -31,7 +31,14 @@ static void test_pipeline(uint16_t width)
 {
     p4_game_services_t services={.available_capabilities=P4_GAME_CAP_VIDEO|P4_GAME_CAP_CONTROLS|(width==768U?P4_GAME_CAP_VIDEO_HIGH_RES:0U)};
     p4_game_instance_t game={0};maze_chase_state_t state;
-    CHECK(p4_game_instance_start(&game,&p4_maze_chase_game,&services,&state,sizeof(state)));
+    /* Preserve the explicit legacy input branch without weakening the actual cartridge. */
+    p4_game_descriptor_t legacy = p4_maze_chase_game;
+    legacy.required_capabilities &= ~(uint32_t)P4_GAME_CAP_VIDEO_HIGH_RES;
+    legacy.optional_capabilities |= P4_GAME_CAP_VIDEO_HIGH_RES;
+    if (width != 768U) {
+        CHECK(!p4_game_instance_start(&game,&p4_maze_chase_game,&services,&state,sizeof(state)));
+    }
+    CHECK(p4_game_instance_start(&game,width==768U?&p4_maze_chase_game:&legacy,&services,&state,sizeof(state)));
     p4_game_input_mapper_t mapper;p4_game_input_mapper_init(&mapper);
     p4_host_mouse_t mouse={.current={.valid=true}};
     p4_game_point_t point;const p4_physical_touch_t start_point=physical(290U,184U);

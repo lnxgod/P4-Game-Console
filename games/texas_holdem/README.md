@@ -71,15 +71,17 @@ Console OS discovers `game.json` and packages `TEXAS_HOLDEM.P4G`. Install the
 cartridge through Game Manager, a guarded SD workflow, or the verified H1
 transfer path; a game-only update does not require an OS flash.
 
-## Native-resolution presentation (1.2.0)
+## Native-resolution presentation
 
-The preferred surface is 768x480 RGB565 with an optional `video-highres`
-capability and a complete 320x200 fallback. Fonts, rounded card edges, and
-mathematical suit silhouettes are rasterized at the negotiated resolution;
-no 320x200 framebuffer is enlarged to produce the high-resolution game.
+Version 1.2.1 requires `video-highres` in the manifest and C descriptor.
+The maintained Tab5 surface is **768×480 RGB565**. Fonts, rounded card edges,
+and mathematical suit silhouettes are rasterized directly into that surface;
+no completed 320×200 frame is enlarged. Canonical 320×200 touch coordinates
+remain input units. The compact legacy renderer is preserved only for
+explicitly requested legacy maintenance and labeled host diagnostics.
 Input, rules, card identities, saves, and multiplayer messages remain unchanged.
 Exact ranks, numbers, and suits are drawn by code, so generated art cannot
-change card meaning. Small fallback labels retain the proven compact font.
+change card meaning. Explicit legacy diagnostics retain the proven compact font.
 
 `assets/table-materials-imagegen.png` is original artwork generated with the
 built-in ImageGen tool for this upgrade. It contains emerald and midnight felt
@@ -98,9 +100,9 @@ Reproduce the material include with Pillow installed:
 python3 games/texas_holdem/tools/convert_table_materials.py
 ```
 
-Focused sanitizer tests include both negotiated surfaces, padded framebuffer
-strides, render captures, and Back lifecycle. Existing rule and multiplayer
-tests remain in place. Optional screenshots come from the actual game renderer:
+Focused sanitizer tests cover the required native surface and explicit legacy
+diagnostic copies, padded framebuffer strides, render captures, and Back
+lifecycle. Existing rule and multiplayer tests remain in place. Optional screenshots come from the actual game renderer:
 
 ```sh
 P4_CARD_CAPTURE_DIR=/absolute/existing/output/directory \
@@ -124,3 +126,17 @@ The table uses direct touch controls for setup, private-card reveal and betting;
 controller-only prompts no longer occupy the table. Touches are handled before
 the shared mapper’s virtual buttons, so Raise cannot accidentally act as Fold.
 Physical keyboard/controller mappings remain available.
+
+## Native Tab5 validation (1.2.1)
+
+The released descriptor requires `video-highres`, so services without that
+capability cannot start it and the runtime rejects a 320×200 surface. Preserved
+legacy checks use explicit local descriptor copies. The focused ASan/UBSan
+suite and SDL smoke passed at 768×480 for this revision. Default previews render
+directly into the native surface.
+
+These are host checks. The target is 60 FPS, with a measured physical-device
+release floor of 30 FPS at 768×480. Panel readability, input, sound and device
+cadence remain subject to exact-package, OS and Tab5 acceptance; a host CPU
+timing or capture does not qualify that floor. Earlier test records retain
+the results for their recorded sources and artifacts.

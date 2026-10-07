@@ -20,12 +20,30 @@
 #ifndef __I_VIDEO__
 #define __I_VIDEO__
 
+#include <stddef.h>
 #include "doomtype.h"
 
-// Screen width and height.
-
-#define SCREENWIDTH  320
-#define SCREENHEIGHT 200
+// The renderer raster and the classic asset/input coordinate system are
+// separate. Legacy builds retain the original raster; Tab5 defines 768x480.
+#define P4_DOOM_CANONICAL_WIDTH 320
+#define P4_DOOM_CANONICAL_HEIGHT 200
+#ifndef P4_DOOM_NATIVE_WIDTH
+#define P4_DOOM_NATIVE_WIDTH P4_DOOM_CANONICAL_WIDTH
+#endif
+#ifndef P4_DOOM_NATIVE_HEIGHT
+#define P4_DOOM_NATIVE_HEIGHT P4_DOOM_CANONICAL_HEIGHT
+#endif
+#define SCREENWIDTH P4_DOOM_NATIVE_WIDTH
+#define SCREENHEIGHT P4_DOOM_NATIVE_HEIGHT
+#define P4_DOOM_SCALE_X(value) ((value) * SCREENWIDTH / P4_DOOM_CANONICAL_WIDTH)
+#define P4_DOOM_SCALE_Y(value) ((value) * SCREENHEIGHT / P4_DOOM_CANONICAL_HEIGHT)
+#define P4_DOOM_NATIVE_RASTER (SCREENWIDTH != 320 || SCREENHEIGHT != 200)
+#if SCREENWIDTH < 320 || SCREENHEIGHT < 200 || SCREENWIDTH > 1120 || SCREENHEIGHT > 832
+#error Doom raster dimensions exceed the renderer lookup bounds
+#endif
+#if SCREENWIDTH * 200 != SCREENHEIGHT * 320
+#error Doom native raster must preserve the canonical aspect ratio
+#endif
 
 // Screen width used for "squash" scale functions
 
@@ -99,6 +117,12 @@ void I_InitGraphics (void);
 void I_GraphicsCheckCommandLine(void);
 
 void I_ShutdownGraphics(void);
+
+/* Optional paired platform framebuffer loan. NULL selects Z_Malloc.
+ * A non-NULL pointer must cover bytes writable indexed pixels until release;
+ * the platform controls its physical allocation and eventual deallocation. */
+void *DG_AllocIndexedFramebuffer(size_t bytes);
+void DG_ReleaseIndexedFramebuffer(void *buffer);
 
 // Takes full 8 bit values.
 void I_SetPalette (byte* palette);

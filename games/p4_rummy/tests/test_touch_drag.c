@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+#include "test_game_start.h"
 #include "p4_rummy_internal.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -47,7 +48,7 @@ int main(void)
         const unsigned width=high?768U:320U;
         const p4_game_services_t services={.available_capabilities=P4_GAME_CAP_VIDEO|P4_GAME_CAP_CONTROLS|(high?P4_GAME_CAP_VIDEO_HIGH_RES:0U)};
         p4_game_instance_t game={0};p4_rummy_state_t state;
-        CHECK(p4_game_instance_start(&game,&p4_p4_rummy_game,&services,&state,sizeof(state)));
+        CHECK(test_start_game(&game,&p4_p4_rummy_game,&services,&state,sizeof(state)));
         fixture(&state);
         const uint32_t revision=state.revision;
         const uint8_t discard=state.discard_count;

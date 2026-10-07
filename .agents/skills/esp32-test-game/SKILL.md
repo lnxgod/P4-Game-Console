@@ -71,16 +71,29 @@ build unless the user explicitly asks only for diagnosis.
 
 ## Inspect high-resolution presentation
 
-Follow `docs/GAME_ART.md`. New and upgraded games should negotiate 768x480,
-with guarded render coverage for the 320x200 fallback and padded strides.
-Inspect native-size captures of gameplay, menus and results; check text bounds,
-card overlap, texture contrast, selected states and sprites at screen edges.
-The SDL runner follows the manifest; a large window alone does not prove that
-the game draws native detail. Test canonical 320x200 touch hit regions against
-the visible high-resolution controls. Record asset bytes and cartridge size.
+Follow `docs/GAME_ART.md`. Every maintained Tab5 game must render directly at
+768x480 RGB565. Verify required high resolution in the manifest and compiled
+C descriptor, then inspect the actual selected framebuffer dimensions. A
+320x200 render, per-title OS downgrade or enlarged completed low-resolution
+frame fails native presentation acceptance. Route a mode mismatch through
+**Fix Console** before adapting textures to the wrong resolution.
+
+Inspect native-size opening, active play, pause and results. Check paths,
+actor/obstacle/pickup/hazard silhouettes, quiet background textures, overlapping
+effects, text bounds, selected states and sprites at screen edges. The SDL
+runner selects its surface from the compiled descriptor; a large window alone
+does not prove native detail. Test canonical 320x200 touch hit regions against
+the visible controls. Record asset bytes and cartridge size. Preserve bounded
+legacy fallback/stride tests as compatibility evidence only.
+
+For a device claim, require `CARTRIDGE_START ... surface=768x480`, exact package,
+OS and unit bindings, and an active-play capture/readability review on that
+unit. For multiplayer, verify both host and guest surfaces. An install receipt,
+optional capability or scaled screenshot cannot close that gate. Keep device
+readability and cadence pending when only host evidence is available.
 
 Follow the canonical [ESP32-P4 performance contract](../../../docs/GAME_PERFORMANCE.md)
-for native/fallback CPU benchmarks, deliberately active movement/drag traces,
+for native-resolution CPU benchmarks, deliberately active movement/drag traces,
 changed-frame checks and exact artifact bindings. Review real motion, timers
 and audio in the SDL runner; its FPS title and Mac CPU results cannot establish
 the actual-device 30 FPS release floor. Report limited or idle trace coverage.
@@ -97,16 +110,34 @@ Before handing a changed game to the firmware workflow, report:
 
 Use `local-play-tested` only after interactive play is explicitly confirmed.
 Use `host-tested` for automated sanitizer/unit success without implying that a
-person played the game. Never allow an unplayed or failing local candidate to
-advance to a guarded device install.
+person played the game. Require confirmed interactive play before a routine
+gameplay installation. An explicitly requested diagnostic device installation
+may follow `$esp32-add-game` after applicable host checks; record missing play,
+keep scaffolds disabled, and label the unplayed result as a candidate. Never
+bypass sanitizer, invalid manifest/ELF/package or lifecycle failures, or treat that
+installation as release qualification.
 
 ## Keep acceptance claims honest
 
-For a multicore service change, run the shared service's concurrent producer/
-consumer, backpressure, stop/restart and teardown tests with race detection
-where available. Host threads validate synchronization, not ESP32-P4 affinity
-or deadlines. Follow `docs/GAME_PERFORMANCE.md`: record actual game/audio core
-IDs, queue rejections, underruns, clipping and frame timing on the named device.
+For a multicore service change, follow `docs/GAME_PERFORMANCE.md`. The maintained
+Tab5 candidate keeps game/update/render on core 0, PPA presentation on core 1 at
+priority 2, and native audio output on core 1 at priority 4. Test its two native
+PSRAM framebuffer leases with rotating pointers: each callback renders the
+complete current surface, never caches its pixel pointer across frames, and
+leaves committed source pixels immutable until backend consumption. Run shared
+service tests for source lifetime, bounded producer/consumer admission,
+backpressure, stop/restart, failure paths and joined teardown, with race
+detection where available. Verify synchronous recovery retains direct 768x480.
+
+Bind device evidence to the exact OS, package and unit. Record actual core IDs
+and priorities, completed-backend frame intervals and concurrent stage timing
+showing game/render work overlapping presentation. Preserve queue/backend
+timeouts, hard errors, audio queue rejections, underruns, clipping and stack
+reserve. Cover busy gameplay, title/ready, pause and results transitions.
+Accepted submissions and backend completions have separate counters; preserve
+any missing physical scanout evidence. Host synchronization tests and worker
+creation leave device cadence, readability and the achieved 30 FPS floor
+pending until measured on the named hardware.
 
 Local play can validate game rules, RGB565 drawing through the shared API,
 normalized keyboard and mouse input, lifecycle behavior, tone-mixer requests,

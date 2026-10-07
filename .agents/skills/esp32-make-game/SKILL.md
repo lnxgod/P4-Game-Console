@@ -31,6 +31,7 @@ game's `game.json` before editing. Also use:
 - `$esp32-multiplayer` automatically for linked-console multiplayer;
   the user does not need to name the skill.
 - `$esp32-test-game` for native SDL3 play, sanitizer smoke and tuning.
+- `$esp32-game-art` for artwork and complete game presentation.
 - `$esp32-add-game` for manifests, packages and content installation.
 - `$esp32-fix-console` for actual toolchain, shared-service or board work.
   Ordinary drawing, tones and normalized controls do not require bring-up.
@@ -166,11 +167,20 @@ metadata into `p4_game_descriptor_t`; that descriptor is the stable API ABI.
   interaction section of `docs/GAME_ART.md`.
 - Use optional `p4/draw.h` primitives and licensed sprites, or a bounded custom
   software renderer. Keep clipping, stride and resource ownership correct.
-- Target native 768x480 RGB565 by default, with optional `video-highres` plus
-  `P4_GAME_CAP_VIDEO_HIGH_RES` and a tested 320x200 fallback. The creator now
-  requests this automatically. Render directly into the negotiated surface;
-  enlarging a finished low-resolution frame is not a visual upgrade. Touch
-  and standard control hit regions remain normalized to 320x200 in either mode.
+  Read the supplied surface's pixel pointer and stride for every frame: the
+  maintained native presenter rotates framebuffer leases. Do not cache the
+  pixel pointer across callbacks or write it after presentation. Render the
+  complete current frame without relying on the previous borrowed buffer.
+- Every maintained Tab5 game must render directly at native 768x480 RGB565.
+  Put `video-highres` in the manifest's required capabilities and
+  `P4_GAME_CAP_VIDEO_HIGH_RES` in the descriptor's required capabilities.
+  The creator emits both requirements by default; verify they remain aligned
+  after edits. Never select
+  `--low-res`, upscale a completed 320x200 frame or reduce resolution to repair
+  performance/readability. Fix measured native rendering costs and preserve
+  an unmet acceptance gate. Touch and standard control hit regions stay
+  normalized to 320x200; those input units do not set game render resolution.
+  Preserve legacy fallback source only for explicitly requested legacy work.
 - Read `docs/GAME_ART.md` for the shared presentation and ImageGen contract.
   Use `p4/presentation.h` for cartridge-local antialiased text and materials;
   keep important card ranks, suits, scores and instructions exact and legible.
@@ -182,14 +192,22 @@ metadata into `p4_game_descriptor_t`; that descriptor is the stable API ABI.
   from the first playable build: bounded shared raster work, fractional motion,
   pinned RV32 hot-path review and exact-device cadence evidence. Target 60 FPS;
   qualify the actual-device 30 FPS release floor separately from host success.
-- Use `p4/audio.h` for host-owned sound.
+  The maintained Tab5 candidate keeps game/update/render on core 0, PPA
+  presentation on core 1 at priority 2, and native audio output on core 1 at
+  priority 4. Console OS owns two native PSRAM framebuffer leases, bounded
+  admission, immutable committed frames until backend consumption and joined
+  teardown. Games consume this service through the supplied surface. OS
+  synchronous recovery preserves 768x480; never reduce rendering resolution.
+  Require exact OS/package/unit completed-backend cadence and overlapping
+  stage evidence through busy play, title/ready, pause and results. Until
+  measured on that device, this worker remains an unqualified candidate.
+- Use `p4/audio.h` for host-owned sound. For simple effects, request
+  `audio-tone` and call `p4_game_play_tone()`.
 - Stop all requested sound in the game's `stop` callback.
-- Use both P4 cores through OS-owned services, as described in
-  `docs/GAME_PERFORMANCE.md`. Games submit bounded PCM/tone commands; the Tab5
-  0.54 candidate's shared core-1 audio worker handles mixing/output while the
-  foreground core runs the game. Never create private tasks or move cartridge
-  callbacks to another core. Measure producer jitter and backpressure; a
-  successful synth test alone does not prove continuous device audio.
+- Use bounded, non-blocking audio commands through OS-owned services. Never
+  create private hardware-owning tasks or move cartridge callbacks to another
+  core. For PCM music, producer timing or optional services, read
+  [Audio and optional services](references/audio-and-services.md).
 
 For linked-console multiplayer, automatically use
 `$esp32-multiplayer`. Declare the optional `multiplayer-session`
@@ -200,46 +218,19 @@ messages and offline/peer-loss behavior. `new-game.py --multiplayer` creates
 metadata only; it does not implement synchronization.
 
 Use the public APIs for optional saves, achievements, resource sidecars and
-dice accessories when the design needs them. See `docs/GAME_STARTERS.md` and
-the corresponding Game SDK section before adding a service. Neither `storage`
-nor `save` gives a game a filesystem path; missing optional capabilities need
-an honest fallback.
-
-For simple sound, request `audio-tone` and call `p4_game_play_tone()`. For a
-software mixer, request `audio-stream`, declare
-`P4_GAME_CAP_AUDIO_STREAM`, and submit 1–256 frames of signed 16 kHz PCM16
-stereo with `p4_game_submit_pcm16_stereo()`. The host copies accepted blocks
-into its fixed 512-frame FIFO; drop/degrade a rejected block and never
-busy-wait in a callback.
+dice accessories only when needed; read
+[Audio and optional services](references/audio-and-services.md) before using them.
+Keep missing-capability fallbacks honest and bounded.
 
 Use original or correctly licensed assets. Never import arcade ROMs, maps,
 sprites, fonts, sounds, or commercial Doom WAD content.
 
-## Make high-resolution art usable in firmware
+## Add artwork or a spatial renderer
 
-Use ImageGen for new or materially revised raster art. Request crop-safe
-sprite atlases or seamless materials sized for their native 768x480 use.
-Describe the grid, frame contents, shared baseline, palette and transparency;
-keep important text and symbols code-rendered. Inspect converted artwork at
-native size. Pixel art may retain hard edges, but it is not the default style
-for every game; follow the user's art direction and `docs/GAME_ART.md`.
-
-- Keep the original source PNG under `games/<slug>/assets/` and explain its
-  provenance, row/frame layout, and license in that game's README.
-- Commit a game-local converter under `games/<slug>/tools/` which takes the
-  source PNG to a fixed-size RGB565 include under `src/generated/`. Use
-  nearest-neighbor scaling for pixel art or a recorded quality offline filter
-  for painted materials, and map transparency to one explicit chroma key. Never decode PNGs, allocate image buffers, or use a texture loader at
-  runtime.
-- Bound every atlas dimension and account for `width * height * 2` bytes in
-  the static firmware budget. Draw an individual cell with
-  `p4_draw_sprite_rgb565()` using the atlas row stride and its frame offset.
-- Advance frames from bounded game state and draw the same cell family in the
-  title/attract view and gameplay. Animate only state that the game owns;
-  hardware timing remains the host's responsibility.
-- Record generated art accurately in `game.json`'s `assets` field. Never
-  describe generated sprites as code-rendered-only or as licensed third-party
-  art.
+Use `$esp32-game-art` for new or upgraded raster artwork and launcher art.
+For sprite/material conversion or projected marble, tilting-tray and water-maze
+scenes, read [Art and spatial rendering](references/art-and-spatial-rendering.md).
+Keep complete opening, gameplay, pause and results presentation in scope.
 
 ## Play and tune locally
 
@@ -264,8 +255,12 @@ is not compatible with this native Game API runner.
 Carry the local-test handoff into the firmware stage: exact game slug and
 source revision or content hash, headless CTest result, interactive tester,
 behaviors exercised, and tablet-only checks still pending. Do not call a
-candidate `local-play-tested` without explicit interactive confirmation, and
-do not request a guarded install for an unplayed or failing changed game.
+candidate `local-play-tested` without explicit interactive confirmation. Require
+confirmed interactive play before a routine gameplay installation. An explicitly
+requested diagnostic device installation may follow `$esp32-add-game` after
+applicable host checks; record missing play and keep drafts disabled and labeled
+as candidates. Never bypass sanitizer, invalid manifest/ELF/package or lifecycle
+failures, or treat that installation as release qualification.
 
 ## Verify the hierarchy and game
 
@@ -293,24 +288,6 @@ reflash.
 Update `docs/GAME_SDK.md` only when the reusable contract changes. Record
 current evidence separately from historical runs. Use `$esp32-add-game`
 for package validation and installation.
-
-## Match the intended spatial experience
-
-For a physical marble, tilting tray or water-maze request, establish the camera
-and depth in the first playable scene. When the user expects 3D or 3D-like play,
-use a native projected scene with visible wall faces, occlusion, shaded actors
-and a water surface that responds continuously to the simulation. A flat grid
-with decorative ripples does not meet that brief. Keep reusable bounded mesh
-rasterization in the shared API; games own the camera and scene. Use the native
-cartridge path for this class of real-time game.
-
-Show an actual native-resolution gameplay capture early, before lengthy polish
-or packaging. A concept image is not evidence of the renderer. Check motion as
-well as a still: interpolate local fixed-step actors, preserve fractional
-projection, handle respawns without tweening across walls, and invert the
-actual camera for touch targeting. Keep input, physics and multiplayer rules
-independent of the view. A rejected visual direction requires a scene/rendering
-change, not just another texture on the same presentation.
 
 ## Game Changers AI OS release quality
 

@@ -38,6 +38,14 @@
 
 #include "v_patch.h"
 
+// Unclipped projected edges grow with native resolution. Keep their fixed
+// point products wide until clipping; legacy render arithmetic is unchanged.
+#if P4_DOOM_NATIVE_RASTER
+typedef int64_t p4_screenfrac_t;
+#else
+typedef fixed_t p4_screenfrac_t;
+#endif
+
 
 
 
@@ -420,6 +428,17 @@ typedef struct
 //
 // Now what is a visplane, anyway?
 // 
+// Plane bounds represent every native Y plus an out-of-range sentinel.
+// Edge sentinels live inside the arrays, avoiding out-of-array indexing.
+#if SCREENHEIGHT < 255
+typedef byte p4_plane_y_t;
+#else
+typedef uint16_t p4_plane_y_t;
+#endif
+#define P4_PLANE_UNSET ((p4_plane_y_t) ~(p4_plane_y_t) 0)
+#define P4_PLANE_TOP(plane, x) ((plane)->top[(x) + 1])
+#define P4_PLANE_BOTTOM(plane, x) ((plane)->bottom[(x) + 1])
+
 typedef struct
 {
   fixed_t		height;
@@ -428,17 +447,8 @@ typedef struct
   int			minx;
   int			maxx;
   
-  // leave pads for [minx-1]/[maxx+1]
-  
-  byte		pad1;
-  // Here lies the rub for all
-  //  dynamic resize/change of resolution.
-  byte		top[SCREENWIDTH];
-  byte		pad2;
-  byte		pad3;
-  // See above.
-  byte		bottom[SCREENWIDTH];
-  byte		pad4;
+  p4_plane_y_t top[SCREENWIDTH + 2];
+  p4_plane_y_t bottom[SCREENWIDTH + 2];
 
 } visplane_t;
 

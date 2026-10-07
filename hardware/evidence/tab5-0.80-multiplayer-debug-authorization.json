@@ -1,0 +1,420 @@
+{
+  "schema": 1,
+  "board": "m5stack-tab5",
+  "version": "0.80",
+  "operation": "app-only",
+  "install_authorized": true,
+  "firmware_only": true,
+  "verification_method": "device-checksum",
+  "created_at": "2026-10-07T22:17:57.872567+00:00",
+  "physical_acceptance": "pending",
+  "scope": "Correct compact Arena startup size and identity using generated authoritative metadata; retain 0.79 native renderer, peripheral features, partitions and verified card content. App-only successor for exact Tab5 A and B; gameplay acceptance pending.",
+  "toolchain": {
+    "schema": 1,
+    "esp_idf": {
+      "version": "5.5.3",
+      "git_tag": "v5.5.3",
+      "git_commit": "2c211b236707889e8400c4dc5644dd5c4ee071e0",
+      "repository": "https://github.com/espressif/esp-idf.git"
+    },
+    "target": {
+      "chip": "esp32p4",
+      "silicon_family": "revision_1_x",
+      "min_revision_full": 100,
+      "max_revision_full": 199
+    },
+    "managed_components": {
+      "espressif/esp_codec_dev": "1.5.4",
+      "espressif/esp_hosted": "1.4.7",
+      "espressif/esp_lcd_lt8912b": "0.2.0",
+      "espressif/esp_tinyusb": "2.0.1",
+      "espressif/esp_wifi_remote": "0.14.5",
+      "espressif/usb": "1.5.0",
+      "espressif/usb_host_hid": "1.2.0"
+    },
+    "policy": {
+      "commit_dependencies_lock": true,
+      "upgrade_only_with_hardware_regression": true
+    }
+  },
+  "peripheral_scope": {
+    "global_pin_map_authorized": false,
+    "pcb_revision": "not separately marked/confirmed; bounded common C145 interfaces only",
+    "published_variants_reviewed": [
+      "initial 2025-05-09 ILI9881C/GT911",
+      "2025-10-14 ST7123",
+      "2026-04-28 ST7121"
+    ],
+    "official_source": {
+      "commit": "73ee07b1ad56f865f13a2739be8bb6808c1da58a",
+      "manual_sha256": "6c054369e4fb1a7d04fa95fb31adda26feaa9de3540942f733eb2c1a68cd81e1",
+      "manual_url": "https://docs.m5stack.com/en/core/Tab5",
+      "repository": "https://github.com/espressif/esp-bsp",
+      "schematic_sha256": "13cf3fd9954d39aa198e57b1bb94ec56af7d49107c80a245acc5bd90ac8ea329",
+      "schematic_url": "https://m5stack-doc.oss-cn-shenzhen.aliyuncs.com/1132/Tab5_Schematics_PDF.pdf"
+    },
+    "review": "Official C145 schematic and Tab5 manual give one shared P4/expander/audio/SD wiring map for all three published panel assemblies. The pinned BSP supplies distinct panel timings/init and GPIO23 handling, selected by the touch controller. Unknown panel firmware fails closed. No factory-binary pin inference used. INA226 0x41/5 mOhm shunt, BMI270 0x68 and RX8130CE 0x32 use the same published shared I2C1 map; identity and configuration readback precede telemetry. The RTC backup control matches the fitted rechargeable supply. Charger/rail controls stay excluded. USB-A J10 and its masked 0x44/P3 enable are additionally scoped by the pinned USB-controller schematic/BSP review. USB-C Serial/JTAG remains independent. User subsequently approved the exact C6 radio scope and requested battery charging. These narrowly scoped authorizations extend the prior 0.44 scope.",
+    "allowed": {
+      "display": {
+        "backlight_gpio": 22,
+        "bus": "MIPI-DSI",
+        "dphy_ldo_channel": 3,
+        "dphy_ldo_mv": 2500,
+        "logical_height": 720,
+        "logical_width": 1280,
+        "native_height": 1280,
+        "native_width": 720,
+        "panels": [
+          "ILI9881C",
+          "ST7123",
+          "ST7121"
+        ],
+        "reset": "PI4IOE5V6408 0x43 P4, release as input pull-up",
+        "rotation_cw_degrees": 90
+      },
+      "i2c": {
+        "expanders": [
+          67,
+          68
+        ],
+        "port": 1,
+        "scl": 32,
+        "sda": 31
+      },
+      "touch": {
+        "controllers": [
+          "GT911 at 0x14",
+          "ST7123/ST7121 at 0x55"
+        ],
+        "interrupt_gpio": 23,
+        "reset": "expander 0x43 P5"
+      },
+      "audio": {
+        "address_7bit": 16,
+        "amp_enable": "expander 0x43 P1 active high",
+        "bclk": 27,
+        "codec": "ES8388",
+        "dout": 26,
+        "i2s_port": 1,
+        "lrclk": 29,
+        "mclk": 30
+      },
+      "sd": {
+        "clk": 43,
+        "cmd": 44,
+        "data": [
+          39,
+          40,
+          41,
+          42
+        ],
+        "format_on_failure": false,
+        "power_ldo_channel": 4,
+        "slot": 0,
+        "width": 4
+      },
+      "sensors": {
+        "provenance": "third_party/tab5-sensors.json",
+        "power": "INA226 at 0x41, 5 mOhm shunt, voltage-based 2S estimate",
+        "motion": "BMI270 at 0x68, 4g / 2000 degrees per second",
+        "clock": "RX8130CE 0x32: read/init plus explicit UTC calendar write 0x10..0x16, VLF-only W0C 0x1D=0xBD after calendar readback, and clearing a pre-existing STOP bit at 0x1E after valid calendar; no alarms, timers, clock-output or offset configuration."
+      },
+      "usb_host": {
+        "connector": "J10 dedicated USB-A; native HS peripheral 0",
+        "power_enable": "PI4IOE5V6408 0x44/P3 active high; U27 MT9700 current-limited switch",
+        "driver_scope": "Masked direction/latch/high-impedance operations preserve every other expander bit; rollback powers off",
+        "provenance": "hardware/evidence/tab5-usb-gamepad-20261004-build.json",
+        "source_schematic_sha256": "13cf3fd9954d39aa198e57b1bb94ec56af7d49107c80a245acc5bd90ac8ea329",
+        "user_scope": "Requested native Xbox-compatible USB controller support in Core OS and approved the complete 0.43 update",
+        "acceptance": "USB host startup may be observed; no controller model is hardware-qualified by this install"
+      },
+      "c6_local_multiplayer": {
+        "evidence": "design/tab5-bluetooth/proposal.json",
+        "scope": "User explicitly approved C6 Bluetooth and local Wi-Fi Host/Join on 2026-10-05. Shared I2C1 GPIO31/32, masked expander 0x44/P0 WLAN 3.3V enable only; SDMMC slot1 GPIO12 CLK,13 CMD,11/10/9/8 D0-D3 at initial 10 MHz, GPIO15 C6 EN high-low-high reset. No C6 flash writes or unrelated pins/rails. Exact P4 artifact and backed-up unit must pass the installation guard.",
+        "broad_flash_authorization": false,
+        "hardware_acceptance": "pending"
+      },
+      "battery_charger_500ma": {
+        "authorized": true,
+        "date": "2026-10-05",
+        "basis": "User confirms attached batteries and requests fixing charging; pinned official M5Unified and C145 schematic in third_party/tab5-sensors.json.",
+        "scope": "Shared I2C1 GPIO31/32, expander 0x44 P7 CHG_EN, P5 QC disabled, P6 charge status input. 500 mA selection only; preserve all other pins. Exact-artifact guarded install required.",
+        "hardware_acceptance": "pending"
+      }
+    },
+    "usb_console": "native FS USB Serial/JTAG GPIO24/25 only",
+    "excluded": [
+      "C6 firmware writes",
+      "external 5V",
+      "camera",
+      "mic",
+      "expansion GPIO",
+      "All expander 0x44 controls except P0 radio power, P3 USB-A, P5/P7 charger control and P6 charger-status input"
+    ],
+    "sensor_reference": "third_party/tab5-sensors.json",
+    "rtc_reference": {
+      "url": "https://download.epsondevice.com/td/pdf/app/RX8130CE_en.pdf",
+      "revision": "ETM50E-10",
+      "sha256": "db027a5fa2dd17b333da81e95063764eb5536d2878c63b64949348d2ec4b8a22",
+      "sections": [
+        "13.2 register table",
+        "14.5 VLF write-zero-to-clear",
+        "18.5 sequential calendar setting without STOP",
+        "18.6 sequential calendar reading"
+      ]
+    }
+  },
+  "usb_host_enabled": true,
+  "charger_control_enabled": true,
+  "ble_multiplayer_enabled": true,
+  "wifi_multiplayer_enabled": true,
+  "units": {
+    "A": {
+      "model_confirmed": true,
+      "identity_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+      "backup_sha256": "849ea1fd532207c96557daab6433cf2986919b80234ed541cba36b5e63d582df",
+      "predecessor": {
+        "file": "build-host/rollout-final-080/preserved-079/app.bin",
+        "bytes": 4622288,
+        "sha256": "89728152ed07b6d4cb11126981ef31c2b43fd4a7831064937c29037e6252b478"
+      },
+      "predecessor_version": "0.79",
+      "predecessor_install_receipt": {
+        "file": "hardware/backups/tab5-a-install-73j03zyw/receipt.json",
+        "bytes": 1628,
+        "sha256": "336263fb2aced506928f5a97167bad75e9691650c9c6020d41fdaa942358c290"
+      }
+    },
+    "B": {
+      "model_confirmed": true,
+      "identity_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+      "backup_sha256": "1005bc51f3c0877c5722695e2a2fb058dcef024658953a16372c16137c7fb842",
+      "predecessor": {
+        "file": "build-host/rollout-final-080/preserved-079/app.bin",
+        "bytes": 4622288,
+        "sha256": "89728152ed07b6d4cb11126981ef31c2b43fd4a7831064937c29037e6252b478"
+      },
+      "predecessor_version": "0.79",
+      "predecessor_install_receipt": {
+        "file": "hardware/backups/tab5-b-install-vh9locev/receipt.json",
+        "bytes": 1627,
+        "sha256": "8d5507cc299c546af438c2d4e58bbe5201dfb06e2a26340fa033944fec43715d"
+      }
+    }
+  },
+  "artifacts": {
+    "0x2000": {
+      "file": "apps/console_os/build-tab5/bootloader/bootloader.bin",
+      "bytes": 23136,
+      "sha256": "058cf4c0434733d72800c383e1bddb54aa33cf667b21254c8bd9d2f4f7f43443"
+    },
+    "0x8000": {
+      "file": "apps/console_os/build-tab5/partition_table/partition-table.bin",
+      "bytes": 3072,
+      "sha256": "606f2ba90d4e68e36eb704e2dff8e2b509ce2adf1a398297d1fe0fc626590871"
+    },
+    "0x10000": {
+      "file": "apps/console_os/build-tab5/ota_data_initial.bin",
+      "bytes": 8192,
+      "sha256": "7d2c7ac4888bfd75cd5f56e8d61f69595121183afc81556c876732fd3782c62f"
+    },
+    "0x20000": {
+      "file": "apps/console_os/build-tab5/p4_console_os.bin",
+      "bytes": 4622288,
+      "sha256": "e7547f4c0ea0bcc889b52c5e0186b51985387cc21a973257c7760c3d9005f169"
+    }
+  },
+  "previous_authorization": {
+    "file": "hardware/evidence/tab5-0.79-multiplayer-debug-authorization.json",
+    "bytes": 17497,
+    "sha256": "50576edafc024c0ea0ec4c2e14c1ec3ead0826d035abb634cb4f5519cee67474"
+  },
+  "previous_install": {
+    "file": "hardware/test-runs/2026-10-07-tab5-079-multiplayer-debug-install.json",
+    "bytes": 2041,
+    "sha256": "962a641082d05db9766d71ab50dcb26b5e0e5e13aece567f46b0967c45279d8c"
+  },
+  "change_receipt": null,
+  "prebuild_source_snapshot": {
+    "file": "build-host/rollout-final-080/source-final-before.json",
+    "bytes": 206716,
+    "sha256": "4851f43002164cecaa23d1b1f29d13f90def82ffb1431a41795984d84bfa42f7"
+  },
+  "build_log": {
+    "file": "build-host/rollout-final-080/build-final.log",
+    "bytes": 25114,
+    "sha256": "7a5aba3a0affc3da7d6e0fbef0990366b06ffd6dc7f9c079dd59fe9e47c5e569"
+  },
+  "build_completed_attestation": true,
+  "prior_successful_build_log": null,
+  "incremental_reused_artifacts": [],
+  "verifier_record": {
+    "file": "build-host/rollout-final-080/verifier-final.json",
+    "bytes": 438,
+    "sha256": "a09e2b0548c191f371af069030feb7c799c14accf6a39db07da497ca942bdc75"
+  },
+  "build_verifier": {
+    "result": "tab5-build-candidate-verified",
+    "board": "m5stack-tab5",
+    "version": "0.80",
+    "image_bytes": 4622288,
+    "ble_multiplayer_enabled": true,
+    "wifi_multiplayer_enabled": true,
+    "image_sha256": "e7547f4c0ea0bcc889b52c5e0186b51985387cc21a973257c7760c3d9005f169",
+    "native_cartridges": null,
+    "content_bundle_verified": false,
+    "usb_host_enabled": true,
+    "charger_control_enabled": true,
+    "hardware_verified": false,
+    "flash_authorized": false
+  },
+  "installer": {
+    "file": "scripts/flash-console-os-tab5.py",
+    "bytes": 14263,
+    "sha256": "3c9544c4cc4ef3e004f4e7cbba86c7ed64bb2b7c04abe657336ab1b721c5ba01"
+  },
+  "verifier": {
+    "file": "scripts/verify-console-os-tab5.py",
+    "bytes": 19004,
+    "sha256": "b0c1bf4c3121a75f1e20d2cb57d66645e3d6a2b3243a97b14d1d16afa85f2edd"
+  },
+  "build_files": {
+    "p4_console_os.elf": {
+      "file": "apps/console_os/build-tab5/p4_console_os.elf",
+      "bytes": 25541336,
+      "sha256": "134483ab0ffada5763e630d7da14f1a2afe0d6c863faa8dbf6c2109c66050b34"
+    },
+    "p4_console_os.map": {
+      "file": "apps/console_os/build-tab5/p4_console_os.map",
+      "bytes": 8242384,
+      "sha256": "25aa08559e5ddd0049f61beaecd87248f87940633105d8b7f786bdc7d70f6fb9"
+    },
+    "P4UPDATE.P4U": {
+      "file": "apps/console_os/build-tab5/P4UPDATE.P4U",
+      "bytes": 4622544,
+      "sha256": "e226e39ee2166988aadb1576dcf240a23b9036f1468fb16b48898e51115fd663"
+    },
+    "sdkconfig": {
+      "file": "apps/console_os/build-tab5/sdkconfig",
+      "bytes": 93027,
+      "sha256": "79e10b758f773feefa8ea9ad1426c2e33483c63d1006bee32f933e05d4f6e29d"
+    },
+    "compile_commands.json": {
+      "file": "apps/console_os/build-tab5/compile_commands.json",
+      "bytes": 34636364,
+      "sha256": "2ffa01b1f475e6efc44556ca3159a7b02e455e60be5ae1ea18745ca2a3c7df18"
+    },
+    "project_description.json": {
+      "file": "apps/console_os/build-tab5/project_description.json",
+      "bytes": 343723,
+      "sha256": "b1cb7a51b6736d6eaefc4da569d038ce1ca09eff3ee9747751dcd374e3240d74"
+    },
+    "flasher_args.json": {
+      "file": "apps/console_os/build-tab5/flasher_args.json",
+      "bytes": 1065,
+      "sha256": "37ec375562575cafbfb699b0225b2a70c014acc8e5ebedc721e68c7c1448c6be"
+    },
+    "CMakeCache.txt": {
+      "file": "apps/console_os/build-tab5/CMakeCache.txt",
+      "bytes": 28509,
+      "sha256": "eac38628853edd0b1c245ed54823a38630155df877b6d98c17d35dec682740bf"
+    }
+  },
+  "arena_local_inputs": {
+    "BASE": {
+      "file": "local-data/doom/arena-compact-v1/ARENA2.WAD",
+      "bytes": 12253462,
+      "sha256": "18dd25d6ed8b719c9d1417324d7ceaaa943af907ae1005e9a36101c0bbe5c1c4"
+    },
+    "PWAD": {
+      "file": "game-data/pure-hades/v0.6/PUREHADES.WAD",
+      "bytes": 2313392,
+      "sha256": "ab027fbeebe20787214a3bc1239bba73271030dc284cd108c20ae8bc73752fc8"
+    },
+    "DWANGO": {
+      "file": "local-data/doom/arena-inbox/dwango5/DWANGO5.WAD",
+      "bytes": 2109396,
+      "sha256": "2b7658f126321fc2ccf953dbbe8d585b4162350080b9715b46fc617d32cdb13a"
+    },
+    "COPYING": {
+      "file": "game-data/pure-hades/v0.6/licenses/Freedoom-0.13.0-COPYING.txt",
+      "bytes": 1644,
+      "sha256": "7c62f2c520769c798774f416637eec4921e5f0aafdac1245ae7c8a8cf65fe102"
+    },
+    "CREDITS_MUSIC": {
+      "file": "game-data/pure-hades/v0.6/licenses/Freedoom-0.13.0-CREDITS-MUSIC.txt",
+      "bytes": 9388,
+      "sha256": "2bb77677bbc4e587bba44ccb6514ee0f5397c7bb8ae9580b9188d3d6a57c0a31"
+    },
+    "CREDITS": {
+      "file": "game-data/pure-hades/v0.6/licenses/Freedoom-0.13.0-CREDITS.txt",
+      "bytes": 15872,
+      "sha256": "72364333d295c598d75ef9553d3b3661ad0b60e27271c87b7637c74b2f46918a"
+    },
+    "README": {
+      "file": "game-data/pure-hades/v0.6/README.md",
+      "bytes": 8324,
+      "sha256": "09cedf54ba776413fcee13aee95563eb988bc71887a564e28bf909187b23a55c"
+    },
+    "MANIFEST": {
+      "file": "game-data/pure-hades/v0.6/manifest.json",
+      "bytes": 15101,
+      "sha256": "1344d73da9c7f1f264e817d50a5747a2b3fe3b7dfe584f21d5f59b9231733712"
+    },
+    "TRACKLIST": {
+      "file": "game-data/pure-hades/v0.6/music/tracklist.json",
+      "bytes": 5577,
+      "sha256": "e8d930a8528a48d07b3460feb7eac0a295101b7c042e1a53dc678fb52e3582d2"
+    },
+    "LICENSE": {
+      "file": "game-data/pure-hades/v0.6/LICENSE",
+      "bytes": 1375,
+      "sha256": "889d96b2da176a6242b47cd3375cadb20d4dd9f16d06d98763b647e9b33ef511"
+    },
+    "HADES_CREDITS": {
+      "file": "game-data/pure-hades/v0.6/CREDITS.md",
+      "bytes": 2366,
+      "sha256": "906c8a6ab2c664c2a57f117cbb79af2c6ae00da50c53fe6dd70d7ec36a1bde26"
+    },
+    "CC_BY_SA": {
+      "file": "game-data/pure-hades/v0.6/licenses/CC-BY-SA-4.0.txt",
+      "bytes": 20138,
+      "sha256": "28a9529c7d0bb4dc51f4bf5c116a3d16ef247a052f7591466768ddf563fd1cf5"
+    },
+    "MIDI_NOTICE": {
+      "file": "game-data/pure-hades/v0.6/licenses/Ultimate-MIDI-Pack-original-readme.txt",
+      "bytes": 14450,
+      "sha256": "37c32dcaca6f8eb143842c7cdf2bce06865c13fe6207094d092ea0c94a313456"
+    },
+    "MIT": {
+      "file": "game-data/pure-hades/v0.6/licenses/MIT.txt",
+      "bytes": 1068,
+      "sha256": "ddba3b25d16067476f8e4a4498c3f9f43328d22d30b5f1019cd73b0e07f5f3e5"
+    },
+    "DWANGO_NOTICE": {
+      "file": "local-data/doom/arena-inbox/dwango5/DWANGO5.TXT",
+      "bytes": 2234,
+      "sha256": "bfb0a573af27da78ac853deedd7754c73e53f472798f5f129500eedbef856cf1"
+    },
+    "DWANGO_DIZ": {
+      "file": "local-data/doom/arena-inbox/dwango5/FILE_ID.DIZ",
+      "bytes": 210,
+      "sha256": "faaa4a0867d05ea49114b9e05ddad783062b9ddba64f8716d5f2556d63aac485"
+    },
+    "ARENA_BASE_NOTICE": {
+      "file": "game-data/arena-compact-v1/NOTICE.txt",
+      "bytes": 1671,
+      "sha256": "ad30829e08a274192f24b5871dc538eeee60d312715a1d069799d3d5d20e76dd"
+    }
+  },
+  "arena_metadata": {
+    "file": "third_party/game-data.json",
+    "bytes": 21612,
+    "sha256": "bc235cc913331a3a78b9b18727b66a65f13ee4e722cfd7496af570977542c89f"
+  },
+  "generator": {
+    "file": "build-host/rollout-final-080/prepare-080-authorization.py",
+    "bytes": 12291,
+    "sha256": "02884986c248c1c8f4947ff11d3caa7d37c4bd04f23f906d991f3e22546793ce"
+  }
+}

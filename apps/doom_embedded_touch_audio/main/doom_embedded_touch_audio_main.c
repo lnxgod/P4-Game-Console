@@ -29,6 +29,7 @@
 #include "m_config.h"
 #include "doomkeys.h"
 #include "i_system.h"
+#include "i_video.h"
 #include "m_controls.h"
 #include "p4_doom_net.h"
 #include "runtime_gate.h"
@@ -36,10 +37,25 @@
 #ifdef P4_CONSOLE_OS_EMBEDDED
 #include "p4/doom_multiplayer.h"
 #include "w_wad.h"
+#include "doom_arena_ui.h"
+#endif
+#if defined(P4_CONSOLE_OS_EMBEDDED) && CONFIG_P4_BOARD_M5STACK_TAB5
+#define P4_DOOM_USB_DEBUG 1
+#include "console_debug.h"
+#include "p4/game.h"
+#else
+#define P4_DOOM_USB_DEBUG 0
+#endif
+/* Product loading feedback is independent of optional USB diagnostics. */
+#if defined(P4_CONSOLE_OS_EMBEDDED) && CONFIG_P4_BOARD_M5STACK_TAB5
+#define P4_DOOM_STARTUP_UI 1
+#include "p4/presentation_font.h"
+#else
+#define P4_DOOM_STARTUP_UI 0
 #endif
 #if defined(P4_CONSOLE_OS_EMBEDDED) && \
     (CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 || \
-     (CONFIG_P4_BOARD_M5STACK_TAB5 && CONFIG_P4_TAB5_USB_HOST))
+     CONFIG_P4_BOARD_M5STACK_TAB5)
 #define P4_DOOM_SHARED_GAMEPAD 1
 #include "doom_gamepad/input.h"
 #include "doom_gamepad/key_merge.h"
@@ -63,6 +79,9 @@
 #include "platform/display.h"
 #include "platform/readonly_blob.h"
 #include "platform/touch.h"
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+#include "platform/touch_sampler.h"
+#endif
 #include "platform_i2c_shared/bus.h"
 #ifdef P4_CONSOLE_OS_EMBEDDED
 #include "platform/game_storage.h"
@@ -83,7 +102,7 @@
 #define EMBEDDED_WAD_BYTES ((size_t)4196020U)
 #define EMBEDDED_WAD_PATH "/doom/doom1.wad"
 #define OVERLAY_PIXELS \
-    ((size_t)DOOM_TOUCH_FRAME_WIDTH * (size_t)DOOM_TOUCH_FRAME_HEIGHT)
+    ((size_t)DOOM_VIDEO_WIDTH * (size_t)DOOM_VIDEO_HEIGHT)
 
 #ifndef P4_CONSOLE_OS_EMBEDDED
 extern const uint8_t _binary_doom_shareware_wad_start[];
@@ -102,14 +121,103 @@ static const char *const TAG = "p4_doom_touch_audio";
 static esp_err_t s_frame_error = ESP_OK;
 static uint32_t s_frame_count;
 static uint32_t *s_overlay_buffer;
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+static uint64_t s_frame_acquire_us;
+#endif
 static uint8_t s_backend_volume_step = DOOM_BACKEND_VOLUME_DEFAULT_STEP;
+
+/* Legacy measurement-only opt-in. Native pixels stay in the PSRAM-backed
+ * engine zone; a 768x480 indexed frame cannot consume internal DMA memory. */
+#ifndef P4_DOOM_INDEXED_DRAM_EXPERIMENT
+#define P4_DOOM_INDEXED_DRAM_EXPERIMENT 0
+#endif
+#if P4_DOOM_INDEXED_DRAM_EXPERIMENT && !DOOM_VIDEO_NATIVE_TAB5 && \
+    defined(P4_CONSOLE_OS_EMBEDDED) && CONFIG_P4_BOARD_M5STACK_TAB5
+#define P4_DOOM_INDEXED_DRAM_ENABLED 1
+#else
+#define P4_DOOM_INDEXED_DRAM_ENABLED 0
+#endif
+#if P4_DOOM_INDEXED_DRAM_ENABLED
+#define DOOM_INDEXED_FRAMEBUFFER_BYTES ((size_t)64000U)
+_Static_assert(SCREENWIDTH * SCREENHEIGHT == DOOM_INDEXED_FRAMEBUFFER_BYTES,
+               "The indexed DRAM experiment is exactly 320 by 200 bytes");
+static void *s_indexed_framebuffer;
+static bool s_indexed_framebuffer_borrowed;
+static bool s_indexed_engine_live;
+
+static void indexed_framebuffer_heap(const char *stage)
+{
+    const uint32_t internal = MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT;
+    const uint32_t dma = internal | MALLOC_CAP_DMA;
+    ESP_LOGI(TAG,
+             "P4_DOOM INDEXED_DRAM stage=%s ptr=%p bytes=%u borrowed=%u "
+             "internal_free=%u internal_largest=%u internal_min=%u "
+             "dma_free=%u dma_largest=%u dma_min=%u",
+             stage, s_indexed_framebuffer,
+             s_indexed_framebuffer ? (unsigned)DOOM_INDEXED_FRAMEBUFFER_BYTES : 0U,
+             s_indexed_framebuffer_borrowed ? 1U : 0U,
+             (unsigned)heap_caps_get_free_size(internal),
+             (unsigned)heap_caps_get_largest_free_block(internal),
+             (unsigned)heap_caps_get_minimum_free_size(internal),
+             (unsigned)heap_caps_get_free_size(dma),
+             (unsigned)heap_caps_get_largest_free_block(dma),
+             (unsigned)heap_caps_get_minimum_free_size(dma));
+}
+
+static void indexed_framebuffer_reserve(void)
+{
+    if (s_indexed_engine_live || s_indexed_framebuffer != NULL) return;
+    indexed_framebuffer_heap("before-reserve");
+    s_indexed_framebuffer = heap_caps_malloc(DOOM_INDEXED_FRAMEBUFFER_BYTES,
+        MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+    indexed_framebuffer_heap(s_indexed_framebuffer ? "reserved" : "zone-fallback");
+}
+
+void *DG_AllocIndexedFramebuffer(size_t bytes)
+{
+    if (bytes != DOOM_INDEXED_FRAMEBUFFER_BYTES || !s_indexed_engine_live ||
+        s_indexed_framebuffer == NULL || s_indexed_framebuffer_borrowed) return NULL;
+    s_indexed_framebuffer_borrowed = true;
+    indexed_framebuffer_heap("borrowed");
+    return s_indexed_framebuffer;
+}
+
+void DG_ReleaseIndexedFramebuffer(void *buffer)
+{
+    /* The engine drops its alias here. Physical free belongs to terminal
+     * composite cleanup, including if shutdown is called inside a live tick. */
+    if (buffer == s_indexed_framebuffer && s_indexed_framebuffer_borrowed) {
+        s_indexed_framebuffer_borrowed = false;
+    }
+}
+
+static bool indexed_framebuffer_cleanup(void)
+{
+    if (s_indexed_engine_live) return false;
+    /* Shutdown detaches first, and knows whether to release our loan or zone. */
+    I_ShutdownGraphics();
+    if (s_indexed_framebuffer_borrowed) return false;
+    if (s_indexed_framebuffer != NULL) {
+        heap_caps_free(s_indexed_framebuffer);
+        s_indexed_framebuffer = NULL;
+        indexed_framebuffer_heap("released");
+    }
+    return true;
+}
+#endif
+
 
 static doom_touch_input_t s_touch_input;
 static platform_i2c_shared_t *s_shared_bus;
 static platform_touch_t *s_touch;
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+static platform_touch_sampler_t *s_touch_sampler;
+#endif
 static bool s_touch_ready;
 static bool s_touch_cleanup_proven = true;
+#if !CONFIG_P4_BOARD_M5STACK_TAB5
 static uint32_t s_last_touch_poll_ms;
+#endif
 static uint32_t s_last_touch_retry_ms;
 static uint32_t s_last_touch_degraded_log_ms;
 static uint32_t s_touch_polls;
@@ -143,6 +251,12 @@ static bool s_cleanup_complete;
 static bool s_console_os_launch_active;
 #endif
 
+_Static_assert(SCREENWIDTH == DOOM_VIDEO_WIDTH && SCREENHEIGHT == DOOM_VIDEO_HEIGHT,
+               "engine raster and presentation packet dimensions must match");
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+_Static_assert(DOOM_VIDEO_WIDTH == 768U && DOOM_VIDEO_HEIGHT == 480U,
+               "maintained Tab5 renders the native game surface");
+#endif
 _Static_assert(sizeof(pixel_t) == sizeof(uint32_t),
                "E5 requires the engine's default 32-bit pixels");
 _Static_assert(DOOM_AUDIO_OUTPUT_RATE_HZ == PLATFORM_AUDIO_SAMPLE_RATE_HZ,
@@ -155,6 +269,259 @@ static uint32_t ticks_ms(void)
 {
     return (uint32_t)((uint64_t)esp_timer_get_time() / UINT64_C(1000));
 }
+
+/* Cumulative foreground measurements, in microseconds. Each phase is
+ * inclusive: net covers only these DG wrappers (including adapter USB polls),
+ * and DG includes the subphases plus intentional sleep. Other engine network
+ * calls remain outside DG, so elapsed minus DG is not pure rendering time.
+ * Do not add overlapping phase totals. Counters start at the first gameplay
+ * DrawFrame; display maxima retain their separate display-init history.
+ * Logging is measured separately because its own report can only include
+ * the preceding reports. No additional per-frame display lock is acquired. */
+#if !P4_DOOM_USB_DEBUG
+typedef enum {
+    DOOM_PERF_INTERVAL,
+    DOOM_PERF_DG,
+    DOOM_PERF_COMPOSE,
+    DOOM_PERF_SUBMIT,
+    DOOM_PERF_NET,
+    DOOM_PERF_DEBUG,
+    DOOM_PERF_TOUCH,
+    DOOM_PERF_GAMEPAD,
+    DOOM_PERF_SLEEP,
+    DOOM_PERF_LOG,
+    DOOM_PERF_COUNT
+} doom_perf_phase_t;
+
+#endif
+#if P4_DOOM_USB_DEBUG
+#include "doom_diagnostics.h"
+static doom_perf_state_t s_perf;
+
+static uint64_t doom_perf_now(void)
+{
+    return (uint64_t)esp_timer_get_time();
+}
+
+/* Sole engine-owner state. No collector is called from map/checkpoint hooks.
+ * Deferred diagnostics receives only value copies of these observations. */
+static doom_memory_diag_t s_memory_diag;
+static uint64_t s_memory_pending_us[DOOM_MEMORY_PHASE_COUNT];
+static uint32_t s_memory_pending_mask;
+
+static void doom_memory_observe(doom_memory_phase_t phase, uint64_t event_us)
+{
+    if (!s_memory_diag.present || (unsigned)phase >= DOOM_MEMORY_PHASE_COUNT) return;
+    multi_heap_info_t info;
+    heap_caps_get_info(&info, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    const uint64_t observed_us = doom_perf_now();
+    s_memory_diag.phases[phase] = (doom_memory_observation_t){
+        .event_us = event_us, .observed_us = observed_us,
+        .free_bytes = info.total_free_bytes,
+        .largest_bytes = info.largest_free_block,
+        .boot_min_free = info.minimum_free_bytes,
+    };
+    s_memory_diag.valid_mask |= UINT32_C(1) << (unsigned)phase;
+    if (!s_memory_diag.sample_count ||
+        info.total_free_bytes < s_memory_diag.sampled_min_free)
+        s_memory_diag.sampled_min_free = info.total_free_bytes;
+    if (s_memory_diag.sample_count < UINT32_MAX) ++s_memory_diag.sample_count;
+}
+
+static void doom_memory_begin(void)
+{
+    memset(&s_memory_diag, 0, sizeof(s_memory_diag));
+    memset(s_memory_pending_us, 0, sizeof(s_memory_pending_us));
+    s_memory_pending_mask = 0U;
+    s_memory_diag.present = true;
+    s_memory_diag.sampled_since_us = doom_perf_now();
+    doom_memory_observe(DOOM_MEMORY_ENGINE_START, s_memory_diag.sampled_since_us);
+}
+
+static void doom_memory_mark(doom_memory_phase_t phase)
+{
+    if (!s_memory_diag.present || (unsigned)phase >= DOOM_MEMORY_PHASE_COUNT) return;
+    const uint32_t bit = UINT32_C(1) << (unsigned)phase;
+    if ((s_memory_diag.valid_mask | s_memory_pending_mask) & bit) return;
+    s_memory_pending_us[phase] = doom_perf_now();
+    s_memory_pending_mask |= bit;
+}
+
+static void doom_memory_service_events(void)
+{
+    if (!s_memory_pending_mask) return;
+    for (unsigned phase = DOOM_MEMORY_FIRST_MAP;
+         phase <= DOOM_MEMORY_CHECKPOINT_RESTORE; ++phase) {
+        const uint32_t bit = UINT32_C(1) << phase;
+        if (!(s_memory_pending_mask & bit)) continue;
+        doom_memory_observe((doom_memory_phase_t)phase, s_memory_pending_us[phase]);
+        s_memory_pending_mask &= ~bit;
+    }
+}
+
+void P4_DoomBeforeZoneAllocation(size_t requested_bytes)
+{
+    if (!s_memory_diag.present) return;
+    size_t resident_bytes = 0U;
+    s_memory_diag.zone_admission_error = platform_game_storage_prepare_doom_zone(
+        requested_bytes, &resident_bytes);
+    s_memory_diag.zone_requested_bytes = requested_bytes;
+    s_memory_diag.arena_resident_bytes = resident_bytes;
+    doom_memory_observe(DOOM_MEMORY_PRE_ZONE, doom_perf_now());
+}
+
+void P4_DoomAfterZoneAllocation(size_t requested_bytes, int allocated)
+{
+    if (!s_memory_diag.present) return;
+    s_memory_diag.zone_requested_bytes = requested_bytes;
+    if (s_memory_diag.zone_allocation_attempts < UINT32_MAX)
+        ++s_memory_diag.zone_allocation_attempts;
+    s_memory_diag.zone_allocation_succeeded = allocated != 0;
+    doom_memory_observe(DOOM_MEMORY_POST_ZONE, doom_perf_now());
+}
+
+void p4_doom_memory_checkpoint(bool restored)
+{
+    doom_memory_mark(restored ? DOOM_MEMORY_CHECKPOINT_RESTORE
+                              : DOOM_MEMORY_CHECKPOINT_CAPTURE);
+}
+
+/* Called only by this engine owner task. No external work or recursion. */
+uint64_t P4_DoomEnginePerfNow(void)
+{ return s_perf.active ? doom_perf_now() : 0; }
+
+void P4_DoomEnginePerfRecord(p4_doom_engine_perf_phase_t phase,
+                           uint64_t elapsed_us)
+{
+    if (!s_perf.active || (unsigned)phase >= P4_DOOM_ENGINE_PHASE_COUNT) return;
+    doom_perf_sample_t *const sample = &s_perf.engine[phase];
+    sample->total_us = UINT64_MAX - sample->total_us < elapsed_us
+                    ? UINT64_MAX : sample->total_us + elapsed_us;
+    if (elapsed_us > sample->max_us) sample->max_us = elapsed_us;
+    if (sample->calls < UINT32_MAX) ++sample->calls;
+}
+
+static void doom_perf_record(doom_perf_phase_t phase, uint64_t elapsed)
+{
+    if (!s_perf.active) return;
+    doom_perf_sample_t *const sample = &s_perf.phases[phase];
+    sample->total_us += elapsed;
+    if (elapsed > sample->max_us) sample->max_us = elapsed;
+    ++sample->calls;
+}
+
+static void doom_perf_end(doom_perf_phase_t phase, uint64_t started)
+{
+    doom_perf_record(phase, doom_perf_now() - started);
+}
+
+static void doom_perf_frame_begin(void)
+{
+    const uint64_t now = doom_perf_now();
+    if (!s_perf.active) {
+        s_perf.active = true;
+        s_perf.started_us = now;
+    } else {
+        doom_perf_record(DOOM_PERF_INTERVAL, now - s_perf.previous_frame_us);
+    }
+    s_perf.previous_frame_us = now;
+    ++s_perf.frames;
+}
+
+static void doom_perf_dg_begin(void)
+{
+    if (!s_perf.active) return;
+    if (s_perf.dg_depth++ == 0U) s_perf.dg_started_us = doom_perf_now();
+}
+
+static void doom_perf_dg_end(void)
+{
+    if (s_perf.active && s_perf.dg_depth > 0U && --s_perf.dg_depth == 0U)
+        doom_perf_end(DOOM_PERF_DG, s_perf.dg_started_us);
+}
+
+#else
+#define doom_perf_now() UINT64_C(0)
+#define doom_perf_record(phase, elapsed) do { (void)(phase); (void)(elapsed); } while (0)
+#define doom_perf_end(phase, started) do { (void)(phase); (void)(started); } while (0)
+#define doom_perf_frame_begin() ((void)0)
+#define doom_perf_dg_begin() ((void)0)
+#define doom_perf_dg_end() ((void)0)
+#define log_performance_stats(display) ((void)(display))
+#define doom_diagnostics_begin() ((void)0)
+#define doom_diagnostics_end() ((void)0)
+#define doom_memory_begin() ((void)0)
+#define doom_memory_service_events() ((void)0)
+#endif
+
+/* The engine owner alone captures counters and serializes sampler lifetime.
+ * Retain the last copied observation after stop; it is not a final-worker
+ * receipt because a sample may complete between this copy and quiescence. */
+#if P4_DOOM_USB_DEBUG && CONFIG_P4_BOARD_M5STACK_TAB5
+static doom_touch_sampler_diag_t s_touch_sampler_diag;
+static uint32_t s_touch_sampler_epoch;
+
+static void touch_sampler_diag_capture(void)
+{
+    if (s_touch_sampler == NULL) return;
+    platform_touch_sampler_stats_t stats;
+    if (platform_touch_sampler_snapshot(s_touch_sampler, &stats) != ESP_OK) {
+        return; /* Preserve the old observation and its original timestamp. */
+    }
+    const int64_t observed_us = esp_timer_get_time();
+    doom_touch_sampler_diag_t next = {0};
+    next.present = true;
+    next.active = true; /* Handle ownership, not proof of a running worker. */
+    next.stats_valid = true;
+    next.epoch = s_touch_sampler_diag.epoch;
+    next.captured_us = observed_us >= 0 ? (uint64_t)observed_us : 0U;
+    next.samples = stats.samples;
+    next.poll_calls = stats.poll_calls;
+    next.poll_total_us = stats.poll_total_us;
+    next.poll_max_us = stats.poll_max_us;
+    next.overflows = stats.overflows;
+    next.stale_neutralizations = stats.stale_neutralizations;
+    next.producer_stalls = stats.producer_stalls;
+    next.recoveries = stats.recoveries;
+    next.last_completed_us = stats.last_completed_us;
+    next.fault = (int32_t)stats.fault;
+    next.age_valid = stats.last_completed_us > 0 &&
+        observed_us >= stats.last_completed_us;
+    if (next.age_valid) {
+        next.age_us = (uint64_t)(observed_us - stats.last_completed_us);
+    }
+    s_touch_sampler_diag = next;
+}
+
+static void touch_sampler_diag_start_result(esp_err_t result)
+{
+    if (result != ESP_OK && s_touch_sampler == NULL) return;
+    memset(&s_touch_sampler_diag, 0, sizeof(s_touch_sampler_diag));
+    s_touch_sampler_diag.present = s_touch_sampler != NULL;
+    s_touch_sampler_diag.active = s_touch_sampler != NULL;
+    if (result == ESP_OK) {
+        /* Zero denotes a failed-start teardown-only handle. Epochs are also
+         * bound to the existing diagnostic generation and sequence. */
+        ++s_touch_sampler_epoch;
+        if (s_touch_sampler_epoch == 0U) ++s_touch_sampler_epoch;
+        s_touch_sampler_diag.epoch = s_touch_sampler_epoch;
+    }
+    touch_sampler_diag_capture();
+}
+
+static doom_touch_sampler_diag_t touch_sampler_diag_snapshot(void)
+{
+    touch_sampler_diag_capture();
+    doom_touch_sampler_diag_t snapshot = s_touch_sampler_diag;
+    /* This field describes ownership now, including retained failed stops;
+     * captured_us continues to describe only the counter observation. */
+    snapshot.active = s_touch_sampler != NULL;
+    return snapshot;
+}
+#else
+#define touch_sampler_diag_capture() ((void)0)
+#define touch_sampler_diag_start_result(result) ((void)(result))
+#endif
 
 static void log_sound_disabled(void)
 {
@@ -267,10 +634,46 @@ static void log_touch_degraded(const char *stage, esp_err_t error,
 static void neutralize_touch_input(void)
 {
     (void)doom_touch_audio_force_neutral(&s_touch_input);
+#ifdef P4_CONSOLE_OS_EMBEDDED
+    p4_doom_arena_score_touch(false);
+#endif
 }
+
+#ifdef P4_CONSOLE_OS_EMBEDDED
+static void service_arena_score_touch(const doom_touch_frame_t *frame)
+{
+    bool pressed = false;
+    for (unsigned i = 0U; i < frame->contact_count; ++i) {
+        /* Unsigned offsets also reject contacts before a letterbox margin. */
+        const uint32_t x = (uint32_t)frame->contacts[i].x - DOOM_TOUCH_VIEWPORT_LEFT;
+        const uint32_t y = (uint32_t)frame->contacts[i].y - DOOM_TOUCH_VIEWPORT_TOP;
+        if (x >= DOOM_TOUCH_VIEWPORT_WIDTH || y >= DOOM_TOUCH_VIEWPORT_HEIGHT) continue;
+        const uint32_t fx = x *
+            DOOM_TOUCH_FRAME_WIDTH / DOOM_TOUCH_VIEWPORT_WIDTH;
+        const uint32_t fy = y *
+            DOOM_TOUCH_FRAME_HEIGHT / DOOM_TOUCH_VIEWPORT_HEIGHT;
+        pressed |= fx >= P4_DOOM_SCORE_LEFT &&
+            fx < P4_DOOM_SCORE_LEFT + P4_DOOM_SCORE_WIDTH &&
+            fy >= P4_DOOM_SCORE_TOP &&
+            fy < P4_DOOM_SCORE_TOP + P4_DOOM_SCORE_HEIGHT;
+    }
+    p4_doom_arena_score_touch(pressed);
+}
+#endif
 
 static bool release_retained_touch(void)
 {
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    /* No client/bus destruction until the sole worker proves quiescence. */
+    touch_sampler_diag_capture();
+    const esp_err_t stopped = platform_touch_sampler_stop(&s_touch_sampler, 100U);
+    if (stopped != ESP_OK) {
+        s_touch_ready = false;
+        s_touch_cleanup_proven = false;
+        log_touch_degraded("touch-sampler-stop", stopped, true);
+        return false;
+    }
+#endif
     if (s_touch == NULL) {
         s_touch_ready = false;
         s_touch_cleanup_proven = true;
@@ -313,7 +716,13 @@ static bool try_touch_create(bool force_log)
     platform_touch_config_t config;
     platform_touch_config_init(
         &config, platform_i2c_shared_handle(s_shared_bus));
-    const esp_err_t result = platform_touch_create(&config, &s_touch);
+    esp_err_t result = platform_touch_create(&config, &s_touch);
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    if (result == ESP_OK) {
+        result = platform_touch_sampler_start(s_touch, &s_touch_sampler);
+        touch_sampler_diag_start_result(result);
+    }
+#endif
     if (result != ESP_OK) {
         s_touch_ready = false;
         s_touch_cleanup_proven = s_touch == NULL;
@@ -347,11 +756,84 @@ static bool try_touch_create(bool force_log)
 
 static void service_touch(void)
 {
+#if CONFIG_P4_BOARD_M5STACK_TAB5
     if (!doom_touch_input_idle(&s_touch_input)) {
         return;
     }
     const uint32_t now_ms = ticks_ms();
-    if (!s_touch_ready) {
+    platform_touch_frame_t platform_frame;
+    bool debug_frame = false;
+#if P4_DOOM_USB_DEBUG
+    debug_frame = console_os_debug_touch(&platform_frame);
+#endif
+    if (debug_frame) {
+        /* A debug lease owns this source until its explicit neutral frame.
+         * Drop earlier physical history so it cannot replay after release. */
+        platform_touch_sampler_discard(s_touch_sampler);
+    } else if (!s_touch_ready) {
+        neutralize_touch_input();
+        /* Controller creation/deletion can wait on the SDK bus lock.
+         * Keep all such lifecycle work outside the renderer, including a
+         * retry after failed initial creation. Remote input remains usable. */
+        return;
+    }
+
+    /* Consume copied transitions only. Hardware sampling runs at 60 Hz in
+     * the platform worker; neither a fresh read nor an error waits for I2C.
+     * Stop at the first emitted Doom transition, then DG_GetKey drains it. */
+    for (unsigned i = 0U; i < PLATFORM_TOUCH_SAMPLER_QUEUE_CAPACITY; ++i) {
+        bool available = debug_frame;
+        const esp_err_t result = debug_frame ? ESP_OK :
+            platform_touch_sampler_read(s_touch_sampler, &platform_frame,
+                                        &available);
+        if (result == ESP_OK && !available) {
+            return;
+        }
+        ++s_touch_polls; /* Consumed reports; raw samples have worker counters. */
+        doom_touch_frame_t touch_frame;
+        const bool converted = doom_touch_audio_frame_from_platform(
+            result == ESP_OK ? &platform_frame : NULL, &touch_frame);
+        if (result != ESP_OK || !converted) {
+            ++s_touch_poll_failures;
+            neutralize_touch_input();
+            log_touch_degraded(debug_frame ? "usb-debug-touch" : "touch-sampler",
+                result != ESP_OK ? result : ESP_ERR_INVALID_RESPONSE, false);
+            if (!debug_frame) {
+                s_touch_ready = false;
+                s_touch_cleanup_proven = false;
+                s_last_touch_retry_ms = now_ms;
+                /* Retain touch and bus. SDK device deletion itself has an
+                 * unbounded bus-lock wait, so it is never attempted here.
+                 * A zero-wait stop also retains a still-active worker. */
+                touch_sampler_diag_capture();
+                (void)platform_touch_sampler_stop(&s_touch_sampler, 0U);
+            }
+            return;
+        }
+#ifdef P4_CONSOLE_OS_EMBEDDED
+        service_arena_score_touch(&touch_frame);
+#endif
+        (void)doom_touch_input_update(&s_touch_input, &touch_frame);
+        if (debug_frame || !doom_touch_input_idle(&s_touch_input)) {
+            return;
+        }
+    }
+#else
+
+    if (!doom_touch_input_idle(&s_touch_input)) {
+        return;
+    }
+    const uint32_t now_ms = ticks_ms();
+    if ((uint32_t)(now_ms - s_last_touch_poll_ms) <
+        TOUCH_POLL_INTERVAL_MS) {
+        return;
+    }
+    platform_touch_frame_t platform_frame;
+    bool debug_frame = false;
+#if P4_DOOM_USB_DEBUG
+    debug_frame = console_os_debug_touch(&platform_frame);
+#endif
+    if (!s_touch_ready && !debug_frame) {
         neutralize_touch_input();
         const bool bus_state_proven =
             s_shared_bus != NULL || s_touch == NULL;
@@ -363,31 +845,34 @@ static void service_touch(void)
         }
         return;
     }
-    if ((uint32_t)(now_ms - s_last_touch_poll_ms) <
-        TOUCH_POLL_INTERVAL_MS) {
-        return;
-    }
     s_last_touch_poll_ms = now_ms;
     ++s_touch_polls;
 
-    platform_touch_frame_t platform_frame;
-    const esp_err_t result = platform_touch_poll(s_touch, &platform_frame);
+    const esp_err_t result = debug_frame
+        ? ESP_OK : platform_touch_poll(s_touch, &platform_frame);
     doom_touch_frame_t touch_frame;
     const bool converted = doom_touch_audio_frame_from_platform(
         result == ESP_OK ? &platform_frame : NULL, &touch_frame);
     if (result != ESP_OK || !converted) {
         ++s_touch_poll_failures;
         neutralize_touch_input();
-        log_touch_degraded("gt911-poll",
+        log_touch_degraded(debug_frame ? "usb-debug-touch" : "gt911-poll",
                            result != ESP_OK ? result
                                             : ESP_ERR_INVALID_RESPONSE,
                            false);
-        s_touch_ready = false;
-        s_last_touch_retry_ms = now_ms;
-        (void)release_retained_touch();
+        if (!debug_frame) {
+            s_touch_ready = false;
+            s_last_touch_retry_ms = now_ms;
+            (void)release_retained_touch();
+        }
         return;
     }
+#ifdef P4_CONSOLE_OS_EMBEDDED
+    service_arena_score_touch(&touch_frame);
+#endif
     (void)doom_touch_input_update(&s_touch_input, &touch_frame);
+
+#endif
 }
 
 #if P4_DOOM_SHARED_GAMEPAD
@@ -465,6 +950,34 @@ static bool gamepad_snapshot_valid(
            GAMEPAD_DPAD_LEFT)) == 0U;
 }
 
+#if P4_DOOM_USB_DEBUG
+static void merge_debug_gamepad(gamepad_state_t *state, uint32_t buttons)
+{
+    buttons &= P4_BUTTON_MASK;
+    if (buttons == 0U) {
+        return;
+    }
+    /* This is an application-local copy. Do not publish a synthetic USB/BLE
+     * connection or resurrect controls from a disconnected physical pad. */
+    if (state->connected == 0U) {
+        gamepad_state_init(state);
+    }
+    state->connected = 1U;
+    if ((buttons & P4_BUTTON_UP) != 0U) state->dpad |= GAMEPAD_DPAD_UP;
+    if ((buttons & P4_BUTTON_DOWN) != 0U) state->dpad |= GAMEPAD_DPAD_DOWN;
+    if ((buttons & P4_BUTTON_LEFT) != 0U) state->dpad |= GAMEPAD_DPAD_LEFT;
+    if ((buttons & P4_BUTTON_RIGHT) != 0U) state->dpad |= GAMEPAD_DPAD_RIGHT;
+    if ((buttons & P4_BUTTON_A) != 0U)
+        state->buttons |= GAMEPAD_BUTTON_MASK(GAMEPAD_BUTTON_SOUTH);
+    if ((buttons & P4_BUTTON_B) != 0U)
+        state->buttons |= GAMEPAD_BUTTON_MASK(GAMEPAD_BUTTON_EAST);
+    if ((buttons & P4_BUTTON_START) != 0U)
+        state->buttons |= GAMEPAD_BUTTON_MASK(GAMEPAD_BUTTON_START);
+    if ((buttons & P4_BUTTON_BACK) != 0U)
+        state->buttons |= GAMEPAD_BUTTON_MASK(GAMEPAD_BUTTON_BACK);
+}
+#endif
+
 static void service_gamepad(void)
 {
     if (!doom_gamepad_input_idle(&s_gamepad_input)) {
@@ -509,8 +1022,12 @@ static void service_gamepad(void)
         s_gamepad_session = session;
     }
 
+    gamepad_state_t combined = *state;
+#if P4_DOOM_USB_DEBUG
+    merge_debug_gamepad(&combined, console_os_debug_buttons());
+#endif
     const gamepad_status_t input_result =
-        doom_gamepad_input_update(&s_gamepad_input, state);
+        doom_gamepad_input_update(&s_gamepad_input, &combined);
     if (input_result != GAMEPAD_OK) {
         ESP_LOGW(TAG,
                  "P4_DOOM_E6 GAMEPAD_UPDATE_FAIL error=%s state=neutral",
@@ -541,14 +1058,40 @@ static bool release_audio(void)
     return release_result.complete;
 }
 
+#if P4_DOOM_STARTUP_UI
+static void startup_failure_before_cleanup(void);
+#endif
+#ifdef P4_CONSOLE_OS_EMBEDDED
+static bool s_terminal_close_engine_wads;
+static void close_engine_wads(void);
+#endif
+
 static void composite_cleanup(void)
 {
     if (s_cleanup_active || s_cleanup_complete) {
         return;
     }
     s_cleanup_active = true;
+    doom_diagnostics_end();
     const bool audio_released = release_audio();
+#ifdef P4_CONSOLE_OS_EMBEDDED
+    if (audio_released && s_terminal_close_engine_wads) {
+        close_engine_wads();
+        s_terminal_close_engine_wads = false;
+    }
+#endif
+#if P4_DOOM_STARTUP_UI
+    /* A terminal join failure must remain legible before scanout is retired.
+     * The audio path is already stopped; normal exits never wait here. */
+    if (audio_released) startup_failure_before_cleanup();
+#endif
     const bool touch_released = release_retained_touch();
+#if P4_DOOM_INDEXED_DRAM_ENABLED
+    const bool indexed_released = indexed_framebuffer_cleanup();
+#else
+    const bool indexed_released = true;
+#endif
+
 
     esp_err_t bus_result = ESP_OK;
     if (touch_released && s_shared_bus != NULL) {
@@ -565,8 +1108,13 @@ static void composite_cleanup(void)
         video_result = doom_video_deinit();
         if (video_result == ESP_OK) {
             s_video_initialized = false;
+#if !CONFIG_P4_BOARD_M5STACK_TAB5
             free(s_overlay_buffer);
+#endif
             s_overlay_buffer = NULL;
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+            DG_ScreenBuffer = NULL;
+#endif
         }
     }
     esp_err_t display_result = ESP_OK;
@@ -585,7 +1133,7 @@ static void composite_cleanup(void)
             s_blob_registered = false;
         }
     }
-    s_cleanup_complete = audio_released && touch_released && bus_released &&
+    s_cleanup_complete = indexed_released && audio_released && touch_released && bus_released &&
         !s_video_initialized && !s_display_initialized && !s_blob_registered;
     ESP_LOGI(TAG,
              "P4_DOOM_E6 CLEANUP audio_released=%u touch_released=%u "
@@ -600,56 +1148,303 @@ static void composite_cleanup(void)
     s_cleanup_active = false;
 }
 
-static void halt_dark(const char *stage, esp_err_t error)
+static _Noreturn void halt_dark(const char *stage, esp_err_t error)
 {
+#if P4_DOOM_INDEXED_DRAM_ENABLED
+    /* This path never returns to a suspended engine stack. Error/quit
+     * callbacks that may return must not clear this guard. */
+    s_indexed_engine_live = false;
+#endif
     composite_cleanup();
     ESP_LOGE(TAG, "P4_DOOM_E6 HALT stage=%s error=%s",
              stage, esp_err_to_name(error));
-#ifdef P4_CONSOLE_OS_EMBEDDED
-    if (s_console_os_launch_active && s_cleanup_complete) {
-        ESP_LOGE(TAG,
-                 "P4_DOOM_E6 RECOVERY action=restart-to-console "
-                 "stage=%s delay_ms=500",
-                 stage);
-        vTaskDelay(pdMS_TO_TICKS(500U));
-        esp_restart();
-    }
-#endif
     for (;;) {
+#ifdef P4_CONSOLE_OS_EMBEDDED
+        /* A retained audio/resource owner may release on a later retry.
+         * Reevaluate the same safe-restart gate after every cleanup attempt. */
+        if (s_console_os_launch_active && s_cleanup_complete) {
+            ESP_LOGE(TAG,
+                     "P4_DOOM_E6 RECOVERY action=restart-to-console "
+                     "stage=%s delay_ms=500",
+                     stage);
+            vTaskDelay(pdMS_TO_TICKS(500U));
+            esp_restart();
+        }
+#endif
         vTaskDelay(pdMS_TO_TICKS(1000U));
         composite_cleanup();
     }
 }
 
+#if P4_DOOM_STARTUP_UI
+/* Arena startup presentation state. */
+#define DOOM_STARTUP_REFRESH_MS UINT32_C(500)
+#define DOOM_STARTUP_FAILURE_HOLD_MS UINT32_C(2000)
+static bool s_startup_ui_active;
+static bool s_startup_ui_waiting;
+static bool s_startup_ui_drawing;
+static uint32_t s_startup_ui_started_ms;
+static uint32_t s_startup_ui_last_ms;
+static p4_doom_engine_loading_phase_t s_startup_engine_phase;
+static bool s_startup_engine_created;
+static uint32_t s_startup_engine_completed, s_startup_engine_total;
+static p4_doom_loading_progress_t s_startup_net_progress;
+static unsigned s_startup_ui_last_phase;
+static bool s_startup_failure_visible;
+static uint32_t s_startup_failure_visible_ms;
+#endif
+
+#if P4_DOOM_STARTUP_UI
+static void startup_text_scaled(const char *text, unsigned y, unsigned scale)
+{
+    if (text == NULL || y >= DOOM_TOUCH_FRAME_HEIGHT || scale == 0U) return;
+    /* Layout and touch units remain canonical. Sample the original font at
+     * the actual destination resolution instead of enlarging a painted frame. */
+    unsigned width = 0U;
+    size_t length = 0U;
+    while (length < 48U && text[length] != '\0') {
+        const unsigned char ch = (unsigned char)text[length++];
+        width += p4_ui_font_advance[ch >= 32U && ch <= 126U ? ch - 32U : 31U] / scale;
+    }
+    unsigned x = width < DOOM_TOUCH_FRAME_WIDTH
+        ? (DOOM_TOUCH_FRAME_WIDTH - width) / 2U : 0U;
+    const unsigned top = y * DOOM_VIDEO_HEIGHT / DOOM_TOUCH_FRAME_HEIGHT;
+    const unsigned glyph_h = (28U / scale) * DOOM_VIDEO_HEIGHT / DOOM_TOUCH_FRAME_HEIGHT;
+    const unsigned glyph_w = (24U / scale) * DOOM_VIDEO_WIDTH / DOOM_TOUCH_FRAME_WIDTH;
+    for (size_t i = 0U; i < length && x < DOOM_TOUCH_FRAME_WIDTH; ++i) {
+        const unsigned char ch = (unsigned char)text[i];
+        const unsigned left = x * DOOM_VIDEO_WIDTH / DOOM_TOUCH_FRAME_WIDTH;
+        for (unsigned gy = 0U; gy < glyph_h && gy < DOOM_VIDEO_HEIGHT - top; ++gy) {
+            uint32_t *row = s_overlay_buffer + (top + gy) * DOOM_VIDEO_WIDTH + left;
+            for (unsigned gx = 0U; gx < glyph_w && gx < DOOM_VIDEO_WIDTH - left; ++gx) {
+                const unsigned fx = gx * DOOM_TOUCH_FRAME_WIDTH * scale / DOOM_VIDEO_WIDTH;
+                const unsigned fy = gy * DOOM_TOUCH_FRAME_HEIGHT * scale / DOOM_VIDEO_HEIGHT;
+                if (p4_ui_glyph_alpha(ch, fx, fy) >= 8U) row[gx] = UINT32_C(0x00ffffff);
+            }
+        }
+        x += p4_ui_font_advance[ch >= 32U && ch <= 126U ? ch - 32U : 31U] / scale;
+    }
+}
+
+/* Engine loops only copy bounded scalar progress. They do not redraw each
+ * item or enter the network/storage service from a loading callback. */
+void P4_DoomLoadingProgress(p4_doom_engine_loading_phase_t phase,
+                          uint32_t completed, uint32_t total)
+{
+#if P4_DOOM_USB_DEBUG
+    if (phase == P4_DOOM_ENGINE_LOADING_MAP && total && completed >= total)
+        doom_memory_mark(DOOM_MEMORY_FIRST_MAP);
+#endif
+    if (!s_startup_ui_active) return;
+    /* Checkpoint restore may call G_InitNew after Create returns. Its map
+     * callbacks must not hide the authoritative transfer/catch-up stage. */
+    if (phase == P4_DOOM_ENGINE_LOADING_READY) s_startup_engine_created = true;
+    s_startup_engine_phase = phase;
+    s_startup_engine_completed = total && completed > total ? total : completed;
+    s_startup_engine_total = total;
+}
+
+static void startup_progress_info(const char **stage, const char **detail,
+                                 const char **unit, uint32_t *completed,
+                                 uint32_t *total, unsigned *phase)
+{
+    *stage = "2/3 Prepare engine";
+    *detail = "Reading game data";
+    *unit = "items";
+    *completed = s_startup_engine_completed;
+    *total = s_startup_engine_total;
+    *phase = (unsigned)s_startup_engine_phase;
+    switch (s_startup_engine_phase) {
+        case P4_DOOM_ENGINE_LOADING_TEXTURES:
+            *stage = "2/3 Load textures"; *detail = "Texture setup steps"; break;
+        case P4_DOOM_ENGINE_LOADING_SPRITES:
+            *stage = "2/3 Load sprites"; *detail = "Sprite headers loaded"; break;
+        case P4_DOOM_ENGINE_LOADING_MAP:
+            *stage = "3/3 Load match"; *detail = "Map setup steps"; break;
+        case P4_DOOM_ENGINE_LOADING_READY:
+            *stage = "3/3 Start match"; *detail = "Preparing first frame";
+            *completed = *total = 0U; break;
+        default: break;
+    }
+    const p4_doom_loading_phase_t net_phase = s_startup_net_progress.phase;
+    if (net_phase == P4_DOOM_LOADING_FAILED ||
+        ((s_startup_ui_waiting || s_startup_engine_created) &&
+         net_phase != P4_DOOM_LOADING_IDLE)) {
+        *phase = 16U + (unsigned)net_phase;
+        *completed = s_startup_net_progress.completed;
+        *total = s_startup_net_progress.total;
+        *stage = "3/3 Sync match";
+        switch (net_phase) {
+            case P4_DOOM_LOADING_CHECKPOINT:
+                *detail = "Receiving match state"; *unit = "bytes"; break;
+            case P4_DOOM_LOADING_CATCHUP:
+                *detail = "Catching up to host"; *unit = "tics"; break;
+            case P4_DOOM_LOADING_READY:
+                *stage = "3/3 Start match"; *detail = "Preparing first frame";
+                *completed = *total = 0U; break;
+            case P4_DOOM_LOADING_FAILED:
+                *stage = "Join failed"; *detail = "Returning Home...";
+                *completed = *total = 0U; break;
+            default:
+                *detail = "Waiting for host"; *completed = *total = 0U; break;
+        }
+    }
+    if (*total && *completed > *total) *completed = *total;
+}
+#endif
+
 static esp_err_t submit_startup_frame(void)
 {
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    const esp_err_t acquired = doom_video_acquire_xrgb8888(
+        &s_overlay_buffer, DOOM_FIRST_FRAME_TIMEOUT_MS);
+    if (acquired != ESP_OK) return acquired;
+#else
     if (s_overlay_buffer == NULL) {
         return ESP_ERR_INVALID_STATE;
     }
-    for (size_t y = 0U; y < DOOM_TOUCH_FRAME_HEIGHT; ++y) {
-        for (size_t x = 0U; x < DOOM_TOUCH_FRAME_WIDTH; ++x) {
-            const bool border = x < 4U || x >= DOOM_TOUCH_FRAME_WIDTH - 4U ||
-                y < 4U || y >= DOOM_TOUCH_FRAME_HEIGHT - 4U;
-            const bool scanline = (y % 16U) == 0U;
-            const bool center_bar = y >= 94U && y < 106U &&
-                x >= 48U && x < DOOM_TOUCH_FRAME_WIDTH - 48U;
-            s_overlay_buffer[y * DOOM_TOUCH_FRAME_WIDTH + x] = border
+#endif
+#if P4_DOOM_STARTUP_UI
+    const uint32_t elapsed_ms = ticks_ms() - s_startup_ui_started_ms;
+    const uint32_t phase = (elapsed_ms / DOOM_STARTUP_REFRESH_MS) % 4U;
+    const char *stage, *detail, *unit;
+    uint32_t completed, total;
+    unsigned display_phase;
+    startup_progress_info(&stage, &detail, &unit, &completed, &total, &display_phase);
+    const bool failed = s_startup_net_progress.phase == P4_DOOM_LOADING_FAILED;
+    const unsigned percent = total ? (unsigned)((uint64_t)completed * 100U / total) : 0U;
+    const size_t bar_top = s_startup_ui_active ? 104U : 94U;
+#else
+    const size_t bar_top = 94U;
+#endif
+    for (size_t y = 0U; y < DOOM_VIDEO_HEIGHT; ++y) {
+        const size_t cy = y * DOOM_TOUCH_FRAME_HEIGHT / DOOM_VIDEO_HEIGHT;
+        for (size_t x = 0U; x < DOOM_VIDEO_WIDTH; ++x) {
+            const size_t cx = x * DOOM_TOUCH_FRAME_WIDTH / DOOM_VIDEO_WIDTH;
+            const bool border = cx < 4U || cx >= DOOM_TOUCH_FRAME_WIDTH - 4U ||
+                cy < 4U || cy >= DOOM_TOUCH_FRAME_HEIGHT - 4U;
+            const bool scanline = (cy % 16U) == 0U;
+            const bool center_bar = cy >= bar_top && cy < bar_top + 12U &&
+                cx >= 48U && cx < DOOM_TOUCH_FRAME_WIDTH - 48U;
+            s_overlay_buffer[y * DOOM_VIDEO_WIDTH + x] = border
                 ? UINT32_C(0x0000ffff)
                 : center_bar
                     ? UINT32_C(0x000080ff)
                     : scanline
                         ? UINT32_C(0x00001838)
                         : UINT32_C(0x00000818);
+#if P4_DOOM_STARTUP_UI
+            if (s_startup_ui_active && center_bar) {
+                const size_t offset = cx - 48U;
+                s_overlay_buffer[y * DOOM_VIDEO_WIDTH + x] =
+                    failed ? UINT32_C(0x00802020) :
+                    (total ? offset < (size_t)((uint64_t)completed * 224U / total)
+                           : offset / 56U == phase && offset % 56U < 40U)
+                        ? UINT32_C(0x000080ff) : UINT32_C(0x00001838);
+            }
+#endif
         }
     }
+#if P4_DOOM_STARTUP_UI
+    if (s_startup_ui_active) {
+        char elapsed[32], progress[64];
+        (void)snprintf(elapsed, sizeof(elapsed), "Elapsed %" PRIu32 " s",
+            elapsed_ms / 1000U);
+        if (total) {
+            (void)snprintf(progress, sizeof(progress), "%u%%  %" PRIu32 " / %" PRIu32 " %s",
+                           percent, completed, total, unit);
+        } else {
+            (void)snprintf(progress, sizeof(progress), "%s",
+                failed ? "Connection did not complete" : "Working - please wait");
+        }
+        startup_text_scaled("Doom Arena by Game Changers", 14U, 2U);
+        startup_text_scaled(stage, 44U, 1U);
+        startup_text_scaled(detail, 78U, 2U);
+        startup_text_scaled(progress, 130U, 2U);
+        startup_text_scaled(elapsed, 164U, 2U);
+    }
+#endif
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    const esp_err_t submitted = doom_video_publish_xrgb8888(
+        true, DOOM_FIRST_FRAME_TIMEOUT_MS);
+    s_overlay_buffer = NULL; /* No alias to a worker-owned frame. */
+    return submitted;
+#else
     return doom_video_submit_xrgb8888(
         s_overlay_buffer, DOOM_VIDEO_WIDTH, DOOM_FIRST_FRAME_TIMEOUT_MS);
+#endif
 }
+
+#if P4_DOOM_STARTUP_UI
+/* Called only by the foreground Arena service, including safe WAD-read
+ * heartbeats. Use compiled-in glyphs and the existing overlay: never enter
+ * the engine, input, networking or storage from this presentation callback. */
+void p4_doom_startup_status(bool waiting)
+{
+    if (!s_startup_ui_active || s_startup_ui_drawing ||
+#if !CONFIG_P4_BOARD_M5STACK_TAB5
+        s_overlay_buffer == NULL ||
+#endif
+        !s_video_initialized || s_cleanup_active ||
+        s_frame_error != ESP_OK) return;
+    const uint32_t now = ticks_ms();
+    s_startup_ui_waiting = waiting;
+    /* This accessor is a scalar owner-task snapshot, not a network poll. */
+    P4_DoomNetGetLoadingProgress(&s_startup_net_progress);
+    const char *stage, *detail, *unit;
+    uint32_t completed, total;
+    unsigned phase;
+    startup_progress_info(&stage, &detail, &unit, &completed, &total, &phase);
+    if (phase == s_startup_ui_last_phase &&
+        now - s_startup_ui_last_ms < DOOM_STARTUP_REFRESH_MS) return;
+    if (phase == 16U + P4_DOOM_LOADING_FAILED && phase == s_startup_ui_last_phase) return;
+    s_startup_ui_last_phase = phase;
+    s_startup_ui_last_ms = now;
+    s_startup_ui_drawing = true;
+    const esp_err_t result = submit_startup_frame();
+    s_startup_ui_drawing = false;
+    if (result != ESP_OK) {
+        s_startup_ui_active = false;
+        ESP_LOGW(TAG, "P4_DOOM_ARENA STARTUP_UI_DEGRADED error=%d", (int)result);
+    } else if (phase == 16U + P4_DOOM_LOADING_FAILED) {
+        s_startup_failure_visible = true;
+        s_startup_failure_visible_ms = ticks_ms();
+    }
+}
+
+static void startup_failure_before_cleanup(void)
+{
+    if (!s_startup_failure_visible) return;
+    s_startup_failure_visible = false; /* Cleanup retries never repeat the hold. */
+    if (!s_startup_ui_active || !s_video_initialized || s_frame_error != ESP_OK) return;
+    while (ticks_ms() - s_startup_failure_visible_ms < DOOM_STARTUP_FAILURE_HOLD_MS) {
+#if P4_DOOM_USB_DEBUG
+        /* Terminal owner-task boundary only: do not enter engine input or
+         * network replay. Raw Back/B can dismiss the automatic return early. */
+        console_os_debug_poll();
+        if ((console_os_debug_buttons() & (P4_BUTTON_BACK | P4_BUTTON_B)) != 0U) break;
+#endif
+        const TickType_t delay = pdMS_TO_TICKS(10U);
+        vTaskDelay(delay > 0 ? delay : 1);
+    }
+}
+#endif
 
 static void engine_exit_composite(void)
 {
 #ifndef P4_CONSOLE_OS_EMBEDDED
     composite_cleanup();
+#elif P4_DOOM_STARTUP_UI
+    p4_doom_loading_progress_t progress;
+    P4_DoomNetGetLoadingProgress(&progress);
+    if (progress.phase == P4_DOOM_LOADING_FAILED) {
+        /* I_Error runs this callback before process exit, so a configure
+         * failure cannot return to the outer Tick loop. Take the established
+        * non-returning owner cleanup path while the failure frame is valid. */
+        p4_doom_startup_status(false);
+        s_terminal_close_engine_wads = true;
+        halt_dark("join-failed", ESP_FAIL);
+    }
 #endif
     /* Console cleanup runs after Tick returns. Doom may still invoke input
      * and rendering from the tick containing I_Quit. */
@@ -657,8 +1452,8 @@ static void engine_exit_composite(void)
 #ifdef P4_CONSOLE_OS_EMBEDDED
 static void close_engine_wads(void)
 {
-    /* All engine exit callbacks and the current tick are finished, and the
-     * audio worker is stopped. Detach every alias before closing each WAD. */
+    /* The tick has finished or the terminal error path cannot return to it,
+     * and the audio worker is stopped. Detach aliases before closing each WAD. */
     for (unsigned i = 0; i < numlumps; ++i) {
         wad_file_t *file = lumpinfo[i].wad_file;
         if (!file) continue;
@@ -778,6 +1573,35 @@ static bool try_audio_enable(void)
 
 static void log_runtime_stats(void)
 {
+#if P4_DOOM_USB_DEBUG
+    p4_diag_reservation_t reservation;
+    if (!doom_diagnostics_reserve(&reservation)) return;
+    /* Foreground-owned scratch; the consumer receives only a value copy. */
+    static doom_diag_snapshot_t snapshot;
+    memset(&snapshot, 0, sizeof(snapshot));
+    doom_memory_observe(DOOM_MEMORY_RUNTIME, doom_perf_now());
+    snapshot.captured_us = doom_perf_now();
+    snapshot.memory = s_memory_diag;
+    snapshot.perf = s_perf;
+    snapshot.frame_count = s_frame_count;
+    snapshot.touch_polls = s_touch_polls;
+    snapshot.touch_failures = s_touch_poll_failures;
+    snapshot.touch_retries = s_touch_retries;
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    snapshot.touch_sampler = touch_sampler_diag_snapshot();
+#endif
+    snapshot.composite_gate = s_runtime_gate.composite_authorized != 0U;
+    snapshot.touch_gate = s_runtime_gate.touch_authorized != 0U;
+    snapshot.audio_gate = s_runtime_gate.audio_authorized != 0U;
+    snapshot.display_valid = platform_display_try_get_stats(&snapshot.display) == ESP_OK;
+    snapshot.audio_valid = s_audio_lifecycle.runtime_bound &&
+        doom_audio_runtime_get_stats(&snapshot.audio) == ESP_OK;
+    platform_audio_adapter_get_stats(&snapshot.adapter);
+    snapshot.backend_valid = platform_audio_get_telemetry(&snapshot.backend) == ESP_OK;
+    P4_DoomNetGetStats(&snapshot.net);
+    doom_diagnostics_publish(reservation, &snapshot);
+#else
+
     platform_display_stats_t video_stats;
     if (platform_display_get_stats(&video_stats) != ESP_OK) {
         return;
@@ -911,6 +1735,11 @@ static void log_runtime_stats(void)
              have_audio_stats ? audio_stats.music_parse_failures : UINT32_MAX,
              have_audio_stats
                  ? audio_stats.music_maximum_absolute_mix : 0U);
+    log_performance_stats(&video_stats);
+#if P4_DOOM_INDEXED_DRAM_ENABLED
+    indexed_framebuffer_heap("runtime");
+#endif
+#endif
 }
 
 static void log_sound_ready(uint32_t audio_calls)
@@ -1006,13 +1835,36 @@ static void verify_audio_start_or_safe_degrade(bool sound_requested)
 
 void DG_Init(void)
 {
-    if (DG_ScreenBuffer == NULL || s_overlay_buffer == NULL) {
+#if P4_DOOM_USB_DEBUG
+    memset(&s_perf, 0, sizeof(s_perf));
+    doom_diagnostics_begin();
+#endif
+    if (DG_ScreenBuffer == NULL || !s_video_initialized
+#if !CONFIG_P4_BOARD_M5STACK_TAB5
+        || s_overlay_buffer == NULL
+#endif
+    ) {
         halt_dark("engine-frame-buffer", ESP_ERR_NO_MEM);
     }
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    /* doomgeneric_Create allocated this before calling DG_Init. Tab5 now
+     * expands each palette directly into a worker lease instead. */
+    free(DG_ScreenBuffer);
+    DG_ScreenBuffer = NULL;
+    s_frame_acquire_us = 0U;
+#if P4_DOOM_INDEXED_PACKET_EXPERIMENT
+    ESP_LOGI(TAG, "P4_DOOM_E6 INDEXED_PRESENT enabled=1 palette=gamma_rgb888 "
+                 "touch=worker_rgb888 copies=indices_palette");
+#endif
+#endif
     ESP_LOGI(TAG,
              "P4_DOOM_E6 VIDEO_READY input=0x00RRGGBB overlay=touch "
-             "output=rgb565 source=320x200 logical=%ux%u native=%ux%u "
+             "output=rgb565 source=%ux%u surface=%ux%u logical=%ux%u native=%ux%u "
              "rotation_cw=%u viewport=%ux%u margins=%u/%u/%u/%u",
+             (unsigned)DOOM_VIDEO_WIDTH,
+             (unsigned)DOOM_VIDEO_HEIGHT,
+             (unsigned)DOOM_VIDEO_WIDTH,
+             (unsigned)DOOM_VIDEO_HEIGHT,
              (unsigned)PLATFORM_DISPLAY_WIDTH,
              (unsigned)PLATFORM_DISPLAY_HEIGHT,
              (unsigned)PLATFORM_DISPLAY_NATIVE_WIDTH,
@@ -1026,54 +1878,220 @@ void DG_Init(void)
              (unsigned)PLATFORM_DISPLAY_GAME_MARGIN_BOTTOM);
 }
 
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+int DG_PrepareFrame(void)
+{
+    doom_perf_dg_begin();
+#if P4_DOOM_STARTUP_UI
+    /* Net polling may invoke the loading hook; it must not acquire another
+     * frame while the engine holds its first presentation lease. */
+    s_startup_ui_active = false;
+#endif
+    if (s_frame_error == ESP_OK) {
+        if (!s_video_initialized || DG_ScreenBuffer != NULL ||
+            s_overlay_buffer != NULL) {
+            s_frame_error = ESP_ERR_INVALID_STATE;
+        } else {
+            const uint64_t started = doom_perf_now();
+            s_frame_error = doom_video_acquire_xrgb8888(
+                &s_overlay_buffer, DOOM_SUBMIT_TIMEOUT_MS);
+            s_frame_acquire_us = doom_perf_now() - started;
+            if (s_frame_error == ESP_OK) {
+                DG_ScreenBuffer = s_overlay_buffer;
+            } else {
+                doom_perf_record(DOOM_PERF_SUBMIT, s_frame_acquire_us);
+            }
+        }
+    }
+    if (s_frame_error != ESP_OK) {
+        /* A held lease remains owned by the adapter until deinit cancels it. */
+        DG_ScreenBuffer = NULL;
+        s_overlay_buffer = NULL;
+    }
+    doom_perf_dg_end();
+    return s_frame_error == ESP_OK;
+}
+#endif
+
+#if CONFIG_P4_BOARD_M5STACK_TAB5 && P4_DOOM_INDEXED_PACKET_EXPERIMENT
+/* The engine invokes this only for its exact default indexed presentation.
+ * No engine buffer/palette/touch pointer crosses the publication boundary. */
+int DG_DrawIndexedFrame(const uint8_t *indices, const uint32_t *palette)
+{
+    doom_perf_frame_begin();
+    doom_perf_dg_begin();
+#if P4_DOOM_STARTUP_UI
+    s_startup_ui_active = false;
+#endif
+    uint64_t phase_started = doom_perf_now();
+    P4_DoomNetPoll();
+    doom_perf_end(DOOM_PERF_NET, phase_started);
+    if (s_frame_error != ESP_OK) goto done;
+    if (!indices || !palette || !s_video_initialized ||
+        DG_ScreenBuffer != NULL || s_overlay_buffer != NULL) {
+        s_frame_error = ESP_ERR_INVALID_STATE;
+        goto done;
+    }
+    uint8_t *leased_indices = NULL;
+    uint32_t *leased_palette = NULL;
+    phase_started = doom_perf_now();
+    s_frame_error = doom_video_acquire_indexed(
+        &leased_indices, &leased_palette, DOOM_SUBMIT_TIMEOUT_MS);
+    const uint64_t acquire_us = doom_perf_now() - phase_started;
+    if (s_frame_error != ESP_OK) {
+        doom_perf_record(DOOM_PERF_SUBMIT, acquire_us);
+        goto done;
+    }
+    phase_started = doom_perf_now();
+    /* Match compose_frame's validation and neutral recovery before snapshot. */
+    const uint32_t mask = (UINT32_C(1) << DOOM_TOUCH_ACTION_COUNT) - UINT32_C(1);
+    if (s_touch_input.version != DOOM_TOUCH_INPUT_VERSION ||
+        s_touch_input.size != sizeof(s_touch_input) ||
+        s_touch_input.read_index >= DOOM_TOUCH_EVENT_CAPACITY ||
+        s_touch_input.event_count > DOOM_TOUCH_EVENT_CAPACITY ||
+        (s_touch_input.active_actions & ~mask) != 0U) {
+        doom_touch_input_init(&s_touch_input);
+        ESP_LOGW(TAG,
+            "P4_DOOM_E6 TOUCH_DEGRADED stage=input-model-reset "
+            "error=ESP_ERR_INVALID_STATE neutral=1 overlay=visible");
+    }
+    memcpy(leased_indices, indices, (size_t)DOOM_VIDEO_WIDTH * DOOM_VIDEO_HEIGHT);
+    memcpy(leased_palette, palette, 256U * sizeof(*leased_palette));
+    const uint32_t active_actions = s_touch_input.active_actions;
+    doom_perf_end(DOOM_PERF_COMPOSE, phase_started);
+    phase_started = doom_perf_now();
+    s_frame_error = doom_video_publish_indexed(
+        active_actions, false, DOOM_SUBMIT_TIMEOUT_MS);
+    /* Locals must not be dereferenced after publication, even on failure. */
+    doom_perf_record(DOOM_PERF_SUBMIT, acquire_us + doom_perf_now() - phase_started);
+    phase_started = doom_perf_now();
+    P4_DoomNetPollFrameTail(s_frame_error == ESP_OK &&
+        ((s_frame_count + 1U) % DOOM_STATS_INTERVAL_FRAMES) != 0U);
+    doom_perf_end(DOOM_PERF_NET, phase_started);
+    if (s_frame_error != ESP_OK) goto done;
+    ++s_frame_count;
+    doom_perf_dg_end();
+    if ((s_frame_count % DOOM_STATS_INTERVAL_FRAMES) == 0U) {
+        phase_started = doom_perf_now();
+        log_runtime_stats();
+        doom_perf_end(DOOM_PERF_LOG, phase_started);
+    }
+    return 1;
+done:
+    /* A lease acquired before an exceptional exit is canceled by deinit.
+     * A negative result suppresses the legacy fallback after a hard error. */
+    doom_perf_dg_end();
+    return -1;
+}
+#endif
+
 void DG_DrawFrame(void)
 {
+    doom_perf_frame_begin();
+    doom_perf_dg_begin();
+#if P4_DOOM_STARTUP_UI
+    /* Retire before network polling can invoke the startup hook. Gameplay
+     * owns this buffer from its first frame, even if that submit fails. */
+    s_startup_ui_active = false;
+#endif
+    uint64_t phase_started = doom_perf_now();
     P4_DoomNetPoll();
-    if (s_frame_error != ESP_OK) {
-        return;
-    }
-    if (DG_ScreenBuffer == NULL || s_overlay_buffer == NULL) {
+    doom_perf_end(DOOM_PERF_NET, phase_started);
+    if (s_frame_error != ESP_OK) goto done;
+    if (DG_ScreenBuffer == NULL || !s_video_initialized ||
+        s_overlay_buffer == NULL
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+        || DG_ScreenBuffer != s_overlay_buffer
+#endif
+    ) {
         s_frame_error = ESP_ERR_INVALID_STATE;
-        return;
+        goto done;
     }
-    if (!doom_touch_audio_compose_frame(
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    const uint64_t acquire_us = s_frame_acquire_us;
+    s_frame_acquire_us = 0U;
+#endif
+    phase_started = doom_perf_now();
+    if (!doom_touch_audio_compose_frame_sized(
             (const uint32_t *)DG_ScreenBuffer, DOOM_VIDEO_WIDTH,
-            s_overlay_buffer, DOOM_VIDEO_WIDTH, &s_touch_input)) {
+            s_overlay_buffer, DOOM_VIDEO_WIDTH, DOOM_VIDEO_WIDTH, DOOM_VIDEO_HEIGHT,
+            &s_touch_input)) {
         doom_touch_input_init(&s_touch_input);
-        if (!doom_touch_audio_compose_frame(
+        if (!doom_touch_audio_compose_frame_sized(
                 (const uint32_t *)DG_ScreenBuffer, DOOM_VIDEO_WIDTH,
-                s_overlay_buffer, DOOM_VIDEO_WIDTH, &s_touch_input)) {
+                s_overlay_buffer, DOOM_VIDEO_WIDTH, DOOM_VIDEO_WIDTH, DOOM_VIDEO_HEIGHT,
+                &s_touch_input)) {
             s_frame_error = ESP_ERR_INVALID_STATE;
-            return;
+            doom_perf_end(DOOM_PERF_COMPOSE, phase_started);
+            goto done;
         }
         ESP_LOGW(TAG,
                  "P4_DOOM_E6 TOUCH_DEGRADED stage=input-model-reset "
                  "error=ESP_ERR_INVALID_STATE neutral=1 overlay=visible");
     }
+    doom_perf_end(DOOM_PERF_COMPOSE, phase_started);
+    phase_started = doom_perf_now();
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    s_frame_error = doom_video_publish_xrgb8888(false, DOOM_SUBMIT_TIMEOUT_MS);
+    /* Success transfers ownership; failure also invalidates the API pointer. */
+    DG_ScreenBuffer = NULL;
+    s_overlay_buffer = NULL;
+#else
     s_frame_error = doom_video_submit_xrgb8888(
         s_overlay_buffer, DOOM_VIDEO_WIDTH, DOOM_SUBMIT_TIMEOUT_MS);
-    P4_DoomNetPoll();
-    if (s_frame_error != ESP_OK) {
-        return;
-    }
+#endif
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    /* One combined foreground submit sample per frame, excluding compose. */
+    doom_perf_record(DOOM_PERF_SUBMIT, acquire_us + doom_perf_now() - phase_started);
+#else
+    doom_perf_end(DOOM_PERF_SUBMIT, phase_started);
+#endif
+    phase_started = doom_perf_now();
+    /* Wipes, errors and a logging frame retain forced RX before returning. */
+    P4_DoomNetPollFrameTail(s_frame_error == ESP_OK &&
+        ((s_frame_count + 1U) % DOOM_STATS_INTERVAL_FRAMES) != 0U);
+    doom_perf_end(DOOM_PERF_NET, phase_started);
+    if (s_frame_error != ESP_OK) goto done;
     ++s_frame_count;
+    doom_perf_dg_end();
     if ((s_frame_count % DOOM_STATS_INTERVAL_FRAMES) == 0U) {
+        phase_started = doom_perf_now();
         log_runtime_stats();
+        doom_perf_end(DOOM_PERF_LOG, phase_started);
     }
+    return;
+done:
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    /* On errors before publish, deinit cancels the adapter's held lease. */
+    DG_ScreenBuffer = NULL;
+    s_overlay_buffer = NULL;
+#endif
+    doom_perf_dg_end();
 }
 
 void DG_SleepMs(uint32_t milliseconds)
 {
+    doom_perf_dg_begin();
+    uint64_t phase_started = doom_perf_now();
+#if P4_DOOM_USB_DEBUG
+    console_os_debug_poll();
+    doom_perf_end(DOOM_PERF_DEBUG, phase_started);
+    phase_started = doom_perf_now();
+#endif
     P4_DoomNetPoll();
+    doom_perf_end(DOOM_PERF_NET, phase_started);
     const uint32_t bounded = milliseconds > DOOM_MAX_SLEEP_MS
         ? DOOM_MAX_SLEEP_MS
         : milliseconds;
+    phase_started = doom_perf_now();
     if (bounded == 0U) {
         taskYIELD();
-        return;
+    } else {
+        const TickType_t ticks = pdMS_TO_TICKS(bounded);
+        vTaskDelay(ticks > 0 ? ticks : 1);
     }
-    const TickType_t ticks = pdMS_TO_TICKS(bounded);
-    vTaskDelay(ticks > 0 ? ticks : 1);
+    doom_perf_end(DOOM_PERF_SLEEP, phase_started);
+    doom_perf_dg_end();
 }
 
 uint32_t DG_GetTicksMs(void)
@@ -1083,13 +2101,20 @@ uint32_t DG_GetTicksMs(void)
 
 int DG_GetKey(int *pressed, unsigned char *key)
 {
-    if (pressed == NULL || key == NULL) {
-        return 0;
-    }
+    doom_perf_dg_begin();
+    uint64_t phase_started = doom_perf_now();
+    int result = 0;
+#if P4_DOOM_USB_DEBUG
+    console_os_debug_poll();
+    doom_perf_end(DOOM_PERF_DEBUG, phase_started);
+#endif
+    if (pressed == NULL || key == NULL) goto done;
     *pressed = 0;
     *key = 0U;
 #if P4_DOOM_SHARED_GAMEPAD
+    phase_started = doom_perf_now();
     service_gamepad();
+    doom_perf_end(DOOM_PERF_GAMEPAD, phase_started);
     doom_gamepad_event_t gamepad_event;
     while (doom_gamepad_input_next(&s_gamepad_input, &gamepad_event)) {
         unsigned char mapped_key = 0U;
@@ -1102,10 +2127,13 @@ int DG_GetKey(int *pressed, unsigned char *key)
         }
         *pressed = gamepad_event.pressed == 1U ? 1 : 0;
         *key = mapped_key;
-        return 1;
+        result = 1;
+        goto done;
     }
 #endif
+    phase_started = doom_perf_now();
     service_touch();
+    doom_perf_end(DOOM_PERF_TOUCH, phase_started);
     doom_touch_event_t event;
     while (doom_touch_input_next(&s_touch_input, &event)) {
         unsigned char mapped_key = 0U;
@@ -1120,9 +2148,12 @@ int DG_GetKey(int *pressed, unsigned char *key)
 #endif
         *pressed = event.pressed == 1U ? 1 : 0;
         *key = mapped_key;
-        return 1;
+        result = 1;
+        goto done;
     }
-    return 0;
+done:
+    doom_perf_dg_end();
+    return result;
 }
 
 void DG_SetWindowTitle(const char *title)
@@ -1268,14 +2299,14 @@ void app_main(void)
     const bool chex =
         title == PLATFORM_GAME_STORAGE_DOOM_TITLE_CHEX_QUEST;
     const bool arena = title == PLATFORM_GAME_STORAGE_DOOM_TITLE_GAME_CHANGERS_AI;
-    const size_t wad_size = arena ? (size_t)PLATFORM_GAME_STORAGE_FREEDOOM2_WAD_BYTES : chex
+    const size_t wad_size = arena ? (size_t)PLATFORM_GAME_STORAGE_ARENA_BASE_WAD_BYTES : chex
         ? (size_t)PLATFORM_GAME_STORAGE_CHEX_WAD_BYTES
         : (size_t)PLATFORM_GAME_STORAGE_DOOM_WAD_BYTES;
     const char *const wad_file_name = arena ? "freedoom2.wad" : chex ? "chex.wad" : "doom1.wad";
     const char *const wad_path = arena ? "/doom/freedoom2.wad" : chex ? "/doom/chex.wad" : EMBEDDED_WAD_PATH;
-    const char *const wad_identity = arena ? "freedoom-phase2-0.13.0" : chex
+    const char *const wad_identity = arena ? P4_GCA_BASE_IDENTITY : chex
         ? "chex-quest-1.0" : "doom-shareware-1.9";
-    const char *const wad_sha256 = arena ? "a8772e088847032510d97ba2312406a6998f21cbab44d4ff10696faa9c0ecd4b" : chex
+    const char *const wad_sha256 = arena ? P4_GCA_BASE_SHA256_HEX : chex
         ? "d8eb5277918883f490fb1a4be3c9a8588df2dbaee6dc4beb8df4929148bbffb1"
         : "1d7d43be501e67d927e415e0b8f3e29c3bf33075e859721816f652a526cac771";
 #else
@@ -1341,12 +2372,29 @@ void app_main(void)
         halt_dark("video-adapter-init", result);
     }
     s_video_initialized = true;
+#if !CONFIG_P4_BOARD_M5STACK_TAB5
     s_overlay_buffer = heap_caps_calloc(
         OVERLAY_PIXELS, sizeof(*s_overlay_buffer),
         MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
     if (s_overlay_buffer == NULL) {
         halt_dark("overlay-buffer", ESP_ERR_NO_MEM);
     }
+#endif
+#if P4_DOOM_STARTUP_UI
+    s_startup_ui_active = arena;
+    s_startup_ui_waiting = false;
+    s_startup_ui_drawing = false;
+    s_startup_engine_phase = P4_DOOM_ENGINE_LOADING_PREPARING;
+    s_startup_engine_created = false;
+    s_startup_engine_completed = s_startup_engine_total = 0U;
+    s_startup_net_progress = (p4_doom_loading_progress_t){0};
+    s_startup_ui_last_phase = P4_DOOM_ENGINE_LOADING_PREPARING;
+    s_startup_failure_visible = false;
+    s_startup_failure_visible_ms = 0U;
+    s_terminal_close_engine_wads = false;
+    s_startup_ui_started_ms = ticks_ms();
+    s_startup_ui_last_ms = s_startup_ui_started_ms;
+#endif
     result = submit_startup_frame();
     if (result != ESP_OK) {
         halt_dark("startup-frame", result);
@@ -1370,6 +2418,17 @@ void app_main(void)
         engine_argv[engine_argc++]="-nosound";
         engine_argv[engine_argc++]="-nomusic";
     }
+#if defined(P4_CONSOLE_OS_EMBEDDED) && CONFIG_P4_BOARD_M5STACK_TAB5
+    doom_memory_begin();
+    ESP_LOGI(TAG,
+             "P4_DOOM MEMORY stage=engine-start internal_free=%u "
+             "internal_largest=%u dma_free=%u dma_largest=%u psram_free=%u",
+             (unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT),
+             (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT),
+             (unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA | MALLOC_CAP_8BIT),
+             (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA | MALLOC_CAP_8BIT),
+             (unsigned)heap_caps_get_free_size(MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT));
+#endif
 #if P4_DOOM_SHARED_GAMEPAD
     ESP_LOGI(TAG,
              "P4_DOOM_E6 ENGINE_START wad=%s touch=%s overlay=visible "
@@ -1394,8 +2453,20 @@ void app_main(void)
         /* Doom sound Init may transition GPIO30 from proven-high to low. */
         s_audio_lifecycle.safe_high_proven = false;
     }
+#if P4_DOOM_INDEXED_DRAM_ENABLED
+    indexed_framebuffer_reserve();
+    s_indexed_engine_live = true;
+#endif
     doomgeneric_Create(engine_argc, engine_argv);
+    P4_DoomLoadingProgress(P4_DOOM_ENGINE_LOADING_READY, 0U, 0U);
     verify_audio_start_or_safe_degrade(sound_enabled);
+#if P4_DOOM_USB_DEBUG
+    doom_memory_observe(DOOM_MEMORY_ENGINE_READY, doom_perf_now());
+#endif
+    doom_memory_service_events();
+#if P4_DOOM_INDEXED_DRAM_ENABLED
+    indexed_framebuffer_heap("engine-ready");
+#endif
     key_prevweapon = '[';
     key_nextweapon = ']';
     if (s_frame_error != ESP_OK) {
@@ -1410,7 +2481,14 @@ void app_main(void)
 #endif
     for (;;) {
         doomgeneric_Tick();
+        doom_memory_service_events();
         if (doomgeneric_QuitRequested()) {
+            /* Tick has returned; retire the snapshot generation before resources. */
+            doom_diagnostics_end();
+#if P4_DOOM_INDEXED_DRAM_ENABLED
+            /* Tick and all exit callbacks have returned; engine use is over. */
+            s_indexed_engine_live = false;
+#endif
 #ifdef P4_CONSOLE_OS_EMBEDDED
             if (release_audio()) close_engine_wads();
             composite_cleanup();
@@ -1424,5 +2502,11 @@ void app_main(void)
         if (s_frame_error != ESP_OK) {
             halt_dark("engine-frame", s_frame_error);
         }
+#if defined(P4_CONSOLE_OS_EMBEDDED) && CONFIG_P4_BOARD_M5STACK_TAB5
+        /* Live catch-up and replay can finish without sleeping. A positive
+         * scheduler block lets core-0 idle run even when touch and display
+         * complete asynchronously; taskYIELD() cannot give idle this turn. */
+        vTaskDelay(1U);
+#endif
     }
 }

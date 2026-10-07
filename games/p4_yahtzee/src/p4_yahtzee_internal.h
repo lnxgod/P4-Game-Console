@@ -79,6 +79,7 @@ typedef struct {
     uint32_t network_revision;
     uint32_t last_network_sequence[P4_YAHTZEE_PLAYERS];
     uint64_t network_seed;
+    uint32_t network_generation;
     p4_dice_request_t accessory_request;
     uint16_t accessory_hold_ack;
     p4_dice_phase_t accessory_phase;
@@ -88,6 +89,7 @@ typedef struct {
     bool accessory_pending;
     bool shared_accessory;
     bool touch_was_down;
+    bool network_bound;
     bool network_started;
     bool network_error;
 } p4_yahtzee_state_t;
@@ -111,6 +113,9 @@ bool p4_yahtzee_perform_action(
     p4_yahtzee_state_t *state,
     uint8_t kind,
     uint8_t argument);
+bool p4_yahtzee_accept_network_status(
+    p4_yahtzee_state_t *state,
+    const p4_game_multiplayer_status_t *status);
 void p4_yahtzee_poll_network(
     p4_game_context_t *context,
     p4_yahtzee_state_t *state);

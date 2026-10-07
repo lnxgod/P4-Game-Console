@@ -8,6 +8,13 @@
 #include "p4/draw.h"
 #include "p4/game.h"
 #include "p4/input.h"
+#include "p4/card_art.h"
+
+/* Keep layout/input units canonical, but rasterize each primitive and glyph
+ * directly into the negotiated native surface. The helpers retain 320x200
+ * drawing for explicitly requested legacy diagnostics. */
+#define p4_draw_fill_rect p4_card_fill
+#define p4_draw_text p4_card_text
 
 enum {
     AV_PATTERN_COUNT = 4,
@@ -170,6 +177,8 @@ static bool game_render(p4_game_context_t *context,
         return false;
     }
     const av_test_state_t *const state = context->state;
+    const bool native = surface->width == P4_GAME_SURFACE_HIGH_RES_WIDTH;
+    p4_draw_clear(surface, UINT16_C(0x0000));
     switch (state->pattern) {
     case 0U: draw_color_bars(surface); break;
     case 1U: draw_grid(surface); break;
@@ -178,17 +187,30 @@ static bool game_render(p4_game_context_t *context,
     default: draw_gradient(surface); break;
     }
     p4_draw_fill_rect(surface, 0, 0, 320, 19, UINT16_C(0x0010));
-    p4_draw_text(surface, 7, 6, "SOUND & MOTION", UINT16_C(0xF81F), 1U, 14U);
-    p4_draw_text(surface, 80, 6, "LEFT/RIGHT PATTERN",
+    p4_draw_text(surface, native ? 65 : 7, 6, "SOUND & MOTION",
+                 UINT16_C(0xF81F), 1U, 14U);
+    p4_draw_text(surface, native ? 191 : 80, 6,
+                 native ? "START RESETS" : "LEFT/RIGHT PATTERN",
                  UINT16_C(0xFFFF), 1U, 18U);
     p4_draw_fill_rect(surface, state->motion_x - 2, 20, 5, 130,
                       UINT16_C(0xF81F));
-    p4_draw_fill_rect(surface, 0, 150, 320, 18, UINT16_C(0x0000));
-    p4_draw_text(surface, 8, 156, "A TONE  B MOTION  START RESET",
-                 UINT16_C(0xFFFF), 1U, 31U);
+    p4_draw_fill_rect(surface, 0, 150, 320, native ? 50 : 18,
+                      UINT16_C(0x0000));
+    if (native) {
+        p4_draw_text(surface, 96, 154, "A TONE  B MOTION",
+                     UINT16_C(0xFFFF), 1U, 16U);
+        p4_draw_text(surface, 96, 169, "LEFT/RIGHT PATTERN",
+                     UINT16_C(0xFFFF), 1U, 18U);
+        p4_draw_text(surface, 96, 184, "FRAMES",
+                     UINT16_C(0xBDF7), 1U, 6U);
+    } else {
+        p4_draw_text(surface, 8, 156, "A TONE  B MOTION  START RESET",
+                     UINT16_C(0xFFFF), 1U, 31U);
+    }
     char count[11];
     const size_t count_length = format_unsigned(state->frame_count, count);
-    p4_draw_text(surface, 244, 177, count, UINT16_C(0xFFE0), 1U,
+    p4_draw_text(surface, native ? 151 : 244, native ? 184 : 177,
+                 count, UINT16_C(0xFFE0), 1U,
                  count_length);
     p4_game_draw_standard_controls(
         surface, UINT16_C(0x7BEF), UINT16_C(0xF81F),
@@ -208,7 +230,8 @@ const p4_game_descriptor_t p4_av_test_game = {
     .title = "Sound & Motion",
     .subtitle = "Check screen motion and tones",
     .accent_rgb565 = UINT16_C(0xF81F),
-    .required_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS,
+    .required_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS |
+                             P4_GAME_CAP_VIDEO_HIGH_RES,
     .optional_capabilities = P4_GAME_CAP_AUDIO_TONE,
     .state_bytes = sizeof(av_test_state_t),
     .start = game_start,

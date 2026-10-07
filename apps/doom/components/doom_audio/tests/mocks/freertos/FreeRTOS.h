@@ -7,6 +7,13 @@ typedef int BaseType_t;
 typedef uint32_t TickType_t;
 typedef unsigned int UBaseType_t;
 
+typedef unsigned int portMUX_TYPE;
+#define portMUX_INITIALIZER_UNLOCKED 0U
+#ifndef DOOM_AUDIO_TEST_CRITICAL_HOOKS
+#define portENTER_CRITICAL(lock_) ((void)(lock_))
+#define portEXIT_CRITICAL(lock_) ((void)(lock_))
+#endif
+
 #define pdTRUE 1
 #define pdFALSE 0
 #define pdPASS 1

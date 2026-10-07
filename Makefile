@@ -129,6 +129,14 @@ console-shell-host:
 	cmake --build build-host/console_shell
 	ctest --test-dir build-host/console_shell --output-on-failure
 
+.PHONY: console-multiplayer-flow-host
+console-multiplayer-flow-host:
+	python3 scripts/tests/test-console-multiplayer-flow.py
+	python3 scripts/tests/test-console-arena-resume.py
+	python3 scripts/tests/test-console-arena-start.py
+	python3 scripts/tests/test-console-doom-loading-boundary.py
+	python3 scripts/tests/test-console-transport-response.py
+
 console-os-host:
 	cmake -S tools/p4-console-host -B build-host/p4-console-host -G Ninja
 	cmake --build build-host/p4-console-host
@@ -300,7 +308,8 @@ play-game:
 	"build-host/play-$(GAME)/p4_game_host.app/Contents/MacOS/p4_game_host"
 
 game-registry-check:
-	python3 scripts/generate-game-registry.py --games-root games --check
+	python3 scripts/generate-game-registry.py --games-root games --check --require-native-resolution
+	python3 scripts/tests/test-console-native-resolution.py
 	python3 scripts/tests/test-game-registry.py
 	python3 scripts/tests/test-game-release.py
 	python3 scripts/tests/test-native-board-verifiers.py

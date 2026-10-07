@@ -95,6 +95,12 @@ else()
     list(APPEND P4_CONSOLE_MAIN_INCLUDE_DIRS
         "${P4_DOOM_TOUCH_AUDIO_MAIN}"
     )
+    if(P4_ACTIVE_BOARD_PROFILE STREQUAL "m5stack-tab5")
+        list(APPEND P4_CONSOLE_MAIN_SOURCES
+            "${P4_DOOM_TOUCH_AUDIO_MAIN}/diag_mailbox.c"
+            "${P4_DOOM_TOUCH_AUDIO_MAIN}/doom_diagnostics.c"
+        )
+    endif()
     if(P4_ACTIVE_BOARD_PROFILE STREQUAL
        "waveshare-esp32-p4-wifi6-touch-lcd-4.3")
         set(P4_TOUCH_BOARD_DEPS board_deps_waveshare)
@@ -140,9 +146,11 @@ else()
             set(P4_CONSOLE_WIFI_MULTIPLAYER_ENABLED 1)
             set(P4_CONSOLE_BLE_MULTIPLAYER_ENABLED 1)
         endif()
+        # Normalized input is also used by the bounded local USB debug service.
+        list(APPEND P4_CONSOLE_MAIN_REQUIREMENTS
+            doom_gamepad_input gamepad_core platform_gamepad)
         if(P4_TAB5_USB_HOST_BUILD)
             list(APPEND P4_CONSOLE_MAIN_REQUIREMENTS
-                doom_gamepad_input gamepad_core platform_gamepad
                 platform_gamepad_usb platform_gamepad_xusb platform_usb_host)
         endif()
     else()
@@ -193,6 +201,18 @@ target_compile_definitions(${COMPONENT_LIB} PRIVATE
     P4_BLE_DIAGNOSTIC_AUTOSTART=${P4_CONSOLE_BLE_DIAGNOSTIC_AUTOSTART_ENABLED}
     CONSOLE_OS_ENABLE_RUNTIME_STATS=${P4_CONSOLE_RUNTIME_STATS_ENABLED}
 )
+if(P4_ACTIVE_BOARD_PROFILE STREQUAL "m5stack-tab5")
+    foreach(retired_override P4_CONSOLE_NATIVE_AIR_LOW_RES
+            P4_CONSOLE_NATIVE_TIDE_BLAST_LOW_RES P4_CONSOLE_NATIVE_CHECKERS_LOW_RES)
+        if(${retired_override})
+            message(FATAL_ERROR "${retired_override} is retired: Tab5 requires native 768x480 rendering")
+        endif()
+    endforeach()
+    target_compile_definitions(${COMPONENT_LIB} PRIVATE
+        DOOM_VIDEO_NATIVE_TAB5=1
+        P4_DOOM_NATIVE_WIDTH=768 P4_DOOM_NATIVE_HEIGHT=480
+        DOOMGENERIC_RESX=768 DOOMGENERIC_RESY=480)
+endif()
 target_compile_features(${COMPONENT_LIB} PRIVATE c_std_11)
 target_compile_options(${COMPONENT_LIB} PRIVATE
     -Wall

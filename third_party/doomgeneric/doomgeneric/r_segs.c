@@ -71,16 +71,16 @@ int		worldbottom;
 int		worldhigh;
 int		worldlow;
 
-fixed_t		pixhigh;
-fixed_t		pixlow;
-fixed_t		pixhighstep;
-fixed_t		pixlowstep;
+p4_screenfrac_t pixhigh;
+p4_screenfrac_t pixlow;
+p4_screenfrac_t pixhighstep;
+p4_screenfrac_t pixlowstep;
 
-fixed_t		topfrac;
-fixed_t		topstep;
+p4_screenfrac_t topfrac;
+p4_screenfrac_t topstep;
 
-fixed_t		bottomfrac;
-fixed_t		bottomstep;
+p4_screenfrac_t bottomfrac;
+p4_screenfrac_t bottomstep;
 
 
 lighttable_t**	walllights;
@@ -159,7 +159,7 @@ R_RenderMaskedSegRange
 	{
 	    if (!fixedcolormap)
 	    {
-		index = spryscale>>LIGHTSCALESHIFT;
+		index = R_CanonicalScale(spryscale)>>LIGHTSCALESHIFT;
 
 		if (index >=  MAXLIGHTSCALE )
 		    index = MAXLIGHTSCALE-1;
@@ -167,7 +167,7 @@ R_RenderMaskedSegRange
 		dc_colormap = walllights[index];
 	    }
 			
-	    sprtopscreen = centeryfrac - FixedMul(dc_texturemid, spryscale);
+	    sprtopscreen = centeryfrac - R_ScreenFixedMul(dc_texturemid, spryscale);
 	    dc_iscale = 0xffffffffu / (unsigned)spryscale;
 	    
 	    // draw the texture
@@ -196,10 +196,33 @@ R_RenderMaskedSegRange
 #define HEIGHTBITS		12
 #define HEIGHTUNIT		(1<<HEIGHTBITS)
 
+/* Opaque tiers share one setup per column. Masked-only columns prepare
+ * their own drawing parameters later in R_RenderMaskedSegRange. */
+// The native projection can place an edge tens of thousands of rows off
+// screen. Bound it before narrowing to the renderer's short clip arrays.
+static inline int R_ClipColumnEdge(int y)
+{
+#if P4_DOOM_NATIVE_RASTER
+    if (y < -1) return -1;
+    if (y > viewheight) return viewheight;
+#endif
+    return y;
+}
+
+static inline void R_SetWallColumn(void)
+{
+    unsigned index = R_CanonicalScale(rw_scale) >> LIGHTSCALESHIFT;
+    if (index >= MAXLIGHTSCALE)
+        index = MAXLIGHTSCALE - 1;
+    dc_colormap = walllights[index];
+    dc_x = rw_x;
+    dc_iscale = 0xffffffffu / (unsigned)rw_scale;
+}
+
 void R_RenderSegLoop (void)
 {
     angle_t		angle;
-    unsigned		index;
+    boolean             columnsetup;
     int			yl;
     int			yh;
     int			mid;
@@ -209,6 +232,7 @@ void R_RenderSegLoop (void)
 
     for ( ; rw_x < rw_stopx ; rw_x++)
     {
+        columnsetup = false;
 	// mark floor / ceiling areas
 	yl = (topfrac+HEIGHTUNIT-1)>>HEIGHTBITS;
 
@@ -226,8 +250,8 @@ void R_RenderSegLoop (void)
 
 	    if (top <= bottom)
 	    {
-		ceilingplane->top[rw_x] = top;
-		ceilingplane->bottom[rw_x] = bottom;
+		P4_PLANE_TOP(ceilingplane, rw_x) = top;
+		P4_PLANE_BOTTOM(ceilingplane, rw_x) = bottom;
 	    }
 	}
 		
@@ -244,8 +268,8 @@ void R_RenderSegLoop (void)
 		top = ceilingclip[rw_x]+1;
 	    if (top <= bottom)
 	    {
-		floorplane->top[rw_x] = top;
-		floorplane->bottom[rw_x] = bottom;
+		P4_PLANE_TOP(floorplane, rw_x) = top;
+		P4_PLANE_BOTTOM(floorplane, rw_x) = bottom;
 	    }
 	}
 	
@@ -256,15 +280,7 @@ void R_RenderSegLoop (void)
 	    angle = (rw_centerangle + xtoviewangle[rw_x])>>ANGLETOFINESHIFT;
 	    texturecolumn = rw_offset-FixedMul(finetangent[angle],rw_distance);
 	    texturecolumn >>= FRACBITS;
-	    // calculate lighting
-	    index = rw_scale>>LIGHTSCALESHIFT;
 
-	    if (index >=  MAXLIGHTSCALE )
-		index = MAXLIGHTSCALE-1;
-
-	    dc_colormap = walllights[index];
-	    dc_x = rw_x;
-	    dc_iscale = 0xffffffffu / (unsigned)rw_scale;
 	}
         else
         {
@@ -277,10 +293,11 @@ void R_RenderSegLoop (void)
 	if (midtexture)
 	{
 	    // single sided line
+            R_SetWallColumn();
 	    dc_yl = yl;
 	    dc_yh = yh;
 	    dc_texturemid = rw_midtexturemid;
-	    dc_source = R_GetColumn(midtexture,texturecolumn);
+	    dc_source = R_GetColumnForOpaque(midtexture,texturecolumn,&dc_sourceheight);
 	    colfunc ();
 	    ceilingclip[rw_x] = viewheight;
 	    floorclip[rw_x] = -1;
@@ -299,21 +316,26 @@ void R_RenderSegLoop (void)
 
 		if (mid >= yl)
 		{
+                    if (!columnsetup)
+                    {
+                        R_SetWallColumn();
+                        columnsetup = true;
+                    }
 		    dc_yl = yl;
 		    dc_yh = mid;
 		    dc_texturemid = rw_toptexturemid;
-		    dc_source = R_GetColumn(toptexture,texturecolumn);
+		    dc_source = R_GetColumnForOpaque(toptexture,texturecolumn,&dc_sourceheight);
 		    colfunc ();
-		    ceilingclip[rw_x] = mid;
+		    ceilingclip[rw_x] = R_ClipColumnEdge(mid);
 		}
 		else
-		    ceilingclip[rw_x] = yl-1;
+		    ceilingclip[rw_x] = R_ClipColumnEdge(yl-1);
 	    }
 	    else
 	    {
 		// no top wall
 		if (markceiling)
-		    ceilingclip[rw_x] = yl-1;
+		    ceilingclip[rw_x] = R_ClipColumnEdge(yl-1);
 	    }
 			
 	    if (bottomtexture)
@@ -328,22 +350,27 @@ void R_RenderSegLoop (void)
 		
 		if (mid <= yh)
 		{
+                    if (!columnsetup)
+                    {
+                        R_SetWallColumn();
+                        columnsetup = true;
+                    }
 		    dc_yl = mid;
 		    dc_yh = yh;
 		    dc_texturemid = rw_bottomtexturemid;
-		    dc_source = R_GetColumn(bottomtexture,
-					    texturecolumn);
+		    dc_source = R_GetColumnForOpaque(bottomtexture,
+					    texturecolumn,&dc_sourceheight);
 		    colfunc ();
-		    floorclip[rw_x] = mid;
+		    floorclip[rw_x] = R_ClipColumnEdge(mid);
 		}
 		else
-		    floorclip[rw_x] = yh+1;
+		    floorclip[rw_x] = R_ClipColumnEdge(yh+1);
 	    }
 	    else
 	    {
 		// no bottom wall
 		if (markfloor)
-		    floorclip[rw_x] = yh+1;
+		    floorclip[rw_x] = R_ClipColumnEdge(yh+1);
 	    }
 			
 	    if (maskedtexture)
@@ -677,11 +704,11 @@ R_StoreWallRange
     worldtop >>= 4;
     worldbottom >>= 4;
 	
-    topstep = -FixedMul (rw_scalestep, worldtop);
-    topfrac = (centeryfrac>>4) - FixedMul (worldtop, rw_scale);
+    topstep = -R_ScreenFixedMul (rw_scalestep, worldtop);
+    topfrac = (centeryfrac>>4) - R_ScreenFixedMul (worldtop, rw_scale);
 
-    bottomstep = -FixedMul (rw_scalestep,worldbottom);
-    bottomfrac = (centeryfrac>>4) - FixedMul (worldbottom, rw_scale);
+    bottomstep = -R_ScreenFixedMul (rw_scalestep,worldbottom);
+    bottomfrac = (centeryfrac>>4) - R_ScreenFixedMul (worldbottom, rw_scale);
 	
     if (backsector)
     {	
@@ -690,14 +717,14 @@ R_StoreWallRange
 
 	if (worldhigh < worldtop)
 	{
-	    pixhigh = (centeryfrac>>4) - FixedMul (worldhigh, rw_scale);
-	    pixhighstep = -FixedMul (rw_scalestep,worldhigh);
+	    pixhigh = (centeryfrac>>4) - R_ScreenFixedMul (worldhigh, rw_scale);
+	    pixhighstep = -R_ScreenFixedMul (rw_scalestep,worldhigh);
 	}
 	
 	if (worldlow > worldbottom)
 	{
-	    pixlow = (centeryfrac>>4) - FixedMul (worldlow, rw_scale);
-	    pixlowstep = -FixedMul (rw_scalestep,worldlow);
+	    pixlow = (centeryfrac>>4) - R_ScreenFixedMul (worldlow, rw_scale);
+	    pixlowstep = -R_ScreenFixedMul (rw_scalestep,worldlow);
 	}
     }
     
@@ -740,4 +767,3 @@ R_StoreWallRange
     }
     ds_p++;
 }
-

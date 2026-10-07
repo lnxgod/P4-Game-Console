@@ -80,6 +80,16 @@ STlib_initNum
 //  based on differences from the old number.
 // Note: worth the trouble?
 //
+// Copy the same native pixel interval used by the scaled status asset. Its
+// 168-row canonical origin has a fractional native position at 768x480.
+static void STlib_restoreBackground(int x, int y, int w, int h)
+{
+    int nx = P4_DOOM_SCALE_X(x), ny = P4_DOOM_SCALE_Y(y);
+    V_CopyRect(nx, ny - ST_NATIVE_Y, st_backing_screen,
+               P4_DOOM_SCALE_X(x + w) - nx, P4_DOOM_SCALE_Y(y + h) - ny,
+               nx, ny);
+}
+
 void
 STlib_drawNum
 ( st_number_t*	n,
@@ -115,7 +125,7 @@ STlib_drawNum
     if (n->y - ST_Y < 0)
 	I_Error("drawNum: n->y - ST_Y < 0");
 
-    V_CopyRect(x, n->y - ST_Y, st_backing_screen, w*numdigits, h, x, n->y);
+    STlib_restoreBackground(x, n->y, w*numdigits, h);
 
     // if non-number, do not draw it
     if (num == 1994)
@@ -223,7 +233,7 @@ STlib_updateMultIcon
 	    if (y - ST_Y < 0)
 		I_Error("updateMultIcon: y - ST_Y < 0");
 
-	    V_CopyRect(x, y-ST_Y, st_backing_screen, w, h, x, y);
+	    STlib_restoreBackground(x, y, w, h);
 	}
 	V_DrawPatch(mi->x, mi->y, mi->p[*mi->inum]);
 	mi->oldinum = *mi->inum;
@@ -275,7 +285,7 @@ STlib_updateBinIcon
 	if (*bi->val)
 	    V_DrawPatch(bi->x, bi->y, bi->p);
 	else
-	    V_CopyRect(x, y-ST_Y, st_backing_screen, w, h, x, y);
+	    STlib_restoreBackground(x, y, w, h);
 
 	bi->oldval = *bi->val;
     }

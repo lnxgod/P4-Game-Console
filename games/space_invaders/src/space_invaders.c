@@ -907,10 +907,10 @@ const p4_game_descriptor_t p4_space_invaders_game = {
     .title = "Space Invaders",
     .subtitle = "Defend against alien waves",
     .accent_rgb565 = UINT16_C(0x07ff),
-    .required_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS,
+    .required_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS |
+        P4_GAME_CAP_VIDEO_HIGH_RES,
     .optional_capabilities = P4_GAME_CAP_AUDIO_TONE |
-                             P4_GAME_CAP_AUDIO_STREAM |
-                             P4_GAME_CAP_VIDEO_HIGH_RES,
+                             P4_GAME_CAP_AUDIO_STREAM,
     .state_bytes = sizeof(space_invaders_state_t),
     .start = game_start,
     .update = game_update,

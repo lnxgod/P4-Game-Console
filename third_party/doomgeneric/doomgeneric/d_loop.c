@@ -23,6 +23,7 @@
 
 #include "d_event.h"
 #include "d_loop.h"
+#include "doomgeneric.h"
 #include "d_ticcmd.h"
 
 #include "i_system.h"
@@ -67,6 +68,7 @@ static int maketic;
 // The number of complete tics received from the server so far.
 
 static int recvtic;
+static boolean p4_replay_input_ready;
 
 // The number of tics that have been run (using RunTic) so far.
 
@@ -178,8 +180,13 @@ static boolean BuildNewTic(void)
     memset(&cmd, 0, sizeof(ticcmd_t));
     loop_interface->BuildTiccmd(&cmd, maketic);
 
-    ticdata[maketic % BACKUPTICS].cmds[localplayer] = cmd;
-    ticdata[maketic % BACKUPTICS].ingame[localplayer] = true;
+    // P4's host supplies every canonical command, including the local slot.
+    // Provisional input must not overwrite queued history during catchup.
+    if (!P4_DoomNetActive())
+    {
+        ticdata[maketic % BACKUPTICS].cmds[localplayer] = cmd;
+        ticdata[maketic % BACKUPTICS].ingame[localplayer] = true;
+    }
 
     if (P4_DoomNetActive())
     {
@@ -204,7 +211,7 @@ static boolean BuildNewTic(void)
 //
 int      lasttime;
 
-void NetUpdate (void)
+static void NetUpdateInternal (boolean opportunistic)
 {
     int nowtime;
     int newtics;
@@ -216,7 +223,11 @@ void NetUpdate (void)
     if (singletics)
         return;
 
-    P4_DoomNetPoll();
+    if (opportunistic) P4_DoomNetPollOpportunistic();
+    else P4_DoomNetPoll();
+    // Cold checkpoint failure requests the platform's clean Home shutdown.
+    // Do not build input or take the generic fatal-disconnect path afterwards.
+    if (doomgeneric_QuitRequested()) return;
     if (P4_DoomNetFailed())
     {
         I_Error("P4 multiplayer peer disconnected");
@@ -236,6 +247,12 @@ void NetUpdate (void)
     newtics = nowtime - lasttime;
 
     lasttime = nowtime;
+
+    // Rejoining guests consume only the host's canonical command journal.
+    // An agreed activation tic can enable input before its actor is spawned,
+    // while presentation remains suspended through that canonical edge.
+    if (P4_DoomNetReplaying() && !p4_replay_input_ready)
+        return;
 
     if (skiptics <= newtics)
     {
@@ -257,6 +274,20 @@ void NetUpdate (void)
             break;
         }
     }
+}
+
+void NetUpdate (void)
+{
+    P4_ENGINE_PERF_BEGIN(net_started);
+    NetUpdateInternal(false);
+    P4_ENGINE_PERF_END(P4_DOOM_ENGINE_NET, net_started);
+}
+
+void NetUpdateRenderTail (void)
+{
+    P4_ENGINE_PERF_BEGIN(net_started);
+    NetUpdateInternal(true);
+    P4_ENGINE_PERF_END(P4_DOOM_ENGINE_NET, net_started);
 }
 
 static void D_Disconnected(void)
@@ -290,6 +321,9 @@ void D_ReceiveTic(ticcmd_t *ticcmds, boolean *players_mask)
         return;
     }
 
+    if (P4_DoomNetActive() && D_P4TicCapacity() == 0)
+        I_Error("P4 canonical tic buffer exhausted");
+
     for (i = 0; i < NET_MAXPLAYERS; ++i)
     {
         if (!P4_DoomNetActive() && !drone && i == localplayer)
@@ -304,6 +338,31 @@ void D_ReceiveTic(ticcmd_t *ticcmds, boolean *players_mask)
     }
 
     ++recvtic;
+}
+
+unsigned int D_P4TicCapacity(void)
+{
+    int pending = recvtic - (ticdup > 0 ? gametic / ticdup : gametic);
+    if (pending < 0 || pending >= BACKUPTICS)
+        return 0;
+    return (unsigned int)(BACKUPTICS - pending);
+}
+
+int D_P4ReplayTic(void)
+{
+    return gametic;
+}
+
+boolean D_P4ReplayFinish(int next_input_tic)
+{
+    if (!P4_DoomNetReplaying() || p4_replay_input_ready || ticdup != 1
+        || next_input_tic < gametic || next_input_tic < recvtic)
+        return false;
+    maketic = next_input_tic;
+    skiptics = 0;
+    lasttime = GetAdjustedTime();
+    p4_replay_input_ready = true;
+    return true;
 }
 
 //
@@ -357,18 +416,32 @@ void D_StartNetGame(net_gamesettings_t *settings,
         offsetms = 0;
         recvtic = 0;
         maketic = 0;
+        p4_replay_input_ready = false;
         if (!P4_DoomNetConfigure(settings))
         {
             I_Error("P4 multiplayer configuration failed");
         }
-        // P4 networking returns only after both peers have exchanged the
-        // same neutral startup tics. Continue command generation at the next
-        // tic so boot-time skew cannot strand either engine at tic zero.
+        // Initial P4 starts have queued the same neutral startup tics. Cold
+        // rejoins return with no queued tics and defer input until activation.
+        // Continue initial input at the next canonical tic.
         maketic = recvtic;
         localplayer = settings->consoleplayer;
+        if (settings->num_players < 1 || settings->num_players > NET_MAXPLAYERS
+            || localplayer < 0 || localplayer >= settings->num_players)
+        {
+            I_Error("Invalid P4 player capacity");
+        }
+        unsigned int initial_mask = P4_DoomNetInitialPlayerMask();
+        unsigned int capacity_mask = (1U << settings->num_players) - 1U;
+        if (!initial_mask) initial_mask = capacity_mask;
+        if (!(initial_mask & 1U) || (initial_mask & ~capacity_mask)
+            || (!P4_DoomNetReplaying() && !(initial_mask & (1U << localplayer))))
+        {
+            I_Error("Invalid P4 initial player mask");
+        }
         for (i = 0; i < NET_MAXPLAYERS; ++i)
         {
-            local_playeringame[i] = i < settings->num_players;
+            local_playeringame[i] = (initial_mask & (1U << i)) != 0;
         }
         ticdup = settings->ticdup;
         new_sync = settings->new_sync;
@@ -742,20 +815,57 @@ static void SinglePlayerClear(ticcmd_set_t *set)
 // TryRunTics
 //
 
+static int p4_checkpoint_oldentertics;
+
 void TryRunTics (void)
 {
     int	i;
     int	lowtic;
     int	entertic;
-    static int oldentertics;
+
     int realtics;
     int	availabletics;
     int	counts;
 
+    if (P4_DoomNetCheckpointBoundary()) return;
+
+    // Replay is limited by received commands, never the guest's wall clock.
+    // Bound one invocation so transport polling and the scheduler keep running.
+    if (P4_DoomNetReplaying())
+    {
+        unsigned int replayed = 0;
+        while (replayed < 256 && P4_DoomNetReplaying())
+        {
+            ticcmd_set_t *set;
+            NetUpdate();
+            if (gametic >= recvtic)
+            {
+                /* No canonical command is available after polling. Yield one
+                 * millisecond instead of spinning through the outer game loop;
+                 * ready replay commands continue without a wall-clock throttle. */
+                if (P4_DoomNetReplaying())
+                    I_Sleep(1);
+                break;
+            }
+            if (ticdup != 1)
+                I_Error("P4 replay requires unduplicated tics");
+            if (P4_DoomNetCheckpointBoundary()) return;
+            set = &ticdata[gametic % BACKUPTICS];
+            memcpy(local_playeringame, set->ingame,
+                   sizeof(local_playeringame));
+            P4_ENGINE_PERF_BEGIN(sim_started);
+            loop_interface->RunTic(set->cmds, set->ingame);
+            P4_ENGINE_PERF_END(P4_DOOM_ENGINE_SIM, sim_started);
+            ++gametic;
+            ++replayed;
+        }
+        return;
+    }
+
     // get real tics
     entertic = I_GetTime() / ticdup;
-    realtics = entertic - oldentertics;
-    oldentertics = entertic;
+    realtics = entertic - p4_checkpoint_oldentertics;
+    p4_checkpoint_oldentertics = entertic;
 
     // in singletics mode, run a single tic every time this function
     // is called.
@@ -845,9 +955,12 @@ void TryRunTics (void)
             if (gametic/ticdup > lowtic)
                 I_Error ("gametic>lowtic");
 
+            if (P4_DoomNetCheckpointBoundary()) return;
             memcpy(local_playeringame, set->ingame, sizeof(local_playeringame));
 
+            P4_ENGINE_PERF_BEGIN(sim_started);
             loop_interface->RunTic(set->cmds, set->ingame);
+            P4_ENGINE_PERF_END(P4_DOOM_ENGINE_SIM, sim_started);
 	    gametic++;
 
 	    // modify command for duplicated tics
@@ -862,4 +975,26 @@ void TryRunTics (void)
 void D_RegisterLoopCallbacks(loop_interface_t *i)
 {
     loop_interface = i;
+}
+
+/* Canonical replay restarts at a verified
+ * snapshot boundary, with transport queues freshly empty, not copied from host. */
+boolean D_P4CheckpointRebase(int next_tic, unsigned int mask)
+{
+    unsigned int slot;
+    if (!P4_DoomNetActive() || !P4_DoomNetReplaying() || ticdup != 1
+        || !loop_interface || next_tic < 0 || next_tic > 1000000000
+        || (mask & 1U) == 0 || (mask & ~15U) != 0)
+        return false;
+    memset(ticdata, 0, sizeof(ticdata));
+    for (slot = 0; slot < NET_MAXPLAYERS; ++slot)
+        local_playeringame[slot] = (mask & (1U << slot)) != 0;
+    gametic = recvtic = maketic = next_tic;
+    p4_replay_input_ready = false;
+    skiptics = frameon = oldnettics = 0;
+    memset(frameskip, 0, sizeof(frameskip));
+    offsetms = 0;
+    lasttime = GetAdjustedTime();
+    p4_checkpoint_oldentertics = I_GetTime();
+    return true;
 }

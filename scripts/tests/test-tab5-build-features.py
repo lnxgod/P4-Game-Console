@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 """The verifier and install authorization distinguish host-on and host-off images."""
 import importlib.util
+import json
 from pathlib import Path
+import re
+import subprocess
+import tempfile
 root=Path(__file__).resolve().parents[2]
 spec=importlib.util.spec_from_file_location("verify_tab5",root/"scripts/verify-console-os-tab5.py")
 v=importlib.util.module_from_spec(spec);spec.loader.exec_module(v)
@@ -53,3 +57,98 @@ for name in ("lua_newstate", "luaL_loadbufferx", "luaV_execute",
     except ValueError: pass
     else: raise AssertionError("retired Lua symbol accepted")
 print("Tab5 native-only execution gates PASS")
+
+# Reject old incremental-build configs before accepting a build candidate.
+seek_config = ("CONFIG_FATFS_USE_FASTSEEK=y\n"
+               "CONFIG_FATFS_ALLOC_PREFER_EXTRAM=y\n"
+               "CONFIG_FATFS_FAST_SEEK_BUFFER_SIZE=112456\n")
+v.verify_storage_seek(seek_config)
+for invalid in ("", seek_config.replace("=y", "=n"),
+                seek_config.replace("=112456", "=64"),
+                seek_config.replace("=112456", "=16384"),
+                seek_config.replace("=112456", "=112457"),
+                seek_config.replace("CONFIG_FATFS_ALLOC_PREFER_EXTRAM=y\n", ""),
+                seek_config.replace("CONFIG_FATFS_FAST_SEEK_BUFFER_SIZE=112456\n", "")):
+    try: v.verify_storage_seek(invalid)
+    except ValueError: pass
+    else: raise AssertionError("missing or unbounded Tab5 seek config accepted")
+defaults = (root / "hardware/boards/m5stack-tab5/sdkconfig.defaults").read_text()
+v.verify_storage_seek(defaults)
+mailbox_config = "CONFIG_LWIP_UDP_RECVMBOX_SIZE=32\n"
+v.verify_udp_mailbox(mailbox_config)
+v.verify_udp_mailbox(defaults)
+for invalid in ("", mailbox_config.replace("=32", "=6"),
+                mailbox_config.replace("=32", "=64"),
+                mailbox_config.replace("=32", "=0"),
+                mailbox_config.replace("=32", "=320"),
+                "# " + mailbox_config, mailbox_config + mailbox_config):
+    try: v.verify_udp_mailbox(invalid)
+    except ValueError: pass
+    else: raise AssertionError("missing, stale or unbounded UDP mailbox accepted")
+print("Tab5 UDP mailbox verifier gates PASS (2 valid, 7 rejected)")
+assert re.findall(r"^CONFIG_LWIP_UDP_RECVMBOX_SIZE=(.*)$", defaults, re.M) == ["32"], \
+    "Tab5 UDP receive mailbox must keep the reviewed 32-datagram bound"
+
+# Every cluster may be a separate fragment on an existing card. The mount's
+# formatting allocation-unit hint does not constrain existing FAT geometry.
+# FatFs needs two header/terminator words plus two words per fragment.
+manifest = json.loads((root / "third_party/game-data.json").read_text())
+wad_bytes = max(entry["size_bytes"] for entry in
+                manifest["game_changers_ai_bundle"]["files"] +
+                [g for g in manifest["game_data"] if g["id"] == "freedoom-0.13.0-phase-2"]
+                if entry["filename"].upper().endswith(".WAD"))
+words = int(re.search(r"^CONFIG_FATFS_FAST_SEEK_BUFFER_SIZE=(\d+)$",
+                      defaults, re.M)[1])
+assert "CONFIG_FATFS_SECTOR_512=y" in (root / "apps/console_os/sdkconfig.defaults").read_text().splitlines()
+assert words == 2 + 2 * ((wad_bytes + 511) // 512), "map must cover full fragmentation of pinned Arena and original campaign WADs"
+storage = (root / "components/platform_game_storage/src/platform_game_storage.c").read_text()
+max_files = int(re.search(r"GAME_STORAGE_MAX_FILES = (\d+)", storage)[1])
+assert words * 4 <= 450000, "per-file map exceeded reviewed PSRAM budget"
+assert words * 4 * max_files <= 3600000, "all-open-file map budget exceeded"
+
+# Execute the real regeneration branch with isolated output and mocked build
+# commands: changing defaults alone must also refresh an existing sdkconfig.
+build_script = (root / "scripts/build.sh").read_text()
+regen = build_script.split("# sdkconfig defaults do not override", 1)[1]
+regen = regen.split("# Finder and interrupted", 1)[0]
+regen = "# sdkconfig defaults do not override" + regen
+with tempfile.TemporaryDirectory() as temporary:
+    build = Path(temporary)
+    sdkconfig = build / "sdkconfig"
+    features = "CONFIG_P4_TAB5_USB_HOST=y\nCONFIG_P4_TAB5_BLE_MULTIPLAYER=y\n"
+    complete_config = seek_config + mailbox_config
+    cases = (
+        ("missing-defaults", "console_os", "m5stack-tab5", "", True, True),
+        ("small-seek-map", "console_os", "m5stack-tab5", complete_config.replace("=112456", "=64"), True, True),
+        ("missing-psram", "console_os", "m5stack-tab5", complete_config.replace("CONFIG_FATFS_ALLOC_PREFER_EXTRAM=y\n", ""), True, True),
+        ("missing-mailbox", "console_os", "m5stack-tab5", seek_config, True, True),
+        ("old-mailbox", "console_os", "m5stack-tab5", complete_config.replace("=32", "=6"), True, True),
+        ("zero-mailbox", "console_os", "m5stack-tab5", complete_config.replace("=32", "=0"), True, True),
+        ("oversized-mailbox", "console_os", "m5stack-tab5", complete_config.replace("=32", "=64"), True, True),
+        ("commented-mailbox", "console_os", "m5stack-tab5", seek_config + "# " + mailbox_config, True, True),
+        ("malformed-mailbox", "console_os", "m5stack-tab5", complete_config.replace("=32", "=320"), True, True),
+        ("exact-defaults", "console_os", "m5stack-tab5", complete_config, True, False),
+        ("legacy-board", "console_os", "elecrow-crowpanel-advanced-10", "", True, False),
+        ("other-app", "bringup", "m5stack-tab5", "", True, False),
+        ("no-cache", "console_os", "m5stack-tab5", "", False, False),
+    )
+    for name, app, board, extra, exists, expected in cases:
+        if exists:
+            sdkconfig.write_text(features + extra)
+        else:
+            sdkconfig.unlink(missing_ok=True)
+        script = '''set -eu
+P4_APP=$1
+P4_BOARD_PROFILE=$2
+P4_BUILD_DIR=$3
+P4_TAB5_USB_HOST=1
+P4_TAB5_USB_CONFIG=CONFIG_P4_TAB5_USB_HOST=y
+P4_TAB5_BLE_CONFIG=CONFIG_P4_TAB5_BLE_MULTIPLAYER=y
+cmake() { [ "$1" = -E ] && [ "$2" = remove ] && rm -- "$3"; }
+p4_idf_action() { [ "$1" = reconfigure ] && printf 'RECONFIGURED\\n'; }
+''' + regen
+        result = subprocess.run(["sh", "-c", script, "tab5-config-test", app, board, str(build)],
+                                check=True, text=True, capture_output=True)
+        assert result.stdout.count("RECONFIGURED") == int(expected), name
+        assert sdkconfig.exists() == (exists and not expected), name
+print(f"Tab5 bounded fast-seek/UDP mailbox and incremental-config gates PASS ({len(cases)} regeneration cases)")

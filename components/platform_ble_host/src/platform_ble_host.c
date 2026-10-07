@@ -234,6 +234,10 @@ esp_err_t platform_ble_host_start(void)
     const bool starting = s_host.start_in_progress;
     if (!initialized && !starting) {
         s_host.start_in_progress = true;
+        /* Publish retry progress before the task can be scheduled. Wi-Fi's
+         * worker must not mistake the previous error for this new attempt. */
+        s_host.status.state = PLATFORM_BLE_HOST_STARTING_RADIO;
+        s_host.status.last_error = 0;
     }
     portEXIT_CRITICAL(&s_lock);
     if (initialized || starting) {

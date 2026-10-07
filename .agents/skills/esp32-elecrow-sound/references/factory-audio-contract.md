@@ -60,12 +60,16 @@ If sound is absent, keep the project path unchanged and diagnose the observed
 factory-compatible waveform before introducing any codec, MCLK, alternate
 GPIO, or amplifier assumption.
 
-The current Game API v1 implementation accepts copied blocks of
+The historical reviewed Game API v1 release accepted copied blocks of
 1–256 signed 16 kHz PCM16-stereo frames into a 512-frame software FIFO and
-mixes them with its bounded tone voices before the counted platform adapter.
-Host/build evidence for that path does not establish acoustic acceptance of
-streaming PCM on a new artifact; the earlier installed native games exercised
-tones. It does not change the factory initializer or GPIO ownership above.
+mixed them with its bounded tone voices before the counted platform adapter.
+That capacity describes the recorded release. For the current shared mixer,
+read [`P4_GAME_AUDIO_STREAM_BUFFER_FRAMES`](../../../../components/p4_game_api/include/p4/audio.h)
+and [the game performance contract](../../../../docs/GAME_PERFORMANCE.md);
+the current FIFO holds 2048 frames. Host/build evidence for either path does
+not establish acoustic acceptance of streaming PCM on a new artifact; the
+earlier installed native games exercised tones. This does not change the
+factory initializer or GPIO ownership above.
 
 Published topology still permits two output families to converge. Prefer a
 powered-off population/continuity release. An owner-directed exception is valid

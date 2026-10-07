@@ -1,0 +1,3359 @@
+{
+  "schema_version": 1,
+  "version": "0.69",
+  "board": "m5stack-tab5",
+  "publication": "root-reviewed-closed-run-failure-and-limited-native-smoke-record",
+  "outcome": "FAIL-first-fresh-checkpoint-admission-before-restore-or-activation",
+  "source": {
+    "seal_receipt": {
+      "file": "build-host/runtime-acceptance-069/sealed/checkpoint-failure-20261007T092912Z/receipt.json",
+      "bytes": 12337,
+      "sha256": "9543aafb7f4b15005ead6bd6e46212d104fbf46030a006c8a1f415fd2683192a"
+    },
+    "analysis": {
+      "file": "build-host/runtime-acceptance-069/sealed/checkpoint-failure-20261007T092912Z/analysis.json",
+      "bytes": 947472,
+      "sha256": "6b078efa1ee0a89d99a2fe0fa265cacf94eda1f6e914788095697406fd4e1222"
+    },
+    "review": {
+      "file": "build-host/runtime-acceptance-069/sealed/checkpoint-failure-20261007T092912Z/review.json",
+      "bytes": 24945,
+      "sha256": "e733e11c401d514ac1b42438a16647d95d3c580c0c4f43245de8278afc4ffe07"
+    },
+    "prefix_files": [
+      {
+        "file": "build-host/runtime-acceptance-069/sealed/checkpoint-failure-20261007T092912Z/prefix/commands.jsonl",
+        "bytes": 39300,
+        "sha256": "f3fcd4fe3475929ad74ec7f847a64ad02fb2c768fbaa4e3f3414bf7deda7c3d6"
+      },
+      {
+        "file": "build-host/runtime-acceptance-069/sealed/checkpoint-failure-20261007T092912Z/prefix/a.rx",
+        "bytes": 419026,
+        "sha256": "a7f64d56b4c82a62c9f8547e75f2020f33f03b2a174a46a9306ac2d662548ec9"
+      },
+      {
+        "file": "build-host/runtime-acceptance-069/sealed/checkpoint-failure-20261007T092912Z/prefix/b.rx",
+        "bytes": 634112,
+        "sha256": "ec5a97e3373480b6a3e657ecfed85f94727715dbd84e0ca4e8d2b4c563c5357f"
+      }
+    ],
+    "failure_readout": {
+      "file": "build-host/runtime-acceptance-069/gates/checkpoint-failure-20261007T092912Z/failure-readout.json",
+      "bytes": 2233,
+      "sha256": "cc56072497d478aa8d025aac33005b38b60b79f3342add2b8f2820c45ea8d8a1"
+    },
+    "failure_readout_reference_note": "Readout internal receipt/analysis hashes identify the earlier direct-analysis snapshot. The verified seal_receipt, analysis and review above are authoritative for this candidate."
+  },
+  "identity": {
+    "schema_version": 1,
+    "status": "PASS",
+    "version": "0.69",
+    "board": "m5stack-tab5",
+    "application": {
+      "file": "hardware/backups/tab5-069-app-predecessor.bin",
+      "bytes": 4453296,
+      "sha256": "3ed7a376eb55a688db4c9ddbfbe1d26918709ecabfbc9bd4be9a563e9411dbae",
+      "embedded_version": "0.69"
+    },
+    "frozen_source": {
+      "commit": "51aefe10080498c3e95e9b78a8b0ecd553e00b5f",
+      "branch": "codex/tab5-multiplayer-debug",
+      "captured_at": "2026-10-07T09:03:12.331832+00:00",
+      "prebuild_inputs": 225,
+      "authorized_inputs": 227,
+      "snapshot_sha256": "9f1be34cb2dfdef1b6e505525d2057519df56b313f8bf3a2849ef1731f9ce35e",
+      "prebuild_source_map_sha256": "83044e15dbce613bb66c3a15eaddebbf18d83d4c081878fc91aac7547ef14250",
+      "authorized_source_map_sha256": "d111a4080f21427b7c62c0a7cfc0f3d753c115676c6d2e893050051245bced65",
+      "scope_sha256": "d543e71f49045e991c6ff4dc0a893d3041484d12e17e09d55b16034a7cfc1073",
+      "identity_kind": "pinned historical source-freeze attestation"
+    },
+    "units": {
+      "A": {
+        "identity_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+        "receipt_sha256": "4da8814feef4c639bd927c13e8516c64da2ae2a34ca5ec6108a6ec6b2d24aa3b",
+        "verification_method": "device-checksum",
+        "runtime_acceptance": "pending"
+      },
+      "B": {
+        "identity_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+        "receipt_sha256": "41d67a3a415dc29a7454486253710330e087b6add83ab5c0259310a375118fe2",
+        "verification_method": "device-checksum",
+        "runtime_acceptance": "pending"
+      }
+    },
+    "binding_artifacts": [
+      {
+        "role": "install",
+        "file": "hardware/test-runs/2026-10-07-tab5-069-multiplayer-debug-install.json",
+        "bytes": 18247,
+        "sha256": "711cad94d9c6022e7e73925b1cba2bab9f1429de719d00384eef89e30c366ebb"
+      },
+      {
+        "role": "prebuild",
+        "file": "build-host/tab5-multiplayer-hardware/069-prebuild-source.json",
+        "bytes": 30776,
+        "sha256": "9f1be34cb2dfdef1b6e505525d2057519df56b313f8bf3a2849ef1731f9ce35e"
+      },
+      {
+        "role": "preparation",
+        "file": "build-host/tab5-multiplayer-hardware/preparation-069-receipt.json",
+        "bytes": 12301,
+        "sha256": "e8064d2d92eca5f700e5f3ee0579aa2d9c9c2bbc44a68b715343df1310c88166"
+      },
+      {
+        "role": "postbuild",
+        "file": "build-host/tab5-multiplayer-hardware/069-postbuild-verification.json",
+        "bytes": 275330,
+        "sha256": "3ec2c311f67483d8d1f43534548167bb15d76d00f564fcd48f654632875b4ed8"
+      },
+      {
+        "role": "authorization",
+        "file": "hardware/evidence/tab5-0.69-multiplayer-debug-authorization.json",
+        "bytes": 46672,
+        "sha256": "3cb0d41b0bd6fa1ccdadd1976a9af71755272d6ab463ffb9f8a033d3c418f207"
+      },
+      {
+        "role": "app",
+        "file": "hardware/backups/tab5-069-app-predecessor.bin",
+        "bytes": 4453296,
+        "sha256": "3ed7a376eb55a688db4c9ddbfbe1d26918709ecabfbc9bd4be9a563e9411dbae"
+      },
+      {
+        "role": "scope",
+        "file": "build-host/tab5-multiplayer-hardware/069-scope.txt",
+        "bytes": 1753,
+        "sha256": "d543e71f49045e991c6ff4dc0a893d3041484d12e17e09d55b16034a7cfc1073"
+      },
+      {
+        "role": "unit_A_receipt",
+        "file": "hardware/backups/tab5-a-install-jzzswsxk/receipt.json",
+        "bytes": 1628,
+        "sha256": "4da8814feef4c639bd927c13e8516c64da2ae2a34ca5ec6108a6ec6b2d24aa3b"
+      },
+      {
+        "role": "unit_B_receipt",
+        "file": "hardware/backups/tab5-b-install-kw2naua4/receipt.json",
+        "bytes": 1627,
+        "sha256": "41d67a3a415dc29a7454486253710330e087b6add83ab5c0259310a375118fe2"
+      }
+    ],
+    "live_source_compared": false,
+    "live_build_compared": false,
+    "ports_opened": false,
+    "runtime_acceptance": "pending",
+    "limits": [
+      "Saved receipt and image identity validation only; no runtime/gameplay acceptance.",
+      "Frozen source hashes are historical attestations; source bytes were not reconstructed or rebuilt.",
+      "The historical source freeze cannot detect transient changes reverted during compilation.",
+      "Install used device checksum verification, not full application readback."
+    ]
+  },
+  "capture": {
+    "gate": {
+      "kind": "root-selected-explicit-byte-prefixes",
+      "manifest": {
+        "file": "build-host/runtime-acceptance-069/gates/checkpoint-failure-20261007T092912Z/gate.json",
+        "bytes": 369,
+        "sha256": "b44a96bc2dd6d62fcf4b84e1977d6d34d560c994ab0b252937ba65f7e4f193b0"
+      },
+      "requested_prefixes": {
+        "commands.jsonl": {
+          "bytes": 39300,
+          "sha256": "f3fcd4fe3475929ad74ec7f847a64ad02fb2c768fbaa4e3f3414bf7deda7c3d6"
+        },
+        "a.rx": {
+          "bytes": 419026,
+          "sha256": "a7f64d56b4c82a62c9f8547e75f2020f33f03b2a174a46a9306ac2d662548ec9"
+        },
+        "b.rx": {
+          "bytes": 634112,
+          "sha256": "ec5a97e3373480b6a3e657ecfed85f94727715dbd84e0ca4e8d2b4c563c5357f"
+        }
+      },
+      "last_journal_row_time": "2026-10-07T09:28:18.645380+00:00"
+    },
+    "journal_rows": 58,
+    "capture_closed": false,
+    "source_capture_may_continue_growing": true,
+    "scope": "Exact root-selected saved byte prefixes; no later rows, raw bytes or events included. This is not a closed run.",
+    "ports_opened_by_review": false,
+    "live_source_or_build_used_as_069_identity": false
+  },
+  "initial_open_failure": {
+    "binding": {
+      "file": "build-host/runtime-acceptance-069/initial-open-failure-binding.json",
+      "bytes": 1290,
+      "sha256": "f0897735bd2fe872ccd1880a4a9206fbc5d865c5e76e36b167172f25e6951444"
+    },
+    "attempt": {
+      "file": "build-host/tab5-multiplayer-hardware/remote-069-initial-open-failed/attempt.json",
+      "bytes": 1031,
+      "sha256": "0a6823c180b034f4e69c40ac6dc81a87da94255feebc15dcc60243a4718218f4"
+    },
+    "files": [
+      {
+        "file": "build-host/tab5-multiplayer-hardware/remote-069-initial-open-failed/a.rx",
+        "bytes": 9864,
+        "sha256": "d72905179f6fb124500d86b078f70ddec124a4775faad09569bda785c30a3354"
+      },
+      {
+        "file": "build-host/tab5-multiplayer-hardware/remote-069-initial-open-failed/b.rx",
+        "bytes": 15469,
+        "sha256": "bc22a2224604cd455e9c6ff09b492d5a0201bd2686e4e8c0317407e21ac401af"
+      },
+      {
+        "file": "build-host/tab5-multiplayer-hardware/remote-069-initial-open-failed/commands.jsonl",
+        "bytes": 1459,
+        "sha256": "2795c5c45d642a5feb516dbffe31d4fa0b0b4444ede9e05f67407b3b8b1dfc95"
+      }
+    ],
+    "observed_failure": "A first STATUS timeout then serial reader Errno6 Device not configured; B STATUS Home; both ports closed; no input/game actions sent",
+    "scope": "Separate preserved initial-open failure; never merged into the primary run or treated as gameplay."
+  },
+  "session": {
+    "session": "86797222",
+    "host": "B",
+    "guest": "A",
+    "guest_slot": 1,
+    "admission_kind": "fresh",
+    "host_admission_frontier": 5344,
+    "beyond_4200_tick_history": true,
+    "guest_times_ms": {
+      "admission": 495140,
+      "replay_loading_complete": 565282,
+      "checkpoint_failed": 569367,
+      "cleanup": 569379,
+      "exit": 569381
+    },
+    "host_times_ms": {
+      "admission": 495127,
+      "checkpoint_capture": 567732,
+      "rejoin_failed": 569364,
+      "player_left": 569365
+    },
+    "durations_same_unit_seconds": {
+      "guest_admission_to_replay": 70.142,
+      "guest_replay_to_abort": 4.085,
+      "guest_admission_to_abort": 74.227,
+      "host_capture_to_failure": 1.632
+    },
+    "duration_scope": "70.142 s is guest admission to REJOIN_REPLAY/loading completion; 4.085 s is that marker to guest abort. These are same-unit marker deltas, not measured checkpoint transfer duration.",
+    "checkpoint_capture": {
+      "slots_bitmask": 2,
+      "boundary_max_us": 76149,
+      "scope": "Cumulative synchronous boundary-call maximum including validation/encode/SHA, not transfer duration or per-attempt cost."
+    },
+    "checkpoint_restored_observed": false,
+    "guest_rejoin_ready_observed": false,
+    "marker_counts": {
+      "A": {
+        "ADMISSION_ACCEPTED": 1,
+        "CHECKPOINT_CAPTURE": 0,
+        "CHECKPOINT_RESTORED": 0,
+        "CHECKPOINT_FAILED": 1,
+        "REJOIN_READY": 0,
+        "REJOIN_FAILED": 0
+      },
+      "B": {
+        "ADMISSION_ACCEPTED": 1,
+        "CHECKPOINT_CAPTURE": 1,
+        "CHECKPOINT_RESTORED": 0,
+        "CHECKPOINT_FAILED": 0,
+        "REJOIN_READY": 0,
+        "REJOIN_FAILED": 1
+      }
+    },
+    "exact_observations": [
+      {
+        "start": 389757,
+        "end": 389849,
+        "boot": 0,
+        "visit": 1,
+        "session": "86797222",
+        "epoch": 3,
+        "phase": "admission-accepted",
+        "uptime_ms": 495140,
+        "utc_bracket": {
+          "status": "bounded",
+          "utc_lower": "2026-10-07T09:26:47.949982+00:00",
+          "utc_upper": "2026-10-07T09:26:59.121052+00:00",
+          "prior_journal_index": 48,
+          "following_journal_index": 50,
+          "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+        },
+        "marker": "ADMISSION_ACCEPTED",
+        "fields": {
+          "slot": 1
+        },
+        "labels": {
+          "side": "guest",
+          "kind": "fresh"
+        },
+        "receipt": "I (495140) p4_console_os: GAME_CHANGERS_AI ADMISSION_ACCEPTED side=guest kind=fresh slot=1",
+        "unit": "A"
+      },
+      {
+        "start": 402818,
+        "end": 402910,
+        "boot": 0,
+        "visit": 1,
+        "session": "86797222",
+        "epoch": 6,
+        "phase": "checkpoint-failed",
+        "uptime_ms": 569367,
+        "utc_bracket": {
+          "status": "bounded",
+          "utc_lower": "2026-10-07T09:28:00.679537+00:00",
+          "utc_upper": "2026-10-07T09:28:18.645380+00:00",
+          "prior_journal_index": 56,
+          "following_journal_index": 57,
+          "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+        },
+        "marker": "CHECKPOINT_FAILED",
+        "fields": {},
+        "labels": {
+          "reason": "admission",
+          "action": "return-home"
+        },
+        "valid_fields": true,
+        "player_slots": null,
+        "observation": "guest-admission-aborted-teardown-requested",
+        "acceptance": "pending",
+        "receipt": "I (569367) doom_gc: GAME_CHANGERS_AI CHECKPOINT_FAILED reason=admission action=return-home",
+        "unit": "A"
+      },
+      {
+        "start": 518816,
+        "end": 518915,
+        "boot": 0,
+        "visit": 1,
+        "session": "86797222",
+        "epoch": 5,
+        "phase": "admission-accepted",
+        "uptime_ms": 495127,
+        "utc_bracket": {
+          "status": "bounded",
+          "utc_lower": "2026-10-07T09:26:47.842359+00:00",
+          "utc_upper": "2026-10-07T09:26:59.121052+00:00",
+          "prior_journal_index": 47,
+          "following_journal_index": 50,
+          "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+        },
+        "marker": "ADMISSION_ACCEPTED",
+        "fields": {
+          "slot": 1,
+          "frontier": 5344
+        },
+        "labels": {
+          "side": "host",
+          "kind": "fresh"
+        },
+        "receipt": "I (495127) doom_gc: GAME_CHANGERS_AI ADMISSION_ACCEPTED side=host kind=fresh slot=1 frontier=5344",
+        "unit": "B"
+      },
+      {
+        "start": 577055,
+        "end": 577142,
+        "boot": 0,
+        "visit": 1,
+        "session": "86797222",
+        "epoch": 5,
+        "phase": "admission-accepted",
+        "uptime_ms": 567732,
+        "utc_bracket": {
+          "status": "bounded",
+          "utc_lower": "2026-10-07T09:28:00.679537+00:00",
+          "utc_upper": "2026-10-07T09:28:18.645380+00:00",
+          "prior_journal_index": 56,
+          "following_journal_index": 57,
+          "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+        },
+        "marker": "CHECKPOINT_CAPTURE",
+        "fields": {
+          "slots": 2,
+          "boundary_max_us": 76149
+        },
+        "labels": {},
+        "valid_fields": true,
+        "player_slots": [
+          1
+        ],
+        "observation": "host-snapshot-prepared-transfer-state-initialized",
+        "acceptance": "pending",
+        "receipt": "I (567732) doom_gc: GAME_CHANGERS_AI CHECKPOINT_CAPTURE slots=2 boundary_max_us=76149",
+        "unit": "B"
+      },
+      {
+        "start": 580937,
+        "end": 581005,
+        "boot": 0,
+        "visit": 1,
+        "session": "86797222",
+        "epoch": 6,
+        "phase": "rejoin-failed",
+        "uptime_ms": 569364,
+        "utc_bracket": {
+          "status": "bounded",
+          "utc_lower": "2026-10-07T09:28:00.679537+00:00",
+          "utc_upper": "2026-10-07T09:28:18.645380+00:00",
+          "prior_journal_index": 56,
+          "following_journal_index": 57,
+          "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+        },
+        "marker": "REJOIN_FAILED",
+        "fields": {
+          "slot": 1,
+          "reason": 5
+        },
+        "labels": {},
+        "receipt": "I (569364) doom_gc: GAME_CHANGERS_AI REJOIN_FAILED slot=1 reason=5",
+        "unit": "B"
+      }
+    ],
+    "host_initial_ready_scope": "Initial host READY players=4 is configured capacity, not a four-player roster or proof of guest activation."
+  },
+  "active_windows": [],
+  "cadence_verdict": "PENDING-no-paired-active-window-or-cadence-acceptance",
+  "cleanup_exact_receipts": [
+    {
+      "start": 402910,
+      "end": 403081,
+      "boot": 0,
+      "visit": 1,
+      "session": "86797222",
+      "epoch": 7,
+      "phase": "terminal",
+      "uptime_ms": 569379,
+      "utc_bracket": {
+        "status": "bounded",
+        "utc_lower": "2026-10-07T09:28:00.679537+00:00",
+        "utc_upper": "2026-10-07T09:28:18.645380+00:00",
+        "prior_journal_index": 56,
+        "following_journal_index": 57,
+        "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+      },
+      "marker": "TERMINAL",
+      "fields": {
+        "audio_released": 1,
+        "touch_released": 1,
+        "complete": 1,
+        "retained": 0
+      },
+      "labels": {},
+      "receipt": "I (569379) p4_doom_touch_audio: P4_DOOM_E6 CLEANUP audio_released=1 touch_released=1 bus=ESP_OK dark=ESP_OK video=ESP_OK display=ESP_OK blob=ESP_OK complete=1 retained=0"
+    },
+    {
+      "start": 403081,
+      "end": 403189,
+      "boot": 0,
+      "visit": 1,
+      "session": "86797222",
+      "epoch": 8,
+      "phase": "terminal",
+      "uptime_ms": 569381,
+      "utc_bracket": {
+        "status": "bounded",
+        "utc_lower": "2026-10-07T09:28:00.679537+00:00",
+        "utc_upper": "2026-10-07T09:28:18.645380+00:00",
+        "prior_journal_index": 56,
+        "following_journal_index": 57,
+        "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+      },
+      "marker": "TERMINAL",
+      "fields": {
+        "cleanup_complete": 1
+      },
+      "labels": {},
+      "receipt": "I (569381) p4_doom_touch_audio: P4_DOOM_E6 EXIT status=confirmed action=restart-to-home cleanup_complete=1"
+    }
+  ],
+  "cleanup_note": "Guest cleanup complete=1 retained=0 and exit cleanup_complete=1 are observed; the host remains in Doom.",
+  "final_state": {
+    "journal_time": "2026-10-07T09:28:18.645380+00:00",
+    "responses": {
+      "A": {
+        "command": "status",
+        "command_id": 1,
+        "result": "ok",
+        "result_id": 0,
+        "session": 0,
+        "sequence": 206,
+        "active": false,
+        "touch": false,
+        "buttons": 0,
+        "x": 0,
+        "y": 0,
+        "session_remaining_ms": 0,
+        "input_remaining_ms": 0,
+        "text": "mode=shell page=0 app=0 view=4 row=11 game=0 link=0 rooms=0 ready=0"
+      },
+      "B": {
+        "command": "status",
+        "command_id": 1,
+        "result": "ok",
+        "result_id": 0,
+        "session": 0,
+        "sequence": 238,
+        "active": false,
+        "touch": false,
+        "buttons": 0,
+        "x": 0,
+        "y": 0,
+        "session_remaining_ms": 0,
+        "input_remaining_ms": 0,
+        "text": "mode=doom page=9 app=9 view=1 row=11 game=2 link=2 rooms=0 ready=0"
+      }
+    },
+    "A": "Home shell",
+    "B": "Doom host",
+    "scope": "Last saved debug STATUS replies only; not later state, physical observation, or closed-run proof."
+  },
+  "screenshots": {
+    "exact_raw_png_validated": 6,
+    "failed_commands_preserved": 0,
+    "details": {
+      "file": "build-host/runtime-acceptance-069/sealed/checkpoint-failure-20261007T092912Z/review.json",
+      "bytes": 24945,
+      "sha256": "e733e11c401d514ac1b42438a16647d95d3c580c0c4f43245de8278afc4ffe07"
+    },
+    "scope": "Snapshot command windows stay excluded for both peers; still images do not prove continuous cadence."
+  },
+  "cause_assessment": {
+    "device_cause_confirmed": false,
+    "status": "DETERMINISTIC-HOST-DEFECT-REVIEWED; CORRECTED-DEVICE-RETEST-PENDING",
+    "staged_regression_appendix": {
+      "status": "DETERMINISTIC-HOST-REGRESSION-REPRODUCED-AND-INDEPENDENTLY-REVIEWED",
+      "device_cause_confirmed": false,
+      "mechanism": "poll_runtime samples now, then deliver() can advance the checkpoint service clock while consuming canonical frames. Passing the older now to p4_cs_poll triggers strict backward-time rejection, releases the snapshot, latches slot 1 failure (failed_slots=2), and subsequently emits GCP1 abort reason 5 while the host continues.",
+      "minimal_patch": "Resample millis() immediately before p4_cs_poll after delivery callbacks. Service and transfer validation, deadlines and wire format are unchanged.",
+      "fixture_scope": "Actual C adapter and checkpoint service; instrumented engine advances the virtual timer by 1 ms inside D_ReceiveTic while two canonical frames are delivered through public submit/poll APIs; virtual queued transport with real SHA verification.",
+      "recorded_results": {
+        "baseline": "elapsed=22 failed_slots=2 retained=0 packets=0; normal regression exits -6 on snapshot-survival assertion. Separate baseline diagnostic mode verifies released snapshot, subsequent on-wire reason 5, removed guest and continuing host.",
+        "candidate": "elapsed=22 failed_slots=0 retained=1 packets=1; transfer repairs a dropped chunk, completes real SHA verification and retains the snapshot until retirement. Genuinely reversed external time still aborts with reason 5.",
+        "sanitizers": "Recorded ASan/UBSan and strict compiler warning checks pass nine adapter groups and twelve unchanged service groups (34,645 service assertions).",
+        "test_rerun_for_this_appendix": false
+      },
+      "independent_review": {
+        "artifact": {
+          "file": "build-host/arena-checkpoint-fault-069/review/independent-review.json",
+          "bytes": 2599,
+          "sha256": "ebe55bee34f4c256f78dd33e5452730bf211c46d979c13f09710386244538c92"
+        },
+        "result": "no_blockers",
+        "binding_checks": {
+          "baseline_files_verified": 973,
+          "candidate_files_verified": 973,
+          "bound_logs_verified": 8,
+          "hash_mismatches": 0,
+          "patches_match_exact_source_diffs": true,
+          "only_changed_source_files": [
+            "apps/console_os/main/doom_gc_p4mp.c",
+            "components/doom_multiplayer/tests/test_doom_gc_checkpoint.c"
+          ],
+          "preserved_baseline_adapter_matches_baseline_manifest": true
+        }
+      },
+      "artifacts": {
+        "diagnosis": {
+          "file": "build-host/arena-checkpoint-fault-069/DIAGNOSIS.md",
+          "bytes": 4039,
+          "sha256": "876b1895fc967ecb68ce60960e671d5d089f695007d21c59fe75968acc709a06"
+        },
+        "seal": {
+          "file": "build-host/arena-checkpoint-fault-069/seal.json",
+          "bytes": 1867,
+          "sha256": "139001a8834d564a746afd77726074a50b375107effcacfacef3e3bd924d2008"
+        },
+        "receipt": {
+          "file": "build-host/arena-checkpoint-fault-069/receipt.json",
+          "bytes": 127152,
+          "sha256": "6dc2246e099f529c4d6a4c07e39aa24b71b2850151de2589082568a02eb5bdfa"
+        },
+        "minimal_adapter_patch": {
+          "file": "build-host/arena-checkpoint-fault-069/adapter-fix.patch",
+          "bytes": 796,
+          "sha256": "270c17f76b7da6ff9741ad5a7ede993d79900f1fcce4f3816c48c3027783c948"
+        },
+        "regression_fixture_patch": {
+          "file": "build-host/arena-checkpoint-fault-069/adapter-regression.patch",
+          "bytes": 5797,
+          "sha256": "01211c695a8d4c82cd25d5a0ffc05f926b834095cbc25f0fe66d790a32bdb602"
+        }
+      },
+      "result_logs": {
+        "red-adapter": {
+          "file": "build-host/arena-checkpoint-fault-069/red-adapter.log",
+          "bytes": 220,
+          "sha256": "cd7b31bf0b4e535187b4280ee0ee6c3c47881dcdbe797d163593d389396d9dee"
+        },
+        "red-observed-failure": {
+          "file": "build-host/arena-checkpoint-fault-069/red-observed-failure.log",
+          "bytes": 155,
+          "sha256": "a422578ada75c5a6bae08413823a7f089b7c22bd82645692c5491868c271e5a1"
+        },
+        "green-adapter": {
+          "file": "build-host/arena-checkpoint-fault-069/green-adapter.log",
+          "bytes": 1032,
+          "sha256": "86de3d2447f3f99ddff0c78246e5c3a8b2e8e05adaac509294362765793793e1"
+        },
+        "green-service": {
+          "file": "build-host/arena-checkpoint-fault-069/green-service.log",
+          "bytes": 739,
+          "sha256": "4b7495980cd96f5c21f0df0b1c6f623149b0463497ef7874487fb3499b728df1"
+        }
+      },
+      "device_relation": "The observed 0.69 CAPTURE followed 1.632 seconds later by reason 5 before guest restore is consistent with this reproduced defect. Device logs do not expose the internal service timestamps; the exact hardware time crossing and device causality remain inferred until a corrected-device retest.",
+      "limits": [
+        "The failed physical prefix remains FAILURE, with no guest CHECKPOINT_RESTORED or REJOIN_READY. This appendix does not change the runtime outcome.",
+        "This host regression does not newly prove native 32-bit engine restore, device transfer performance, activation, paired cadence or native Air acceptance.",
+        "The initial STATUS timeout / Errno 6 open failure remains a separate event; this diagnosis does not assign its cause."
+      ]
+    },
+    "scope": "Host proof establishes the adapter ordering defect. Its causal role in the recorded device failure remains a consistent inference pending corrected-device retest."
+  },
+  "remaining_acceptance": {
+    "checkpoint_restore_and_ready": "FAILED-in-this-attempt; corrected-device-retest-pending",
+    "paired_sustained_play_and_cadence": "pending",
+    "native_air": "pending",
+    "physical_continuous_video_and_heard_audio": "pending"
+  },
+  "limits": [
+    "Provisional failure record with reviewed deterministic regression appendix; root alone may promote after review.",
+    "Sealer PASS proves saved identity validation, not successful multiplayer or runtime acceptance.",
+    "CHECKPOINT_CAPTURE slots=2 is a player-slot bitmask; boundary_max_us=76149 is a cumulative host synchronous-boundary maximum, not per-attempt transfer time.",
+    "CAPTURE, verified guest RESTORED and REJOIN_READY are separate stages. No cross-peer checkpoint identity or completed transfer is assigned.",
+    "No guest restore/READY, paired play, four-player operation, native Air or physical/acoustic acceptance is established.",
+    "Complete command failures, warnings, counters and screenshot exclusions remain in the bound analysis; this summary does not assert a clean run.",
+    "Exact saved app/source/install binding is inherited from the seal receipt. No new build, device access, app readback or live source comparison occurred."
+  ],
+  "official_evidence_modified": false,
+  "publication_history": {
+    "prior_candidate": {
+      "file": "build-host/runtime-acceptance-069/publication-candidate/runtime-069-candidate.json",
+      "bytes": 21015,
+      "sha256": "5c5cd2b1fda420414ae9d9eca83270b3eb14d5441df71c3b6aa369afa4920df8"
+    },
+    "prior_receipt": {
+      "file": "build-host/runtime-acceptance-069/publication-candidate/candidate-receipt.json",
+      "bytes": 1677,
+      "sha256": "d948955cf2e8eabe2e519db48e90587451c42739835a9acb955a37dcf4c60772"
+    },
+    "note": "Both original provisional files remain unchanged. This revision adds the separately reviewed regression appendix; the device outcome, identity chain and acceptance limits are preserved."
+  },
+  "record_scope": "Existing capture, session, final_state, cadence and acceptance fields retain the original failed checkpoint prefix. later_closed_run separately records the later native Air evidence and exact closure; it does not change the failed checkpoint outcome or confirm its device cause.",
+  "later_closed_run": {
+    "source": {
+      "seal_receipt": {
+        "file": "build-host/runtime-acceptance-069/sealed/closed-20261007T094150Z/receipt.json",
+        "bytes": 16344,
+        "sha256": "f439242fa6a9c58160e809e6cb84989c655af840877bc1e7343127ad4fe3943b"
+      },
+      "analysis": {
+        "file": "build-host/runtime-acceptance-069/sealed/closed-20261007T094150Z/analysis.json",
+        "bytes": 2393655,
+        "sha256": "80905f0dd9394e71f273460291f3da96bb0953dadb554242759d4dbcfbdc3de6"
+      },
+      "review": {
+        "file": "build-host/runtime-acceptance-069/sealed/closed-20261007T094150Z/review.json",
+        "bytes": 52799,
+        "sha256": "f783d9f1821466360f1eb6a8fa4bf1024da7461c650b554a8ae311a870287a4a"
+      },
+      "prefix_files": [
+        {
+          "file": "build-host/runtime-acceptance-069/sealed/closed-20261007T094150Z/prefix/commands.jsonl",
+          "bytes": 132725,
+          "sha256": "c6f1bfcc422774726698030b8af2a9743bb3fea301ebc971c839234837911bd2"
+        },
+        {
+          "file": "build-host/runtime-acceptance-069/sealed/closed-20261007T094150Z/prefix/a.rx",
+          "bytes": 1530311,
+          "sha256": "82cb5edceeefc1a0d78fb8061591c508bec8acabe789c4bfada830f53d5cf828"
+        },
+        {
+          "file": "build-host/runtime-acceptance-069/sealed/closed-20261007T094150Z/prefix/b.rx",
+          "bytes": 1954685,
+          "sha256": "813f2a5e9091e345d669dc32090ed39e7fc06c1c0c48fe9726d5e3fac8519d31"
+        }
+      ],
+      "native_air_readout": {
+        "file": "build-host/runtime-acceptance-069/native-air-readout.json",
+        "bytes": 104596,
+        "sha256": "18be3f7e5fcf7a4dfcdae135274dea1a5a63f5a86da9968812f6278a983e263f"
+      }
+    },
+    "closed_at": "2026-10-07T09:41:50.992669+00:00",
+    "capture_closed": true,
+    "terminal_journal_event": {
+      "time": "2026-10-07T09:41:50.992669+00:00",
+      "event": "ports-closed"
+    },
+    "earlier_failed_checkpoint_prefix_preserved_byte_for_byte": true,
+    "final_status": {
+      "time": "2026-10-07T09:41:46.183048+00:00",
+      "started_at": "2026-10-07T09:41:46.118565+00:00",
+      "duration_ms": 64.467,
+      "unit_duration_ms": {
+        "A": 6.432,
+        "B": 58.021
+      },
+      "request": {
+        "command": "status",
+        "unit": "both"
+      },
+      "response": {
+        "A": {
+          "command": "status",
+          "command_id": 1,
+          "result": "ok",
+          "result_id": 0,
+          "session": 0,
+          "sequence": 821,
+          "active": false,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 0,
+          "input_remaining_ms": 0,
+          "text": "mode=shell page=0 app=0 view=2 row=9 game=6 link=2 rooms=0 ready=0"
+        },
+        "B": {
+          "command": "status",
+          "command_id": 1,
+          "result": "ok",
+          "result_id": 0,
+          "session": 0,
+          "sequence": 859,
+          "active": false,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 0,
+          "input_remaining_ms": 0,
+          "text": "mode=shell page=0 app=0 view=1 row=11 game=6 link=2 rooms=0 ready=0"
+        }
+      }
+    },
+    "close_command_receipts": [
+      {
+        "time": "2026-10-07T09:32:40.291439+00:00",
+        "started_at": "2026-10-07T09:32:40.226774+00:00",
+        "duration_ms": 64.653,
+        "unit_duration_ms": {
+          "A": 14.097,
+          "B": 50.543
+        },
+        "request": {
+          "command": "close",
+          "unit": "both"
+        },
+        "response": {
+          "A": {
+            "error": "close: session (mode=shell page=0 app=0 view=4 row=11 game=0 link=0 rooms=0 ready=0)",
+            "response": {
+              "command": "close",
+              "command_id": 5,
+              "result": "session",
+              "result_id": 3,
+              "session": 1466953079,
+              "sequence": 208,
+              "active": false,
+              "touch": false,
+              "buttons": 0,
+              "x": 0,
+              "y": 0,
+              "session_remaining_ms": 0,
+              "input_remaining_ms": 0,
+              "text": "mode=shell page=0 app=0 view=4 row=11 game=0 link=0 rooms=0 ready=0"
+            }
+          },
+          "B": {
+            "error": "close: session (mode=doom page=9 app=9 view=1 row=11 game=2 link=2 rooms=0 ready=0)",
+            "response": {
+              "command": "close",
+              "command_id": 5,
+              "result": "session",
+              "result_id": 3,
+              "session": 2667126504,
+              "sequence": 240,
+              "active": false,
+              "touch": false,
+              "buttons": 0,
+              "x": 0,
+              "y": 0,
+              "session_remaining_ms": 0,
+              "input_remaining_ms": 0,
+              "text": "mode=doom page=9 app=9 view=1 row=11 game=2 link=2 rooms=0 ready=0"
+            }
+          }
+        }
+      },
+      {
+        "time": "2026-10-07T09:41:40.769232+00:00",
+        "started_at": "2026-10-07T09:41:40.694227+00:00",
+        "duration_ms": 74.99,
+        "unit_duration_ms": {
+          "A": 12.124,
+          "B": 62.852
+        },
+        "request": {
+          "command": "close",
+          "unit": "both"
+        },
+        "response": {
+          "A": {
+            "error": "close: session (mode=shell page=0 app=0 view=2 row=9 game=6 link=2 rooms=0 ready=0)",
+            "response": {
+              "command": "close",
+              "command_id": 5,
+              "result": "session",
+              "result_id": 3,
+              "session": 1937440889,
+              "sequence": 820,
+              "active": false,
+              "touch": false,
+              "buttons": 0,
+              "x": 0,
+              "y": 0,
+              "session_remaining_ms": 0,
+              "input_remaining_ms": 0,
+              "text": "mode=shell page=0 app=0 view=2 row=9 game=6 link=2 rooms=0 ready=0"
+            }
+          },
+          "B": {
+            "error": "close: session (mode=shell page=0 app=0 view=1 row=11 game=6 link=2 rooms=0 ready=0)",
+            "response": {
+              "command": "close",
+              "command_id": 5,
+              "result": "session",
+              "result_id": 3,
+              "session": 241654617,
+              "sequence": 858,
+              "active": false,
+              "touch": false,
+              "buttons": 0,
+              "x": 0,
+              "y": 0,
+              "session_remaining_ms": 0,
+              "input_remaining_ms": 0,
+              "text": "mode=shell page=0 app=0 view=1 row=11 game=6 link=2 rooms=0 ready=0"
+            }
+          }
+        }
+      }
+    ],
+    "final_state": "Both Home, inactive synthetic sessions, neutral input; exact saved STATUS replies.",
+    "closure_scope": "Closure follows the exact terminal ports-closed journal event and complete journal audit. The generic prefix sealer receipt is retained unchanged, including its conservative open-prefix labels.",
+    "native_air": {
+      "version": "0.69",
+      "game": "org.p4console.p4-air-hockey",
+      "source": [
+        {
+          "file": "build-host/runtime-acceptance-069/sealed/closed-20261007T094150Z/receipt.json",
+          "bytes": 16344,
+          "sha256": "f439242fa6a9c58160e809e6cb84989c655af840877bc1e7343127ad4fe3943b"
+        },
+        {
+          "file": "build-host/runtime-acceptance-069/sealed/closed-20261007T094150Z/analysis.json",
+          "bytes": 2393655,
+          "sha256": "80905f0dd9394e71f273460291f3da96bb0953dadb554242759d4dbcfbdc3de6"
+        },
+        {
+          "file": "build-host/runtime-acceptance-069/sealed/closed-20261007T094150Z/review.json",
+          "bytes": 52799,
+          "sha256": "f783d9f1821466360f1eb6a8fa4bf1024da7461c650b554a8ae311a870287a4a"
+        },
+        {
+          "file": "build-host/runtime-acceptance-069/sealed/closed-20261007T094150Z/prefix/commands.jsonl",
+          "bytes": 132725,
+          "sha256": "c6f1bfcc422774726698030b8af2a9743bb3fea301ebc971c839234837911bd2"
+        },
+        {
+          "file": "build-host/runtime-acceptance-069/sealed/closed-20261007T094150Z/prefix/a.rx",
+          "bytes": 1530311,
+          "sha256": "82cb5edceeefc1a0d78fb8061591c508bec8acabe789c4bfada830f53d5cf828"
+        },
+        {
+          "file": "build-host/runtime-acceptance-069/sealed/closed-20261007T094150Z/prefix/b.rx",
+          "bytes": 1954685,
+          "sha256": "813f2a5e9091e345d669dc32090ed39e7fc06c1c0c48fe9726d5e3fac8519d31"
+        },
+        {
+          "file": "build-host/tab5-multiplayer-hardware/summarize-069-runtime.py",
+          "bytes": 43665,
+          "sha256": "a95d377b7a0c0b6810c812f5038f96c435fd05ed686499f1734f65de33472d30"
+        },
+        {
+          "file": "build-host/tab5-multiplayer-hardware/summarize-064-runtime.py",
+          "bytes": 42156,
+          "sha256": "bf121aa00cee2777f7f8ea89ee8e426f9bb10edeeeebbed4df4ca3109febe6a3"
+        },
+        {
+          "file": "build-host/tab5-multiplayer-hardware/paired-log-position-063.py",
+          "bytes": 8565,
+          "sha256": "3d73d5daecbe28e6d57d508ab921c5cc06101ec028bb1a7b4d6a511f0f83e088"
+        },
+        {
+          "file": "build-host/tab5-multiplayer-hardware/worker-067-analysis.py",
+          "bytes": 12549,
+          "sha256": "be3da8660dcfc661156239ce05655323c86d54ac1d525df12907087bd282880e"
+        },
+        {
+          "file": "build-host/tab5-multiplayer-hardware/promote-067/engine-analysis/engineperf_offline.py",
+          "bytes": 22682,
+          "sha256": "3132c820d738af3a13c007236cc16967102d940ce7b347c90409548bec84dcaa"
+        },
+        {
+          "file": "build-host/runtime-acceptance-069/native-air-readout.py",
+          "bytes": 8359,
+          "sha256": "1feb1015e910eab39447b98f9dc5bd1b6131d1275b9cb2b48de739545c05ac3c"
+        }
+      ],
+      "closed_at": "2026-10-07T09:41:50.992669+00:00",
+      "units": {
+        "A": {
+          "role": "guest",
+          "lifecycle": [
+            {
+              "start": 910617,
+              "end": 910813,
+              "epoch": 1,
+              "uptime_ms": 462033,
+              "utc_bracket": {
+                "status": "bounded",
+                "utc_lower": "2026-10-07T09:35:49.447537+00:00",
+                "utc_upper": "2026-10-07T09:35:51.494067+00:00",
+                "prior_journal_index": 146,
+                "following_journal_index": 147,
+                "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+              },
+              "values": {
+                "game_core": 0,
+                "worker_core": 1,
+                "priority": 2,
+                "native_audio_priority": 4,
+                "width": 768,
+                "height": 480
+              },
+              "receipt": "I (462033) p4_console_os: P4_CONSOLE_OS VIDEO_WORKER_START app=org.p4console.p4-air-hockey game_core=0 worker_core=1 priority=2 native_audio_priority=4 source=fixed-abi-copy width=768 height=480"
+            },
+            {
+              "start": 1409116,
+              "end": 1409350,
+              "epoch": 1,
+              "uptime_ms": 781327,
+              "utc_bracket": {
+                "status": "bounded",
+                "utc_lower": "2026-10-07T09:41:09.169583+00:00",
+                "utc_upper": "2026-10-07T09:41:09.908116+00:00",
+                "prior_journal_index": 177,
+                "following_journal_index": 178,
+                "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+              },
+              "values": {
+                "accepted": 4782,
+                "backend_completed": 4782,
+                "backend_timeouts": 0,
+                "wait_timeouts": 0,
+                "hard_error": 0,
+                "stack_min_bytes": 2800,
+                "joined": 1,
+                "physical_scanout_verified": 0
+              },
+              "receipt": "I (781327) p4_console_os: P4_CONSOLE_OS VIDEO_WORKER_STOP app=org.p4console.p4-air-hockey accepted=4782 backend_completed=4782 backend_timeouts=0 wait_timeouts=0 hard_error=0 stack_min_bytes=2800 joined=1 physical_scanout_verified=0"
+            }
+          ],
+          "multiplayer_markers": [
+            {
+              "start": 1409350,
+              "end": 1409466,
+              "epoch": 1,
+              "uptime_ms": 781330,
+              "utc_bracket": {
+                "status": "bounded",
+                "utc_lower": "2026-10-07T09:41:09.169583+00:00",
+                "utc_upper": "2026-10-07T09:41:09.908116+00:00",
+                "prior_journal_index": 177,
+                "following_journal_index": 178,
+                "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+              },
+              "values": {
+                "state": 3,
+                "dropped": 0
+              },
+              "receipt": "I (781330) p4_console_os: P4_CONSOLE_OS NATIVE_MULTIPLAYER_STOP game=org.p4console.p4-air-hockey state=3 dropped=0"
+            }
+          ],
+          "samples": [
+            {
+              "start": 1029869,
+              "end": 1030282,
+              "epoch": 1,
+              "uptime_ms": 480709,
+              "utc_bracket": {
+                "status": "bounded",
+                "utc_lower": "2026-10-07T09:35:49.869763+00:00",
+                "utc_upper": "2026-10-07T09:36:12.194390+00:00",
+                "prior_journal_index": 147,
+                "following_journal_index": 150,
+                "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+              },
+              "values": {
+                "game_core": 0,
+                "worker_core": 1,
+                "accepted": 300,
+                "backend_completed": 299,
+                "backend_timeouts": 0,
+                "wait_timeouts": 0,
+                "hard_error": 0,
+                "copy_avg_us": 19087,
+                "queue_avg_us": 81,
+                "backend_avg_us": 39850,
+                "reuse_avg_us": 32,
+                "transform_avg_us": 34692,
+                "handoff_avg_us": 163,
+                "ppa_avg_us": 34615,
+                "stack_min_bytes": 2800,
+                "saturated": 0,
+                "physical_scanout_verified": 0
+              },
+              "receipt": "I (480709) p4_console_os: P4_CONSOLE_OS VIDEO_WORKER_TIMING app=org.p4console.p4-air-hockey game_core=0 worker_core=1 accepted=300 backend_completed=299 backend_timeouts=0 wait_timeouts=0 hard_error=0 copy_avg_us=19087 queue_avg_us=81 backend_avg_us=39850 reuse_avg_us=32 transform_avg_us=34692 handoff_avg_us=163 ppa_avg_us=34615 stack_min_bytes=2800 averages=cumulative saturated=0 physical_scanout_verified=0"
+            },
+            {
+              "start": 1149515,
+              "end": 1149928,
+              "epoch": 1,
+              "uptime_ms": 498132,
+              "utc_bracket": {
+                "status": "bounded",
+                "utc_lower": "2026-10-07T09:36:14.273955+00:00",
+                "utc_upper": "2026-10-07T09:36:50.025812+00:00",
+                "prior_journal_index": 155,
+                "following_journal_index": 158,
+                "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+              },
+              "values": {
+                "game_core": 0,
+                "worker_core": 1,
+                "accepted": 600,
+                "backend_completed": 599,
+                "backend_timeouts": 0,
+                "wait_timeouts": 0,
+                "hard_error": 0,
+                "copy_avg_us": 19120,
+                "queue_avg_us": 83,
+                "backend_avg_us": 39897,
+                "reuse_avg_us": 32,
+                "transform_avg_us": 34773,
+                "handoff_avg_us": 160,
+                "ppa_avg_us": 34697,
+                "stack_min_bytes": 2800,
+                "saturated": 0,
+                "physical_scanout_verified": 0
+              },
+              "receipt": "I (498132) p4_console_os: P4_CONSOLE_OS VIDEO_WORKER_TIMING app=org.p4console.p4-air-hockey game_core=0 worker_core=1 accepted=600 backend_completed=599 backend_timeouts=0 wait_timeouts=0 hard_error=0 copy_avg_us=19120 queue_avg_us=83 backend_avg_us=39897 reuse_avg_us=32 transform_avg_us=34773 handoff_avg_us=160 ppa_avg_us=34697 stack_min_bytes=2800 averages=cumulative saturated=0 physical_scanout_verified=0"
+            },
+            {
+              "start": 1151000,
+              "end": 1151413,
+              "epoch": 1,
+              "uptime_ms": 515515,
+              "utc_bracket": {
+                "status": "bounded",
+                "utc_lower": "2026-10-07T09:36:14.273955+00:00",
+                "utc_upper": "2026-10-07T09:36:50.025812+00:00",
+                "prior_journal_index": 155,
+                "following_journal_index": 158,
+                "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+              },
+              "values": {
+                "game_core": 0,
+                "worker_core": 1,
+                "accepted": 900,
+                "backend_completed": 899,
+                "backend_timeouts": 0,
+                "wait_timeouts": 0,
+                "hard_error": 0,
+                "copy_avg_us": 19226,
+                "queue_avg_us": 83,
+                "backend_avg_us": 39977,
+                "reuse_avg_us": 32,
+                "transform_avg_us": 34829,
+                "handoff_avg_us": 165,
+                "ppa_avg_us": 34750,
+                "stack_min_bytes": 2800,
+                "saturated": 0,
+                "physical_scanout_verified": 0
+              },
+              "receipt": "I (515515) p4_console_os: P4_CONSOLE_OS VIDEO_WORKER_TIMING app=org.p4console.p4-air-hockey game_core=0 worker_core=1 accepted=900 backend_completed=899 backend_timeouts=0 wait_timeouts=0 hard_error=0 copy_avg_us=19226 queue_avg_us=83 backend_avg_us=39977 reuse_avg_us=32 transform_avg_us=34829 handoff_avg_us=165 ppa_avg_us=34750 stack_min_bytes=2800 averages=cumulative saturated=0 physical_scanout_verified=0"
+            },
+            {
+              "start": 1161820,
+              "end": 1162235,
+              "epoch": 1,
+              "uptime_ms": 533808,
+              "utc_bracket": {
+                "status": "bounded",
+                "utc_lower": "2026-10-07T09:37:01.350357+00:00",
+                "utc_upper": "2026-10-07T09:40:41.845775+00:00",
+                "prior_journal_index": 166,
+                "following_journal_index": 169,
+                "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+              },
+              "values": {
+                "game_core": 0,
+                "worker_core": 1,
+                "accepted": 1200,
+                "backend_completed": 1199,
+                "backend_timeouts": 0,
+                "wait_timeouts": 0,
+                "hard_error": 0,
+                "copy_avg_us": 19222,
+                "queue_avg_us": 84,
+                "backend_avg_us": 40055,
+                "reuse_avg_us": 32,
+                "transform_avg_us": 34845,
+                "handoff_avg_us": 161,
+                "ppa_avg_us": 34768,
+                "stack_min_bytes": 2800,
+                "saturated": 0,
+                "physical_scanout_verified": 0
+              },
+              "receipt": "I (533808) p4_console_os: P4_CONSOLE_OS VIDEO_WORKER_TIMING app=org.p4console.p4-air-hockey game_core=0 worker_core=1 accepted=1200 backend_completed=1199 backend_timeouts=0 wait_timeouts=0 hard_error=0 copy_avg_us=19222 queue_avg_us=84 backend_avg_us=40055 reuse_avg_us=32 transform_avg_us=34845 handoff_avg_us=161 ppa_avg_us=34768 stack_min_bytes=2800 averages=cumulative saturated=0 physical_scanout_verified=0"
+            },
+            {
+              "start": 1272460,
+              "end": 1272875,
+              "epoch": 1,
+              "uptime_ms": 555032,
+              "utc_bracket": {
+                "status": "bounded",
+                "utc_lower": "2026-10-07T09:37:01.350357+00:00",
+                "utc_upper": "2026-10-07T09:40:41.845775+00:00",
+                "prior_journal_index": 166,
+                "following_journal_index": 169,
+                "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+              },
+              "values": {
+                "game_core": 0,
+                "worker_core": 1,
+                "accepted": 1500,
+                "backend_completed": 1499,
+                "backend_timeouts": 0,
+                "wait_timeouts": 0,
+                "hard_error": 0,
+                "copy_avg_us": 19062,
+                "queue_avg_us": 82,
+                "backend_avg_us": 40024,
+                "reuse_avg_us": 32,
+                "transform_avg_us": 34874,
+                "handoff_avg_us": 161,
+                "ppa_avg_us": 34796,
+                "stack_min_bytes": 2800,
+                "saturated": 0,
+                "physical_scanout_verified": 0
+              },
+              "receipt": "I (555032) p4_console_os: P4_CONSOLE_OS VIDEO_WORKER_TIMING app=org.p4console.p4-air-hockey game_core=0 worker_core=1 accepted=1500 backend_completed=1499 backend_timeouts=0 wait_timeouts=0 hard_error=0 copy_avg_us=19062 queue_avg_us=82 backend_avg_us=40024 reuse_avg_us=32 transform_avg_us=34874 handoff_avg_us=161 ppa_avg_us=34796 stack_min_bytes=2800 averages=cumulative saturated=0 physical_scanout_verified=0"
+            },
+            {
+              "start": 1274148,
+              "end": 1274563,
+              "epoch": 1,
+              "uptime_ms": 576222,
+              "utc_bracket": {
+                "status": "bounded",
+                "utc_lower": "2026-10-07T09:37:01.350357+00:00",
+                "utc_upper": "2026-10-07T09:40:41.845775+00:00",
+                "prior_journal_index": 166,
+                "following_journal_index": 169,
+                "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+              },
+              "values": {
+                "game_core": 0,
+                "worker_core": 1,
+                "accepted": 1800,
+                "backend_completed": 1799,
+                "backend_timeouts": 0,
+                "wait_timeouts": 0,
+                "hard_error": 0,
+                "copy_avg_us": 18953,
+                "queue_avg_us": 81,
+                "backend_avg_us": 40054,
+                "reuse_avg_us": 32,
+                "transform_avg_us": 34912,
+                "handoff_avg_us": 161,
+                "ppa_avg_us": 34833,
+                "stack_min_bytes": 2800,
+                "saturated": 0,
+                "physical_scanout_verified": 0
+              },
+              "receipt": "I (576222) p4_console_os: P4_CONSOLE_OS VIDEO_WORKER_TIMING app=org.p4console.p4-air-hockey game_core=0 worker_core=1 accepted=1800 backend_completed=1799 backend_timeouts=0 wait_timeouts=0 hard_error=0 copy_avg_us=18953 queue_avg_us=81 backend_avg_us=40054 reuse_avg_us=32 transform_avg_us=34912 handoff_avg_us=161 ppa_avg_us=34833 stack_min_bytes=2800 averages=cumulative saturated=0 physical_scanout_verified=0"
+            },
+            {
+              "start": 1275838,
+              "end": 1276253,
+              "epoch": 1,
+              "uptime_ms": 597397,
+              "utc_bracket": {
+                "status": "bounded",
+                "utc_lower": "2026-10-07T09:37:01.350357+00:00",
+                "utc_upper": "2026-10-07T09:40:41.845775+00:00",
+                "prior_journal_index": 166,
+                "following_journal_index": 169,
+                "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+              },
+              "values": {
+                "game_core": 0,
+                "worker_core": 1,
+                "accepted": 2100,
+                "backend_completed": 2099,
+                "backend_timeouts": 0,
+                "wait_timeouts": 0,
+                "hard_error": 0,
+                "copy_avg_us": 18875,
+                "queue_avg_us": 81,
+                "backend_avg_us": 40078,
+                "reuse_avg_us": 32,
+                "transform_avg_us": 34941,
+                "handoff_avg_us": 159,
+                "ppa_avg_us": 34863,
+                "stack_min_bytes": 2800,
+                "saturated": 0,
+                "physical_scanout_verified": 0
+              },
+              "receipt": "I (597397) p4_console_os: P4_CONSOLE_OS VIDEO_WORKER_TIMING app=org.p4console.p4-air-hockey game_core=0 worker_core=1 accepted=2100 backend_completed=2099 backend_timeouts=0 wait_timeouts=0 hard_error=0 copy_avg_us=18875 queue_avg_us=81 backend_avg_us=40078 reuse_avg_us=32 transform_avg_us=34941 handoff_avg_us=159 ppa_avg_us=34863 stack_min_bytes=2800 averages=cumulative saturated=0 physical_scanout_verified=0"
+            },
+            {
+              "start": 1277528,
+              "end": 1277943,
+              "epoch": 1,
+              "uptime_ms": 618586,
+              "utc_bracket": {
+                "status": "bounded",
+                "utc_lower": "2026-10-07T09:37:01.350357+00:00",
+                "utc_upper": "2026-10-07T09:40:41.845775+00:00",
+                "prior_journal_index": 166,
+                "following_journal_index": 169,
+                "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+              },
+              "values": {
+                "game_core": 0,
+                "worker_core": 1,
+                "accepted": 2400,
+                "backend_completed": 2399,
+                "backend_timeouts": 0,
+                "wait_timeouts": 0,
+                "hard_error": 0,
+                "copy_avg_us": 18819,
+                "queue_avg_us": 81,
+                "backend_avg_us": 40099,
+                "reuse_avg_us": 32,
+                "transform_avg_us": 34963,
+                "handoff_avg_us": 158,
+                "ppa_avg_us": 34885,
+                "stack_min_bytes": 2800,
+                "saturated": 0,
+                "physical_scanout_verified": 0
+              },
+              "receipt": "I (618586) p4_console_os: P4_CONSOLE_OS VIDEO_WORKER_TIMING app=org.p4console.p4-air-hockey game_core=0 worker_core=1 accepted=2400 backend_completed=2399 backend_timeouts=0 wait_timeouts=0 hard_error=0 copy_avg_us=18819 queue_avg_us=81 backend_avg_us=40099 reuse_avg_us=32 transform_avg_us=34963 handoff_avg_us=158 ppa_avg_us=34885 stack_min_bytes=2800 averages=cumulative saturated=0 physical_scanout_verified=0"
+            },
+            {
+              "start": 1279220,
+              "end": 1279635,
+              "epoch": 1,
+              "uptime_ms": 639773,
+              "utc_bracket": {
+                "status": "bounded",
+                "utc_lower": "2026-10-07T09:37:01.350357+00:00",
+                "utc_upper": "2026-10-07T09:40:41.845775+00:00",
+                "prior_journal_index": 166,
+                "following_journal_index": 169,
+                "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+              },
+              "values": {
+                "game_core": 0,
+                "worker_core": 1,
+                "accepted": 2700,
+                "backend_completed": 2699,
+                "backend_timeouts": 0,
+                "wait_timeouts": 0,
+                "hard_error": 0,
+                "copy_avg_us": 18775,
+                "queue_avg_us": 80,
+                "backend_avg_us": 40109,
+                "reuse_avg_us": 32,
+                "transform_avg_us": 34978,
+                "handoff_avg_us": 157,
+                "ppa_avg_us": 34900,
+                "stack_min_bytes": 2800,
+                "saturated": 0,
+                "physical_scanout_verified": 0
+              },
+              "receipt": "I (639773) p4_console_os: P4_CONSOLE_OS VIDEO_WORKER_TIMING app=org.p4console.p4-air-hockey game_core=0 worker_core=1 accepted=2700 backend_completed=2699 backend_timeouts=0 wait_timeouts=0 hard_error=0 copy_avg_us=18775 queue_avg_us=80 backend_avg_us=40109 reuse_avg_us=32 transform_avg_us=34978 handoff_avg_us=157 ppa_avg_us=34900 stack_min_bytes=2800 averages=cumulative saturated=0 physical_scanout_verified=0"
+            },
+            {
+              "start": 1280911,
+              "end": 1281326,
+              "epoch": 1,
+              "uptime_ms": 660957,
+              "utc_bracket": {
+                "status": "bounded",
+                "utc_lower": "2026-10-07T09:37:01.350357+00:00",
+                "utc_upper": "2026-10-07T09:40:41.845775+00:00",
+                "prior_journal_index": 166,
+                "following_journal_index": 169,
+                "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+              },
+              "values": {
+                "game_core": 0,
+                "worker_core": 1,
+                "accepted": 3000,
+                "backend_completed": 2999,
+                "backend_timeouts": 0,
+                "wait_timeouts": 0,
+                "hard_error": 0,
+                "copy_avg_us": 18738,
+                "queue_avg_us": 80,
+                "backend_avg_us": 40127,
+                "reuse_avg_us": 32,
+                "transform_avg_us": 34992,
+                "handoff_avg_us": 158,
+                "ppa_avg_us": 34912,
+                "stack_min_bytes": 2800,
+                "saturated": 0,
+                "physical_scanout_verified": 0
+              },
+              "receipt": "I (660957) p4_console_os: P4_CONSOLE_OS VIDEO_WORKER_TIMING app=org.p4console.p4-air-hockey game_core=0 worker_core=1 accepted=3000 backend_completed=2999 backend_timeouts=0 wait_timeouts=0 hard_error=0 copy_avg_us=18738 queue_avg_us=80 backend_avg_us=40127 reuse_avg_us=32 transform_avg_us=34992 handoff_avg_us=158 ppa_avg_us=34912 stack_min_bytes=2800 averages=cumulative saturated=0 physical_scanout_verified=0"
+            },
+            {
+              "start": 1282602,
+              "end": 1283017,
+              "epoch": 1,
+              "uptime_ms": 682145,
+              "utc_bracket": {
+                "status": "bounded",
+                "utc_lower": "2026-10-07T09:37:01.350357+00:00",
+                "utc_upper": "2026-10-07T09:40:41.845775+00:00",
+                "prior_journal_index": 166,
+                "following_journal_index": 169,
+                "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+              },
+              "values": {
+                "game_core": 0,
+                "worker_core": 1,
+                "accepted": 3300,
+                "backend_completed": 3299,
+                "backend_timeouts": 0,
+                "wait_timeouts": 0,
+                "hard_error": 0,
+                "copy_avg_us": 18707,
+                "queue_avg_us": 80,
+                "backend_avg_us": 40132,
+                "reuse_avg_us": 32,
+                "transform_avg_us": 35002,
+                "handoff_avg_us": 160,
+                "ppa_avg_us": 34922,
+                "stack_min_bytes": 2800,
+                "saturated": 0,
+                "physical_scanout_verified": 0
+              },
+              "receipt": "I (682145) p4_console_os: P4_CONSOLE_OS VIDEO_WORKER_TIMING app=org.p4console.p4-air-hockey game_core=0 worker_core=1 accepted=3300 backend_completed=3299 backend_timeouts=0 wait_timeouts=0 hard_error=0 copy_avg_us=18707 queue_avg_us=80 backend_avg_us=40132 reuse_avg_us=32 transform_avg_us=35002 handoff_avg_us=160 ppa_avg_us=34922 stack_min_bytes=2800 averages=cumulative saturated=0 physical_scanout_verified=0"
+            },
+            {
+              "start": 1284292,
+              "end": 1284707,
+              "epoch": 1,
+              "uptime_ms": 703335,
+              "utc_bracket": {
+                "status": "bounded",
+                "utc_lower": "2026-10-07T09:37:01.350357+00:00",
+                "utc_upper": "2026-10-07T09:40:41.845775+00:00",
+                "prior_journal_index": 166,
+                "following_journal_index": 169,
+                "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+              },
+              "values": {
+                "game_core": 0,
+                "worker_core": 1,
+                "accepted": 3600,
+                "backend_completed": 3599,
+                "backend_timeouts": 0,
+                "wait_timeouts": 0,
+                "hard_error": 0,
+                "copy_avg_us": 18684,
+                "queue_avg_us": 80,
+                "backend_avg_us": 40140,
+                "reuse_avg_us": 32,
+                "transform_avg_us": 35008,
+                "handoff_avg_us": 160,
+                "ppa_avg_us": 34928,
+                "stack_min_bytes": 2800,
+                "saturated": 0,
+                "physical_scanout_verified": 0
+              },
+              "receipt": "I (703335) p4_console_os: P4_CONSOLE_OS VIDEO_WORKER_TIMING app=org.p4console.p4-air-hockey game_core=0 worker_core=1 accepted=3600 backend_completed=3599 backend_timeouts=0 wait_timeouts=0 hard_error=0 copy_avg_us=18684 queue_avg_us=80 backend_avg_us=40140 reuse_avg_us=32 transform_avg_us=35008 handoff_avg_us=160 ppa_avg_us=34928 stack_min_bytes=2800 averages=cumulative saturated=0 physical_scanout_verified=0"
+            },
+            {
+              "start": 1285983,
+              "end": 1286398,
+              "epoch": 1,
+              "uptime_ms": 724526,
+              "utc_bracket": {
+                "status": "bounded",
+                "utc_lower": "2026-10-07T09:37:01.350357+00:00",
+                "utc_upper": "2026-10-07T09:40:41.845775+00:00",
+                "prior_journal_index": 166,
+                "following_journal_index": 169,
+                "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+              },
+              "values": {
+                "game_core": 0,
+                "worker_core": 1,
+                "accepted": 3900,
+                "backend_completed": 3899,
+                "backend_timeouts": 0,
+                "wait_timeouts": 0,
+                "hard_error": 0,
+                "copy_avg_us": 18664,
+                "queue_avg_us": 80,
+                "backend_avg_us": 40148,
+                "reuse_avg_us": 32,
+                "transform_avg_us": 35017,
+                "handoff_avg_us": 159,
+                "ppa_avg_us": 34938,
+                "stack_min_bytes": 2800,
+                "saturated": 0,
+                "physical_scanout_verified": 0
+              },
+              "receipt": "I (724526) p4_console_os: P4_CONSOLE_OS VIDEO_WORKER_TIMING app=org.p4console.p4-air-hockey game_core=0 worker_core=1 accepted=3900 backend_completed=3899 backend_timeouts=0 wait_timeouts=0 hard_error=0 copy_avg_us=18664 queue_avg_us=80 backend_avg_us=40148 reuse_avg_us=32 transform_avg_us=35017 handoff_avg_us=159 ppa_avg_us=34938 stack_min_bytes=2800 averages=cumulative saturated=0 physical_scanout_verified=0"
+            },
+            {
+              "start": 1287673,
+              "end": 1288088,
+              "epoch": 1,
+              "uptime_ms": 745709,
+              "utc_bracket": {
+                "status": "bounded",
+                "utc_lower": "2026-10-07T09:37:01.350357+00:00",
+                "utc_upper": "2026-10-07T09:40:41.845775+00:00",
+                "prior_journal_index": 166,
+                "following_journal_index": 169,
+                "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+              },
+              "values": {
+                "game_core": 0,
+                "worker_core": 1,
+                "accepted": 4200,
+                "backend_completed": 4199,
+                "backend_timeouts": 0,
+                "wait_timeouts": 0,
+                "hard_error": 0,
+                "copy_avg_us": 18648,
+                "queue_avg_us": 80,
+                "backend_avg_us": 40153,
+                "reuse_avg_us": 32,
+                "transform_avg_us": 35023,
+                "handoff_avg_us": 158,
+                "ppa_avg_us": 34944,
+                "stack_min_bytes": 2800,
+                "saturated": 0,
+                "physical_scanout_verified": 0
+              },
+              "receipt": "I (745709) p4_console_os: P4_CONSOLE_OS VIDEO_WORKER_TIMING app=org.p4console.p4-air-hockey game_core=0 worker_core=1 accepted=4200 backend_completed=4199 backend_timeouts=0 wait_timeouts=0 hard_error=0 copy_avg_us=18648 queue_avg_us=80 backend_avg_us=40153 reuse_avg_us=32 transform_avg_us=35023 handoff_avg_us=158 ppa_avg_us=34944 stack_min_bytes=2800 averages=cumulative saturated=0 physical_scanout_verified=0"
+            },
+            {
+              "start": 1406944,
+              "end": 1407359,
+              "epoch": 1,
+              "uptime_ms": 765632,
+              "utc_bracket": {
+                "status": "bounded",
+                "utc_lower": "2026-10-07T09:40:48.723059+00:00",
+                "utc_upper": "2026-10-07T09:41:09.281248+00:00",
+                "prior_journal_index": 173,
+                "following_journal_index": 177,
+                "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+              },
+              "values": {
+                "game_core": 0,
+                "worker_core": 1,
+                "accepted": 4500,
+                "backend_completed": 4499,
+                "backend_timeouts": 0,
+                "wait_timeouts": 0,
+                "hard_error": 0,
+                "copy_avg_us": 18642,
+                "queue_avg_us": 80,
+                "backend_avg_us": 40139,
+                "reuse_avg_us": 32,
+                "transform_avg_us": 35018,
+                "handoff_avg_us": 157,
+                "ppa_avg_us": 34940,
+                "stack_min_bytes": 2800,
+                "saturated": 0,
+                "physical_scanout_verified": 0
+              },
+              "receipt": "I (765632) p4_console_os: P4_CONSOLE_OS VIDEO_WORKER_TIMING app=org.p4console.p4-air-hockey game_core=0 worker_core=1 accepted=4500 backend_completed=4499 backend_timeouts=0 wait_timeouts=0 hard_error=0 copy_avg_us=18642 queue_avg_us=80 backend_avg_us=40139 reuse_avg_us=32 transform_avg_us=35018 handoff_avg_us=157 ppa_avg_us=34940 stack_min_bytes=2800 averages=cumulative saturated=0 physical_scanout_verified=0"
+            },
+            {
+              "start": 1409935,
+              "end": 1410350,
+              "epoch": 1,
+              "uptime_ms": 781526,
+              "utc_bracket": {
+                "status": "bounded",
+                "utc_lower": "2026-10-07T09:41:09.169583+00:00",
+                "utc_upper": "2026-10-07T09:41:09.908116+00:00",
+                "prior_journal_index": 177,
+                "following_journal_index": 178,
+                "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+              },
+              "values": {
+                "game_core": 0,
+                "worker_core": 1,
+                "accepted": 4782,
+                "backend_completed": 4782,
+                "backend_timeouts": 0,
+                "wait_timeouts": 0,
+                "hard_error": 0,
+                "copy_avg_us": 18674,
+                "queue_avg_us": 80,
+                "backend_avg_us": 40080,
+                "reuse_avg_us": 31,
+                "transform_avg_us": 35000,
+                "handoff_avg_us": 153,
+                "ppa_avg_us": 34923,
+                "stack_min_bytes": 2800,
+                "saturated": 0,
+                "physical_scanout_verified": 0
+              },
+              "receipt": "I (781526) p4_console_os: P4_CONSOLE_OS VIDEO_WORKER_TIMING app=org.p4console.p4-air-hockey game_core=0 worker_core=1 accepted=4782 backend_completed=4782 backend_timeouts=0 wait_timeouts=0 hard_error=0 copy_avg_us=18674 queue_avg_us=80 backend_avg_us=40080 reuse_avg_us=31 transform_avg_us=35000 handoff_avg_us=153 ppa_avg_us=34923 stack_min_bytes=2800 averages=cumulative saturated=0 physical_scanout_verified=0"
+            }
+          ],
+          "diagnostic_intervals": [
+            {
+              "from_uptime_ms": 480709,
+              "to_uptime_ms": 498132,
+              "from_raw_offset": 1029869,
+              "to_raw_offset": 1149515,
+              "possible_utc_window": [
+                "2026-10-07T09:35:49.869763+00:00",
+                "2026-10-07T09:36:50.025812+00:00"
+              ],
+              "elapsed_ms": 17423,
+              "accepted_delta": 300,
+              "backend_completed_delta": 300,
+              "diagnostic_submission_fps": 17.218619,
+              "diagnostic_backend_completion_fps": 17.218619,
+              "clean_cadence_eligible": false,
+              "excluded_reason": "possible-overlap-with-full-screenshot-command",
+              "gameplay_phase": "unresolved-by-timing-marker; includes post-match/results and possibly departure",
+              "scope": "Raw cumulative submission/completion counter difference, not simulation or physical scanout."
+            },
+            {
+              "from_uptime_ms": 498132,
+              "to_uptime_ms": 515515,
+              "from_raw_offset": 1149515,
+              "to_raw_offset": 1151000,
+              "possible_utc_window": [
+                "2026-10-07T09:36:14.273955+00:00",
+                "2026-10-07T09:36:50.025812+00:00"
+              ],
+              "elapsed_ms": 17383,
+              "accepted_delta": 300,
+              "backend_completed_delta": 300,
+              "diagnostic_submission_fps": 17.258241,
+              "diagnostic_backend_completion_fps": 17.258241,
+              "clean_cadence_eligible": false,
+              "excluded_reason": "possible-overlap-with-full-screenshot-command",
+              "gameplay_phase": "unresolved-by-timing-marker; includes post-match/results and possibly departure",
+              "scope": "Raw cumulative submission/completion counter difference, not simulation or physical scanout."
+            },
+            {
+              "from_uptime_ms": 515515,
+              "to_uptime_ms": 533808,
+              "from_raw_offset": 1151000,
+              "to_raw_offset": 1161820,
+              "possible_utc_window": [
+                "2026-10-07T09:36:14.273955+00:00",
+                "2026-10-07T09:40:41.845775+00:00"
+              ],
+              "elapsed_ms": 18293,
+              "accepted_delta": 300,
+              "backend_completed_delta": 300,
+              "diagnostic_submission_fps": 16.399716,
+              "diagnostic_backend_completion_fps": 16.399716,
+              "clean_cadence_eligible": false,
+              "excluded_reason": "possible-overlap-with-full-screenshot-command",
+              "gameplay_phase": "unresolved-by-timing-marker; includes post-match/results and possibly departure",
+              "scope": "Raw cumulative submission/completion counter difference, not simulation or physical scanout."
+            },
+            {
+              "from_uptime_ms": 533808,
+              "to_uptime_ms": 555032,
+              "from_raw_offset": 1161820,
+              "to_raw_offset": 1272460,
+              "possible_utc_window": [
+                "2026-10-07T09:37:01.350357+00:00",
+                "2026-10-07T09:40:41.845775+00:00"
+              ],
+              "elapsed_ms": 21224,
+              "accepted_delta": 300,
+              "backend_completed_delta": 300,
+              "diagnostic_submission_fps": 14.134942,
+              "diagnostic_backend_completion_fps": 14.134942,
+              "clean_cadence_eligible": false,
+              "excluded_reason": "possible-overlap-with-full-screenshot-command",
+              "gameplay_phase": "unresolved-by-timing-marker; includes post-match/results and possibly departure",
+              "scope": "Raw cumulative submission/completion counter difference, not simulation or physical scanout."
+            },
+            {
+              "from_uptime_ms": 555032,
+              "to_uptime_ms": 576222,
+              "from_raw_offset": 1272460,
+              "to_raw_offset": 1274148,
+              "possible_utc_window": [
+                "2026-10-07T09:37:01.350357+00:00",
+                "2026-10-07T09:40:41.845775+00:00"
+              ],
+              "elapsed_ms": 21190,
+              "accepted_delta": 300,
+              "backend_completed_delta": 300,
+              "diagnostic_submission_fps": 14.157622,
+              "diagnostic_backend_completion_fps": 14.157622,
+              "clean_cadence_eligible": false,
+              "excluded_reason": "possible-overlap-with-full-screenshot-command",
+              "gameplay_phase": "unresolved-by-timing-marker; includes post-match/results and possibly departure",
+              "scope": "Raw cumulative submission/completion counter difference, not simulation or physical scanout."
+            },
+            {
+              "from_uptime_ms": 576222,
+              "to_uptime_ms": 597397,
+              "from_raw_offset": 1274148,
+              "to_raw_offset": 1275838,
+              "possible_utc_window": [
+                "2026-10-07T09:37:01.350357+00:00",
+                "2026-10-07T09:40:41.845775+00:00"
+              ],
+              "elapsed_ms": 21175,
+              "accepted_delta": 300,
+              "backend_completed_delta": 300,
+              "diagnostic_submission_fps": 14.167651,
+              "diagnostic_backend_completion_fps": 14.167651,
+              "clean_cadence_eligible": false,
+              "excluded_reason": "possible-overlap-with-full-screenshot-command",
+              "gameplay_phase": "unresolved-by-timing-marker; includes post-match/results and possibly departure",
+              "scope": "Raw cumulative submission/completion counter difference, not simulation or physical scanout."
+            },
+            {
+              "from_uptime_ms": 597397,
+              "to_uptime_ms": 618586,
+              "from_raw_offset": 1275838,
+              "to_raw_offset": 1277528,
+              "possible_utc_window": [
+                "2026-10-07T09:37:01.350357+00:00",
+                "2026-10-07T09:40:41.845775+00:00"
+              ],
+              "elapsed_ms": 21189,
+              "accepted_delta": 300,
+              "backend_completed_delta": 300,
+              "diagnostic_submission_fps": 14.15829,
+              "diagnostic_backend_completion_fps": 14.15829,
+              "clean_cadence_eligible": false,
+              "excluded_reason": "possible-overlap-with-full-screenshot-command",
+              "gameplay_phase": "unresolved-by-timing-marker; includes post-match/results and possibly departure",
+              "scope": "Raw cumulative submission/completion counter difference, not simulation or physical scanout."
+            },
+            {
+              "from_uptime_ms": 618586,
+              "to_uptime_ms": 639773,
+              "from_raw_offset": 1277528,
+              "to_raw_offset": 1279220,
+              "possible_utc_window": [
+                "2026-10-07T09:37:01.350357+00:00",
+                "2026-10-07T09:40:41.845775+00:00"
+              ],
+              "elapsed_ms": 21187,
+              "accepted_delta": 300,
+              "backend_completed_delta": 300,
+              "diagnostic_submission_fps": 14.159626,
+              "diagnostic_backend_completion_fps": 14.159626,
+              "clean_cadence_eligible": false,
+              "excluded_reason": "possible-overlap-with-full-screenshot-command",
+              "gameplay_phase": "unresolved-by-timing-marker; includes post-match/results and possibly departure",
+              "scope": "Raw cumulative submission/completion counter difference, not simulation or physical scanout."
+            },
+            {
+              "from_uptime_ms": 639773,
+              "to_uptime_ms": 660957,
+              "from_raw_offset": 1279220,
+              "to_raw_offset": 1280911,
+              "possible_utc_window": [
+                "2026-10-07T09:37:01.350357+00:00",
+                "2026-10-07T09:40:41.845775+00:00"
+              ],
+              "elapsed_ms": 21184,
+              "accepted_delta": 300,
+              "backend_completed_delta": 300,
+              "diagnostic_submission_fps": 14.161631,
+              "diagnostic_backend_completion_fps": 14.161631,
+              "clean_cadence_eligible": false,
+              "excluded_reason": "possible-overlap-with-full-screenshot-command",
+              "gameplay_phase": "unresolved-by-timing-marker; includes post-match/results and possibly departure",
+              "scope": "Raw cumulative submission/completion counter difference, not simulation or physical scanout."
+            },
+            {
+              "from_uptime_ms": 660957,
+              "to_uptime_ms": 682145,
+              "from_raw_offset": 1280911,
+              "to_raw_offset": 1282602,
+              "possible_utc_window": [
+                "2026-10-07T09:37:01.350357+00:00",
+                "2026-10-07T09:40:41.845775+00:00"
+              ],
+              "elapsed_ms": 21188,
+              "accepted_delta": 300,
+              "backend_completed_delta": 300,
+              "diagnostic_submission_fps": 14.158958,
+              "diagnostic_backend_completion_fps": 14.158958,
+              "clean_cadence_eligible": false,
+              "excluded_reason": "possible-overlap-with-full-screenshot-command",
+              "gameplay_phase": "unresolved-by-timing-marker; includes post-match/results and possibly departure",
+              "scope": "Raw cumulative submission/completion counter difference, not simulation or physical scanout."
+            },
+            {
+              "from_uptime_ms": 682145,
+              "to_uptime_ms": 703335,
+              "from_raw_offset": 1282602,
+              "to_raw_offset": 1284292,
+              "possible_utc_window": [
+                "2026-10-07T09:37:01.350357+00:00",
+                "2026-10-07T09:40:41.845775+00:00"
+              ],
+              "elapsed_ms": 21190,
+              "accepted_delta": 300,
+              "backend_completed_delta": 300,
+              "diagnostic_submission_fps": 14.157622,
+              "diagnostic_backend_completion_fps": 14.157622,
+              "clean_cadence_eligible": false,
+              "excluded_reason": "possible-overlap-with-full-screenshot-command",
+              "gameplay_phase": "unresolved-by-timing-marker; includes post-match/results and possibly departure",
+              "scope": "Raw cumulative submission/completion counter difference, not simulation or physical scanout."
+            },
+            {
+              "from_uptime_ms": 703335,
+              "to_uptime_ms": 724526,
+              "from_raw_offset": 1284292,
+              "to_raw_offset": 1285983,
+              "possible_utc_window": [
+                "2026-10-07T09:37:01.350357+00:00",
+                "2026-10-07T09:40:41.845775+00:00"
+              ],
+              "elapsed_ms": 21191,
+              "accepted_delta": 300,
+              "backend_completed_delta": 300,
+              "diagnostic_submission_fps": 14.156953,
+              "diagnostic_backend_completion_fps": 14.156953,
+              "clean_cadence_eligible": false,
+              "excluded_reason": "possible-overlap-with-full-screenshot-command",
+              "gameplay_phase": "unresolved-by-timing-marker; includes post-match/results and possibly departure",
+              "scope": "Raw cumulative submission/completion counter difference, not simulation or physical scanout."
+            },
+            {
+              "from_uptime_ms": 724526,
+              "to_uptime_ms": 745709,
+              "from_raw_offset": 1285983,
+              "to_raw_offset": 1287673,
+              "possible_utc_window": [
+                "2026-10-07T09:37:01.350357+00:00",
+                "2026-10-07T09:40:41.845775+00:00"
+              ],
+              "elapsed_ms": 21183,
+              "accepted_delta": 300,
+              "backend_completed_delta": 300,
+              "diagnostic_submission_fps": 14.1623,
+              "diagnostic_backend_completion_fps": 14.1623,
+              "clean_cadence_eligible": false,
+              "excluded_reason": "possible-overlap-with-full-screenshot-command",
+              "gameplay_phase": "unresolved-by-timing-marker; includes post-match/results and possibly departure",
+              "scope": "Raw cumulative submission/completion counter difference, not simulation or physical scanout."
+            },
+            {
+              "from_uptime_ms": 745709,
+              "to_uptime_ms": 765632,
+              "from_raw_offset": 1287673,
+              "to_raw_offset": 1406944,
+              "possible_utc_window": [
+                "2026-10-07T09:37:01.350357+00:00",
+                "2026-10-07T09:41:09.281248+00:00"
+              ],
+              "elapsed_ms": 19923,
+              "accepted_delta": 300,
+              "backend_completed_delta": 300,
+              "diagnostic_submission_fps": 15.057973,
+              "diagnostic_backend_completion_fps": 15.057973,
+              "clean_cadence_eligible": false,
+              "excluded_reason": "possible-overlap-with-full-screenshot-command",
+              "gameplay_phase": "unresolved-by-timing-marker; includes post-match/results and possibly departure",
+              "scope": "Raw cumulative submission/completion counter difference, not simulation or physical scanout."
+            },
+            {
+              "from_uptime_ms": 765632,
+              "to_uptime_ms": 781526,
+              "from_raw_offset": 1406944,
+              "to_raw_offset": 1409935,
+              "possible_utc_window": [
+                "2026-10-07T09:40:48.723059+00:00",
+                "2026-10-07T09:41:09.908116+00:00"
+              ],
+              "elapsed_ms": 15894,
+              "accepted_delta": 282,
+              "backend_completed_delta": 283,
+              "diagnostic_submission_fps": 17.742544,
+              "diagnostic_backend_completion_fps": 17.805461,
+              "clean_cadence_eligible": false,
+              "excluded_reason": "possible-overlap-with-full-screenshot-command",
+              "gameplay_phase": "unresolved-by-timing-marker; includes post-match/results and possibly departure",
+              "scope": "Raw cumulative submission/completion counter difference, not simulation or physical scanout."
+            }
+          ],
+          "clean_interval_count": 0,
+          "early_two_diagnostic_submission_fps": [
+            17.218619,
+            17.258241
+          ],
+          "final_cumulative_cost_us": {
+            "copy_avg_us": 18674,
+            "queue_avg_us": 80,
+            "backend_avg_us": 40080,
+            "reuse_avg_us": 31,
+            "transform_avg_us": 35000,
+            "handoff_avg_us": 153,
+            "ppa_avg_us": 34923
+          },
+          "timing_scope": "Cumulative integer averages across the entire native episode. PPA overlaps transform, which is inside backend; foreground copy and worker costs must not be summed as sequential frame time.",
+          "worker_joined": true,
+          "all_observed_worker_error_counters_zero": true,
+          "physical_scanout_verified": false
+        },
+        "B": {
+          "role": "host",
+          "lifecycle": [
+            {
+              "start": 1336102,
+              "end": 1336298,
+              "epoch": 1,
+              "uptime_ms": 150914,
+              "utc_bracket": {
+                "status": "bounded",
+                "utc_lower": "2026-10-07T09:35:49.447537+00:00",
+                "utc_upper": "2026-10-07T09:35:51.494067+00:00",
+                "prior_journal_index": 146,
+                "following_journal_index": 147,
+                "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+              },
+              "values": {
+                "game_core": 0,
+                "worker_core": 1,
+                "priority": 2,
+                "native_audio_priority": 4,
+                "width": 768,
+                "height": 480
+              },
+              "receipt": "I (150914) p4_console_os: P4_CONSOLE_OS VIDEO_WORKER_START app=org.p4console.p4-air-hockey game_core=0 worker_core=1 priority=2 native_audio_priority=4 source=fixed-abi-copy width=768 height=480"
+            },
+            {
+              "start": 1715010,
+              "end": 1715244,
+              "epoch": 1,
+              "uptime_ms": 448881,
+              "utc_bracket": {
+                "status": "bounded",
+                "utc_lower": "2026-10-07T09:40:48.013603+00:00",
+                "utc_upper": "2026-10-07T09:40:48.722969+00:00",
+                "prior_journal_index": 171,
+                "following_journal_index": 172,
+                "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+              },
+              "values": {
+                "accepted": 4419,
+                "backend_completed": 4419,
+                "backend_timeouts": 0,
+                "wait_timeouts": 0,
+                "hard_error": 0,
+                "stack_min_bytes": 2804,
+                "joined": 1,
+                "physical_scanout_verified": 0
+              },
+              "receipt": "I (448881) p4_console_os: P4_CONSOLE_OS VIDEO_WORKER_STOP app=org.p4console.p4-air-hockey accepted=4419 backend_completed=4419 backend_timeouts=0 wait_timeouts=0 hard_error=0 stack_min_bytes=2804 joined=1 physical_scanout_verified=0"
+            }
+          ],
+          "multiplayer_markers": [
+            {
+              "start": 1715244,
+              "end": 1715360,
+              "epoch": 1,
+              "uptime_ms": 448884,
+              "utc_bracket": {
+                "status": "bounded",
+                "utc_lower": "2026-10-07T09:40:48.013603+00:00",
+                "utc_upper": "2026-10-07T09:40:48.722969+00:00",
+                "prior_journal_index": 171,
+                "following_journal_index": 172,
+                "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+              },
+              "values": {
+                "state": 2,
+                "dropped": 0
+              },
+              "receipt": "I (448884) p4_console_os: P4_CONSOLE_OS NATIVE_MULTIPLAYER_STOP game=org.p4console.p4-air-hockey state=2 dropped=0"
+            }
+          ],
+          "samples": [
+            {
+              "start": 1455156,
+              "end": 1455568,
+              "epoch": 1,
+              "uptime_ms": 168517,
+              "utc_bracket": {
+                "status": "bounded",
+                "utc_lower": "2026-10-07T09:35:49.869763+00:00",
+                "utc_upper": "2026-10-07T09:36:12.194390+00:00",
+                "prior_journal_index": 147,
+                "following_journal_index": 150,
+                "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+              },
+              "values": {
+                "game_core": 0,
+                "worker_core": 1,
+                "accepted": 300,
+                "backend_completed": 299,
+                "backend_timeouts": 0,
+                "wait_timeouts": 0,
+                "hard_error": 0,
+                "copy_avg_us": 18729,
+                "queue_avg_us": 81,
+                "backend_avg_us": 39777,
+                "reuse_avg_us": 29,
+                "transform_avg_us": 34668,
+                "handoff_avg_us": 91,
+                "ppa_avg_us": 34600,
+                "stack_min_bytes": 2804,
+                "saturated": 0,
+                "physical_scanout_verified": 0
+              },
+              "receipt": "I (168517) p4_console_os: P4_CONSOLE_OS VIDEO_WORKER_TIMING app=org.p4console.p4-air-hockey game_core=0 worker_core=1 accepted=300 backend_completed=299 backend_timeouts=0 wait_timeouts=0 hard_error=0 copy_avg_us=18729 queue_avg_us=81 backend_avg_us=39777 reuse_avg_us=29 transform_avg_us=34668 handoff_avg_us=91 ppa_avg_us=34600 stack_min_bytes=2804 averages=cumulative saturated=0 physical_scanout_verified=0"
+            },
+            {
+              "start": 1574797,
+              "end": 1575209,
+              "epoch": 1,
+              "uptime_ms": 185987,
+              "utc_bracket": {
+                "status": "bounded",
+                "utc_lower": "2026-10-07T09:36:14.273955+00:00",
+                "utc_upper": "2026-10-07T09:36:50.025812+00:00",
+                "prior_journal_index": 155,
+                "following_journal_index": 158,
+                "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+              },
+              "values": {
+                "game_core": 0,
+                "worker_core": 1,
+                "accepted": 600,
+                "backend_completed": 599,
+                "backend_timeouts": 0,
+                "wait_timeouts": 0,
+                "hard_error": 0,
+                "copy_avg_us": 18625,
+                "queue_avg_us": 82,
+                "backend_avg_us": 39791,
+                "reuse_avg_us": 30,
+                "transform_avg_us": 34712,
+                "handoff_avg_us": 91,
+                "ppa_avg_us": 34641,
+                "stack_min_bytes": 2804,
+                "saturated": 0,
+                "physical_scanout_verified": 0
+              },
+              "receipt": "I (185987) p4_console_os: P4_CONSOLE_OS VIDEO_WORKER_TIMING app=org.p4console.p4-air-hockey game_core=0 worker_core=1 accepted=600 backend_completed=599 backend_timeouts=0 wait_timeouts=0 hard_error=0 copy_avg_us=18625 queue_avg_us=82 backend_avg_us=39791 reuse_avg_us=30 transform_avg_us=34712 handoff_avg_us=91 ppa_avg_us=34641 stack_min_bytes=2804 averages=cumulative saturated=0 physical_scanout_verified=0"
+            },
+            {
+              "start": 1576278,
+              "end": 1576690,
+              "epoch": 1,
+              "uptime_ms": 203372,
+              "utc_bracket": {
+                "status": "bounded",
+                "utc_lower": "2026-10-07T09:36:14.273955+00:00",
+                "utc_upper": "2026-10-07T09:36:50.025812+00:00",
+                "prior_journal_index": 155,
+                "following_journal_index": 158,
+                "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+              },
+              "values": {
+                "game_core": 0,
+                "worker_core": 1,
+                "accepted": 900,
+                "backend_completed": 899,
+                "backend_timeouts": 0,
+                "wait_timeouts": 0,
+                "hard_error": 0,
+                "copy_avg_us": 18585,
+                "queue_avg_us": 82,
+                "backend_avg_us": 39817,
+                "reuse_avg_us": 30,
+                "transform_avg_us": 34746,
+                "handoff_avg_us": 88,
+                "ppa_avg_us": 34676,
+                "stack_min_bytes": 2804,
+                "saturated": 0,
+                "physical_scanout_verified": 0
+              },
+              "receipt": "I (203372) p4_console_os: P4_CONSOLE_OS VIDEO_WORKER_TIMING app=org.p4console.p4-air-hockey game_core=0 worker_core=1 accepted=900 backend_completed=899 backend_timeouts=0 wait_timeouts=0 hard_error=0 copy_avg_us=18585 queue_avg_us=82 backend_avg_us=39817 reuse_avg_us=30 transform_avg_us=34746 handoff_avg_us=88 ppa_avg_us=34676 stack_min_bytes=2804 averages=cumulative saturated=0 physical_scanout_verified=0"
+            },
+            {
+              "start": 1578596,
+              "end": 1579010,
+              "epoch": 1,
+              "uptime_ms": 221380,
+              "utc_bracket": {
+                "status": "bounded",
+                "utc_lower": "2026-10-07T09:36:59.204701+00:00",
+                "utc_upper": "2026-10-07T09:37:01.430933+00:00",
+                "prior_journal_index": 163,
+                "following_journal_index": 166,
+                "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+              },
+              "values": {
+                "game_core": 0,
+                "worker_core": 1,
+                "accepted": 1200,
+                "backend_completed": 1199,
+                "backend_timeouts": 0,
+                "wait_timeouts": 0,
+                "hard_error": 0,
+                "copy_avg_us": 18563,
+                "queue_avg_us": 81,
+                "backend_avg_us": 39851,
+                "reuse_avg_us": 31,
+                "transform_avg_us": 34780,
+                "handoff_avg_us": 89,
+                "ppa_avg_us": 34711,
+                "stack_min_bytes": 2804,
+                "saturated": 0,
+                "physical_scanout_verified": 0
+              },
+              "receipt": "I (221380) p4_console_os: P4_CONSOLE_OS VIDEO_WORKER_TIMING app=org.p4console.p4-air-hockey game_core=0 worker_core=1 accepted=1200 backend_completed=1199 backend_timeouts=0 wait_timeouts=0 hard_error=0 copy_avg_us=18563 queue_avg_us=81 backend_avg_us=39851 reuse_avg_us=31 transform_avg_us=34780 handoff_avg_us=89 ppa_avg_us=34711 stack_min_bytes=2804 averages=cumulative saturated=0 physical_scanout_verified=0"
+            },
+            {
+              "start": 1697731,
+              "end": 1698146,
+              "epoch": 1,
+              "uptime_ms": 242695,
+              "utc_bracket": {
+                "status": "bounded",
+                "utc_lower": "2026-10-07T09:37:01.350357+00:00",
+                "utc_upper": "2026-10-07T09:40:41.845775+00:00",
+                "prior_journal_index": 166,
+                "following_journal_index": 169,
+                "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+              },
+              "values": {
+                "game_core": 0,
+                "worker_core": 1,
+                "accepted": 1500,
+                "backend_completed": 1499,
+                "backend_timeouts": 0,
+                "wait_timeouts": 0,
+                "hard_error": 0,
+                "copy_avg_us": 18545,
+                "queue_avg_us": 81,
+                "backend_avg_us": 39918,
+                "reuse_avg_us": 31,
+                "transform_avg_us": 34851,
+                "handoff_avg_us": 101,
+                "ppa_avg_us": 34778,
+                "stack_min_bytes": 2804,
+                "saturated": 0,
+                "physical_scanout_verified": 0
+              },
+              "receipt": "I (242695) p4_console_os: P4_CONSOLE_OS VIDEO_WORKER_TIMING app=org.p4console.p4-air-hockey game_core=0 worker_core=1 accepted=1500 backend_completed=1499 backend_timeouts=0 wait_timeouts=0 hard_error=0 copy_avg_us=18545 queue_avg_us=81 backend_avg_us=39918 reuse_avg_us=31 transform_avg_us=34851 handoff_avg_us=101 ppa_avg_us=34778 stack_min_bytes=2804 averages=cumulative saturated=0 physical_scanout_verified=0"
+            },
+            {
+              "start": 1699415,
+              "end": 1699830,
+              "epoch": 1,
+              "uptime_ms": 263883,
+              "utc_bracket": {
+                "status": "bounded",
+                "utc_lower": "2026-10-07T09:37:01.350357+00:00",
+                "utc_upper": "2026-10-07T09:40:41.845775+00:00",
+                "prior_journal_index": 166,
+                "following_journal_index": 169,
+                "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+              },
+              "values": {
+                "game_core": 0,
+                "worker_core": 1,
+                "accepted": 1800,
+                "backend_completed": 1799,
+                "backend_timeouts": 0,
+                "wait_timeouts": 0,
+                "hard_error": 0,
+                "copy_avg_us": 18537,
+                "queue_avg_us": 80,
+                "backend_avg_us": 39994,
+                "reuse_avg_us": 31,
+                "transform_avg_us": 34921,
+                "handoff_avg_us": 111,
+                "ppa_avg_us": 34847,
+                "stack_min_bytes": 2804,
+                "saturated": 0,
+                "physical_scanout_verified": 0
+              },
+              "receipt": "I (263883) p4_console_os: P4_CONSOLE_OS VIDEO_WORKER_TIMING app=org.p4console.p4-air-hockey game_core=0 worker_core=1 accepted=1800 backend_completed=1799 backend_timeouts=0 wait_timeouts=0 hard_error=0 copy_avg_us=18537 queue_avg_us=80 backend_avg_us=39994 reuse_avg_us=31 transform_avg_us=34921 handoff_avg_us=111 ppa_avg_us=34847 stack_min_bytes=2804 averages=cumulative saturated=0 physical_scanout_verified=0"
+            },
+            {
+              "start": 1701101,
+              "end": 1701516,
+              "epoch": 1,
+              "uptime_ms": 285057,
+              "utc_bracket": {
+                "status": "bounded",
+                "utc_lower": "2026-10-07T09:37:01.350357+00:00",
+                "utc_upper": "2026-10-07T09:40:41.845775+00:00",
+                "prior_journal_index": 166,
+                "following_journal_index": 169,
+                "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+              },
+              "values": {
+                "game_core": 0,
+                "worker_core": 1,
+                "accepted": 2100,
+                "backend_completed": 2099,
+                "backend_timeouts": 0,
+                "wait_timeouts": 0,
+                "hard_error": 0,
+                "copy_avg_us": 18526,
+                "queue_avg_us": 80,
+                "backend_avg_us": 40038,
+                "reuse_avg_us": 32,
+                "transform_avg_us": 34969,
+                "handoff_avg_us": 115,
+                "ppa_avg_us": 34893,
+                "stack_min_bytes": 2804,
+                "saturated": 0,
+                "physical_scanout_verified": 0
+              },
+              "receipt": "I (285057) p4_console_os: P4_CONSOLE_OS VIDEO_WORKER_TIMING app=org.p4console.p4-air-hockey game_core=0 worker_core=1 accepted=2100 backend_completed=2099 backend_timeouts=0 wait_timeouts=0 hard_error=0 copy_avg_us=18526 queue_avg_us=80 backend_avg_us=40038 reuse_avg_us=32 transform_avg_us=34969 handoff_avg_us=115 ppa_avg_us=34893 stack_min_bytes=2804 averages=cumulative saturated=0 physical_scanout_verified=0"
+            },
+            {
+              "start": 1702788,
+              "end": 1703203,
+              "epoch": 1,
+              "uptime_ms": 306245,
+              "utc_bracket": {
+                "status": "bounded",
+                "utc_lower": "2026-10-07T09:37:01.350357+00:00",
+                "utc_upper": "2026-10-07T09:40:41.845775+00:00",
+                "prior_journal_index": 166,
+                "following_journal_index": 169,
+                "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+              },
+              "values": {
+                "game_core": 0,
+                "worker_core": 1,
+                "accepted": 2400,
+                "backend_completed": 2399,
+                "backend_timeouts": 0,
+                "wait_timeouts": 0,
+                "hard_error": 0,
+                "copy_avg_us": 18518,
+                "queue_avg_us": 80,
+                "backend_avg_us": 40071,
+                "reuse_avg_us": 32,
+                "transform_avg_us": 35006,
+                "handoff_avg_us": 119,
+                "ppa_avg_us": 34930,
+                "stack_min_bytes": 2804,
+                "saturated": 0,
+                "physical_scanout_verified": 0
+              },
+              "receipt": "I (306245) p4_console_os: P4_CONSOLE_OS VIDEO_WORKER_TIMING app=org.p4console.p4-air-hockey game_core=0 worker_core=1 accepted=2400 backend_completed=2399 backend_timeouts=0 wait_timeouts=0 hard_error=0 copy_avg_us=18518 queue_avg_us=80 backend_avg_us=40071 reuse_avg_us=32 transform_avg_us=35006 handoff_avg_us=119 ppa_avg_us=34930 stack_min_bytes=2804 averages=cumulative saturated=0 physical_scanout_verified=0"
+            },
+            {
+              "start": 1704475,
+              "end": 1704890,
+              "epoch": 1,
+              "uptime_ms": 327431,
+              "utc_bracket": {
+                "status": "bounded",
+                "utc_lower": "2026-10-07T09:37:01.350357+00:00",
+                "utc_upper": "2026-10-07T09:40:41.845775+00:00",
+                "prior_journal_index": 166,
+                "following_journal_index": 169,
+                "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+              },
+              "values": {
+                "game_core": 0,
+                "worker_core": 1,
+                "accepted": 2700,
+                "backend_completed": 2699,
+                "backend_timeouts": 0,
+                "wait_timeouts": 0,
+                "hard_error": 0,
+                "copy_avg_us": 18510,
+                "queue_avg_us": 80,
+                "backend_avg_us": 40095,
+                "reuse_avg_us": 33,
+                "transform_avg_us": 35035,
+                "handoff_avg_us": 122,
+                "ppa_avg_us": 34959,
+                "stack_min_bytes": 2804,
+                "saturated": 0,
+                "physical_scanout_verified": 0
+              },
+              "receipt": "I (327431) p4_console_os: P4_CONSOLE_OS VIDEO_WORKER_TIMING app=org.p4console.p4-air-hockey game_core=0 worker_core=1 accepted=2700 backend_completed=2699 backend_timeouts=0 wait_timeouts=0 hard_error=0 copy_avg_us=18510 queue_avg_us=80 backend_avg_us=40095 reuse_avg_us=33 transform_avg_us=35035 handoff_avg_us=122 ppa_avg_us=34959 stack_min_bytes=2804 averages=cumulative saturated=0 physical_scanout_verified=0"
+            },
+            {
+              "start": 1706162,
+              "end": 1706577,
+              "epoch": 1,
+              "uptime_ms": 348616,
+              "utc_bracket": {
+                "status": "bounded",
+                "utc_lower": "2026-10-07T09:37:01.350357+00:00",
+                "utc_upper": "2026-10-07T09:40:41.845775+00:00",
+                "prior_journal_index": 166,
+                "following_journal_index": 169,
+                "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+              },
+              "values": {
+                "game_core": 0,
+                "worker_core": 1,
+                "accepted": 3000,
+                "backend_completed": 2999,
+                "backend_timeouts": 0,
+                "wait_timeouts": 0,
+                "hard_error": 0,
+                "copy_avg_us": 18507,
+                "queue_avg_us": 79,
+                "backend_avg_us": 40119,
+                "reuse_avg_us": 32,
+                "transform_avg_us": 35054,
+                "handoff_avg_us": 125,
+                "ppa_avg_us": 34976,
+                "stack_min_bytes": 2804,
+                "saturated": 0,
+                "physical_scanout_verified": 0
+              },
+              "receipt": "I (348616) p4_console_os: P4_CONSOLE_OS VIDEO_WORKER_TIMING app=org.p4console.p4-air-hockey game_core=0 worker_core=1 accepted=3000 backend_completed=2999 backend_timeouts=0 wait_timeouts=0 hard_error=0 copy_avg_us=18507 queue_avg_us=79 backend_avg_us=40119 reuse_avg_us=32 transform_avg_us=35054 handoff_avg_us=125 ppa_avg_us=34976 stack_min_bytes=2804 averages=cumulative saturated=0 physical_scanout_verified=0"
+            },
+            {
+              "start": 1707849,
+              "end": 1708264,
+              "epoch": 1,
+              "uptime_ms": 369801,
+              "utc_bracket": {
+                "status": "bounded",
+                "utc_lower": "2026-10-07T09:37:01.350357+00:00",
+                "utc_upper": "2026-10-07T09:40:41.845775+00:00",
+                "prior_journal_index": 166,
+                "following_journal_index": 169,
+                "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+              },
+              "values": {
+                "game_core": 0,
+                "worker_core": 1,
+                "accepted": 3300,
+                "backend_completed": 3299,
+                "backend_timeouts": 0,
+                "wait_timeouts": 0,
+                "hard_error": 0,
+                "copy_avg_us": 18504,
+                "queue_avg_us": 79,
+                "backend_avg_us": 40141,
+                "reuse_avg_us": 32,
+                "transform_avg_us": 35073,
+                "handoff_avg_us": 128,
+                "ppa_avg_us": 34995,
+                "stack_min_bytes": 2804,
+                "saturated": 0,
+                "physical_scanout_verified": 0
+              },
+              "receipt": "I (369801) p4_console_os: P4_CONSOLE_OS VIDEO_WORKER_TIMING app=org.p4console.p4-air-hockey game_core=0 worker_core=1 accepted=3300 backend_completed=3299 backend_timeouts=0 wait_timeouts=0 hard_error=0 copy_avg_us=18504 queue_avg_us=79 backend_avg_us=40141 reuse_avg_us=32 transform_avg_us=35073 handoff_avg_us=128 ppa_avg_us=34995 stack_min_bytes=2804 averages=cumulative saturated=0 physical_scanout_verified=0"
+            },
+            {
+              "start": 1709536,
+              "end": 1709951,
+              "epoch": 1,
+              "uptime_ms": 390992,
+              "utc_bracket": {
+                "status": "bounded",
+                "utc_lower": "2026-10-07T09:37:01.350357+00:00",
+                "utc_upper": "2026-10-07T09:40:41.845775+00:00",
+                "prior_journal_index": 166,
+                "following_journal_index": 169,
+                "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+              },
+              "values": {
+                "game_core": 0,
+                "worker_core": 1,
+                "accepted": 3600,
+                "backend_completed": 3599,
+                "backend_timeouts": 0,
+                "wait_timeouts": 0,
+                "hard_error": 0,
+                "copy_avg_us": 18500,
+                "queue_avg_us": 79,
+                "backend_avg_us": 40158,
+                "reuse_avg_us": 32,
+                "transform_avg_us": 35090,
+                "handoff_avg_us": 131,
+                "ppa_avg_us": 35012,
+                "stack_min_bytes": 2804,
+                "saturated": 0,
+                "physical_scanout_verified": 0
+              },
+              "receipt": "I (390992) p4_console_os: P4_CONSOLE_OS VIDEO_WORKER_TIMING app=org.p4console.p4-air-hockey game_core=0 worker_core=1 accepted=3600 backend_completed=3599 backend_timeouts=0 wait_timeouts=0 hard_error=0 copy_avg_us=18500 queue_avg_us=79 backend_avg_us=40158 reuse_avg_us=32 transform_avg_us=35090 handoff_avg_us=131 ppa_avg_us=35012 stack_min_bytes=2804 averages=cumulative saturated=0 physical_scanout_verified=0"
+            },
+            {
+              "start": 1711222,
+              "end": 1711637,
+              "epoch": 1,
+              "uptime_ms": 412189,
+              "utc_bracket": {
+                "status": "bounded",
+                "utc_lower": "2026-10-07T09:37:01.350357+00:00",
+                "utc_upper": "2026-10-07T09:40:41.845775+00:00",
+                "prior_journal_index": 166,
+                "following_journal_index": 169,
+                "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+              },
+              "values": {
+                "game_core": 0,
+                "worker_core": 1,
+                "accepted": 3900,
+                "backend_completed": 3899,
+                "backend_timeouts": 0,
+                "wait_timeouts": 0,
+                "hard_error": 0,
+                "copy_avg_us": 18498,
+                "queue_avg_us": 79,
+                "backend_avg_us": 40177,
+                "reuse_avg_us": 32,
+                "transform_avg_us": 35110,
+                "handoff_avg_us": 133,
+                "ppa_avg_us": 35031,
+                "stack_min_bytes": 2804,
+                "saturated": 0,
+                "physical_scanout_verified": 0
+              },
+              "receipt": "I (412189) p4_console_os: P4_CONSOLE_OS VIDEO_WORKER_TIMING app=org.p4console.p4-air-hockey game_core=0 worker_core=1 accepted=3900 backend_completed=3899 backend_timeouts=0 wait_timeouts=0 hard_error=0 copy_avg_us=18498 queue_avg_us=79 backend_avg_us=40177 reuse_avg_us=32 transform_avg_us=35110 handoff_avg_us=133 ppa_avg_us=35031 stack_min_bytes=2804 averages=cumulative saturated=0 physical_scanout_verified=0"
+            },
+            {
+              "start": 1712909,
+              "end": 1713324,
+              "epoch": 1,
+              "uptime_ms": 433376,
+              "utc_bracket": {
+                "status": "bounded",
+                "utc_lower": "2026-10-07T09:37:01.350357+00:00",
+                "utc_upper": "2026-10-07T09:40:41.845775+00:00",
+                "prior_journal_index": 166,
+                "following_journal_index": 169,
+                "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+              },
+              "values": {
+                "game_core": 0,
+                "worker_core": 1,
+                "accepted": 4200,
+                "backend_completed": 4199,
+                "backend_timeouts": 0,
+                "wait_timeouts": 0,
+                "hard_error": 0,
+                "copy_avg_us": 18495,
+                "queue_avg_us": 79,
+                "backend_avg_us": 40187,
+                "reuse_avg_us": 32,
+                "transform_avg_us": 35121,
+                "handoff_avg_us": 134,
+                "ppa_avg_us": 35042,
+                "stack_min_bytes": 2804,
+                "saturated": 0,
+                "physical_scanout_verified": 0
+              },
+              "receipt": "I (433376) p4_console_os: P4_CONSOLE_OS VIDEO_WORKER_TIMING app=org.p4console.p4-air-hockey game_core=0 worker_core=1 accepted=4200 backend_completed=4199 backend_timeouts=0 wait_timeouts=0 hard_error=0 copy_avg_us=18495 queue_avg_us=79 backend_avg_us=40187 reuse_avg_us=32 transform_avg_us=35121 handoff_avg_us=134 ppa_avg_us=35042 stack_min_bytes=2804 averages=cumulative saturated=0 physical_scanout_verified=0"
+            },
+            {
+              "start": 1715829,
+              "end": 1716244,
+              "epoch": 1,
+              "uptime_ms": 449081,
+              "utc_bracket": {
+                "status": "bounded",
+                "utc_lower": "2026-10-07T09:40:48.013603+00:00",
+                "utc_upper": "2026-10-07T09:40:48.722969+00:00",
+                "prior_journal_index": 171,
+                "following_journal_index": 172,
+                "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+              },
+              "values": {
+                "game_core": 0,
+                "worker_core": 1,
+                "accepted": 4419,
+                "backend_completed": 4419,
+                "backend_timeouts": 0,
+                "wait_timeouts": 0,
+                "hard_error": 0,
+                "copy_avg_us": 18494,
+                "queue_avg_us": 79,
+                "backend_avg_us": 40191,
+                "reuse_avg_us": 32,
+                "transform_avg_us": 35125,
+                "handoff_avg_us": 137,
+                "ppa_avg_us": 35045,
+                "stack_min_bytes": 2804,
+                "saturated": 0,
+                "physical_scanout_verified": 0
+              },
+              "receipt": "I (449081) p4_console_os: P4_CONSOLE_OS VIDEO_WORKER_TIMING app=org.p4console.p4-air-hockey game_core=0 worker_core=1 accepted=4419 backend_completed=4419 backend_timeouts=0 wait_timeouts=0 hard_error=0 copy_avg_us=18494 queue_avg_us=79 backend_avg_us=40191 reuse_avg_us=32 transform_avg_us=35125 handoff_avg_us=137 ppa_avg_us=35045 stack_min_bytes=2804 averages=cumulative saturated=0 physical_scanout_verified=0"
+            }
+          ],
+          "diagnostic_intervals": [
+            {
+              "from_uptime_ms": 168517,
+              "to_uptime_ms": 185987,
+              "from_raw_offset": 1455156,
+              "to_raw_offset": 1574797,
+              "possible_utc_window": [
+                "2026-10-07T09:35:49.869763+00:00",
+                "2026-10-07T09:36:50.025812+00:00"
+              ],
+              "elapsed_ms": 17470,
+              "accepted_delta": 300,
+              "backend_completed_delta": 300,
+              "diagnostic_submission_fps": 17.172295,
+              "diagnostic_backend_completion_fps": 17.172295,
+              "clean_cadence_eligible": false,
+              "excluded_reason": "possible-overlap-with-full-screenshot-command",
+              "gameplay_phase": "unresolved-by-timing-marker; includes post-match/results and possibly departure",
+              "scope": "Raw cumulative submission/completion counter difference, not simulation or physical scanout."
+            },
+            {
+              "from_uptime_ms": 185987,
+              "to_uptime_ms": 203372,
+              "from_raw_offset": 1574797,
+              "to_raw_offset": 1576278,
+              "possible_utc_window": [
+                "2026-10-07T09:36:14.273955+00:00",
+                "2026-10-07T09:36:50.025812+00:00"
+              ],
+              "elapsed_ms": 17385,
+              "accepted_delta": 300,
+              "backend_completed_delta": 300,
+              "diagnostic_submission_fps": 17.256255,
+              "diagnostic_backend_completion_fps": 17.256255,
+              "clean_cadence_eligible": false,
+              "excluded_reason": "possible-overlap-with-full-screenshot-command",
+              "gameplay_phase": "unresolved-by-timing-marker; includes post-match/results and possibly departure",
+              "scope": "Raw cumulative submission/completion counter difference, not simulation or physical scanout."
+            },
+            {
+              "from_uptime_ms": 203372,
+              "to_uptime_ms": 221380,
+              "from_raw_offset": 1576278,
+              "to_raw_offset": 1578596,
+              "possible_utc_window": [
+                "2026-10-07T09:36:14.273955+00:00",
+                "2026-10-07T09:37:01.430933+00:00"
+              ],
+              "elapsed_ms": 18008,
+              "accepted_delta": 300,
+              "backend_completed_delta": 300,
+              "diagnostic_submission_fps": 16.659263,
+              "diagnostic_backend_completion_fps": 16.659263,
+              "clean_cadence_eligible": false,
+              "excluded_reason": "possible-overlap-with-full-screenshot-command",
+              "gameplay_phase": "unresolved-by-timing-marker; includes post-match/results and possibly departure",
+              "scope": "Raw cumulative submission/completion counter difference, not simulation or physical scanout."
+            },
+            {
+              "from_uptime_ms": 221380,
+              "to_uptime_ms": 242695,
+              "from_raw_offset": 1578596,
+              "to_raw_offset": 1697731,
+              "possible_utc_window": [
+                "2026-10-07T09:36:59.204701+00:00",
+                "2026-10-07T09:40:41.845775+00:00"
+              ],
+              "elapsed_ms": 21315,
+              "accepted_delta": 300,
+              "backend_completed_delta": 300,
+              "diagnostic_submission_fps": 14.074595,
+              "diagnostic_backend_completion_fps": 14.074595,
+              "clean_cadence_eligible": false,
+              "excluded_reason": "possible-overlap-with-full-screenshot-command",
+              "gameplay_phase": "unresolved-by-timing-marker; includes post-match/results and possibly departure",
+              "scope": "Raw cumulative submission/completion counter difference, not simulation or physical scanout."
+            },
+            {
+              "from_uptime_ms": 242695,
+              "to_uptime_ms": 263883,
+              "from_raw_offset": 1697731,
+              "to_raw_offset": 1699415,
+              "possible_utc_window": [
+                "2026-10-07T09:37:01.350357+00:00",
+                "2026-10-07T09:40:41.845775+00:00"
+              ],
+              "elapsed_ms": 21188,
+              "accepted_delta": 300,
+              "backend_completed_delta": 300,
+              "diagnostic_submission_fps": 14.158958,
+              "diagnostic_backend_completion_fps": 14.158958,
+              "clean_cadence_eligible": false,
+              "excluded_reason": "possible-overlap-with-full-screenshot-command",
+              "gameplay_phase": "unresolved-by-timing-marker; includes post-match/results and possibly departure",
+              "scope": "Raw cumulative submission/completion counter difference, not simulation or physical scanout."
+            },
+            {
+              "from_uptime_ms": 263883,
+              "to_uptime_ms": 285057,
+              "from_raw_offset": 1699415,
+              "to_raw_offset": 1701101,
+              "possible_utc_window": [
+                "2026-10-07T09:37:01.350357+00:00",
+                "2026-10-07T09:40:41.845775+00:00"
+              ],
+              "elapsed_ms": 21174,
+              "accepted_delta": 300,
+              "backend_completed_delta": 300,
+              "diagnostic_submission_fps": 14.16832,
+              "diagnostic_backend_completion_fps": 14.16832,
+              "clean_cadence_eligible": false,
+              "excluded_reason": "possible-overlap-with-full-screenshot-command",
+              "gameplay_phase": "unresolved-by-timing-marker; includes post-match/results and possibly departure",
+              "scope": "Raw cumulative submission/completion counter difference, not simulation or physical scanout."
+            },
+            {
+              "from_uptime_ms": 285057,
+              "to_uptime_ms": 306245,
+              "from_raw_offset": 1701101,
+              "to_raw_offset": 1702788,
+              "possible_utc_window": [
+                "2026-10-07T09:37:01.350357+00:00",
+                "2026-10-07T09:40:41.845775+00:00"
+              ],
+              "elapsed_ms": 21188,
+              "accepted_delta": 300,
+              "backend_completed_delta": 300,
+              "diagnostic_submission_fps": 14.158958,
+              "diagnostic_backend_completion_fps": 14.158958,
+              "clean_cadence_eligible": false,
+              "excluded_reason": "possible-overlap-with-full-screenshot-command",
+              "gameplay_phase": "unresolved-by-timing-marker; includes post-match/results and possibly departure",
+              "scope": "Raw cumulative submission/completion counter difference, not simulation or physical scanout."
+            },
+            {
+              "from_uptime_ms": 306245,
+              "to_uptime_ms": 327431,
+              "from_raw_offset": 1702788,
+              "to_raw_offset": 1704475,
+              "possible_utc_window": [
+                "2026-10-07T09:37:01.350357+00:00",
+                "2026-10-07T09:40:41.845775+00:00"
+              ],
+              "elapsed_ms": 21186,
+              "accepted_delta": 300,
+              "backend_completed_delta": 300,
+              "diagnostic_submission_fps": 14.160295,
+              "diagnostic_backend_completion_fps": 14.160295,
+              "clean_cadence_eligible": false,
+              "excluded_reason": "possible-overlap-with-full-screenshot-command",
+              "gameplay_phase": "unresolved-by-timing-marker; includes post-match/results and possibly departure",
+              "scope": "Raw cumulative submission/completion counter difference, not simulation or physical scanout."
+            },
+            {
+              "from_uptime_ms": 327431,
+              "to_uptime_ms": 348616,
+              "from_raw_offset": 1704475,
+              "to_raw_offset": 1706162,
+              "possible_utc_window": [
+                "2026-10-07T09:37:01.350357+00:00",
+                "2026-10-07T09:40:41.845775+00:00"
+              ],
+              "elapsed_ms": 21185,
+              "accepted_delta": 300,
+              "backend_completed_delta": 300,
+              "diagnostic_submission_fps": 14.160963,
+              "diagnostic_backend_completion_fps": 14.160963,
+              "clean_cadence_eligible": false,
+              "excluded_reason": "possible-overlap-with-full-screenshot-command",
+              "gameplay_phase": "unresolved-by-timing-marker; includes post-match/results and possibly departure",
+              "scope": "Raw cumulative submission/completion counter difference, not simulation or physical scanout."
+            },
+            {
+              "from_uptime_ms": 348616,
+              "to_uptime_ms": 369801,
+              "from_raw_offset": 1706162,
+              "to_raw_offset": 1707849,
+              "possible_utc_window": [
+                "2026-10-07T09:37:01.350357+00:00",
+                "2026-10-07T09:40:41.845775+00:00"
+              ],
+              "elapsed_ms": 21185,
+              "accepted_delta": 300,
+              "backend_completed_delta": 300,
+              "diagnostic_submission_fps": 14.160963,
+              "diagnostic_backend_completion_fps": 14.160963,
+              "clean_cadence_eligible": false,
+              "excluded_reason": "possible-overlap-with-full-screenshot-command",
+              "gameplay_phase": "unresolved-by-timing-marker; includes post-match/results and possibly departure",
+              "scope": "Raw cumulative submission/completion counter difference, not simulation or physical scanout."
+            },
+            {
+              "from_uptime_ms": 369801,
+              "to_uptime_ms": 390992,
+              "from_raw_offset": 1707849,
+              "to_raw_offset": 1709536,
+              "possible_utc_window": [
+                "2026-10-07T09:37:01.350357+00:00",
+                "2026-10-07T09:40:41.845775+00:00"
+              ],
+              "elapsed_ms": 21191,
+              "accepted_delta": 300,
+              "backend_completed_delta": 300,
+              "diagnostic_submission_fps": 14.156953,
+              "diagnostic_backend_completion_fps": 14.156953,
+              "clean_cadence_eligible": false,
+              "excluded_reason": "possible-overlap-with-full-screenshot-command",
+              "gameplay_phase": "unresolved-by-timing-marker; includes post-match/results and possibly departure",
+              "scope": "Raw cumulative submission/completion counter difference, not simulation or physical scanout."
+            },
+            {
+              "from_uptime_ms": 390992,
+              "to_uptime_ms": 412189,
+              "from_raw_offset": 1709536,
+              "to_raw_offset": 1711222,
+              "possible_utc_window": [
+                "2026-10-07T09:37:01.350357+00:00",
+                "2026-10-07T09:40:41.845775+00:00"
+              ],
+              "elapsed_ms": 21197,
+              "accepted_delta": 300,
+              "backend_completed_delta": 300,
+              "diagnostic_submission_fps": 14.152946,
+              "diagnostic_backend_completion_fps": 14.152946,
+              "clean_cadence_eligible": false,
+              "excluded_reason": "possible-overlap-with-full-screenshot-command",
+              "gameplay_phase": "unresolved-by-timing-marker; includes post-match/results and possibly departure",
+              "scope": "Raw cumulative submission/completion counter difference, not simulation or physical scanout."
+            },
+            {
+              "from_uptime_ms": 412189,
+              "to_uptime_ms": 433376,
+              "from_raw_offset": 1711222,
+              "to_raw_offset": 1712909,
+              "possible_utc_window": [
+                "2026-10-07T09:37:01.350357+00:00",
+                "2026-10-07T09:40:41.845775+00:00"
+              ],
+              "elapsed_ms": 21187,
+              "accepted_delta": 300,
+              "backend_completed_delta": 300,
+              "diagnostic_submission_fps": 14.159626,
+              "diagnostic_backend_completion_fps": 14.159626,
+              "clean_cadence_eligible": false,
+              "excluded_reason": "possible-overlap-with-full-screenshot-command",
+              "gameplay_phase": "unresolved-by-timing-marker; includes post-match/results and possibly departure",
+              "scope": "Raw cumulative submission/completion counter difference, not simulation or physical scanout."
+            },
+            {
+              "from_uptime_ms": 433376,
+              "to_uptime_ms": 449081,
+              "from_raw_offset": 1712909,
+              "to_raw_offset": 1715829,
+              "possible_utc_window": [
+                "2026-10-07T09:37:01.350357+00:00",
+                "2026-10-07T09:40:48.722969+00:00"
+              ],
+              "elapsed_ms": 15705,
+              "accepted_delta": 219,
+              "backend_completed_delta": 220,
+              "diagnostic_submission_fps": 13.944604,
+              "diagnostic_backend_completion_fps": 14.008278,
+              "clean_cadence_eligible": false,
+              "excluded_reason": "possible-overlap-with-full-screenshot-command",
+              "gameplay_phase": "unresolved-by-timing-marker; includes post-match/results and possibly departure",
+              "scope": "Raw cumulative submission/completion counter difference, not simulation or physical scanout."
+            }
+          ],
+          "clean_interval_count": 0,
+          "early_two_diagnostic_submission_fps": [
+            17.172295,
+            17.256255
+          ],
+          "final_cumulative_cost_us": {
+            "copy_avg_us": 18494,
+            "queue_avg_us": 79,
+            "backend_avg_us": 40191,
+            "reuse_avg_us": 32,
+            "transform_avg_us": 35125,
+            "handoff_avg_us": 137,
+            "ppa_avg_us": 35045
+          },
+          "timing_scope": "Cumulative integer averages across the entire native episode. PPA overlaps transform, which is inside backend; foreground copy and worker costs must not be summed as sequential frame time.",
+          "worker_joined": true,
+          "all_observed_worker_error_counters_zero": true,
+          "physical_scanout_verified": false
+        }
+      },
+      "screenshots": [
+        {
+          "journal_row_zero_based": 96,
+          "unit": "A",
+          "request": {
+            "command": "screenshot",
+            "unit": "both",
+            "name": "air02-p4-air-hockey-b-roles",
+            "scale": 4,
+            "parallel": true
+          },
+          "started_at": "2026-10-07T09:34:17.967075+00:00",
+          "completed_at": "2026-10-07T09:34:21.668273+00:00",
+          "raw_episode": {
+            "ordered_single_episode": true,
+            "read_frames": 57
+          },
+          "validation": "exact-raw-payload-and-png-correlated",
+          "sealed_png": {
+            "file": "build-host/runtime-acceptance-069/sealed/closed-20261007T094150Z/images/96-A-air02-p4-air-hockey-b-roles-a.png",
+            "bytes": 4064,
+            "sha256": "49c2015bab90367f807a759f88591d4bc203bcd7262c97945ae0aac29cc341b7"
+          }
+        },
+        {
+          "journal_row_zero_based": 96,
+          "unit": "B",
+          "request": {
+            "command": "screenshot",
+            "unit": "both",
+            "name": "air02-p4-air-hockey-b-roles",
+            "scale": 4,
+            "parallel": true
+          },
+          "started_at": "2026-10-07T09:34:17.967075+00:00",
+          "completed_at": "2026-10-07T09:34:21.668273+00:00",
+          "raw_episode": {
+            "ordered_single_episode": true,
+            "read_frames": 57
+          },
+          "validation": "exact-raw-payload-and-png-correlated",
+          "sealed_png": {
+            "file": "build-host/runtime-acceptance-069/sealed/closed-20261007T094150Z/images/96-B-air02-p4-air-hockey-b-roles-b.png",
+            "bytes": 4244,
+            "sha256": "9a2744be96e194239b1457a9e1861c9dc2e7c95831a95aa3ba3aabb749603820"
+          }
+        },
+        {
+          "journal_row_zero_based": 116,
+          "unit": "A",
+          "request": {
+            "command": "screenshot",
+            "unit": "both",
+            "name": "air02-p4-air-hockey-b-create",
+            "scale": 4,
+            "parallel": true
+          },
+          "started_at": "2026-10-07T09:34:47.636040+00:00",
+          "completed_at": "2026-10-07T09:34:51.827624+00:00",
+          "raw_episode": {
+            "ordered_single_episode": true,
+            "read_frames": 57
+          },
+          "validation": "exact-raw-payload-and-png-correlated",
+          "sealed_png": {
+            "file": "build-host/runtime-acceptance-069/sealed/closed-20261007T094150Z/images/116-A-air02-p4-air-hockey-b-create-a.png",
+            "bytes": 3941,
+            "sha256": "68a82111478917b2298152f032c1305aeb1f7c2dad426dfbd306f9219c2f3101"
+          }
+        },
+        {
+          "journal_row_zero_based": 116,
+          "unit": "B",
+          "request": {
+            "command": "screenshot",
+            "unit": "both",
+            "name": "air02-p4-air-hockey-b-create",
+            "scale": 4,
+            "parallel": true
+          },
+          "started_at": "2026-10-07T09:34:47.636040+00:00",
+          "completed_at": "2026-10-07T09:34:51.827624+00:00",
+          "raw_episode": {
+            "ordered_single_episode": true,
+            "read_frames": 57
+          },
+          "validation": "exact-raw-payload-and-png-correlated",
+          "sealed_png": {
+            "file": "build-host/runtime-acceptance-069/sealed/closed-20261007T094150Z/images/116-B-air02-p4-air-hockey-b-create-b.png",
+            "bytes": 4281,
+            "sha256": "41e3b7602148ca7e856ab2556e955bf9ad95dd37b605590b6ee9b86a6686f6ba"
+          }
+        },
+        {
+          "journal_row_zero_based": 121,
+          "unit": "A",
+          "request": {
+            "command": "screenshot",
+            "unit": "both",
+            "name": "air02-p4-air-hockey-b-select-room",
+            "scale": 4,
+            "parallel": true
+          },
+          "started_at": "2026-10-07T09:35:00.694636+00:00",
+          "completed_at": "2026-10-07T09:35:04.957159+00:00",
+          "raw_episode": {
+            "ordered_single_episode": true,
+            "read_frames": 57
+          },
+          "validation": "exact-raw-payload-and-png-correlated",
+          "sealed_png": {
+            "file": "build-host/runtime-acceptance-069/sealed/closed-20261007T094150Z/images/121-A-air02-p4-air-hockey-b-select-room-a.png",
+            "bytes": 3868,
+            "sha256": "c24ffbc92fcdfbe7b0a6f314bb7258167cef517b42c6782a1e3159f5fc4bea95"
+          }
+        },
+        {
+          "journal_row_zero_based": 121,
+          "unit": "B",
+          "request": {
+            "command": "screenshot",
+            "unit": "both",
+            "name": "air02-p4-air-hockey-b-select-room",
+            "scale": 4,
+            "parallel": true
+          },
+          "started_at": "2026-10-07T09:35:00.694636+00:00",
+          "completed_at": "2026-10-07T09:35:04.957159+00:00",
+          "raw_episode": {
+            "ordered_single_episode": true,
+            "read_frames": 57
+          },
+          "validation": "exact-raw-payload-and-png-correlated",
+          "sealed_png": {
+            "file": "build-host/runtime-acceptance-069/sealed/closed-20261007T094150Z/images/121-B-air02-p4-air-hockey-b-select-room-b.png",
+            "bytes": 4281,
+            "sha256": "41e3b7602148ca7e856ab2556e955bf9ad95dd37b605590b6ee9b86a6686f6ba"
+          }
+        },
+        {
+          "journal_row_zero_based": 139,
+          "unit": "B",
+          "request": {
+            "command": "screenshot",
+            "unit": "both",
+            "name": "air02-p4-air-hockey-b-join",
+            "scale": 4,
+            "parallel": true
+          },
+          "started_at": "2026-10-07T09:35:23.067109+00:00",
+          "completed_at": "2026-10-07T09:35:27.714915+00:00",
+          "raw_episode": {
+            "ordered_single_episode": true,
+            "read_frames": 57
+          },
+          "validation": "exact-raw-payload-and-png-correlated",
+          "sealed_png": {
+            "file": "build-host/runtime-acceptance-069/sealed/closed-20261007T094150Z/images/139-B-air02-p4-air-hockey-b-join-b.png",
+            "bytes": 4293,
+            "sha256": "5256e5f523d54addda3d0c977cc984159b1a691139cfb63887f4f4f68232b3a1"
+          }
+        },
+        {
+          "journal_row_zero_based": 139,
+          "unit": "A",
+          "request": {
+            "command": "screenshot",
+            "unit": "both",
+            "name": "air02-p4-air-hockey-b-join",
+            "scale": 4,
+            "parallel": true
+          },
+          "started_at": "2026-10-07T09:35:23.067109+00:00",
+          "completed_at": "2026-10-07T09:35:27.714915+00:00",
+          "raw_episode": {
+            "ordered_single_episode": true,
+            "read_frames": 57
+          },
+          "validation": "exact-raw-payload-and-png-correlated",
+          "sealed_png": {
+            "file": "build-host/runtime-acceptance-069/sealed/closed-20261007T094150Z/images/139-A-air02-p4-air-hockey-b-join-a.png",
+            "bytes": 4119,
+            "sha256": "70d078214c18a835a81bf2ec0110cbc511d229c6b3a07d6c689b5769ca5eb5ea"
+          }
+        },
+        {
+          "journal_row_zero_based": 148,
+          "unit": "A",
+          "request": {
+            "command": "screenshot",
+            "unit": "both",
+            "name": "air02-p4-air-hockey-b-start",
+            "scale": 4,
+            "parallel": true
+          },
+          "started_at": "2026-10-07T09:35:51.494166+00:00",
+          "completed_at": "2026-10-07T09:35:55.317701+00:00",
+          "raw_episode": {
+            "ordered_single_episode": true,
+            "read_frames": 57
+          },
+          "validation": "exact-raw-payload-and-png-correlated",
+          "sealed_png": {
+            "file": "build-host/runtime-acceptance-069/sealed/closed-20261007T094150Z/images/148-A-air02-p4-air-hockey-b-start-a.png",
+            "bytes": 17432,
+            "sha256": "7d46843abd90499575caafb739884e83d4ee10891e860a8858172ed24732b659"
+          }
+        },
+        {
+          "journal_row_zero_based": 148,
+          "unit": "B",
+          "request": {
+            "command": "screenshot",
+            "unit": "both",
+            "name": "air02-p4-air-hockey-b-start",
+            "scale": 4,
+            "parallel": true
+          },
+          "started_at": "2026-10-07T09:35:51.494166+00:00",
+          "completed_at": "2026-10-07T09:35:55.317701+00:00",
+          "raw_episode": {
+            "ordered_single_episode": true,
+            "read_frames": 57
+          },
+          "validation": "exact-raw-payload-and-png-correlated",
+          "sealed_png": {
+            "file": "build-host/runtime-acceptance-069/sealed/closed-20261007T094150Z/images/148-B-air02-p4-air-hockey-b-start-b.png",
+            "bytes": 17627,
+            "sha256": "60778561b4ce7e9c7475ba90ef99a8d83a616f1962f0adc192ff5ce6365cf4a5"
+          }
+        },
+        {
+          "journal_row_zero_based": 156,
+          "unit": "A",
+          "request": {
+            "command": "screenshot",
+            "unit": "both",
+            "name": "air02-p4-air-hockey-b-pose1",
+            "scale": 4,
+            "parallel": true
+          },
+          "started_at": "2026-10-07T09:36:14.413554+00:00",
+          "completed_at": "2026-10-07T09:36:18.128077+00:00",
+          "raw_episode": {
+            "ordered_single_episode": true,
+            "read_frames": 57
+          },
+          "validation": "exact-raw-payload-and-png-correlated",
+          "sealed_png": {
+            "file": "build-host/runtime-acceptance-069/sealed/closed-20261007T094150Z/images/156-A-air02-p4-air-hockey-b-pose1-a.png",
+            "bytes": 17944,
+            "sha256": "5dda48c3e463fd0f5825e176709b4c0e82113fa2741821ee5ed3fb20b62a2b09"
+          }
+        },
+        {
+          "journal_row_zero_based": 156,
+          "unit": "B",
+          "request": {
+            "command": "screenshot",
+            "unit": "both",
+            "name": "air02-p4-air-hockey-b-pose1",
+            "scale": 4,
+            "parallel": true
+          },
+          "started_at": "2026-10-07T09:36:14.413554+00:00",
+          "completed_at": "2026-10-07T09:36:18.128077+00:00",
+          "raw_episode": {
+            "ordered_single_episode": true,
+            "read_frames": 57
+          },
+          "validation": "exact-raw-payload-and-png-correlated",
+          "sealed_png": {
+            "file": "build-host/runtime-acceptance-069/sealed/closed-20261007T094150Z/images/156-B-air02-p4-air-hockey-b-pose1-b.png",
+            "bytes": 17791,
+            "sha256": "4b8a0c1f3c808a7c78e062a9bd60e06fbe0653396e0cc1792f004b6bc4951249"
+          }
+        },
+        {
+          "journal_row_zero_based": 167,
+          "unit": "B",
+          "request": {
+            "command": "screenshot",
+            "unit": "both",
+            "name": "air02-p4-air-hockey-b-pose2",
+            "scale": 4,
+            "parallel": true
+          },
+          "started_at": "2026-10-07T09:37:01.431050+00:00",
+          "completed_at": "2026-10-07T09:37:05.753516+00:00",
+          "raw_episode": {
+            "ordered_single_episode": true,
+            "read_frames": 57
+          },
+          "validation": "exact-raw-payload-and-png-correlated",
+          "sealed_png": {
+            "file": "build-host/runtime-acceptance-069/sealed/closed-20261007T094150Z/images/167-B-air02-p4-air-hockey-b-pose2-b.png",
+            "bytes": 17571,
+            "sha256": "71952d6d8411ed8e1fc0b0589e3b3fdc27fee72aeceb2b255c888af321251621"
+          }
+        },
+        {
+          "journal_row_zero_based": 167,
+          "unit": "A",
+          "request": {
+            "command": "screenshot",
+            "unit": "both",
+            "name": "air02-p4-air-hockey-b-pose2",
+            "scale": 4,
+            "parallel": true
+          },
+          "started_at": "2026-10-07T09:37:01.431050+00:00",
+          "completed_at": "2026-10-07T09:37:05.753516+00:00",
+          "raw_episode": {
+            "ordered_single_episode": true,
+            "read_frames": 57
+          },
+          "validation": "exact-raw-payload-and-png-correlated",
+          "sealed_png": {
+            "file": "build-host/runtime-acceptance-069/sealed/closed-20261007T094150Z/images/167-A-air02-p4-air-hockey-b-pose2-a.png",
+            "bytes": 17751,
+            "sha256": "7cc404a577edc700d91308b1c469bee9bcbee0755d292f854d153c0fbf4d35c3"
+          }
+        },
+        {
+          "journal_row_zero_based": 174,
+          "unit": "B",
+          "request": {
+            "command": "screenshot",
+            "unit": "both",
+            "name": "air02-p4-air-hockey-b-depart-host",
+            "scale": 4,
+            "parallel": true
+          },
+          "started_at": "2026-10-07T09:40:48.856461+00:00",
+          "completed_at": "2026-10-07T09:40:52.818566+00:00",
+          "raw_episode": {
+            "ordered_single_episode": true,
+            "read_frames": 57
+          },
+          "validation": "exact-raw-payload-and-png-correlated",
+          "sealed_png": {
+            "file": "build-host/runtime-acceptance-069/sealed/closed-20261007T094150Z/images/174-B-air02-p4-air-hockey-b-depart-host-b.png",
+            "bytes": 21572,
+            "sha256": "5207710264e1c6dc4d130e33227c806c9aafce8f8b6db801506a95144a051cc9"
+          }
+        },
+        {
+          "journal_row_zero_based": 174,
+          "unit": "A",
+          "request": {
+            "command": "screenshot",
+            "unit": "both",
+            "name": "air02-p4-air-hockey-b-depart-host",
+            "scale": 4,
+            "parallel": true
+          },
+          "started_at": "2026-10-07T09:40:48.856461+00:00",
+          "completed_at": "2026-10-07T09:40:52.818566+00:00",
+          "raw_episode": {
+            "ordered_single_episode": true,
+            "read_frames": 57
+          },
+          "validation": "exact-raw-payload-and-png-correlated",
+          "sealed_png": {
+            "file": "build-host/runtime-acceptance-069/sealed/closed-20261007T094150Z/images/174-A-air02-p4-air-hockey-b-depart-host-a.png",
+            "bytes": 18342,
+            "sha256": "5c739330610546dbe6e755c7214450116bfdb6129061f0b65e1f09924e300c76"
+          }
+        },
+        {
+          "journal_row_zero_based": 180,
+          "unit": "A",
+          "request": {
+            "command": "screenshot",
+            "unit": "both",
+            "name": "air02-p4-air-hockey-b-finish-after-host-left",
+            "scale": 4,
+            "parallel": true
+          },
+          "started_at": "2026-10-07T09:41:10.014792+00:00",
+          "completed_at": "2026-10-07T09:41:13.401984+00:00",
+          "raw_episode": {
+            "ordered_single_episode": true,
+            "read_frames": 57
+          },
+          "validation": "exact-raw-payload-and-png-correlated",
+          "sealed_png": {
+            "file": "build-host/runtime-acceptance-069/sealed/closed-20261007T094150Z/images/180-A-air02-p4-air-hockey-b-finish-after-host-left-a.png",
+            "bytes": 21574,
+            "sha256": "be5d331f5d9f80838ebf4f4c0c6f4d783c08ca9bb57961e7b8749e3c04a73750"
+          }
+        },
+        {
+          "journal_row_zero_based": 180,
+          "unit": "B",
+          "request": {
+            "command": "screenshot",
+            "unit": "both",
+            "name": "air02-p4-air-hockey-b-finish-after-host-left",
+            "scale": 4,
+            "parallel": true
+          },
+          "started_at": "2026-10-07T09:41:10.014792+00:00",
+          "completed_at": "2026-10-07T09:41:13.401984+00:00",
+          "raw_episode": {
+            "ordered_single_episode": true,
+            "read_frames": 57
+          },
+          "validation": "exact-raw-payload-and-png-correlated",
+          "sealed_png": {
+            "file": "build-host/runtime-acceptance-069/sealed/closed-20261007T094150Z/images/180-B-air02-p4-air-hockey-b-finish-after-host-left-b.png",
+            "bytes": 21572,
+            "sha256": "5207710264e1c6dc4d130e33227c806c9aafce8f8b6db801506a95144a051cc9"
+          }
+        }
+      ],
+      "command_errors_and_timing_problems": [
+        {
+          "journal_row": 158,
+          "row_kind": "command",
+          "event": null,
+          "request": {
+            "command": "release",
+            "unit": "both"
+          },
+          "start_utc": "2026-10-07T09:36:49.884839+00:00",
+          "end_utc": "2026-10-07T09:36:50.025812+00:00",
+          "start_ms": 1791365809884.839,
+          "end_ms": 1791365810025.812,
+          "valid_bounds": true,
+          "time_bounds_required": true,
+          "aggregate_bounds_unavailable": false,
+          "observed_elapsed_ms": 140.972900390625,
+          "recorded_duration_ms": 140.962,
+          "recorded_unit_duration_ms": {
+            "A": 47.384,
+            "B": 93.567
+          },
+          "idle_gap_before_ms": 31756.761962890625,
+          "status_poll_gaps": [],
+          "timing_problems": [],
+          "receipt_problems": [
+            "A:error-receipt",
+            "B:error-receipt"
+          ],
+          "receipt_ok": false
+        },
+        {
+          "journal_row": 160,
+          "row_kind": "aggregate",
+          "event": "guarded-batch",
+          "request": {
+            "command": "guarded_batch",
+            "name": "069-air-bhost-pose2",
+            "steps": [
+              {
+                "request": {
+                  "command": "release",
+                  "unit": "both"
+                }
+              },
+              {
+                "expect": {
+                  "B": {
+                    "mode": "native",
+                    "id": "org.p4console.p4-air-hockey"
+                  }
+                },
+                "timeout_ms": 5000
+              },
+              {
+                "request": {
+                  "command": "pulse",
+                  "unit": "B",
+                  "buttons": "0",
+                  "touch": true,
+                  "x": 443,
+                  "y": 469,
+                  "hold_ms": 500
+                }
+              },
+              {
+                "expect": {
+                  "A": {
+                    "mode": "native",
+                    "id": "org.p4console.p4-air-hockey"
+                  }
+                },
+                "timeout_ms": 5000
+              },
+              {
+                "request": {
+                  "command": "pulse",
+                  "unit": "A",
+                  "buttons": "0",
+                  "touch": true,
+                  "x": 227,
+                  "y": 217,
+                  "hold_ms": 500
+                }
+              },
+              {
+                "expect": {
+                  "A": {
+                    "mode": "native",
+                    "id": "org.p4console.p4-air-hockey"
+                  },
+                  "B": {
+                    "mode": "native",
+                    "id": "org.p4console.p4-air-hockey"
+                  }
+                },
+                "timeout_ms": 5000
+              },
+              {
+                "request": {
+                  "command": "screenshot",
+                  "unit": "both",
+                  "name": "air02-p4-air-hockey-b-pose2",
+                  "scale": 4,
+                  "parallel": true
+                }
+              }
+            ]
+          },
+          "start_utc": null,
+          "end_utc": "2026-10-07T09:36:50.025922+00:00",
+          "start_ms": null,
+          "end_ms": 1791365810025.922,
+          "valid_bounds": false,
+          "time_bounds_required": false,
+          "aggregate_bounds_unavailable": true,
+          "observed_elapsed_ms": null,
+          "recorded_duration_ms": null,
+          "recorded_unit_duration_ms": null,
+          "idle_gap_before_ms": null,
+          "status_poll_gaps": [],
+          "timing_problems": [],
+          "receipt_problems": [
+            "guarded-batch-missing-or-failed-outcome"
+          ],
+          "receipt_ok": false
+        },
+        {
+          "journal_row": 169,
+          "row_kind": "command",
+          "event": null,
+          "request": {
+            "command": "release",
+            "unit": "both"
+          },
+          "start_utc": "2026-10-07T09:40:41.694373+00:00",
+          "end_utc": "2026-10-07T09:40:41.845775+00:00",
+          "start_ms": 1791366041694.3728,
+          "end_ms": 1791366041845.775,
+          "valid_bounds": true,
+          "time_bounds_required": true,
+          "aggregate_bounds_unavailable": false,
+          "observed_elapsed_ms": 151.402099609375,
+          "recorded_duration_ms": 151.391,
+          "recorded_unit_duration_ms": {
+            "A": 44.085,
+            "B": 107.293
+          },
+          "idle_gap_before_ms": 215940.85693359375,
+          "status_poll_gaps": [],
+          "timing_problems": [],
+          "receipt_problems": [
+            "A:error-receipt",
+            "B:error-receipt"
+          ],
+          "receipt_ok": false
+        },
+        {
+          "journal_row": 182,
+          "row_kind": "command",
+          "event": null,
+          "request": {
+            "command": "close",
+            "unit": "both"
+          },
+          "start_utc": "2026-10-07T09:41:40.694227+00:00",
+          "end_utc": "2026-10-07T09:41:40.769232+00:00",
+          "start_ms": 1791366100694.227,
+          "end_ms": 1791366100769.232,
+          "valid_bounds": true,
+          "time_bounds_required": true,
+          "aggregate_bounds_unavailable": false,
+          "observed_elapsed_ms": 75.0048828125,
+          "recorded_duration_ms": 74.99,
+          "recorded_unit_duration_ms": {
+            "A": 12.124,
+            "B": 62.852
+          },
+          "idle_gap_before_ms": 27292.2431640625,
+          "status_poll_gaps": [],
+          "timing_problems": [],
+          "receipt_problems": [
+            "A:error-receipt",
+            "B:error-receipt"
+          ],
+          "receipt_ok": false
+        }
+      ],
+      "all_commands_source": {
+        "file": "build-host/runtime-acceptance-069/sealed/closed-20261007T094150Z/analysis.json",
+        "bytes": 2393655,
+        "sha256": "80905f0dd9394e71f273460291f3da96bb0953dadb554242759d4dbcfbdc3de6"
+      },
+      "global_time_poison": true,
+      "global_time_poison_reasons": [
+        "unattributed-harness-error:24",
+        "unattributed-harness-error:58",
+        "unattributed-harness-error:61"
+      ],
+      "strict_screenshot_policy": "Every full possible UTC interval must avoid every screenshot command on either peer, successful or failed; unknown command bounds also exclude. All 29 native timing intervals are excluded. No clean FPS claim.",
+      "cadence_acceptance": "FAIL / not qualified: raw early diagnostics are about 17.2 FPS, below operator 25 and repository 30; no clean interval establishes either floor.",
+      "visual_review": {
+        "reviewer": "root agent declaration after personally viewing the captured images",
+        "linked_play": "B host / A guest actual two-player Air Hockey linked; B won 7:0.",
+        "pose1": "Two paddle effects observed and replicated in the paired pose1 captures.",
+        "pose2": "Both pose2 captures were after match completion; no movement claim.",
+        "host_departure": "B Back at 09:40:48; A captured PEER LEFT CPU TAKES OVER and 0:0.",
+        "exit": "A Back at 09:41:09; paired final Home images personally reviewed.",
+        "scope": "Bounded captured visuals plus explicit command/status receipts. Not continuous physical-panel/touch observation or person-heard audio."
+      },
+      "audio_acceptance": "Pending; no person-heard music or SFX confirmation.",
+      "checkpoint_acceptance": "Earlier Doom checkpoint failure remains FAIL; later Air results do not repair it.",
+      "device_access": false,
+      "live_source_dependency": false,
+      "official_evidence_writes": false
+    },
+    "scope": "Linked play, score, paddle effects, departure fallback and cadence require their separate readout evidence. Pose 2 after match completion establishes no movement. Worker activity does not prove the cadence threshold or physical scanout. Neither Air nor closure repairs the earlier checkpoint failure."
+  },
+  "final_revision_source": {
+    "file": "build-host/runtime-acceptance-069/publication-candidate/runtime-069-candidate-with-regression.json",
+    "bytes": 27074,
+    "sha256": "f7b8e995b3f389418a3a55c3e7ccd59fc7fc8553ab7f8579c0c29162e44a5855"
+  },
+  "root_publication": {
+    "created_utc": "2026-10-07T09:56:26.079919+00:00",
+    "candidate_sha256": "980d8f5a8f0da30e815869cee48d3774777a748050d41a49362a1e89d2f5dbcf",
+    "embedded_bindings_reverified": 75,
+    "acceptance": "failed-checkpoint-and-unqualified-cadence; heard-audio-pending",
+    "original_prefix_fields_retained": true
+  }
+}

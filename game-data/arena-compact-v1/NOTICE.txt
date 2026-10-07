@@ -1,0 +1,31 @@
+Doom Arena compact base v1
+
+This Arena-only IWAD is derived from Freedoom Phase 2 version 0.13.0.
+Freedoom project: https://freedoom.github.io/
+Pinned upstream release: https://github.com/freedoom/freedoom/releases/tag/v0.13.0
+
+Original Freedoom2 IWAD: 28,787,748 bytes
+SHA-256: a8772e088847032510d97ba2312406a6998f21cbab44d4ff10696faa9c0ecd4b
+Arena compact IWAD: 12,253,462 bytes
+SHA-256: 18dd25d6ed8b719c9d1417324d7ceaaa943af907ae1005e9a36101c0bbe5c1c4
+
+P4 Game Console's compact recipe removes the original campaign geometry and
+unused wall texture definitions/patches. All 32 map-name markers remain for
+engine lookup. Retained wall texture records remain in their original order;
+all retained artwork bytes, sprites, flats, interface graphics, sounds and
+music are unchanged. Pure Hades v0.6 and DWANGO5 remain separate unchanged
+inputs providing the 29 supported Arena selections.
+
+This file is not a general or campaign IWAD. Keep the original FREEDOOM2.WAD
+for ordinary campaign use. The derivative is installed separately as
+/GCADOOM/ARENA2.WAD. Both Arena peers need the same complete current bundle;
+older content identities and checkpoints are incompatible.
+
+Freedoom's BSD 3-Clause license and attribution remain applicable. The full
+original COPYING, CREDITS, and CREDITS-MUSIC files must accompany this base in
+GCADOOM/licenses. They are preserved without modification. The Freedoom
+project does not endorse this derivative. No DWANGO redistribution rights
+are granted by this recipe or by P4 Game Console.
+
+Reproduce locally with scripts/doom/arena-compact.py and the pinned recipe
+third_party/arena-compact-v1.json. Generated WAD bytes stay outside Git.

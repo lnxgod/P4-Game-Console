@@ -53,6 +53,8 @@ void D_RegisterLoopCallbacks(loop_interface_t *i);
 
 // Create any new ticcmds and broadcast to other players.
 void NetUpdate (void);
+/* Short post-masked-render hint; builds local ticcmds exactly as NetUpdate. */
+void NetUpdateRenderTail (void);
 
 // Broadcasts special packets to other players
 //  to notify of game exit
@@ -66,6 +68,15 @@ void D_StartGameLoop(void);
 
 // Deliver one complete lockstep tic from an external transport adapter.
 void D_ReceiveTic(ticcmd_t *ticcmds, boolean *players_mask);
+
+// Available canonical tic slots; callers must not overwrite unplayed tics.
+unsigned int D_P4TicCapacity(void);
+// Next engine tic to simulate, distinct from transport's delivered cursor.
+int D_P4ReplayTic(void);
+// Enable live input at the agreed future activation tic without resetting
+// the replayed world, gametic or consistency history. Replay presentation
+// remains suspended until the transport retires its replay flag.
+boolean D_P4ReplayFinish(int next_input_tic);
 
 // Initialize networking code and connect to server.
 

@@ -60,11 +60,13 @@ ctest --test-dir build-host/p4_air_hockey --output-on-failure
 
 ## Native high-resolution presentation
 
-Version 1.1.0 negotiates **768x480** through optional `video-highres`,
-with a complete **320x200** fallback. Touch coordinates remain canonical
-320x200 in both modes. Game geometry is rasterized directly into the supplied
-surface, with native 24/38px antialiased typography in high resolution and
-legible compact bitmap text in fallback; no small framebuffer is enlarged.
+Version 1.1.2 requires `video-highres` in both the manifest and C
+descriptor and renders directly at **768×480 RGB565** on maintained Tab5.
+Touch coordinates remain canonical 320×200 input units. Geometry and native
+24/38px antialiased typography are rasterized into the supplied surface;
+no completed low-resolution frame is enlarged. The compact 320×200 source
+path remains for explicitly requested legacy maintenance and labeled host
+diagnostics; it is not an admitted maintained-game surface.
 
 The original ImageGen atlas `assets/presentation_imagegen_v2.png` provides
 66px glossy cyan/magenta strikers and puck, with 64px rink and rail materials.
@@ -84,8 +86,8 @@ python3 tools/convert_presentation.py
 ```
 
 Focused tests cover padded framebuffer guards and full-surface rendering at
-both resolutions, canonical touch targets after rendering, and representative
-menus, play and result states. Set `P4_CAPTURE_DIR` to an existing absolute
+768×480 plus explicit legacy diagnostic copies, canonical touch targets after
+rendering, and representative menus, play and result states. Set `P4_CAPTURE_DIR` to an existing absolute
 directory to retain native PPM captures from the presentation test. The
 existing rules and mocked multiplayer assertions remain covered, including linked
 start and continued simulation when local pause controls are pressed. See
@@ -94,7 +96,8 @@ physical-device acceptance; host tests are not hardware acceptance.
 
 ## Frame-time budget
 
-The minimum target is 30 presented frames per second (33.333ms per frame).
+The target is 60 FPS. Release acceptance requires at least 30 presented frames
+per second (33.333ms per frame) measured on the actual Tab5 at 768×480.
 The renderer copies mirrored material row spans and paints visible regions
 without repeatedly painting covered full-screen layers. State, touch targets,
 rule timing and multiplayer packet formats remain unchanged.
@@ -154,3 +157,17 @@ stops queued tones and clears the local movement target without changing the
 puck, score or accumulated sub-step. Peer loss still transitions directly to
 a fresh CPU match rather than a title screen. These UI fields are local only
 and never appear in the existing protocol-4 messages.
+
+## Native Tab5 validation (1.1.2)
+
+The released descriptor requires `video-highres`, so services without that
+capability cannot start it and the runtime rejects a 320×200 surface. Preserved
+legacy checks use explicit local descriptor copies. The focused ASan/UBSan
+suite and SDL smoke passed at 768×480 for this revision. Default previews render
+directly into the native surface.
+
+These are host checks. The target is 60 FPS, with a measured physical-device
+release floor of 30 FPS at 768×480. Panel readability, input, sound and device
+cadence remain subject to exact-package, OS and Tab5 acceptance; a host CPU
+timing or capture does not qualify that floor. Earlier test records retain
+the results for their recorded sources and artifacts.

@@ -406,7 +406,10 @@ static bool event(p4_midi_player_t *p,p4_midi_track_t *t)
             if(n!=3)return false;
             const uint8_t *v=p->data+t->cursor;
             uint32_t tempo=(uint32_t)v[0]<<16|(uint32_t)v[1]<<8|v[2];
-            if(!tempo)return false;p->tempo=tempo;
+            if (!tempo) {
+                return false;
+            }
+            p->tempo=tempo;
         }
         t->cursor+=n;
     } else if(s==0xf0||s==0xf7) {

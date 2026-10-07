@@ -48,7 +48,8 @@
       "game-data/pure-hades/v0.6/validation/gameplay.json",
       "game-data/pure-hades/v0.6/validation/music-playback.json",
       "game-data/pure-hades/v0.6/validation/reproducibility.json",
-      "game-data/pure-hades/v0.6/validation/structure.json"
+      "game-data/pure-hades/v0.6/validation/structure.json",
+      "game-data/arena-compact-v1/NOTICE.txt"
     ]
   },
   "game_data": [
@@ -161,10 +162,28 @@
         "license_file": "SLICNSE.TXT"
       },
       "notice": "Local development and user-supplied SD input only. Do not commit, embed, modify, or redistribute the extracted PAK from this project. The original shareware license permits only constrained distribution of the complete unmodified package with its agreement."
+    },
+    {
+      "id": "p4-arena-compact-v1",
+      "title": "Doom Arena compact base v1 (Freedoom 0.13.0 derivative)",
+      "filename": "ARENA2.WAD",
+      "local_path": "local-data/doom/arena-compact-v1/ARENA2.WAD",
+      "format": "IWAD",
+      "version": "1",
+      "size_bytes": 12253462,
+      "sha256": "18dd25d6ed8b719c9d1417324d7ceaaa943af907ae1005e9a36101c0bbe5c1c4",
+      "derived_from": "freedoom-0.13.0-phase-2",
+      "generator": "scripts/doom/arena-compact.py",
+      "recipe": "third_party/arena-compact-v1.json",
+      "recipe_sha256": "c43b36ae929c7f6f58e3319fd195a1f2aebcc26de631b72d4b7ec2721331f139",
+      "usage": "Arena-only; original campaign geometry removed; all29 Arena selections preserved; never replace the ordinary campaign IWAD",
+      "license": "BSD-3-Clause; preserve original Freedoom COPYING, CREDITS and CREDITS-MUSIC",
+      "notice": "game-data/arena-compact-v1/NOTICE.txt",
+      "redistributable": true
     }
   ],
   "game_changers_ai_bundle": {
-    "version": "pure-hades-0.6-dwango5-freedoom-0.13.0",
+    "version": "pure-hades-0.6-dwango5-arena-compact-v1",
     "default_map": 1,
     "rotation": [
       1,
@@ -175,19 +194,19 @@
     ],
     "max_players": 4,
     "identity_encoding": "ASCII P4-GCA-ARENAS-1 NUL then binary SHA-256 of IWAD, Pure Hades PWAD, DWANGO5 PWAD in that order",
-    "content_sha256": "363c69fd5b0ae3faa5360d96624414e6dabd2d4c9c86d1eab518899d8095358b",
+    "content_sha256": "89ae377759fd397d811812304e42de8591aa1fcff54a6c4bf137dd57b8f76793",
     "source": "https://github.com/lnxgod/pure-hades at 142c6ff56ff8fb9eee40e6b2ea7875a0424337e8 (v0.6); replaces Pure Hell v0.5",
     "notice": "Owner-requested Pure Hades replacement. Maps and unchanged community MIDI: CC BY-SA 4.0; original source: MIT; Freedoom-derived artwork: BSD-3-Clause. All upstream source, notices and credits are preserved. External Freedoom/DWANGO inputs stay ignored.",
     "files": [
       {
         "symbol": "BASE",
-        "usb_kind": 5,
-        "directory": "",
-        "filename": "FREEDOOM2.WAD",
-        "local_path": "local-data/doom/freedoom2.wad",
-        "command": "freedoom2",
-        "size_bytes": 28787748,
-        "sha256": "a8772e088847032510d97ba2312406a6998f21cbab44d4ff10696faa9c0ecd4b"
+        "usb_kind": 21,
+        "directory": "/GCADOOM",
+        "filename": "ARENA2.WAD",
+        "local_path": "local-data/doom/arena-compact-v1/ARENA2.WAD",
+        "command": "arena-base",
+        "size_bytes": 12253462,
+        "sha256": "18dd25d6ed8b719c9d1417324d7ceaaa943af907ae1005e9a36101c0bbe5c1c4"
       },
       {
         "symbol": "PWAD",
@@ -362,6 +381,18 @@
         "command": "dwango5-diz",
         "size_bytes": 210,
         "sha256": "faaa4a0867d05ea49114b9e05ddad783062b9ddba64f8716d5f2556d63aac485"
+      },
+      {
+        "usb_kind": 22,
+        "symbol": "ARENA_BASE_NOTICE",
+        "directory": "/GCADOOM",
+        "filename": "ARENA-BASE.txt",
+        "local_path": "game-data/arena-compact-v1/NOTICE.txt",
+        "size_bytes": 1671,
+        "sha256": "ad30829e08a274192f24b5871dc538eeee60d312715a1d069799d3d5d20e76dd",
+        "command": "arena-base-notice",
+        "repository_asset": true,
+        "source_group": "repository"
       }
     ],
     "selections": [
@@ -546,6 +577,7 @@
       "archive_sha256": "f6cc5b7adcb38f9e1bcee979668f155f2d8815d6218a694869f81c27386a407c",
       "notes": "Unmodified local input from the community deathmatch archive. Preserve DWANGO5.TXT and FILE_ID.DIZ. No redistribution by this repository. In-memory lump namespace isolates legacy graphics/sounds; maps and map music are selected explicitly."
     },
-    "game_protocol": 5
+    "game_protocol": 5,
+    "base_game_data_id": "p4-arena-compact-v1"
   }
 }

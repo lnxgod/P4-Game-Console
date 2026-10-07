@@ -19,6 +19,26 @@ target_compile_options(test_clock_control PRIVATE -Wall -Wextra -Wconversion -Ws
 target_link_options(test_clock_control PRIVATE -fsanitize=address,undefined)
 add_test(NAME usb_clock_control COMMAND test_clock_control)
 
+add_executable(test_debug_control test_debug_control.c)
+target_link_libraries(test_debug_control PRIVATE p4_h1_usb_drive_control)
+if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
+    target_compile_options(test_debug_control PRIVATE
+        -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Werror
+        -fsanitize=address,undefined -fno-omit-frame-pointer)
+    target_link_options(test_debug_control PRIVATE -fsanitize=address,undefined)
+endif()
+add_test(NAME usb_debug_control COMMAND test_debug_control)
+
+add_executable(test_debug_snapshot test_debug_snapshot.c)
+target_link_libraries(test_debug_snapshot PRIVATE p4_h1_usb_drive_control)
+if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
+    target_compile_options(test_debug_snapshot PRIVATE
+        -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Werror
+        -fsanitize=address,undefined -fno-omit-frame-pointer)
+    target_link_options(test_debug_snapshot PRIVATE -fsanitize=address,undefined)
+endif()
+add_test(NAME usb_debug_snapshot COMMAND test_debug_snapshot)
+
 # Exercise the actual device parser with fake SDK services and real SHA-256.
 add_executable(test_file_transfer_native_only
     test_file_transfer_native_only.c
@@ -62,7 +82,8 @@ target_include_directories(test_content_transfer_batch PRIVATE
     stubs ../include ../../platform_game_storage/include)
 target_compile_features(test_content_transfer_batch PRIVATE c_std_11)
 target_compile_definitions(test_content_transfer_batch PRIVATE
-    PACK_ROOT="${CMAKE_CURRENT_SOURCE_DIR}/../../../game-data/pure-hades/v0.6")
+    PACK_ROOT="${CMAKE_CURRENT_SOURCE_DIR}/../../../game-data/pure-hades/v0.6"
+    ARENA_NOTICE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/../../../game-data/arena-compact-v1/NOTICE.txt")
 target_compile_options(test_content_transfer_batch PRIVATE
     -Wall -Wextra -Wconversion -Wshadow -Werror
     -fsanitize=address,undefined -fno-omit-frame-pointer)

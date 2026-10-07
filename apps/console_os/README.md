@@ -4,8 +4,7 @@
 
 Console OS is the **shared platform** in the P4 Game Console monorepo. It is
 currently branded *Game Changers AI OS* on the device. It provides the launcher,
-system pages, hardware services and game lifecycle. The **Game Changers AI
-multiplayer arena** is one integrated Doom-based game mode; its rules, maps,
+system pages, hardware services and game lifecycle. The **Doom Arena by Game Changers** is one integrated Doom-based game mode; its rules, maps,
 content and acceptance belong in the [arena README](../../docs/games/arena/README.md).
 
 ## Primary device and current source

@@ -7,9 +7,10 @@ the [engine-game inventory](../README.md#engine-games-and-ports). This document
 records library policy and historical review; it is not the OS overview.
 
 Tab5 is the primary Console OS target. The enabled native bundle contains
-12 main-library games and three utilities. Byte Buddy, Red Dragon and Skyline
-Leap are held back for explicit developer installs only. Tide Maze remains
-available at the owner’s request, with its device-lag acceptance still open.
+11 main-library games and three utilities. Byte Buddy, Red Dragon, Skyline
+Leap and Tide Maze are held back for explicit developer installs only. Tide Maze
+was removed from the product library at the owner’s request on 2026-10-07;
+its failed device acceptance and disabled development source remain preserved.
 Doom v1.9 shareware is the default engine-data title; provisioning includes its
 verified WAD download when missing. Chex Quest is an optional SD add-on and
 requires an explicit opt-in plus its verified WAD and patch. Game data stays
@@ -25,21 +26,21 @@ changes only presentation: launching and saved progress still use stable IDs.
 
 | Category | Games |
 |---|---|
-| Arcade | Blast Circuit, Frog Hop, Maze Chase, Space Invaders, Tide Maze |
+| Arcade | Blast Circuit, Frog Hop, Maze Chase, Space Invaders |
 | Cards | Color Clash, Rummy 500, Solitaire, Texas Hold'em |
 | Shooters | Doom; verified shareware WAD installed by default |
 | Optional | Chex Quest; explicit SD opt-in, verified WAD and patch required |
 | Sports | Air Hockey |
 | Tabletop | Checkers, Yahtzee |
-| Development only (hidden by default) | Byte Buddy, Red Dragon, Skyline Leap |
+| Development only (hidden by default) | Byte Buddy, Red Dragon, Skyline Leap, Tide Maze |
 
 Byte Buddy 5.0.0, Red Dragon 1.9.0 and Maze Chase 1.1.1 (the Pac-Man-style
 game) are native C `.P4G` games. The initial-launch remixes update Byte Buddy's
 city/panels and Red Dragon's native ANSI presentation while preserving their
 game identities and saved progress. See their game READMEs for exact acceptance.
 
-Byte Buddy, Red Dragon and Skyline Leap have disabled manifests. Default
-bundles also exclude `GAMES/WIP` even if a future edit leaves `enabled: true`.
+Byte Buddy, Red Dragon, Skyline Leap and Tide Maze have disabled manifests.
+Default bundles also exclude `GAMES/WIP` even if a future edit leaves `enabled: true`.
 Use [developer installs](../games/README.md#developer-installs) to opt in to a
 named title. Their source, package IDs and saves remain available; this is not
 retirement. Blast Circuit leads the Tab5 home view, followed by Wacky Wheels
@@ -106,6 +107,12 @@ outside the accepted port.
   identity are retained for possible development; it must meet the complete-loop
   and fluid-action release requirements before being enabled again.
 
+- Tide Maze: removed from the product/default library at the owner’s request
+  on 2026-10-07 after unacceptable tilt/gameplay feel and lag. Its manifest is
+  disabled. Source, package/save identity and historical failed acceptance are
+  preserved; the unverified 0.2.4 development source must not ship by default.
+  See [its README and acceptance notes](../games/tide_maze/README.md).
+
 - Asteroids, Asteroids 2 and Breakout: removed at the owner's request. Their
   source history remains in Git; their public IDs, launcher IDs and filenames
   are permanently reserved in `games/retired.json`.
@@ -122,9 +129,11 @@ files display their ordinary game names.
 ## Keep future additions worthwhile
 
 Apply the [ESP32-P4 performance contract](GAME_PERFORMANCE.md) from the first
-playable build: native 768×480 with fallback, 60 FPS target and actual-device
-30 FPS release floor. A locally tested or installed candidate is not yet a
-performance-qualified release. Keep unmeasured candidates/WIP honestly labelled;
+playable build: direct native 768×480 RGB565, a 60 FPS target and actual-device
+30 FPS release floor. Require `video-highres` in the native manifest and C
+descriptor. Canonical 320×200 touch coordinates are input units; preserved
+legacy rendering source is only for explicit legacy maintenance and diagnostics.
+A locally tested or installed candidate is not yet a performance-qualified release. Keep unmeasured candidates/WIP honestly labelled;
 record exact package, OS, unit and sustained active-play cadence before claiming
 release readiness. Action games must move continuously and respond fluidly on the tablet; visible
 whole-tile jumps, repeated stalls and unfinished demo-like play fail the release
@@ -164,8 +173,7 @@ files and symlinks. Supply a matching `.P4R` before its `.P4G` when present;
 saved progress and game WADs are preserved.
 Use firmware with this protocol extension; old firmware rejects the request.
 
-Tide Maze 0.1.0 is a locally exercised development candidate with three flooded
-marble labyrinths and two-console co-op. Its new optional six-axis motion service
-requires a motion-aware OS (Tab5 0.50 candidate); physical tilt, audio, launcher
-refresh and linked-tablet acceptance remain pending. See
-[its verification record](../games/tide_maze/LOCAL_TESTING.json).
+Historical Tide Maze 0.1.x motion and transfer evidence remains in
+[its verification record](../games/tide_maze/LOCAL_TESTING.json). The title is now
+disabled and excluded from default bundles; historical transfers and source
+reworks do not supersede its failed gameplay acceptance.

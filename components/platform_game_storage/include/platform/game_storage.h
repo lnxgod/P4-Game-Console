@@ -33,6 +33,9 @@ extern "C" {
 #define PLATFORM_GAME_STORAGE_CHEX_DEH_BYTES UINT64_C(20367)
 #define PLATFORM_GAME_STORAGE_FREEDOOM2_WAD_PATH "/game-data/FREEDOOM2.WAD"
 #define PLATFORM_GAME_STORAGE_FREEDOOM2_WAD_BYTES UINT64_C(28787748)
+/* Separate Arena derivative; preserve original Freedoom campaign support. */
+#define PLATFORM_GAME_STORAGE_ARENA_BASE_WAD_BYTES P4_GCA_BASE_WAD_BYTES
+#define PLATFORM_GAME_STORAGE_ARENA_BASE_WAD_PATH P4_GCA_BASE_SD_PATH
 #define PLATFORM_GAME_STORAGE_DWANGO5_WAD_BYTES UINT64_C(2109396)
 #define PLATFORM_GAME_STORAGE_PUREHADES_WAD_BYTES UINT64_C(2313392)
 
@@ -234,6 +237,45 @@ esp_err_t platform_game_storage_remove_file(
 /** Remove one regular file from the fixed GAMES directory. */
 esp_err_t platform_game_storage_remove_game_file(const char *name);
 
+/** Service a caller-owned activity between bounded content-validation reads. */
+typedef void (*platform_game_storage_progress_fn_t)(void *context);
+
+/** Full content scans detect all changed bytes before launch. Trusted-on-read
+ * is available only for Tab5 Arena: firmware-owned metadata authenticates each
+ * consumed block; unconsumed card blocks are not claimed to be verified. */
+typedef enum {
+    PLATFORM_GAME_STORAGE_VERIFY_FULL_CONTENT = 0,
+    PLATFORM_GAME_STORAGE_VERIFY_TRUSTED_ON_READ = 1,
+} platform_game_storage_verification_t;
+
+/** A copied snapshot of the current Arena launch preparation pass. */
+typedef struct {
+    platform_game_storage_verification_t verification;
+    uint64_t bytes_checked;
+    uint64_t bytes_total;
+    uint16_t file_index;
+    uint16_t file_count;
+    bool active;
+    bool checking_structure;
+    bool checking_trusted_metadata;
+    /** True after the selected policy and required WAD structure passed.
+     * TRUSTED_ON_READ does not imply that unconsumed WAD blocks were read. */
+    bool complete;
+} platform_game_storage_doom_load_progress_t;
+
+/**
+ * Copy Arena launch progress without reading files or changing ownership.
+ * bytes_checked counts bytes fed successfully into whole-file hash checks.
+ * In TRUSTED_ON_READ mode, bytes_total/checks include only the 13 support files;
+ * WAD metadata and structure are separate named stages. complete describes
+ * preparation under verification, not full-card health in lazy mode. The calling-task
+ * progress callback may use this getter while the recursive storage lock is
+ * held. Other tasks may block until validation ends, so this is not a worker
+ * polling API. No other storage API is permitted from that callback.
+ */
+esp_err_t platform_game_storage_get_doom_load_progress(
+    platform_game_storage_doom_load_progress_t *out_progress);
+
 /**
  * Read one bounded regular root file into PSRAM (or internal RAM fallback).
  * The returned allocation must be released with the matching function.
@@ -246,6 +288,22 @@ esp_err_t platform_game_storage_load_root_file(
 esp_err_t platform_game_storage_load_game_file(
     const char *name, size_t maximum_bytes,
     uint8_t **out_data, size_t *out_size_bytes);
+
+/**
+ * Like the corresponding load function, with optional calling-task progress
+ * before the first read and between reads of at most 64 KiB. The storage lock
+ * stays held: the callback must not call storage APIs or retain file buffers.
+ * It must return promptly and must not change storage ownership.
+ */
+esp_err_t platform_game_storage_load_root_file_with_progress(
+    const char *name, size_t maximum_bytes,
+    uint8_t **out_data, size_t *out_size_bytes,
+    platform_game_storage_progress_fn_t progress, void *context);
+
+esp_err_t platform_game_storage_load_game_file_with_progress(
+    const char *name, size_t maximum_bytes,
+    uint8_t **out_data, size_t *out_size_bytes,
+    platform_game_storage_progress_fn_t progress, void *context);
 
 /** Read one bounded regular file from the fixed UPDATE directory. */
 esp_err_t platform_game_storage_load_update_file(
@@ -280,11 +338,32 @@ esp_err_t platform_game_storage_remove_update_file(const char *name);
 esp_err_t platform_game_storage_lock_for_game(void);
 
 /**
- * Validate and lock one supported Doom-engine title for exclusive launch.
+ * Fully hash and lock one supported Doom-engine title for exclusive launch.
  * Chex Quest requires both the exact CHEX.WAD and matching CHEX.DEH.
  */
 esp_err_t platform_game_storage_lock_for_doom_title(
     platform_game_storage_doom_title_t title);
+
+/**
+ * Like lock_for_doom_title(), with optional progress on the calling task after
+ * each hashed block. The storage lock is held: the callback may copy status
+ * with get_doom_load_progress(), but must not call any other storage API or
+ * retain content buffers. This lets an admitted multiplayer
+ * session poll and exchange keepalives during a long SD validation pass.
+ */
+esp_err_t platform_game_storage_lock_for_doom_title_with_progress(
+    platform_game_storage_doom_title_t title,
+    platform_game_storage_progress_fn_t progress, void *context);
+
+/** Explicit launch policy. Existing lock APIs always select FULL_CONTENT.
+ * TRUSTED_ON_READ is rejected for non-Arena titles and non-Tab5 targets.
+ * The terminal storage lease, read-time block checks and failure latch are
+ * identical in both modes. Call FULL_CONTENT for a complete Arena card scan.
+ * Progress callback restrictions are identical to the API above. */
+esp_err_t platform_game_storage_lock_for_doom_title_with_policy(
+    platform_game_storage_doom_title_t title,
+    platform_game_storage_verification_t verification,
+    platform_game_storage_progress_fn_t progress, void *context);
 
 /**
  * Borrow the verified in-memory data for the current terminal game lease.
@@ -299,9 +378,25 @@ esp_err_t platform_game_storage_get_locked_doom_snapshot(
 
 /** True only after platform_game_storage_lock_for_game succeeds. */
 bool platform_game_storage_game_locked(void);
-/** Dedicated SD-backed, block-verified arena stream; no full-WAD allocation. */
+/** Arena data under the terminal lease. The optional Tab5 BASE copy is fully
+ * verified before publication; both PWADs retain their block-verified streams. */
 esp_err_t platform_game_storage_read_arena_wad(unsigned file, size_t offset, void *out, size_t bytes);
-/** Cheap presence/size preflight; the terminal lease performs full validation. */
+/** Engine-owner call immediately before the actual zone allocation. Recheck
+ * the exact upcoming request plus the fixed reserve, releasing only an optional
+ * Arena BASE copy if necessary. No filesystem I/O, retries or allocation occur.
+ * Lock admission is zero-wait; contention leaves all ownership unchanged.
+ * Other valid Doom leases are unchanged. Missing/invalid leases are rejected.
+ * The optional output is zeroed on failure and reports retained BASE bytes. */
+esp_err_t platform_game_storage_prepare_doom_zone(
+    size_t zone_bytes, size_t *out_arena_resident_bytes);
+/* Optional one-descriptor startup hint. Failed begin means use normal reads;
+ * failure after begin is an I/O failure, never an integrity-bypassing fallback.
+ * Owner closes the scope before gameplay; lease teardown also frees it. */
+bool platform_game_storage_arena_sprite_begin(unsigned file);
+esp_err_t platform_game_storage_arena_sprite_read(unsigned file, size_t offset,
+                                                  void *out, size_t bytes);
+void platform_game_storage_arena_sprite_end(void);
+/** Cheap presence/size preflight; launch still must pass its selected policy. */
 bool platform_game_storage_arena_present(void);
 
 const char *platform_game_storage_state_name(

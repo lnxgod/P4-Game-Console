@@ -1139,8 +1139,10 @@ G_CheckSpot
     if (!players[playernum].mo)
     {
 	// first spawn of level, before corpses
-	for (i=0 ; i<playernum ; i++)
-	    if (players[i].mo != NULL
+	// Arena may first admit a lower seat while higher seats already play.
+	int limit = P4_DoomArenaActive() ? MAXPLAYERS : playernum;
+	for (i=0 ; i<limit ; i++)
+	    if (i != playernum && players[i].mo != NULL
                 && players[i].mo->x == mthing->x << FRACBITS
 		&& players[i].mo->y == mthing->y << FRACBITS)
 		return false;	

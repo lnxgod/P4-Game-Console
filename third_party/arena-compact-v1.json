@@ -1,0 +1,766 @@
+{
+  "animation_intervals": [
+    {
+      "end": "NUKAGE3",
+      "kind": "flat",
+      "names": [
+        "NUKAGE1",
+        "NUKAGE2",
+        "NUKAGE3"
+      ],
+      "start": "NUKAGE1"
+    },
+    {
+      "end": "FWATER4",
+      "kind": "flat",
+      "names": [
+        "FWATER1",
+        "FWATER2",
+        "FWATER3",
+        "FWATER4"
+      ],
+      "start": "FWATER1"
+    },
+    {
+      "end": "SWATER4",
+      "kind": "flat",
+      "names": [
+        "SWATER1",
+        "SWATER2",
+        "SWATER3",
+        "SWATER4"
+      ],
+      "start": "SWATER1"
+    },
+    {
+      "end": "LAVA4",
+      "kind": "flat",
+      "names": [
+        "LAVA1",
+        "LAVA2",
+        "LAVA3",
+        "LAVA4"
+      ],
+      "start": "LAVA1"
+    },
+    {
+      "end": "BLOOD3",
+      "kind": "flat",
+      "names": [
+        "BLOOD1",
+        "BLOOD2",
+        "BLOOD3"
+      ],
+      "start": "BLOOD1"
+    },
+    {
+      "end": "RROCK08",
+      "kind": "flat",
+      "names": [
+        "RROCK05",
+        "RROCK06",
+        "RROCK07",
+        "RROCK08"
+      ],
+      "start": "RROCK05"
+    },
+    {
+      "end": "SLIME04",
+      "kind": "flat",
+      "names": [
+        "SLIME01",
+        "SLIME02",
+        "SLIME03",
+        "SLIME04"
+      ],
+      "start": "SLIME01"
+    },
+    {
+      "end": "SLIME08",
+      "kind": "flat",
+      "names": [
+        "SLIME05",
+        "SLIME06",
+        "SLIME07",
+        "SLIME08"
+      ],
+      "start": "SLIME05"
+    },
+    {
+      "end": "SLIME12",
+      "kind": "flat",
+      "names": [
+        "SLIME09",
+        "SLIME10",
+        "SLIME11",
+        "SLIME12"
+      ],
+      "start": "SLIME09"
+    },
+    {
+      "end": "BLODGR4",
+      "kind": "texture",
+      "names": [
+        "BLODGR1",
+        "BLODGR2",
+        "BLODGR3",
+        "BLODGR4"
+      ],
+      "start": "BLODGR1"
+    },
+    {
+      "end": "SLADRIP3",
+      "kind": "texture",
+      "names": [
+        "SLADRIP1",
+        "SLADRIP2",
+        "SLADRIP3"
+      ],
+      "start": "SLADRIP1"
+    },
+    {
+      "end": "BLODRIP4",
+      "kind": "texture",
+      "names": [
+        "BLODRIP1",
+        "BLODRIP2",
+        "BLODRIP3",
+        "BLODRIP4"
+      ],
+      "start": "BLODRIP1"
+    },
+    {
+      "end": "FIREWALL",
+      "kind": "texture",
+      "names": [
+        "FIREWALA",
+        "FIREWALB",
+        "FIREWALL"
+      ],
+      "start": "FIREWALA"
+    },
+    {
+      "end": "GSTFONT3",
+      "kind": "texture",
+      "names": [
+        "GSTFONT1",
+        "GSTFONT2",
+        "GSTFONT3"
+      ],
+      "start": "GSTFONT1"
+    },
+    {
+      "end": "FIRELAVA",
+      "kind": "texture",
+      "names": [
+        "FIRELAV3",
+        "FIRELAVA"
+      ],
+      "start": "FIRELAV3"
+    },
+    {
+      "end": "FIREMAG3",
+      "kind": "texture",
+      "names": [
+        "FIREMAG1",
+        "FIREMAG2",
+        "FIREMAG3"
+      ],
+      "start": "FIREMAG1"
+    },
+    {
+      "end": "FIREBLU2",
+      "kind": "texture",
+      "names": [
+        "FIREBLU1",
+        "FIREBLU2"
+      ],
+      "start": "FIREBLU1"
+    },
+    {
+      "end": "ROCKRED3",
+      "kind": "texture",
+      "names": [
+        "ROCKRED1",
+        "ROCKRED2",
+        "ROCKRED3"
+      ],
+      "start": "ROCKRED1"
+    },
+    {
+      "end": "BFALL4",
+      "kind": "texture",
+      "names": [
+        "BFALL1",
+        "BFALL2",
+        "BFALL3",
+        "BFALL4"
+      ],
+      "start": "BFALL1"
+    },
+    {
+      "end": "SFALL4",
+      "kind": "texture",
+      "names": [
+        "SFALL1",
+        "SFALL2",
+        "SFALL3",
+        "SFALL4"
+      ],
+      "start": "SFALL1"
+    },
+    {
+      "end": "WFALL4",
+      "kind": "texture",
+      "names": [
+        "WFALL1",
+        "WFALL2",
+        "WFALL3",
+        "WFALL4"
+      ],
+      "start": "WFALL1"
+    },
+    {
+      "end": "DBRAIN4",
+      "kind": "texture",
+      "names": [
+        "DBRAIN1",
+        "DBRAIN2",
+        "DBRAIN3",
+        "DBRAIN4"
+      ],
+      "start": "DBRAIN1"
+    }
+  ],
+  "engine_contract": {
+    "audit_source_sha256": {
+      "apps/console_os/main/doom_gc_engine.c": "bff6b5f8362219cf1a349eb34b5a17e05c2de31c18aeeccbfcd766af511df1b0",
+      "third_party/doomgeneric/doomgeneric/doomfeatures.h": "01fd54d8060c650933f1d65c90fbd04355637b9ec66108e65cda0ef1bba4b929",
+      "third_party/doomgeneric/doomgeneric/p_setup.c": "e0528ed85103772951f5f89f2a23f32dcd6de77ddf615033cb1fd111c3876c73",
+      "third_party/doomgeneric/doomgeneric/p_spec.c": "7b79a0d9972f0866ab0f1a0cdcbf377ca28851d1d2139e8651037808eaca276e",
+      "third_party/doomgeneric/doomgeneric/p_switch.c": "e7621d563f384a2e228644612a59702c7cd0f5c7ed88fa8f69a09098c062c236",
+      "third_party/doomgeneric/doomgeneric/r_data.c": "77ea6c31e05a969d2f8ff7f7e1da623863c9eb9d3adcfc7322512355a89914fc"
+    },
+    "checkpoint": "numeric texture indices change; peers must use new bundle identity; old checkpoints incompatible",
+    "dehacked": "disabled: DEH_String is identity",
+    "map_selection": "Pure Hades MAP01..05 plus DWANGO5 MAP01..24; retain base MAP01..32 markers for eager W_GetNumForName",
+    "patch_lookup": "last lump; no ambiguous non-geometry duplicate names admitted",
+    "texture_lookup": "first definition; no duplicate definitions admitted for pinned inputs"
+  },
+  "id": "p4-arena-compact-v1",
+  "inputs": [
+    {
+      "lump_count": 3610,
+      "map_count": 32,
+      "path": "local-data/doom/freedoom2.wad",
+      "sha256": "a8772e088847032510d97ba2312406a6998f21cbab44d4ff10696faa9c0ecd4b",
+      "size": 28787748
+    },
+    {
+      "lump_count": 71,
+      "map_count": 5,
+      "path": "game-data/pure-hades/v0.6/PUREHADES.WAD",
+      "sha256": "ab027fbeebe20787214a3bc1239bba73271030dc284cd108c20ae8bc73752fc8",
+      "size": 2313392
+    },
+    {
+      "lump_count": 317,
+      "map_count": 24,
+      "path": "local-data/doom/arena-inbox/dwango5/DWANGO5.WAD",
+      "sha256": "2b7658f126321fc2ccf953dbbe8d585b4162350080b9715b46fc617d32cdb13a",
+      "size": 2109396
+    }
+  ],
+  "output": {
+    "local_path": "local-data/doom/arena-compact-v1/ARENA2.WAD",
+    "lump_count": 2581,
+    "sha256": "18dd25d6ed8b719c9d1417324d7ceaaa943af907ae1005e9a36101c0bbe5c1c4",
+    "size_bytes": 12253462
+  },
+  "protected_patch_literals": [
+    "BFALL1",
+    "BFALL4",
+    "FIREBLU1",
+    "FIREBLU2",
+    "ROCK",
+    "SFALL1",
+    "SFALL4",
+    "SKY1",
+    "SKY4",
+    "SW1SKULL",
+    "SW2SKULL",
+    "WFALL1",
+    "WFALL4"
+  ],
+  "retained_texture_names": [
+    "AASHITTY",
+    "ASHWALL2",
+    "ASHWALL3",
+    "ASHWALL4",
+    "ASHWALL6",
+    "BFALL1",
+    "BFALL2",
+    "BFALL3",
+    "BFALL4",
+    "BIGBRIK1",
+    "BIGBRIK2",
+    "BIGDOOR1",
+    "BIGDOOR2",
+    "BIGDOOR4",
+    "BIGDOOR5",
+    "BIGDOOR6",
+    "BIGDOOR7",
+    "BLAKWAL1",
+    "BLAKWAL2",
+    "BLODRIP1",
+    "BLODRIP2",
+    "BLODRIP3",
+    "BLODRIP4",
+    "BRICK1",
+    "BRICK10",
+    "BRICK2",
+    "BRICK4",
+    "BRICK5",
+    "BRICK6",
+    "BRICK7",
+    "BRICK8",
+    "BRICK9",
+    "BRNSMAL1",
+    "BRNSMALC",
+    "BRONZE1",
+    "BRONZE2",
+    "BRONZE3",
+    "BRONZE4",
+    "BROVINE2",
+    "BROWN1",
+    "BROWN144",
+    "BROWN96",
+    "BROWNGRN",
+    "BROWNHUG",
+    "BSTONE1",
+    "BSTONE2",
+    "BSTONE3",
+    "CEMENT6",
+    "CEMENT7",
+    "CEMENT9",
+    "COMPBLUE",
+    "COMPSPAN",
+    "COMPSTA1",
+    "COMPTALL",
+    "COMPWERD",
+    "CRACKLE4",
+    "CRATE1",
+    "CRATE2",
+    "CRATE3",
+    "CRATELIT",
+    "CRATINY",
+    "CRATWIDE",
+    "DBRAIN1",
+    "DBRAIN2",
+    "DBRAIN3",
+    "DBRAIN4",
+    "DOOR1",
+    "DOOR3",
+    "DOORBLU",
+    "DOORRED",
+    "DOORRED2",
+    "DOORSTOP",
+    "DOORTRAK",
+    "EXITDOOR",
+    "EXITSIGN",
+    "EXITSTON",
+    "FIREBLU1",
+    "FIREBLU2",
+    "FIRELAV3",
+    "FIRELAVA",
+    "FIREMAG1",
+    "FIREMAG2",
+    "FIREMAG3",
+    "FIREWALA",
+    "FIREWALB",
+    "FIREWALL",
+    "GRAY1",
+    "GRAY4",
+    "GRAY5",
+    "GSTFONT1",
+    "GSTFONT2",
+    "GSTFONT3",
+    "GSTGARG",
+    "GSTONE1",
+    "GSTONE2",
+    "GSTVINE1",
+    "GSTVINE2",
+    "ICKWALL2",
+    "ICKWALL7",
+    "LITE3",
+    "LITE5",
+    "LITEBLU1",
+    "LITEBLU4",
+    "MARBFAC2",
+    "MARBFAC3",
+    "MARBFACE",
+    "MARBGRAY",
+    "METAL",
+    "METAL1",
+    "METAL2",
+    "METAL3",
+    "METAL4",
+    "METAL5",
+    "METAL6",
+    "METAL7",
+    "MIDBARS1",
+    "MIDBARS3",
+    "MIDBRN1",
+    "MIDBRONZ",
+    "MIDGRATE",
+    "MIDSPACE",
+    "MODWALL1",
+    "MODWALL3",
+    "MODWALL4",
+    "PANBOOK",
+    "PANBORD1",
+    "PANBORD2",
+    "PANCASE1",
+    "PANCASE2",
+    "PANEL2",
+    "PANEL6",
+    "PIPE2",
+    "PIPE4",
+    "PIPES",
+    "PIPEWAL1",
+    "PIPEWAL2",
+    "PLAT1",
+    "ROCK1",
+    "ROCK3",
+    "ROCK5",
+    "ROCKRED1",
+    "ROCKRED2",
+    "ROCKRED3",
+    "SFALL1",
+    "SFALL2",
+    "SFALL3",
+    "SFALL4",
+    "SHAWN1",
+    "SHAWN2",
+    "SILVER1",
+    "SILVER2",
+    "SILVER3",
+    "SK_LEFT",
+    "SK_RIGHT",
+    "SKIN2",
+    "SKINMET2",
+    "SKINSCAB",
+    "SKSPINE2",
+    "SKY1",
+    "SKY2",
+    "SKY3",
+    "SLOPPY1",
+    "SP_ROCK1",
+    "SPACEW3",
+    "SPACEW4",
+    "SPCDOOR1",
+    "SPCDOOR2",
+    "SPCDOOR3",
+    "SPCDOOR4",
+    "STARG1",
+    "STARTAN2",
+    "STARTAN3",
+    "STEP1",
+    "STEP2",
+    "STEP3",
+    "STEP4",
+    "STEP5",
+    "STEP6",
+    "STEPTOP",
+    "STONE",
+    "STONE4",
+    "STONE5",
+    "STONE6",
+    "STONE7",
+    "STUCCO",
+    "STUCCO3",
+    "SUPPORT2",
+    "SUPPORT3",
+    "SW1BLUE",
+    "SW1BRCOM",
+    "SW1BRIK",
+    "SW1BRN1",
+    "SW1BRN2",
+    "SW1BRNGN",
+    "SW1BROWN",
+    "SW1CMT",
+    "SW1COMM",
+    "SW1COMP",
+    "SW1DIRT",
+    "SW1EXIT",
+    "SW1GARG",
+    "SW1GRAY",
+    "SW1GRAY1",
+    "SW1GSTON",
+    "SW1HOT",
+    "SW1LION",
+    "SW1MARB",
+    "SW1MET2",
+    "SW1METAL",
+    "SW1MOD1",
+    "SW1PANEL",
+    "SW1PIPE",
+    "SW1ROCK",
+    "SW1SATYR",
+    "SW1SKIN",
+    "SW1SKULL",
+    "SW1SLAD",
+    "SW1STARG",
+    "SW1STON1",
+    "SW1STON2",
+    "SW1STON6",
+    "SW1STONE",
+    "SW1STRTN",
+    "SW1TEK",
+    "SW1VINE",
+    "SW1WDMET",
+    "SW1WOOD",
+    "SW1ZIM",
+    "SW2BLUE",
+    "SW2BRCOM",
+    "SW2BRIK",
+    "SW2BRN1",
+    "SW2BRN2",
+    "SW2BRNGN",
+    "SW2BROWN",
+    "SW2CMT",
+    "SW2COMM",
+    "SW2COMP",
+    "SW2DIRT",
+    "SW2EXIT",
+    "SW2GARG",
+    "SW2GRAY",
+    "SW2GRAY1",
+    "SW2GSTON",
+    "SW2HOT",
+    "SW2LION",
+    "SW2MARB",
+    "SW2MET2",
+    "SW2METAL",
+    "SW2MOD1",
+    "SW2PANEL",
+    "SW2PIPE",
+    "SW2ROCK",
+    "SW2SATYR",
+    "SW2SKIN",
+    "SW2SKULL",
+    "SW2SLAD",
+    "SW2STARG",
+    "SW2STON1",
+    "SW2STON2",
+    "SW2STON6",
+    "SW2STONE",
+    "SW2STRTN",
+    "SW2TEK",
+    "SW2VINE",
+    "SW2WDMET",
+    "SW2WOOD",
+    "SW2ZIM",
+    "TANROCK3",
+    "TANROCK4",
+    "TANROCK5",
+    "TEKBRON2",
+    "TEKGREN1",
+    "TEKGREN2",
+    "TEKGREN3",
+    "TEKGREN4",
+    "TEKGREN5",
+    "TEKWALL4",
+    "TEKWALL6",
+    "WOOD1",
+    "WOOD12",
+    "WOOD3",
+    "WOOD5",
+    "WOOD6",
+    "WOOD7",
+    "WOOD8",
+    "WOOD9",
+    "WOODMET1",
+    "WOODMET2",
+    "ZDOORF1",
+    "ZIMMER3",
+    "ZIMMER4",
+    "ZZWOLF9",
+    "BLODGR1",
+    "BLODGR2",
+    "BLODGR3",
+    "BLODGR4",
+    "SLADRIP1",
+    "SLADRIP2",
+    "SLADRIP3",
+    "WFALL1",
+    "WFALL2",
+    "WFALL3",
+    "WFALL4",
+    "REDWALL1"
+  ],
+  "schema": 1,
+  "scope": "Arena-only derivative; all29 selected maps; no campaign geometry",
+  "switch_pairs": [
+    [
+      "SW1BRCOM",
+      "SW2BRCOM"
+    ],
+    [
+      "SW1BRN1",
+      "SW2BRN1"
+    ],
+    [
+      "SW1BRN2",
+      "SW2BRN2"
+    ],
+    [
+      "SW1BRNGN",
+      "SW2BRNGN"
+    ],
+    [
+      "SW1BROWN",
+      "SW2BROWN"
+    ],
+    [
+      "SW1COMM",
+      "SW2COMM"
+    ],
+    [
+      "SW1COMP",
+      "SW2COMP"
+    ],
+    [
+      "SW1DIRT",
+      "SW2DIRT"
+    ],
+    [
+      "SW1EXIT",
+      "SW2EXIT"
+    ],
+    [
+      "SW1GRAY",
+      "SW2GRAY"
+    ],
+    [
+      "SW1GRAY1",
+      "SW2GRAY1"
+    ],
+    [
+      "SW1METAL",
+      "SW2METAL"
+    ],
+    [
+      "SW1PIPE",
+      "SW2PIPE"
+    ],
+    [
+      "SW1SLAD",
+      "SW2SLAD"
+    ],
+    [
+      "SW1STARG",
+      "SW2STARG"
+    ],
+    [
+      "SW1STON1",
+      "SW2STON1"
+    ],
+    [
+      "SW1STON2",
+      "SW2STON2"
+    ],
+    [
+      "SW1STONE",
+      "SW2STONE"
+    ],
+    [
+      "SW1STRTN",
+      "SW2STRTN"
+    ],
+    [
+      "SW1BLUE",
+      "SW2BLUE"
+    ],
+    [
+      "SW1CMT",
+      "SW2CMT"
+    ],
+    [
+      "SW1GARG",
+      "SW2GARG"
+    ],
+    [
+      "SW1GSTON",
+      "SW2GSTON"
+    ],
+    [
+      "SW1HOT",
+      "SW2HOT"
+    ],
+    [
+      "SW1LION",
+      "SW2LION"
+    ],
+    [
+      "SW1SATYR",
+      "SW2SATYR"
+    ],
+    [
+      "SW1SKIN",
+      "SW2SKIN"
+    ],
+    [
+      "SW1VINE",
+      "SW2VINE"
+    ],
+    [
+      "SW1WOOD",
+      "SW2WOOD"
+    ],
+    [
+      "SW1PANEL",
+      "SW2PANEL"
+    ],
+    [
+      "SW1ROCK",
+      "SW2ROCK"
+    ],
+    [
+      "SW1MET2",
+      "SW2MET2"
+    ],
+    [
+      "SW1WDMET",
+      "SW2WDMET"
+    ],
+    [
+      "SW1BRIK",
+      "SW2BRIK"
+    ],
+    [
+      "SW1MOD1",
+      "SW2MOD1"
+    ],
+    [
+      "SW1ZIM",
+      "SW2ZIM"
+    ],
+    [
+      "SW1STON6",
+      "SW2STON6"
+    ],
+    [
+      "SW1TEK",
+      "SW2TEK"
+    ],
+    [
+      "SW1MARB",
+      "SW2MARB"
+    ],
+    [
+      "SW1SKULL",
+      "SW2SKULL"
+    ]
+  ]
+}

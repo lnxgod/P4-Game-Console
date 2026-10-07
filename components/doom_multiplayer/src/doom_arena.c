@@ -3,24 +3,34 @@
 #include <limits.h>
 #include <string.h>
 
-bool p4_doom_arena_begin(p4_doom_arena_t *arena, uint8_t players,
-                        const uint8_t *maps, uint8_t count)
+static bool begin_mask(p4_doom_arena_t *arena, uint8_t players, uint8_t mask,
+                       const uint8_t *maps, uint8_t count)
 {
     if (!arena || !maps || players < 2 || players > P4_MP_MAX_PLAYERS ||
+        !(mask & 1U) || (mask & ~((1U << players) - 1U)) ||
         count == 0 || count > P4_DOOM_ARENA_MAX_MAPS) return false;
     for (uint8_t i = 0; i < count; ++i) {
         if (maps[i] == 0 || maps[i] > 32) return false;
         for (uint8_t j = 0; j < i; ++j) if (maps[j] == maps[i]) return false;
     }
     memset(arena, 0, sizeof(*arena));
-    arena->connected_mask = (uint8_t)((1U << players) - 1U);
+    arena->capacity = players;
+    arena->connected_mask = mask;
     arena->map_count = count;
     memcpy(arena->maps, maps, count);
     for (uint8_t i = 0; i < players; ++i) {
+        if (!(mask & (1U << i))) continue;
         arena->players[i].active = true;
         arena->players[i].visit = 1;
     }
     return true;
+}
+
+bool p4_doom_arena_begin(p4_doom_arena_t *arena, uint8_t players,
+                        const uint8_t *maps, uint8_t count)
+{
+    if (players < 2 || players > P4_MP_MAX_PLAYERS) return false;
+    return begin_mask(arena, players, (uint8_t)((1U << players) - 1U), maps, count);
 }
 
 p4_doom_arena_transition_t p4_doom_arena_tick(p4_doom_arena_t *arena,
@@ -67,6 +77,34 @@ bool p4_doom_arena_kill(p4_doom_arena_t *arena, uint8_t killer, uint8_t victim)
         !arena->players[victim].active) return false;
     if (arena->players[killer].kills != UINT32_MAX) ++arena->players[killer].kills;
     return true;
+}
+
+bool p4_doom_arena_activate(p4_doom_arena_t *arena, uint8_t slot)
+{
+    if (!arena || !arena->map_count || slot == 0 || slot >= arena->capacity ||
+        arena->capacity > P4_MP_MAX_PLAYERS)
+        return false;
+    p4_doom_arena_player_t *p = &arena->players[slot];
+    const uint8_t bit = (uint8_t)(1U << slot);
+    if (p->visit == UINT32_MAX || (arena->connected_mask & bit))
+        return false;
+    ++p->visit;
+    p->kills = 0;
+    p->idle_tics = 0;
+    p->active = true;
+    p->use_held = false;
+    arena->connected_mask |= bit;
+    arena->vote_yes &= (uint8_t)~bit;
+    arena->vote_no &= (uint8_t)~bit;
+    arena->vote_opcode[slot] = arena->vote_wait[slot] = 0;
+    return true;
+}
+
+bool p4_doom_arena_rejoin(p4_doom_arena_t *arena, uint8_t slot)
+{
+    if (!arena || slot >= P4_MP_MAX_PLAYERS || !arena->players[slot].visit)
+        return false;
+    return p4_doom_arena_activate(arena, slot);
 }
 
 uint8_t p4_doom_arena_next_map(p4_doom_arena_t *arena)
@@ -121,6 +159,15 @@ bool p4_doom_arena_begin_selected(p4_doom_arena_t *a,uint8_t players,uint8_t sel
 {
     if (!p4_doom_arena_map_number(selection) || !p4_doom_arena_begin_default(a,players)) return false;
     return p4_doom_arena_select(a,selection);
+}
+
+bool p4_doom_arena_begin_selected_mask(p4_doom_arena_t *a, uint8_t capacity,
+                                     uint8_t mask, uint8_t selection)
+{
+    static const uint8_t maps[] = {1, 2, 3, 4, 5};
+    if (!p4_doom_arena_map_number(selection) ||
+        !begin_mask(a, capacity, mask, maps, sizeof(maps))) return false;
+    return p4_doom_arena_select(a, selection);
 }
 
 uint8_t p4_doom_arena_active_mask(const p4_doom_arena_t *a)

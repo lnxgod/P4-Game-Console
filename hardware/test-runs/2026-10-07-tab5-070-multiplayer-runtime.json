@@ -1,0 +1,2979 @@
+{
+  "schema": "p4-console-closed-multiplayer-runtime-v1",
+  "version": "0.70",
+  "board": "m5stack-tab5",
+  "publication": "staged proposal; root publication pending",
+  "record_scope": "Closed saved-run evidence only. Three successful Doom admissions and captured linked native play coexist with failed cadence and pending heard audio.",
+  "identity": {
+    "schema_version": 1,
+    "status": "PASS",
+    "version": "0.70",
+    "board": "m5stack-tab5",
+    "application": {
+      "file": "hardware/backups/tab5-070-app-predecessor.bin",
+      "bytes": 4453520,
+      "sha256": "2ce16a705b1d4ab1071bb6074f340f9cb710f22db9005238bf3c1b4a07b6b4a1",
+      "embedded_version": "0.70"
+    },
+    "frozen_source": {
+      "commit": "51aefe10080498c3e95e9b78a8b0ecd553e00b5f",
+      "branch": "codex/tab5-multiplayer-debug",
+      "captured_at": "2026-10-07T09:54:22.690552+00:00",
+      "prebuild_inputs": 232,
+      "authorized_inputs": 234,
+      "snapshot_sha256": "e88a7661fb20172897a2cf13ce7eabdc4b65dcdf8ece2e5a75541565d018f309",
+      "prebuild_source_map_sha256": "cac5133896e122f42e7a9953c109b790be158b23dd3094cd33aaa18496f1d166",
+      "authorized_source_map_sha256": "b4b870da6f403e98331056e07d8fc3f60506c01e8aef67aebc4696929f8f8844",
+      "scope_sha256": "482c6cc8f7be73ca70b801b1295c6214fe8640671d52ba5ef4fb203342d844c2",
+      "identity_kind": "pinned historical source-freeze attestation"
+    },
+    "units": {
+      "A": {
+        "identity_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+        "receipt_sha256": "b0c8bb488b56425dadcaeb9a764e7430ce0a895e1975de981076ff19c8746cc3",
+        "verification_method": "device-checksum",
+        "runtime_acceptance": "pending"
+      },
+      "B": {
+        "identity_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+        "receipt_sha256": "b088ea9a77818d49d5c954fb9ccd22dda6f8610eee32d672837c66f31e4cc909",
+        "verification_method": "device-checksum",
+        "runtime_acceptance": "pending"
+      }
+    },
+    "binding_artifacts": [
+      {
+        "role": "install",
+        "file": "hardware/test-runs/2026-10-07-tab5-070-multiplayer-debug-install.json",
+        "bytes": 17748,
+        "sha256": "a23683c5f0c99c7c357ff690ec71033a5d75c863d527dcba821a30692f88b6b9"
+      },
+      {
+        "role": "prebuild",
+        "file": "build-host/tab5-multiplayer-hardware/070-prebuild-source.json",
+        "bytes": 31177,
+        "sha256": "e88a7661fb20172897a2cf13ce7eabdc4b65dcdf8ece2e5a75541565d018f309"
+      },
+      {
+        "role": "preparation",
+        "file": "build-host/tab5-multiplayer-hardware/preparation-070-binding-v1/receipt.json",
+        "bytes": 8683,
+        "sha256": "8ba044458e493ed610be416935a3b50fb0d704a5d860e3a0796ab5d5e1187f87"
+      },
+      {
+        "role": "postbuild",
+        "file": "build-host/tab5-multiplayer-hardware/070-postbuild-verification.json",
+        "bytes": 365028,
+        "sha256": "1fb0cbf464dd45f7718e19643fb9786291a377e8f2e982295d5528b62bf5ecbe"
+      },
+      {
+        "role": "authorization",
+        "file": "hardware/evidence/tab5-0.70-multiplayer-debug-authorization.json",
+        "bytes": 47073,
+        "sha256": "b12f98158655e349df295a3059605963670e1af5d042dda3387c484eb85599d5"
+      },
+      {
+        "role": "app",
+        "file": "hardware/backups/tab5-070-app-predecessor.bin",
+        "bytes": 4453520,
+        "sha256": "2ce16a705b1d4ab1071bb6074f340f9cb710f22db9005238bf3c1b4a07b6b4a1"
+      },
+      {
+        "role": "scope",
+        "file": "build-host/tab5-multiplayer-hardware/070-scope.txt",
+        "bytes": 1254,
+        "sha256": "482c6cc8f7be73ca70b801b1295c6214fe8640671d52ba5ef4fb203342d844c2"
+      },
+      {
+        "role": "unit_A_receipt",
+        "file": "hardware/backups/tab5-a-install-mt2yx295/receipt.json",
+        "bytes": 1628,
+        "sha256": "b0c8bb488b56425dadcaeb9a764e7430ce0a895e1975de981076ff19c8746cc3"
+      },
+      {
+        "role": "unit_B_receipt",
+        "file": "hardware/backups/tab5-b-install-vkwg5l0d/receipt.json",
+        "bytes": 1627,
+        "sha256": "b088ea9a77818d49d5c954fb9ccd22dda6f8610eee32d672837c66f31e4cc909"
+      }
+    ],
+    "live_source_compared": false,
+    "live_build_compared": false,
+    "ports_opened": false,
+    "runtime_acceptance": "pending",
+    "limits": [
+      "Saved receipt and image identity validation only; no runtime/gameplay acceptance.",
+      "Frozen source hashes are historical attestations; source bytes were not reconstructed or rebuilt.",
+      "The historical source freeze cannot detect transient changes reverted during compilation.",
+      "Install used device checksum verification, not full application readback."
+    ]
+  },
+  "source": {
+    "closed_inputs": [
+      {
+        "file": "build-host/runtime-acceptance-070/closed-inputs/commands.jsonl",
+        "bytes": 429766,
+        "sha256": "f176932249f407dc7d75453a6b34707bc2aabb070aaf3456233c8ac0e490b7c7"
+      },
+      {
+        "file": "build-host/runtime-acceptance-070/closed-inputs/a.rx",
+        "bytes": 3171415,
+        "sha256": "b86678af09941d354a1377a0680f3619d96925be201dc344897e285b1d895264"
+      },
+      {
+        "file": "build-host/runtime-acceptance-070/closed-inputs/b.rx",
+        "bytes": 3697447,
+        "sha256": "17503211567a810cec8efec003c6e72ae80e92b1574aa16631abfbd4fc90db3f"
+      }
+    ],
+    "closed_input_manifest": {
+      "file": "build-host/runtime-acceptance-070/closed-inputs/manifest.json",
+      "bytes": 981,
+      "sha256": "37aa8b9189f377bca259a8efb1957f476c7edeb9b61223b82bcf97fb9fc61e2f"
+    },
+    "full_analysis": {
+      "file": "build-host/runtime-acceptance-070/analysis-closed/analysis.json",
+      "bytes": 11614025,
+      "sha256": "ab0aa1fead0e8e64359bc6319d09885e9a940845c7ebe39a8f4b0bc1e1d458c5"
+    },
+    "lifecycle_review": {
+      "file": "build-host/runtime-acceptance-070/analysis-closed/lifecycle-review.json",
+      "bytes": 36885,
+      "sha256": "9461b73f0a655afc84241ecf7c101b29bfbaded0875c2e72411a5ff64f8af4a9"
+    },
+    "native_air_analysis": {
+      "file": "build-host/runtime-acceptance-070/analysis-closed/native-air.json",
+      "bytes": 143857,
+      "sha256": "230059359d35ac91fc63045be2660034ddcb6819fa53e423f42b15a46d697311"
+    },
+    "native_air_analysis_script": {
+      "file": "build-host/runtime-acceptance-070/analysis-closed/native_air.py",
+      "bytes": 5737,
+      "sha256": "cd0de5a0370d18c3d3406b7913e4fb35dd03c649b8fc780f6121a99627bed0c0"
+    },
+    "image_bindings": {
+      "file": "build-host/runtime-acceptance-070/analysis-closed/image-bindings.json",
+      "bytes": 22869,
+      "sha256": "422a1d275ae64c99dfdef6e35aef5936c05982499cf456ec7ddca517652352f1"
+    },
+    "preserved_fresh_summary": {
+      "file": "build-host/runtime-acceptance-070/analysis-fresh-window/summary.json",
+      "bytes": 75056,
+      "sha256": "7ef166e0419ec004b955cd56a300e514fad1822c49fc287bcf01f5831b3413f9"
+    },
+    "preserved_fresh_receipt": {
+      "file": "build-host/runtime-acceptance-070/analysis-fresh-window/receipt.json",
+      "bytes": 1716,
+      "sha256": "35fe635f3161297a8a8c89dec5b073c027613593f11530596f680d3a768505ca"
+    },
+    "prior_fresh_prefixes": [
+      {
+        "file": "build-host/runtime-acceptance-070/prefix-fresh-window/commands.jsonl",
+        "bytes": 221415,
+        "sha256": "e4fb0884616dec08cc82d662e4c92d627b3ab8ce1f13a3002716bd8aca08418a"
+      },
+      {
+        "file": "build-host/runtime-acceptance-070/prefix-fresh-window/a.rx",
+        "bytes": 1093326,
+        "sha256": "f2dd516c37905a2b1960ed06d1f425a7918cb97e0f05a51989db73f7385bd0b8"
+      },
+      {
+        "file": "build-host/runtime-acceptance-070/prefix-fresh-window/b.rx",
+        "bytes": 1402277,
+        "sha256": "edf78007eb00deece5ad6f5b752d70300240e0dcc5d5afd4e446b7c95a74b1e9"
+      }
+    ],
+    "prior_prefixes_are_exact_prefixes_of_closed_streams": true,
+    "helper_sources": [
+      {
+        "file": "build-host/runtime-acceptance-070/analyzer/summarize-070-runtime.py",
+        "bytes": 44354,
+        "sha256": "45911c8e78e65a3f4c309bc969841f105422f7e547c715817d42cf0b0bb42691"
+      },
+      {
+        "file": "build-host/tab5-multiplayer-hardware/summarize-064-runtime.py",
+        "bytes": 42156,
+        "sha256": "bf121aa00cee2777f7f8ea89ee8e426f9bb10edeeeebbed4df4ca3109febe6a3"
+      },
+      {
+        "file": "build-host/tab5-multiplayer-hardware/summarize-063-runtime.py",
+        "bytes": 41521,
+        "sha256": "01ca3e264d8a538007046103bc400fa174c64995337c030ff0d4a6d09ff11717"
+      },
+      {
+        "file": "build-host/tab5-multiplayer-hardware/paired-log-position-063.py",
+        "bytes": 8565,
+        "sha256": "3d73d5daecbe28e6d57d508ab921c5cc06101ec028bb1a7b4d6a511f0f83e088"
+      },
+      {
+        "file": "build-host/tab5-multiplayer-hardware/worker-067-analysis.py",
+        "bytes": 12549,
+        "sha256": "be3da8660dcfc661156239ce05655323c86d54ac1d525df12907087bd282880e"
+      },
+      {
+        "file": "build-host/tab5-multiplayer-hardware/active-play-067.py",
+        "bytes": 14102,
+        "sha256": "9321a3ed63a77238f0b33e0c8a7c05ca8339276df2874624ab8c7f916b11ab9d"
+      },
+      {
+        "file": "build-host/tab5-multiplayer-hardware/promote-067/engine-analysis/engineperf_offline.py",
+        "bytes": 22682,
+        "sha256": "3132c820d738af3a13c007236cc16967102d940ce7b347c90409548bec84dcaa"
+      },
+      {
+        "file": "build-host/runtime-acceptance-070/binding/bind_070.py",
+        "bytes": 16601,
+        "sha256": "20c89be0c768b2dbfb2d47685f49bd0cf9d65044d2d20510e05bfc9077a0faaf"
+      },
+      {
+        "file": "build-host/runtime-acceptance-068/tests/journal_audit.py",
+        "bytes": 13049,
+        "sha256": "c5af0ba47c8c748f764da232332b856ac04cae7cf199c4484ba8887df7e36af2"
+      },
+      {
+        "file": "scripts/p4-debug-control.py",
+        "bytes": 29660,
+        "sha256": "a0f0155a5c7e5fca64d0cec7e1682f66b13446d84ef3233ea41d3adcd6ce9ca9"
+      }
+    ],
+    "paired_cadence_reader": {
+      "file": "build-host/runtime-acceptance-070/paired-cadence-amendment/read_paired_070.py",
+      "bytes": 1689,
+      "sha256": "cf9a1ea8ee868ad501ea1c9cf3226de1d4c6e54254ad0171b0999f3c5e9f5052"
+    },
+    "paired_cadence_receipt": {
+      "file": "build-host/runtime-acceptance-070/paired-cadence-amendment/analyzer-receipt.json",
+      "bytes": 5867,
+      "sha256": "dfdc78b7ccccaf99e0bdf8211c45580a99e423dc0cb4fd47d89e9f20a4f16d60"
+    },
+    "initial_failed_setup_attempts": [
+      {
+        "name": "remote-070-initial-python-failed",
+        "files": [
+          {
+            "file": "build-host/tab5-multiplayer-hardware/remote-070-initial-python-failed/a.rx",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "file": "build-host/tab5-multiplayer-hardware/remote-070-initial-python-failed/commands.jsonl",
+            "bytes": 70,
+            "sha256": "910885bbfe335f7e5f63933dd0faaec9a7abcc68d84540d61b51adf8afef450b"
+          }
+        ],
+        "scope": "Preserved initial failed host setup attempt; empty a.rx and ports-closed-only journal do not establish a device/runtime failure."
+      },
+      {
+        "name": "remote-070-host-python-failed",
+        "files": [
+          {
+            "file": "build-host/tab5-multiplayer-hardware/remote-070-host-python-failed/a.rx",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "file": "build-host/tab5-multiplayer-hardware/remote-070-host-python-failed/commands.jsonl",
+            "bytes": 70,
+            "sha256": "f4c175f4e7285c3c3d8873170992a44c68fb13537d46805f9f1024207010d112"
+          }
+        ],
+        "scope": "Preserved initial failed host setup attempt; empty a.rx and ports-closed-only journal do not establish a device/runtime failure."
+      }
+    ]
+  },
+  "closure": {
+    "capture_closed": true,
+    "ports_closed_at": "2026-10-07T10:45:53.345872+00:00",
+    "terminal_event": {
+      "time": "2026-10-07T10:45:53.345872+00:00",
+      "event": "ports-closed"
+    },
+    "final_status": {
+      "time": "2026-10-07T10:45:50.218899+00:00",
+      "started_at": "2026-10-07T10:45:50.151546+00:00",
+      "duration_ms": 67.328,
+      "unit_duration_ms": {
+        "A": 44.51,
+        "B": 22.798
+      },
+      "request": {
+        "command": "status",
+        "unit": "both"
+      },
+      "response": {
+        "A": {
+          "command": "status",
+          "command_id": 1,
+          "result": "ok",
+          "result_id": 0,
+          "session": 0,
+          "sequence": 1528,
+          "active": false,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 0,
+          "input_remaining_ms": 0,
+          "text": "mode=shell page=0 app=0 view=2 row=9 game=6 link=2 rooms=0 ready=0 tr=1 ts=0"
+        },
+        "B": {
+          "command": "status",
+          "command_id": 1,
+          "result": "ok",
+          "result_id": 0,
+          "session": 0,
+          "sequence": 1547,
+          "active": false,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 0,
+          "input_remaining_ms": 0,
+          "text": "mode=shell page=0 app=0 view=1 row=11 game=6 link=2 rooms=0 ready=0 tr=1 ts=0"
+        }
+      }
+    },
+    "journal_rows": 525,
+    "parse_error_rows": [],
+    "global_time_poison": false,
+    "scope": "Exact terminal event and neutral both-Home STATUS establish closure. Generic open-prefix labels in the frozen analyzer remain unchanged historical labels."
+  },
+  "doom": {
+    "host": "B",
+    "guest": "A",
+    "session": "d962beaa",
+    "attempts": [
+      {
+        "attempt_id": "070-bhost-fresh-a-1",
+        "kind": "fresh-first-late-join",
+        "declaration": {
+          "journal_row_1based": 45,
+          "utc": "2026-10-07T10:11:52.983916+00:00"
+        },
+        "guest_boot": 0,
+        "guest_visit": 1,
+        "session": "d962beaa",
+        "slot": 1,
+        "guest_utc_bracket": {
+          "status": "bounded",
+          "utc_lower": "2026-10-07T10:12:00.423853+00:00",
+          "utc_upper": "2026-10-07T10:13:42.054808+00:00",
+          "prior_journal_index": 46,
+          "following_journal_index": 48,
+          "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+        },
+        "guest_events": {
+          "admission": {
+            "raw_start": 265847,
+            "raw_end": 265939,
+            "receipt": "I (280952) p4_console_os: GAME_CHANGERS_AI ADMISSION_ACCEPTED side=guest kind=fresh slot=1",
+            "uptime_ms": 280952
+          },
+          "first_loading_marker": {
+            "raw_start": 266057,
+            "raw_end": 266202,
+            "receipt": "I (281119) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=loading dma_free=137815 dma_largest=69632 internal_free=177315 internal_largest=69632",
+            "uptime_ms": 281119
+          },
+          "storage_snapshot_ready": {
+            "raw_start": 271508,
+            "raw_end": 271701,
+            "receipt": "I (320896) game_storage: P4_GAME_STORAGE LOCKED_SNAPSHOT_READY title=game-changers-ai wad_bytes=28787748 deh_bytes=0 source=single-pass-exact-sha256 target=verified-sd-blocks elapsed_ms=39772",
+            "uptime_ms": 320896
+          },
+          "replay": {
+            "raw_start": 278344,
+            "raw_end": 278403,
+            "receipt": "I (357540) doom_gc: GAME_CHANGERS_AI REJOIN_REPLAY slot=1",
+            "uptime_ms": 357540
+          },
+          "checkpoint_restored": {
+            "raw_start": 279189,
+            "raw_end": 279269,
+            "receipt": "I (366496) doom_gc: GAME_CHANGERS_AI CHECKPOINT_RESTORED tic=7750 bytes=451008",
+            "uptime_ms": 366496
+          },
+          "rejoin_ready": {
+            "raw_start": 279386,
+            "raw_end": 279453,
+            "receipt": "I (368757) doom_gc: GAME_CHANGERS_AI REJOIN_READY slot=1 tic=8057",
+            "uptime_ms": 368757
+          }
+        },
+        "guest_elapsed_ms": {
+          "admission_to_first_loading": 167,
+          "first_loading_to_replay": 76421,
+          "admission_to_replay": 76588,
+          "replay_to_restored": 8956,
+          "restored_to_ready": 2261,
+          "replay_to_ready": 11217,
+          "admission_to_ready": 87805
+        },
+        "host_events": {
+          "admission": {
+            "raw_start": 515918,
+            "raw_end": 516017,
+            "receipt": "I (280939) doom_gc: GAME_CHANGERS_AI ADMISSION_ACCEPTED side=host kind=fresh slot=1 frontier=4985",
+            "uptime_ms": 280939
+          },
+          "checkpoint_capture": {
+            "raw_start": 584951,
+            "raw_end": 585038,
+            "receipt": "I (360027) doom_gc: GAME_CHANGERS_AI CHECKPOINT_CAPTURE slots=2 boundary_max_us=75351",
+            "uptime_ms": 360027
+          },
+          "rejoin_armed": {
+            "raw_start": 589512,
+            "raw_end": 589579,
+            "receipt": "I (368508) doom_gc: GAME_CHANGERS_AI REJOIN_ARMED slot=1 tic=8057",
+            "uptime_ms": 368508
+          }
+        },
+        "host_utc_bracket": {
+          "status": "bounded",
+          "utc_lower": "2026-10-07T10:12:00.268945+00:00",
+          "utc_upper": "2026-10-07T10:13:42.054808+00:00",
+          "prior_journal_index": 45,
+          "following_journal_index": 48,
+          "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+        },
+        "host_armed_guest_ready_tic": 8057
+      },
+      {
+        "attempt_id": "070-bhost-return-a-1",
+        "kind": "returning-owned-seat",
+        "declaration": {
+          "journal_row_1based": 295,
+          "utc": "2026-10-07T10:28:11.857501+00:00"
+        },
+        "guest_boot": 1,
+        "guest_visit": 2,
+        "session": "d962beaa",
+        "slot": 1,
+        "guest_utc_bracket": {
+          "status": "bounded",
+          "utc_lower": "2026-10-07T10:28:15.736498+00:00",
+          "utc_upper": "2026-10-07T10:30:07.619798+00:00",
+          "prior_journal_index": 296,
+          "following_journal_index": 298,
+          "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+        },
+        "guest_events": {
+          "admission": {
+            "raw_start": 1292898,
+            "raw_end": 1292990,
+            "receipt": "I (83767) p4_console_os: GAME_CHANGERS_AI ADMISSION_ACCEPTED side=guest kind=return slot=1",
+            "uptime_ms": 83767
+          },
+          "first_loading_marker": {
+            "raw_start": 1293107,
+            "raw_end": 1293251,
+            "receipt": "I (83938) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=loading dma_free=137815 dma_largest=69632 internal_free=177315 internal_largest=69632",
+            "uptime_ms": 83938
+          },
+          "storage_snapshot_ready": {
+            "raw_start": 1298556,
+            "raw_end": 1298749,
+            "receipt": "I (122621) game_storage: P4_GAME_STORAGE LOCKED_SNAPSHOT_READY title=game-changers-ai wad_bytes=28787748 deh_bytes=0 source=single-pass-exact-sha256 target=verified-sd-blocks elapsed_ms=38679",
+            "uptime_ms": 122621
+          },
+          "replay": {
+            "raw_start": 1305196,
+            "raw_end": 1305255,
+            "receipt": "I (157083) doom_gc: GAME_CHANGERS_AI REJOIN_REPLAY slot=1",
+            "uptime_ms": 157083
+          },
+          "checkpoint_restored": {
+            "raw_start": 1306040,
+            "raw_end": 1306121,
+            "receipt": "I (165548) doom_gc: GAME_CHANGERS_AI CHECKPOINT_RESTORED tic=40466 bytes=451008",
+            "uptime_ms": 165548
+          },
+          "rejoin_ready": {
+            "raw_start": 1306238,
+            "raw_end": 1306306,
+            "receipt": "I (167894) doom_gc: GAME_CHANGERS_AI REJOIN_READY slot=1 tic=40758",
+            "uptime_ms": 167894
+          }
+        },
+        "guest_elapsed_ms": {
+          "admission_to_first_loading": 171,
+          "first_loading_to_replay": 73145,
+          "admission_to_replay": 73316,
+          "replay_to_restored": 8465,
+          "restored_to_ready": 2346,
+          "replay_to_ready": 10811,
+          "admission_to_ready": 84127
+        },
+        "host_events": {
+          "admission": {
+            "raw_start": 1646342,
+            "raw_end": 1646444,
+            "receipt": "I (1256268) doom_gc: GAME_CHANGERS_AI ADMISSION_ACCEPTED side=host kind=return slot=1 frontier=37814",
+            "uptime_ms": 1256268
+          },
+          "checkpoint_capture": {
+            "raw_start": 1703918,
+            "raw_end": 1704006,
+            "receipt": "I (1332112) doom_gc: GAME_CHANGERS_AI CHECKPOINT_CAPTURE slots=2 boundary_max_us=76508",
+            "uptime_ms": 1332112
+          },
+          "rejoin_armed": {
+            "raw_start": 1712390,
+            "raw_end": 1712459,
+            "receipt": "I (1340157) doom_gc: GAME_CHANGERS_AI REJOIN_ARMED slot=1 tic=40758",
+            "uptime_ms": 1340157
+          }
+        },
+        "host_utc_bracket": {
+          "status": "bounded",
+          "utc_lower": "2026-10-07T10:28:15.661372+00:00",
+          "utc_upper": "2026-10-07T10:30:07.619798+00:00",
+          "prior_journal_index": 295,
+          "following_journal_index": 298,
+          "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+        },
+        "host_armed_guest_ready_tic": 40758
+      },
+      {
+        "attempt_id": "070-bhost-return-a-2",
+        "kind": "returning-owned-seat",
+        "declaration": {
+          "journal_row_1based": 338,
+          "utc": "2026-10-07T10:31:38.297888+00:00"
+        },
+        "guest_boot": 2,
+        "guest_visit": 3,
+        "session": "d962beaa",
+        "slot": 1,
+        "guest_utc_bracket": {
+          "status": "bounded",
+          "utc_lower": "2026-10-07T10:31:44.173044+00:00",
+          "utc_upper": "2026-10-07T10:33:26.044011+00:00",
+          "prior_journal_index": 339,
+          "following_journal_index": 341,
+          "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+        },
+        "guest_events": {
+          "admission": {
+            "raw_start": 1493947,
+            "raw_end": 1494039,
+            "receipt": "I (61285) p4_console_os: GAME_CHANGERS_AI ADMISSION_ACCEPTED side=guest kind=return slot=1",
+            "uptime_ms": 61285
+          },
+          "first_loading_marker": {
+            "raw_start": 1494156,
+            "raw_end": 1494300,
+            "receipt": "I (61454) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=loading dma_free=137815 dma_largest=69632 internal_free=177315 internal_largest=69632",
+            "uptime_ms": 61454
+          },
+          "storage_snapshot_ready": {
+            "raw_start": 1499392,
+            "raw_end": 1499585,
+            "receipt": "I (100166) game_storage: P4_GAME_STORAGE LOCKED_SNAPSHOT_READY title=game-changers-ai wad_bytes=28787748 deh_bytes=0 source=single-pass-exact-sha256 target=verified-sd-blocks elapsed_ms=38708",
+            "uptime_ms": 100166
+          },
+          "replay": {
+            "raw_start": 1506230,
+            "raw_end": 1506289,
+            "receipt": "I (134646) doom_gc: GAME_CHANGERS_AI REJOIN_REPLAY slot=1",
+            "uptime_ms": 134646
+          },
+          "checkpoint_restored": {
+            "raw_start": 1507075,
+            "raw_end": 1507156,
+            "receipt": "I (143090) doom_gc: GAME_CHANGERS_AI CHECKPOINT_RESTORED tic=47556 bytes=451008",
+            "uptime_ms": 143090
+          },
+          "rejoin_ready": {
+            "raw_start": 1507273,
+            "raw_end": 1507341,
+            "receipt": "I (145504) doom_gc: GAME_CHANGERS_AI REJOIN_READY slot=1 tic=47849",
+            "uptime_ms": 145504
+          }
+        },
+        "guest_elapsed_ms": {
+          "admission_to_first_loading": 169,
+          "first_loading_to_replay": 73192,
+          "admission_to_replay": 73361,
+          "replay_to_restored": 8444,
+          "restored_to_ready": 2414,
+          "replay_to_ready": 10858,
+          "admission_to_ready": 84219
+        },
+        "host_events": {
+          "admission": {
+            "raw_start": 1927086,
+            "raw_end": 1927188,
+            "receipt": "I (1464705) doom_gc: GAME_CHANGERS_AI ADMISSION_ACCEPTED side=host kind=return slot=1 frontier=44904",
+            "uptime_ms": 1464705
+          },
+          "checkpoint_capture": {
+            "raw_start": 1990939,
+            "raw_end": 1991027,
+            "receipt": "I (1540574) doom_gc: GAME_CHANGERS_AI CHECKPOINT_CAPTURE slots=2 boundary_max_us=76508",
+            "uptime_ms": 1540574
+          },
+          "rejoin_armed": {
+            "raw_start": 1995596,
+            "raw_end": 1995665,
+            "receipt": "I (1548632) doom_gc: GAME_CHANGERS_AI REJOIN_ARMED slot=1 tic=47849",
+            "uptime_ms": 1548632
+          }
+        },
+        "host_utc_bracket": {
+          "status": "bounded",
+          "utc_lower": "2026-10-07T10:31:44.054100+00:00",
+          "utc_upper": "2026-10-07T10:33:26.044011+00:00",
+          "prior_journal_index": 338,
+          "following_journal_index": 341,
+          "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+        },
+        "host_armed_guest_ready_tic": 47849
+      }
+    ],
+    "host_continuity": {
+      "unit": "B",
+      "session": "d962beaa",
+      "boot": 0,
+      "visit": 1,
+      "lobby_created": {
+        "raw_start": 23156,
+        "raw_end": 23260,
+        "receipt": "I (59841) p4_console_os: P4_CONSOLE_OS MULTIPLAYER_LOBBY_CREATED session=d962beaa transport=wifi-local",
+        "uptime_ms": 59841,
+        "utc_bracket": {
+          "status": "bounded",
+          "utc_lower": "2026-10-07T10:08:23.334951+00:00",
+          "utc_upper": "2026-10-07T10:08:44.973112+00:00",
+          "prior_journal_index": 16,
+          "following_journal_index": 19,
+          "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+        }
+      },
+      "initial_ready": {
+        "raw_start": 153429,
+        "raw_end": 153490,
+        "receipt": "I (135554) doom_gc: GAME_CHANGERS_AI READY players=4 slot=0",
+        "uptime_ms": 135554,
+        "utc_bracket": {
+          "status": "bounded",
+          "utc_lower": "2026-10-07T10:09:36.459294+00:00",
+          "utc_upper": "2026-10-07T10:09:52.771170+00:00",
+          "prior_journal_index": 22,
+          "following_journal_index": 23,
+          "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+        }
+      },
+      "players_4_meaning": "configured capacity, not connected player count",
+      "player_left": [
+        {
+          "raw_start": 1576636,
+          "raw_end": 1576694,
+          "receipt": "I (1172462) doom_gc: GAME_CHANGERS_AI PLAYER_LEFT slot=1",
+          "uptime_ms": 1172462,
+          "utc_bracket": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T10:26:56.144839+00:00",
+            "utc_upper": "2026-10-07T10:27:17.657446+00:00",
+            "prior_journal_index": 273,
+            "following_journal_index": 277,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 1874480,
+          "raw_end": 1874538,
+          "receipt": "I (1403373) doom_gc: GAME_CHANGERS_AI PLAYER_LEFT slot=1",
+          "uptime_ms": 1403373,
+          "utc_bracket": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T10:30:47.066536+00:00",
+            "utc_upper": "2026-10-07T10:31:05.222878+00:00",
+            "prior_journal_index": 316,
+            "following_journal_index": 320,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 2300449,
+          "raw_end": 2300507,
+          "receipt": "I (1789543) doom_gc: GAME_CHANGERS_AI PLAYER_LEFT slot=1",
+          "uptime_ms": 1789543,
+          "utc_bracket": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T10:37:13.181538+00:00",
+            "utc_upper": "2026-10-07T10:37:50.303960+00:00",
+            "prior_journal_index": 359,
+            "following_journal_index": 363,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        }
+      ],
+      "reset_count_between_lobby_and_final_doom_exit": 0,
+      "lifecycle_session_and_boot_unchanged": true
+    },
+    "cleanup_and_restart": {
+      "A": [
+        {
+          "cleanup": {
+            "raw_start": 1268937,
+            "raw_end": 1269109,
+            "receipt": "I (1172473) p4_doom_touch_audio: P4_DOOM_E6 CLEANUP audio_released=1 touch_released=1 bus=ESP_OK dark=ESP_OK video=ESP_OK display=ESP_OK blob=ESP_OK complete=1 retained=0",
+            "uptime_ms": 1172473,
+            "utc_bracket": {
+              "status": "bounded",
+              "utc_lower": "2026-10-07T10:26:56.144839+00:00",
+              "utc_upper": "2026-10-07T10:27:06.559693+00:00",
+              "prior_journal_index": 273,
+              "following_journal_index": 275,
+              "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+            }
+          },
+          "exit": {
+            "raw_start": 1269109,
+            "raw_end": 1269218,
+            "receipt": "I (1172475) p4_doom_touch_audio: P4_DOOM_E6 EXIT status=confirmed action=restart-to-home cleanup_complete=1",
+            "uptime_ms": 1172475
+          },
+          "following_reset": {
+            "raw_start": 1269268,
+            "raw_end": 1269325,
+            "receipt": "rst:0xc (SW_CPU_RESET),boot:0x30f (SPI_FAST_FLASH_BOOT)"
+          },
+          "cleanup_values": {
+            "audio_released": "1",
+            "touch_released": "1",
+            "bus": "ESP_OK",
+            "dark": "ESP_OK",
+            "video": "ESP_OK",
+            "display": "ESP_OK",
+            "blob": "ESP_OK",
+            "complete": "1",
+            "retained": "0"
+          },
+          "cleanup_complete": 1
+        },
+        {
+          "cleanup": {
+            "raw_start": 1470453,
+            "raw_end": 1470624,
+            "receipt": "I (230855) p4_doom_touch_audio: P4_DOOM_E6 CLEANUP audio_released=1 touch_released=1 bus=ESP_OK dark=ESP_OK video=ESP_OK display=ESP_OK blob=ESP_OK complete=1 retained=0",
+            "uptime_ms": 230855,
+            "utc_bracket": {
+              "status": "bounded",
+              "utc_lower": "2026-10-07T10:30:47.066536+00:00",
+              "utc_upper": "2026-10-07T10:30:57.463488+00:00",
+              "prior_journal_index": 316,
+              "following_journal_index": 318,
+              "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+            }
+          },
+          "exit": {
+            "raw_start": 1470624,
+            "raw_end": 1470732,
+            "receipt": "I (230857) p4_doom_touch_audio: P4_DOOM_E6 EXIT status=confirmed action=restart-to-home cleanup_complete=1",
+            "uptime_ms": 230857
+          },
+          "following_reset": {
+            "raw_start": 1470782,
+            "raw_end": 1470839,
+            "receipt": "rst:0xc (SW_CPU_RESET),boot:0x30f (SPI_FAST_FLASH_BOOT)"
+          },
+          "cleanup_values": {
+            "audio_released": "1",
+            "touch_released": "1",
+            "bus": "ESP_OK",
+            "dark": "ESP_OK",
+            "video": "ESP_OK",
+            "display": "ESP_OK",
+            "blob": "ESP_OK",
+            "complete": "1",
+            "retained": "0"
+          },
+          "cleanup_complete": 1
+        },
+        {
+          "cleanup": {
+            "raw_start": 1819716,
+            "raw_end": 1819887,
+            "receipt": "I (386139) p4_doom_touch_audio: P4_DOOM_E6 CLEANUP audio_released=1 touch_released=1 bus=ESP_OK dark=ESP_OK video=ESP_OK display=ESP_OK blob=ESP_OK complete=1 retained=0",
+            "uptime_ms": 386139,
+            "utc_bracket": {
+              "status": "bounded",
+              "utc_lower": "2026-10-07T10:37:13.181538+00:00",
+              "utc_upper": "2026-10-07T10:37:23.621892+00:00",
+              "prior_journal_index": 359,
+              "following_journal_index": 361,
+              "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+            }
+          },
+          "exit": {
+            "raw_start": 1819887,
+            "raw_end": 1819995,
+            "receipt": "I (386141) p4_doom_touch_audio: P4_DOOM_E6 EXIT status=confirmed action=restart-to-home cleanup_complete=1",
+            "uptime_ms": 386141
+          },
+          "following_reset": {
+            "raw_start": 1820045,
+            "raw_end": 1820102,
+            "receipt": "rst:0xc (SW_CPU_RESET),boot:0x30f (SPI_FAST_FLASH_BOOT)"
+          },
+          "cleanup_values": {
+            "audio_released": "1",
+            "touch_released": "1",
+            "bus": "ESP_OK",
+            "dark": "ESP_OK",
+            "video": "ESP_OK",
+            "display": "ESP_OK",
+            "blob": "ESP_OK",
+            "complete": "1",
+            "retained": "0"
+          },
+          "cleanup_complete": 1
+        }
+      ],
+      "B": [
+        {
+          "cleanup": {
+            "raw_start": 2349818,
+            "raw_end": 2349990,
+            "receipt": "I (1842359) p4_doom_touch_audio: P4_DOOM_E6 CLEANUP audio_released=1 touch_released=1 bus=ESP_OK dark=ESP_OK video=ESP_OK display=ESP_OK blob=ESP_OK complete=1 retained=0",
+            "uptime_ms": 1842359,
+            "utc_bracket": {
+              "status": "bounded",
+              "utc_lower": "2026-10-07T10:38:05.966381+00:00",
+              "utc_upper": "2026-10-07T10:38:16.440304+00:00",
+              "prior_journal_index": 376,
+              "following_journal_index": 378,
+              "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+            }
+          },
+          "exit": {
+            "raw_start": 2349990,
+            "raw_end": 2350099,
+            "receipt": "I (1842362) p4_doom_touch_audio: P4_DOOM_E6 EXIT status=confirmed action=restart-to-home cleanup_complete=1",
+            "uptime_ms": 1842362
+          },
+          "following_reset": {
+            "raw_start": 2350149,
+            "raw_end": 2350206,
+            "receipt": "rst:0xc (SW_CPU_RESET),boot:0x30f (SPI_FAST_FLASH_BOOT)"
+          },
+          "cleanup_values": {
+            "audio_released": "1",
+            "touch_released": "1",
+            "bus": "ESP_OK",
+            "dark": "ESP_OK",
+            "video": "ESP_OK",
+            "display": "ESP_OK",
+            "blob": "ESP_OK",
+            "complete": "1",
+            "retained": "0"
+          },
+          "cleanup_complete": 1
+        }
+      ]
+    },
+    "failure_marker_counts": {
+      "A": {
+        "CHECKPOINT_FAILED": 0,
+        "REJOIN_FAILED": 0
+      },
+      "B": {
+        "CHECKPOINT_FAILED": 0,
+        "REJOIN_FAILED": 0
+      }
+    },
+    "markers_scope": "RESTORED is guest-local verified restore; READY is later activation. Cross-peer marker association uses sequence/session/slot/tic agreement and is not an independently logged checkpoint digest. No peer clock subtraction.",
+    "fresh_cadence": {
+      "window_id": "070-bhost-fresh-a",
+      "window": {
+        "start_utc": "2026-10-07T10:17:22.591001+00:00",
+        "end_utc": "2026-10-07T10:25:19.793602+00:00",
+        "end_marker_present": true,
+        "elapsed_ms": 477202.60107421875,
+        "at_least_120_seconds_journal_elapsed": true,
+        "pulse_commands_observed": 60,
+        "pulse_commands_planned": 60,
+        "all_planned_pulse_requests_observed": true,
+        "sequence_shape_errors": [],
+        "command_errors": [],
+        "verified_guarded_pulses": 60,
+        "verified_guarded_batch_aggregates": 60
+      },
+      "first_pulse_start_utc": "2026-10-07T10:17:35.922272+00:00",
+      "last_pulse_complete_utc": "2026-10-07T10:24:57.907571+00:00",
+      "last_pulse_to_end_marker_seconds": 21.886031,
+      "longest_gaps": [
+        {
+          "after_step": 5,
+          "before_step": 6,
+          "from_utc": "2026-10-07T10:17:56.840172+00:00",
+          "to_utc": "2026-10-07T10:18:25.924831+00:00",
+          "paired_gap_seconds": 29.084659
+        },
+        {
+          "after_step": 20,
+          "before_step": 21,
+          "from_utc": "2026-10-07T10:20:03.687017+00:00",
+          "to_utc": "2026-10-07T10:20:14.797614+00:00",
+          "paired_gap_seconds": 11.110597
+        },
+        {
+          "after_step": 50,
+          "before_step": 51,
+          "from_utc": "2026-10-07T10:23:40.680317+00:00",
+          "to_utc": "2026-10-07T10:23:50.753567+00:00",
+          "paired_gap_seconds": 10.07325
+        }
+      ],
+      "units": {
+        "A": {
+          "cadence": {
+            "STATS": {
+              "intervals": 83,
+              "frames": 12600,
+              "sampled_seconds": 459.572,
+              "weighted_fps": 27.416813905111713,
+              "min_fps": 16.11517,
+              "max_fps": 65.905097,
+              "samples_ge25": 81,
+              "samples_ge30": 1,
+              "all_ge25": false,
+              "all_ge30": false
+            },
+            "PERF": {
+              "intervals": 84,
+              "frames": 12600,
+              "sampled_seconds": 459.573432,
+              "weighted_fps": 27.416728476157864,
+              "min_fps": 24.934078,
+              "max_fps": 30.110022,
+              "samples_ge25": 83,
+              "samples_ge30": 1,
+              "all_ge25": false,
+              "all_ge30": false
+            }
+          },
+          "after_use6_diagnostic": {
+            "start_utc": "2026-10-07T10:18:28.766318+00:00",
+            "end_utc": "2026-10-07T10:24:57.907571+00:00",
+            "cadence": {
+              "STATS": {
+                "intervals": 69,
+                "frames": 10500,
+                "sampled_seconds": 380.388,
+                "weighted_fps": 27.603394428846336,
+                "min_fps": 16.11517,
+                "max_fps": 65.905097,
+                "samples_ge25": 67,
+                "samples_ge30": 1,
+                "all_ge25": false,
+                "all_ge30": false
+              },
+              "PERF": {
+                "intervals": 70,
+                "frames": 10500,
+                "sampled_seconds": 380.388837,
+                "weighted_fps": 27.603333690888515,
+                "min_fps": 24.934078,
+                "max_fps": 30.110022,
+                "samples_ge25": 69,
+                "samples_ge30": 1,
+                "all_ge25": false,
+                "all_ge30": false
+              }
+            }
+          },
+          "net": {
+            "deltas": {
+              "frames": 12600,
+              "poll_calls": 133850,
+              "poll_us": 93056877,
+              "tx_attempts": 44747,
+              "tx_failures": 0,
+              "rx_packets": 16831,
+              "rx_session_rejected": 0,
+              "peer_departures": 0,
+              "host_blocked_peer_polls": 0
+            },
+            "poll_us_per_draw": 7385.466428571429,
+            "calls_per_draw": 10.623015873015873
+          },
+          "audio": {
+            "eligible_stats_deltas": {
+              "audio_frames_forwarded": 7353088,
+              "audio_nonzero_frames": 7349486,
+              "audio_write_failures": 0,
+              "backend_write_successes": 57446,
+              "backend_write_failures": 0,
+              "backend_nonzero_frames": 7349486,
+              "music_songs": 0,
+              "music_events": 18138,
+              "music_notes": 8792,
+              "music_loops": 4,
+              "music_frames": 7353088,
+              "music_parse_failures": 0
+            },
+            "stat_samples": 84,
+            "all_gate_backend_running": true,
+            "all_music_playing_unpaused": true
+          },
+          "video": {
+            "eligible_deltas": {
+              "submits": 12600,
+              "completions": 12600,
+              "video_timeouts": 0,
+              "video_failures": 0
+            },
+            "worker_completed": 12750,
+            "worker_failures": 0,
+            "worker_samples": 84,
+            "worker_convert_mean_us": 12435.059523809523,
+            "worker_display_mean_us": 15395.154761904761,
+            "worker_sample_service_max_us": 34757
+          },
+          "phase": {
+            "session": "d962beaa",
+            "boot": 0,
+            "visit": 1,
+            "epoch": 6,
+            "phase": "rejoin-ready",
+            "from_raw_offset": 569083,
+            "to_raw_offset": 947837,
+            "interval_count": 84,
+            "frames_delta": 12600,
+            "elapsed_us": 459573432,
+            "draw_entry_fps": 27.416728476157864,
+            "wall_us_per_frame": 36474.08190476191,
+            "dg_us_per_frame": 4801.186428571428,
+            "engine": {
+              "tics": {
+                "calls_delta": 12600,
+                "total_us_delta": 56208420,
+                "us_per_frame": 4460.9857142857145,
+                "us_per_call": 4460.9857142857145
+              },
+              "sim": {
+                "calls_delta": 15479,
+                "total_us_delta": 15074988,
+                "us_per_frame": 1196.4276190476191,
+                "us_per_call": 973.8993475030687
+              },
+              "sound": {
+                "calls_delta": 12600,
+                "total_us_delta": 921506,
+                "us_per_frame": 73.13539682539682,
+                "us_per_call": 73.13539682539682
+              },
+              "display": {
+                "calls_delta": 12600,
+                "total_us_delta": 401873815,
+                "us_per_frame": 31894.74722222222,
+                "us_per_call": 31894.74722222222
+              },
+              "setup": {
+                "calls_delta": 12600,
+                "total_us_delta": 1623082,
+                "us_per_frame": 128.81603174603174,
+                "us_per_call": 128.81603174603174
+              },
+              "bsp": {
+                "calls_delta": 12600,
+                "total_us_delta": 155557397,
+                "us_per_frame": 12345.825158730158,
+                "us_per_call": 12345.825158730158
+              },
+              "planes": {
+                "calls_delta": 12600,
+                "total_us_delta": 36623967,
+                "us_per_frame": 2906.664047619048,
+                "us_per_call": 2906.664047619048
+              },
+              "masked": {
+                "calls_delta": 12600,
+                "total_us_delta": 8596949,
+                "us_per_frame": 682.2975396825397,
+                "us_per_call": 682.2975396825397
+              },
+              "palette": {
+                "calls_delta": 12600,
+                "total_us_delta": 76937290,
+                "us_per_frame": 6106.134126984127,
+                "us_per_call": 6106.134126984127
+              },
+              "net": {
+                "calls_delta": 100261,
+                "total_us_delta": 97412775,
+                "us_per_frame": 7731.172619047619,
+                "us_per_call": 971.5918951536489
+              }
+            },
+            "rounded_phase_bounds": {
+              "compose": {
+                "us_per_frame_min": 970.5066666666667,
+                "us_per_frame_max": 1138.4933333333333
+              },
+              "submit": {
+                "us_per_frame_min": 19.83730158730159,
+                "us_per_frame_max": 171.49333333333334
+              },
+              "net": {
+                "us_per_frame_min": 1509.3566666666666,
+                "us_per_frame_max": 1954.7769047619047
+              },
+              "debug": {
+                "us_per_frame_min": 1.1225396825396825,
+                "us_per_frame_max": 202.2330158730159
+              },
+              "touch": {
+                "us_per_frame_min": 861.1510317460318,
+                "us_per_frame_max": 1079.5314285714285
+              },
+              "gamepad": {
+                "us_per_frame_min": 159.94452380952382,
+                "us_per_frame_max": 380.23285714285714
+              },
+              "sleep": {
+                "us_per_frame_min": 452.495,
+                "us_per_frame_max": 561.9152380952381
+              },
+              "log": {
+                "us_per_frame_min": 347.96436507936505,
+                "us_per_frame_max": 349.0576984126984
+              }
+            },
+            "top_level_ranking": [
+              "display",
+              "tics",
+              "sound"
+            ],
+            "render_children_ranking": [
+              "bsp",
+              "planes",
+              "masked",
+              "setup"
+            ],
+            "acceptance": "none-offline-diagnostics-only"
+          }
+        },
+        "B": {
+          "cadence": {
+            "STATS": {
+              "intervals": 82,
+              "frames": 12300,
+              "sampled_seconds": 457.216,
+              "weighted_fps": 26.90194568868981,
+              "min_fps": 24.533857,
+              "max_fps": 29.498525,
+              "samples_ge25": 78,
+              "samples_ge30": 0,
+              "all_ge25": false,
+              "all_ge30": false
+            },
+            "PERF": {
+              "intervals": 82,
+              "frames": 12300,
+              "sampled_seconds": 457.216302,
+              "weighted_fps": 26.901927919446756,
+              "min_fps": 24.537649,
+              "max_fps": 29.496048,
+              "samples_ge25": 78,
+              "samples_ge30": 0,
+              "all_ge25": false,
+              "all_ge30": false
+            }
+          },
+          "after_use6_diagnostic": {
+            "start_utc": "2026-10-07T10:18:28.766318+00:00",
+            "end_utc": "2026-10-07T10:24:57.907571+00:00",
+            "cadence": {
+              "STATS": {
+                "intervals": 68,
+                "frames": 10200,
+                "sampled_seconds": 378.248,
+                "weighted_fps": 26.96643472007783,
+                "min_fps": 24.533857,
+                "max_fps": 29.498525,
+                "samples_ge25": 65,
+                "samples_ge30": 0,
+                "all_ge25": false,
+                "all_ge30": false
+              },
+              "PERF": {
+                "intervals": 68,
+                "frames": 10200,
+                "sampled_seconds": 378.246865,
+                "weighted_fps": 26.96651563787581,
+                "min_fps": 24.537649,
+                "max_fps": 29.496048,
+                "samples_ge25": 65,
+                "samples_ge30": 0,
+                "all_ge25": false,
+                "all_ge30": false
+              }
+            }
+          },
+          "net": {
+            "deltas": {
+              "frames": 12300,
+              "poll_calls": 131711,
+              "poll_us": 92571774,
+              "tx_attempts": 16754,
+              "tx_failures": 0,
+              "rx_packets": 44518,
+              "rx_session_rejected": 0,
+              "peer_departures": 0,
+              "host_blocked_peer_polls": 116113
+            },
+            "poll_us_per_draw": 7526.160487804878,
+            "calls_per_draw": 10.708211382113822
+          },
+          "audio": {
+            "eligible_stats_deltas": {
+              "audio_frames_forwarded": 7315456,
+              "audio_nonzero_frames": 7315108,
+              "audio_write_failures": 0,
+              "backend_write_successes": 57152,
+              "backend_write_failures": 0,
+              "backend_nonzero_frames": 7315108,
+              "music_songs": 0,
+              "music_events": 17825,
+              "music_notes": 8633,
+              "music_loops": 4,
+              "music_frames": 7315456,
+              "music_parse_failures": 0
+            },
+            "stat_samples": 83,
+            "all_gate_backend_running": true,
+            "all_music_playing_unpaused": true
+          },
+          "video": {
+            "eligible_deltas": {
+              "submits": 12300,
+              "completions": 12300,
+              "video_timeouts": 0,
+              "video_failures": 0
+            },
+            "worker_completed": 12450,
+            "worker_failures": 0,
+            "worker_samples": 83,
+            "worker_convert_mean_us": 12698.373493975903,
+            "worker_display_mean_us": 15476.602409638554,
+            "worker_sample_service_max_us": 34913
+          },
+          "phase": {
+            "session": "d962beaa",
+            "boot": 0,
+            "visit": 1,
+            "epoch": 6,
+            "phase": "rejoin-armed",
+            "from_raw_offset": 883284,
+            "to_raw_offset": 1256885,
+            "interval_count": 82,
+            "frames_delta": 12300,
+            "elapsed_us": 457216302,
+            "draw_entry_fps": 26.901927919446756,
+            "wall_us_per_frame": 37172.057073170734,
+            "dg_us_per_frame": 5036.463333333333,
+            "engine": {
+              "tics": {
+                "calls_delta": 12300,
+                "total_us_delta": 57178507,
+                "us_per_frame": 4648.6591056910565,
+                "us_per_call": 4648.6591056910565
+              },
+              "sim": {
+                "calls_delta": 15405,
+                "total_us_delta": 15157070,
+                "us_per_frame": 1232.2821138211382,
+                "us_per_call": 983.9058747160013
+              },
+              "sound": {
+                "calls_delta": 12300,
+                "total_us_delta": 952043,
+                "us_per_frame": 77.40186991869919,
+                "us_per_call": 77.40186991869919
+              },
+              "display": {
+                "calls_delta": 12300,
+                "total_us_delta": 398503886,
+                "us_per_frame": 32398.689918699187,
+                "us_per_call": 32398.689918699187
+              },
+              "setup": {
+                "calls_delta": 12300,
+                "total_us_delta": 1694476,
+                "us_per_frame": 137.76227642276422,
+                "us_per_call": 137.76227642276422
+              },
+              "bsp": {
+                "calls_delta": 12300,
+                "total_us_delta": 151855852,
+                "us_per_frame": 12346.004227642277,
+                "us_per_call": 12346.004227642277
+              },
+              "planes": {
+                "calls_delta": 12300,
+                "total_us_delta": 34276749,
+                "us_per_frame": 2786.72756097561,
+                "us_per_call": 2786.72756097561
+              },
+              "masked": {
+                "calls_delta": 12300,
+                "total_us_delta": 8506790,
+                "us_per_frame": 691.6089430894309,
+                "us_per_call": 691.6089430894309
+              },
+              "palette": {
+                "calls_delta": 12300,
+                "total_us_delta": 78594943,
+                "us_per_frame": 6389.832764227643,
+                "us_per_call": 6389.832764227643
+              },
+              "net": {
+                "calls_delta": 98514,
+                "total_us_delta": 97477560,
+                "us_per_frame": 7925.0048780487805,
+                "us_per_call": 989.4792618308057
+              }
+            },
+            "rounded_phase_bounds": {
+              "compose": {
+                "us_per_frame_min": 965.6530081300813,
+                "us_per_frame_max": 1227.639674796748
+              },
+              "submit": {
+                "us_per_frame_min": 1.1466666666666667,
+                "us_per_frame_max": 219.29821138211383
+              },
+              "net": {
+                "us_per_frame_min": 1476.3160975609755,
+                "us_per_frame_max": 2126.107235772358
+              },
+              "debug": {
+                "us_per_frame_min": 1.2309756097560975,
+                "us_per_frame_max": 263.6761788617886
+              },
+              "touch": {
+                "us_per_frame_min": 879.7363414634146,
+                "us_per_frame_max": 1205.2386178861789
+              },
+              "gamepad": {
+                "us_per_frame_min": 121.03569105691057,
+                "us_per_frame_max": 448.2719512195122
+              },
+              "sleep": {
+                "us_per_frame_min": 473.9188617886179,
+                "us_per_frame_max": 599.71
+              },
+              "log": {
+                "us_per_frame_min": 355.2120325203252,
+                "us_per_frame_max": 356.9320325203252
+              }
+            },
+            "top_level_ranking": [
+              "display",
+              "tics",
+              "sound"
+            ],
+            "render_children_ranking": [
+              "bsp",
+              "planes",
+              "masked",
+              "setup"
+            ],
+            "acceptance": "none-offline-diagnostics-only"
+          }
+        }
+      },
+      "acceptance": {
+        "command_window_shape": "pass60guarded",
+        "operator25_all_samples": "fail_both",
+        "repository30_all_samples": "fail_both",
+        "continuous_active_gameplay": "not_accepted_possible_break_contamination",
+        "person_heard_music_and_sfx": "pending"
+      },
+      "caveats": [
+        "Root read frozen070 Arena rule:15s idle enters break; only Use edge reactivates. Movement/fire while inactive do not reactivate. Prefix has no explicit break-active transitions.",
+        "Step5 to6 has29.084659s paired-command gap, beyond15s; step6 is Use. End marker is21.886031s afterlastpairedcompletion, also beyond15s. Thus fullmarkedwindow includes possible break periods.",
+        "Supplement afterstep6Use completion tolastpulse is source-informed diagnostic only, not continuous physical video proof. It retains all wholly-bracketed intervals, including every25floorfailure that fits; no outliers discarded.",
+        "Final screenshot request10:25:29.208005 to10:25:32.663675 lies outsidewindow. Root visually reports bothBREAK redviews; initialimages cleanliveviews; ammo50 to22 demonstrates somefiring. These declarations do notdateallbreaktransitions.",
+        "No screenshot interval intersectsmarkedwindow. Debugactive=true andmode=doom describeinputsession/app, notArenaactivegameplay.",
+        "PERF measuresDGdrawentries; STATS measuressuccessfulsubmissionsusingloguptime. A STATS16.115/65.905 anomalies remain recorded; PERFminimum24.934independentlyfails25.",
+        "Phase timings overlap; display includesrenderchildren andDG; engineNetUpdate andallpublicNetPoll overlap. Hostblockedpeerpollcounts arechecks, notduration/loss.",
+        "Audio counters prove forwardednonzeroPCM/backendwrites/musicprogress, notheardoutput orSFXdistinction.",
+        "Exact070artifact/sourceauthorization binding verified by finalboundanalyzer; archiveisbuildartifact, notreadback."
+      ]
+    },
+    "latency_acceptance": "87.805 / 84.127 / 84.219 seconds admission-to-READY remains a slow join experience; success is not a latency pass."
+  },
+  "air_hockey": {
+    "game": "org.p4console.p4-air-hockey",
+    "window_id": "070-air-m01-s01",
+    "host": "B",
+    "guest": "A",
+    "window": {
+      "start_utc": "2026-10-07T10:42:59.227740+00:00",
+      "end_utc": "2026-10-07T10:44:30.906747+00:00",
+      "seconds": 91.679007
+    },
+    "marks": [
+      {
+        "time": "2026-10-07T10:42:59.227740+00:00",
+        "event": "phase-marker",
+        "request": {
+          "command": "mark",
+          "native_game": "p4-air-hockey",
+          "host_unit": "B",
+          "guest_unit": "A",
+          "window_id": "070-air-m01-s01",
+          "evidence_phase": "active-segment-start",
+          "expected_pulses": 16,
+          "reviewed_gate": "both-linked-play-no-results"
+        }
+      },
+      {
+        "time": "2026-10-07T10:44:30.906747+00:00",
+        "event": "phase-marker",
+        "request": {
+          "command": "mark",
+          "native_game": "p4-air-hockey",
+          "host_unit": "B",
+          "guest_unit": "A",
+          "window_id": "070-air-m01-s01",
+          "evidence_phase": "active-segment-end"
+        }
+      },
+      {
+        "time": "2026-10-07T10:45:01.275869+00:00",
+        "event": "phase-marker",
+        "request": {
+          "command": "mark",
+          "native_game": "p4-air-hockey",
+          "host_unit": "B",
+          "guest_unit": "A",
+          "window_id": "070-air-m01-s01",
+          "evidence_phase": "active-segment-review",
+          "reviewed_gate": "both-linked-play-no-results",
+          "eligible": true
+        }
+      }
+    ],
+    "touches_observed": 16,
+    "successful_guarded_batches": 8,
+    "presentation": "synchronous; exact VIDEO_MODE reason=native-worker-disabled",
+    "units": {
+      "A": {
+        "role": "guest",
+        "complete_interval_cadence": {
+          "intervals": 5,
+          "frames": 1500,
+          "sampled_seconds": 73.326001,
+          "weighted_fps": 20.45659083467541,
+          "min_fps": 20.449897750511248,
+          "max_fps": 20.468034354367582,
+          "samples_ge25": 0,
+          "samples_ge30": 0,
+          "all_ge25": false,
+          "all_ge30": false
+        },
+        "last_cumulative_cost_us": {
+          "wall_avg_us": 48767,
+          "update_render_avg_us": 23386,
+          "input_avg_us": 488,
+          "audio_avg_us": 1,
+          "present_avg_us": 23365,
+          "reuse_avg_us": 23,
+          "transform_avg_us": 19846,
+          "handoff_avg_us": 592
+        }
+      },
+      "B": {
+        "role": "host",
+        "complete_interval_cadence": {
+          "intervals": 5,
+          "frames": 1500,
+          "sampled_seconds": 73.325953,
+          "weighted_fps": 20.45660422579165,
+          "min_fps": 20.449931206431422,
+          "max_fps": 20.466639377814165,
+          "samples_ge25": 0,
+          "samples_ge30": 0,
+          "all_ge25": false,
+          "all_ge30": false
+        },
+        "last_cumulative_cost_us": {
+          "wall_avg_us": 48986,
+          "update_render_avg_us": 23559,
+          "input_avg_us": 499,
+          "audio_avg_us": 1,
+          "present_avg_us": 23457,
+          "reuse_avg_us": 23,
+          "transform_avg_us": 19930,
+          "handoff_avg_us": 600
+        }
+      }
+    },
+    "cadence_acceptance": "FAIL25 and FAIL30: every complete eligible interval is below both floors. Short negative baseline only, not a 120-second release qualification.",
+    "cost_scope": "Cumulative integer phase averages for the whole native episode, not isolated active-window deltas; transform is contained within present.",
+    "scope": "91.679-second marked active segment and five eligible full timing intervals per unit. A short negative baseline, not 120-second release qualification. Final linked scores and moved paddles are root-reviewed captured observations; no results screen was present."
+  },
+  "all_run_telemetry": {
+    "A": {
+      "bad_debug_frames": 0,
+      "pending_frame_bytes": 0,
+      "runtime_errors": [],
+      "warnings": [
+        {
+          "start": 7036,
+          "end": 7115,
+          "boot": 0,
+          "visit": 0,
+          "session": null,
+          "epoch": 1,
+          "phase": "boot",
+          "uptime_ms": 3722,
+          "utc_bracket": {
+            "status": "one-sided",
+            "utc_lower": null,
+            "utc_upper": "2026-10-07T10:07:34.151676+00:00",
+            "prior_journal_index": null,
+            "following_journal_index": 1,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          },
+          "receipt": "W (3722) ldo: The voltage value 0 is out of the recommended range [500, 2700]"
+        },
+        {
+          "start": 20743,
+          "end": 20815,
+          "boot": 0,
+          "visit": 0,
+          "session": null,
+          "epoch": 1,
+          "phase": "boot",
+          "uptime_ms": 27689,
+          "utc_bracket": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T10:07:48.857117+00:00",
+            "utc_upper": "2026-10-07T10:08:06.310443+00:00",
+            "prior_journal_index": 7,
+            "following_journal_index": 11,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          },
+          "receipt": "W (27689) rpc_rsp: Hosted RPC_Resp [0x21f], uid [3], resp code [12290]"
+        },
+        {
+          "start": 1275162,
+          "end": 1275241,
+          "boot": 1,
+          "visit": 1,
+          "session": null,
+          "epoch": 9,
+          "phase": "boot",
+          "uptime_ms": 3732,
+          "utc_bracket": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T10:26:56.144839+00:00",
+            "utc_upper": "2026-10-07T10:27:06.559693+00:00",
+            "prior_journal_index": 273,
+            "following_journal_index": 275,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          },
+          "receipt": "W (3732) ldo: The voltage value 0 is out of the recommended range [500, 2700]"
+        },
+        {
+          "start": 1289682,
+          "end": 1289754,
+          "boot": 1,
+          "visit": 1,
+          "session": null,
+          "epoch": 9,
+          "phase": "boot",
+          "uptime_ms": 55285,
+          "utc_bracket": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T10:27:48.965971+00:00",
+            "utc_upper": "2026-10-07T10:27:53.765595+00:00",
+            "prior_journal_index": 285,
+            "following_journal_index": 287,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          },
+          "receipt": "W (55285) rpc_rsp: Hosted RPC_Resp [0x21f], uid [3], resp code [12290]"
+        },
+        {
+          "start": 1476676,
+          "end": 1476755,
+          "boot": 2,
+          "visit": 2,
+          "session": null,
+          "epoch": 17,
+          "phase": "boot",
+          "uptime_ms": 3732,
+          "utc_bracket": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T10:30:47.066536+00:00",
+            "utc_upper": "2026-10-07T10:30:57.463488+00:00",
+            "prior_journal_index": 316,
+            "following_journal_index": 318,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          },
+          "receipt": "W (3732) ldo: The voltage value 0 is out of the recommended range [500, 2700]"
+        },
+        {
+          "start": 1490807,
+          "end": 1490879,
+          "boot": 2,
+          "visit": 2,
+          "session": null,
+          "epoch": 17,
+          "phase": "boot",
+          "uptime_ms": 40243,
+          "utc_bracket": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T10:31:24.811528+00:00",
+            "utc_upper": "2026-10-07T10:31:28.953550+00:00",
+            "prior_journal_index": 328,
+            "following_journal_index": 330,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          },
+          "receipt": "W (40243) rpc_rsp: Hosted RPC_Resp [0x21f], uid [3], resp code [12290]"
+        },
+        {
+          "start": 1825939,
+          "end": 1826018,
+          "boot": 3,
+          "visit": 3,
+          "session": null,
+          "epoch": 25,
+          "phase": "boot",
+          "uptime_ms": 3731,
+          "utc_bracket": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T10:37:13.181538+00:00",
+            "utc_upper": "2026-10-07T10:37:23.621892+00:00",
+            "prior_journal_index": 359,
+            "following_journal_index": 361,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          },
+          "receipt": "W (3731) ldo: The voltage value 0 is out of the recommended range [500, 2700]"
+        },
+        {
+          "start": 1963272,
+          "end": 1963345,
+          "boot": 3,
+          "visit": 3,
+          "session": null,
+          "epoch": 25,
+          "phase": "boot",
+          "uptime_ms": 143389,
+          "utc_bracket": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T10:39:36.333767+00:00",
+            "utc_upper": "2026-10-07T10:39:36.922685+00:00",
+            "prior_journal_index": 398,
+            "following_journal_index": 399,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          },
+          "receipt": "W (143389) rpc_rsp: Hosted RPC_Resp [0x21f], uid [3], resp code [12290]"
+        },
+        {
+          "start": 3052772,
+          "end": 3052862,
+          "boot": 3,
+          "visit": 4,
+          "session": "897d2761",
+          "epoch": 26,
+          "phase": "lobby-guest",
+          "uptime_ms": 495313,
+          "utc_bracket": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T10:45:28.363295+00:00",
+            "utc_upper": "2026-10-07T10:45:29.030283+00:00",
+            "prior_journal_index": 517,
+            "following_journal_index": 518,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          },
+          "receipt": "W (495313) p4_console_os: P4_CONSOLE_OS MULTIPLAYER_LOBBY_RESET reason=native-game-ended"
+        }
+      ],
+      "audio_stat_samples": 201,
+      "audio_failure_maxima": {
+        "audio_write_failures": 0,
+        "backend_write_failures": 0,
+        "music_parse_failures": 0
+      },
+      "counter_findings": {
+        "positive_observations": 0,
+        "transitions": [],
+        "maxima": {},
+        "scope": "Cumulative repeated observations condensed without discarding any value transition. Full raw findings remain in bound full_analysis; departure may reflect the intentional exits."
+      },
+      "native_audio": {
+        "samples": 12,
+        "failure_maxima": {
+          "write_failures": 0,
+          "underrun": 0,
+          "rejected": 0,
+          "clipped": 0
+        },
+        "last_periodic_sample": {
+          "start": 3049866,
+          "end": 3050071,
+          "boot": 3,
+          "visit": 4,
+          "session": "897d2761",
+          "epoch": 26,
+          "phase": "lobby-guest",
+          "uptime_ms": 483887,
+          "utc_bracket": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T10:45:07.412752+00:00",
+            "utc_upper": "2026-10-07T10:45:28.406838+00:00",
+            "prior_journal_index": 513,
+            "following_journal_index": 517,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          },
+          "receipt": "I (483887) p4_console_os: P4_CONSOLE_OS AUDIO_WORKER app=org.p4console.p4-air-hockey game_core=0 audio_core=1 running=1 queued=0 rejected=0 underrun=0 clipped=0 frames=2820992 write_failures=0 stack=2048"
+        },
+        "stop_markers": [
+          {
+            "start": 3051555,
+            "end": 3051669,
+            "boot": 3,
+            "visit": 4,
+            "session": "897d2761",
+            "epoch": 26,
+            "phase": "lobby-guest",
+            "uptime_ms": 495107,
+            "utc_bracket": {
+              "status": "bounded",
+              "utc_lower": "2026-10-07T10:45:28.363295+00:00",
+              "utc_upper": "2026-10-07T10:45:29.030283+00:00",
+              "prior_journal_index": 517,
+              "following_journal_index": 518,
+              "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+            },
+            "receipt": "I (495107) p4_console_os: P4_CONSOLE_OS AUDIO_WORKER_STOP core=1 frames=3000448 underrun=0 rejected=0 stack=2048"
+          }
+        ],
+        "heard_output": "PENDING"
+      }
+    },
+    "B": {
+      "bad_debug_frames": 0,
+      "pending_frame_bytes": 0,
+      "runtime_errors": [],
+      "warnings": [
+        {
+          "start": 6187,
+          "end": 6295,
+          "boot": 0,
+          "visit": 0,
+          "session": null,
+          "epoch": 1,
+          "phase": "boot",
+          "uptime_ms": 2604,
+          "utc_bracket": {
+            "status": "one-sided",
+            "utc_lower": null,
+            "utc_upper": "2026-10-07T10:07:34.151676+00:00",
+            "prior_journal_index": null,
+            "following_journal_index": 1,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          },
+          "receipt": "W (2604) st7123: The 36h command has been used and will be overwritten by external initialization sequence"
+        },
+        {
+          "start": 7337,
+          "end": 7416,
+          "boot": 0,
+          "visit": 0,
+          "session": null,
+          "epoch": 1,
+          "phase": "boot",
+          "uptime_ms": 2996,
+          "utc_bracket": {
+            "status": "one-sided",
+            "utc_lower": null,
+            "utc_upper": "2026-10-07T10:07:34.151676+00:00",
+            "prior_journal_index": null,
+            "following_journal_index": 1,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          },
+          "receipt": "W (2996) ldo: The voltage value 0 is out of the recommended range [500, 2700]"
+        },
+        {
+          "start": 21026,
+          "end": 21098,
+          "boot": 0,
+          "visit": 0,
+          "session": null,
+          "epoch": 1,
+          "phase": "boot",
+          "uptime_ms": 28185,
+          "utc_bracket": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T10:07:48.857117+00:00",
+            "utc_upper": "2026-10-07T10:08:05.773429+00:00",
+            "prior_journal_index": 7,
+            "following_journal_index": 9,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          },
+          "receipt": "W (28185) rpc_rsp: Hosted RPC_Resp [0x21f], uid [3], resp code [12290]"
+        },
+        {
+          "start": 147875,
+          "end": 147985,
+          "boot": 0,
+          "visit": 1,
+          "session": "d962beaa",
+          "epoch": 2,
+          "phase": "lobby-host",
+          "uptime_ms": 111681,
+          "utc_bracket": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T10:08:44.973198+00:00",
+            "utc_upper": "2026-10-07T10:09:36.640170+00:00",
+            "prior_journal_index": 20,
+            "following_journal_index": 22,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          },
+          "receipt": "W (111681) st7123: The 36h command has been used and will be overwritten by external initialization sequence"
+        },
+        {
+          "start": 2355002,
+          "end": 2355110,
+          "boot": 1,
+          "visit": 1,
+          "session": null,
+          "epoch": 18,
+          "phase": "boot",
+          "uptime_ms": 2613,
+          "utc_bracket": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T10:38:05.966381+00:00",
+            "utc_upper": "2026-10-07T10:38:16.440304+00:00",
+            "prior_journal_index": 376,
+            "following_journal_index": 378,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          },
+          "receipt": "W (2613) st7123: The 36h command has been used and will be overwritten by external initialization sequence"
+        },
+        {
+          "start": 2356152,
+          "end": 2356231,
+          "boot": 1,
+          "visit": 1,
+          "session": null,
+          "epoch": 18,
+          "phase": "boot",
+          "uptime_ms": 3005,
+          "utc_bracket": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T10:38:05.966381+00:00",
+            "utc_upper": "2026-10-07T10:38:16.440304+00:00",
+            "prior_journal_index": 376,
+            "following_journal_index": 378,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          },
+          "receipt": "W (3005) ldo: The voltage value 0 is out of the recommended range [500, 2700]"
+        },
+        {
+          "start": 2491760,
+          "end": 2491832,
+          "boot": 1,
+          "visit": 1,
+          "session": null,
+          "epoch": 18,
+          "phase": "boot",
+          "uptime_ms": 91114,
+          "utc_bracket": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T10:39:37.175689+00:00",
+            "utc_upper": "2026-10-07T10:39:37.587526+00:00",
+            "prior_journal_index": 400,
+            "following_journal_index": 401,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          },
+          "receipt": "W (91114) rpc_rsp: Hosted RPC_Resp [0x21f], uid [3], resp code [12290]"
+        },
+        {
+          "start": 3460609,
+          "end": 3460699,
+          "boot": 1,
+          "visit": 2,
+          "session": "897d2761",
+          "epoch": 19,
+          "phase": "lobby-host",
+          "uptime_ms": 420951,
+          "utc_bracket": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T10:45:06.715862+00:00",
+            "utc_upper": "2026-10-07T10:45:07.412641+00:00",
+            "prior_journal_index": 511,
+            "following_journal_index": 512,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          },
+          "receipt": "W (420951) p4_console_os: P4_CONSOLE_OS MULTIPLAYER_LOBBY_RESET reason=native-game-ended"
+        }
+      ],
+      "audio_stat_samples": 315,
+      "audio_failure_maxima": {
+        "audio_write_failures": 0,
+        "backend_write_failures": 0,
+        "music_parse_failures": 0
+      },
+      "counter_findings": {
+        "positive_observations": 411,
+        "transitions": [
+          {
+            "boot": 0,
+            "visit": 1,
+            "session": "d962beaa",
+            "phase": "admission-accepted",
+            "uptime_ms": 284466,
+            "start": 519768,
+            "utc_bracket": {
+              "status": "bounded",
+              "utc_lower": "2026-10-07T10:12:00.268945+00:00",
+              "utc_upper": "2026-10-07T10:13:42.054808+00:00",
+              "prior_journal_index": 45,
+              "following_journal_index": 48,
+              "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+            },
+            "counter": "rx_session_rejected",
+            "lifetime_value": 1,
+            "scope": "Positive cumulative observation; admission rejection and peer departure may be expected. Requires contextual review."
+          },
+          {
+            "boot": 0,
+            "visit": 1,
+            "session": "d962beaa",
+            "phase": "player-left",
+            "uptime_ms": 1176859,
+            "start": 1580524,
+            "utc_bracket": {
+              "status": "bounded",
+              "utc_lower": "2026-10-07T10:26:56.144839+00:00",
+              "utc_upper": "2026-10-07T10:27:17.657446+00:00",
+              "prior_journal_index": 273,
+              "following_journal_index": 277,
+              "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+            },
+            "counter": "peer_departures",
+            "lifetime_value": 1,
+            "scope": "Positive cumulative observation; admission rejection and peer departure may be expected. Requires contextual review."
+          },
+          {
+            "boot": 0,
+            "visit": 1,
+            "session": "d962beaa",
+            "phase": "admission-accepted",
+            "uptime_ms": 1259552,
+            "start": 1650274,
+            "utc_bracket": {
+              "status": "bounded",
+              "utc_lower": "2026-10-07T10:28:15.661372+00:00",
+              "utc_upper": "2026-10-07T10:30:07.619798+00:00",
+              "prior_journal_index": 295,
+              "following_journal_index": 298,
+              "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+            },
+            "counter": "rx_session_rejected",
+            "lifetime_value": 2,
+            "scope": "Positive cumulative observation; admission rejection and peer departure may be expected. Requires contextual review."
+          },
+          {
+            "boot": 0,
+            "visit": 1,
+            "session": "d962beaa",
+            "phase": "player-left",
+            "uptime_ms": 1404239,
+            "start": 1878187,
+            "utc_bracket": {
+              "status": "bounded",
+              "utc_lower": "2026-10-07T10:30:47.066536+00:00",
+              "utc_upper": "2026-10-07T10:31:05.222878+00:00",
+              "prior_journal_index": 316,
+              "following_journal_index": 320,
+              "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+            },
+            "counter": "peer_departures",
+            "lifetime_value": 2,
+            "scope": "Positive cumulative observation; admission rejection and peer departure may be expected. Requires contextual review."
+          },
+          {
+            "boot": 0,
+            "visit": 1,
+            "session": "d962beaa",
+            "phase": "admission-accepted",
+            "uptime_ms": 1465581,
+            "start": 1930837,
+            "utc_bracket": {
+              "status": "bounded",
+              "utc_lower": "2026-10-07T10:31:44.054100+00:00",
+              "utc_upper": "2026-10-07T10:33:26.044011+00:00",
+              "prior_journal_index": 338,
+              "following_journal_index": 341,
+              "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+            },
+            "counter": "rx_session_rejected",
+            "lifetime_value": 3,
+            "scope": "Positive cumulative observation; admission rejection and peer departure may be expected. Requires contextual review."
+          },
+          {
+            "boot": 0,
+            "visit": 1,
+            "session": "d962beaa",
+            "phase": "player-left",
+            "uptime_ms": 1793707,
+            "start": 2304538,
+            "utc_bracket": {
+              "status": "bounded",
+              "utc_lower": "2026-10-07T10:37:13.181538+00:00",
+              "utc_upper": "2026-10-07T10:37:50.303960+00:00",
+              "prior_journal_index": 359,
+              "following_journal_index": 363,
+              "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+            },
+            "counter": "peer_departures",
+            "lifetime_value": 3,
+            "scope": "Positive cumulative observation; admission rejection and peer departure may be expected. Requires contextual review."
+          }
+        ],
+        "maxima": {
+          "peer_departures": 3,
+          "rx_session_rejected": 3
+        },
+        "scope": "Cumulative repeated observations condensed without discarding any value transition. Full raw findings remain in bound full_analysis; departure may reflect the intentional exits."
+      },
+      "native_audio": {
+        "samples": 10,
+        "failure_maxima": {
+          "write_failures": 0,
+          "underrun": 0,
+          "rejected": 0,
+          "clipped": 0
+        },
+        "last_periodic_sample": {
+          "start": 3457704,
+          "end": 3457909,
+          "boot": 1,
+          "visit": 2,
+          "session": "897d2761",
+          "epoch": 19,
+          "phase": "lobby-host",
+          "uptime_ms": 416626,
+          "utc_bracket": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T10:44:22.994667+00:00",
+            "utc_upper": "2026-10-07T10:45:06.768174+00:00",
+            "prior_journal_index": 503,
+            "following_journal_index": 511,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          },
+          "receipt": "I (416626) p4_console_os: P4_CONSOLE_OS AUDIO_WORKER app=org.p4console.p4-air-hockey game_core=0 audio_core=1 running=1 queued=0 rejected=0 underrun=0 clipped=0 frames=2589952 write_failures=0 stack=2052"
+        },
+        "stop_markers": [
+          {
+            "start": 3459392,
+            "end": 3459506,
+            "boot": 1,
+            "visit": 2,
+            "session": "897d2761",
+            "epoch": 19,
+            "phase": "lobby-host",
+            "uptime_ms": 420744,
+            "utc_bracket": {
+              "status": "bounded",
+              "utc_lower": "2026-10-07T10:45:06.715862+00:00",
+              "utc_upper": "2026-10-07T10:45:07.412641+00:00",
+              "prior_journal_index": 511,
+              "following_journal_index": 512,
+              "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+            },
+            "receipt": "I (420744) p4_console_os: P4_CONSOLE_OS AUDIO_WORKER_STOP core=1 frames=2655872 underrun=0 rejected=0 stack=2052"
+          }
+        ],
+        "heard_output": "PENDING"
+      }
+    }
+  },
+  "journal_command_errors": [
+    {
+      "journal_row_1based": 275,
+      "utc": "2026-10-07T10:27:02.527823+00:00",
+      "command": "pulse",
+      "unit": "A",
+      "error": "no release response after 3 identical requests",
+      "response": null
+    },
+    {
+      "journal_row_1based": 276,
+      "utc": "2026-10-07T10:27:06.559693+00:00",
+      "command": "release",
+      "unit": "A",
+      "error": "release: session (mode=shell page=0 app=0 view=4 row=11 game=0 link=0 rooms=0 ready=0 tr=1 ts=0)",
+      "response": {
+        "command": "release",
+        "command_id": 4,
+        "result": "session",
+        "result_id": 3,
+        "session": 1083160409,
+        "sequence": 553,
+        "active": false,
+        "touch": false,
+        "buttons": 0,
+        "x": 0,
+        "y": 0,
+        "session_remaining_ms": 0,
+        "input_remaining_ms": 0,
+        "text": "mode=shell page=0 app=0 view=4 row=11 game=0 link=0 rooms=0 ready=0 tr=1 ts=0"
+      }
+    },
+    {
+      "journal_row_1based": 318,
+      "utc": "2026-10-07T10:30:53.430196+00:00",
+      "command": "pulse",
+      "unit": "A",
+      "error": "no release response after 3 identical requests",
+      "response": null
+    },
+    {
+      "journal_row_1based": 319,
+      "utc": "2026-10-07T10:30:57.463488+00:00",
+      "command": "release",
+      "unit": "A",
+      "error": "release: session (mode=shell page=0 app=0 view=4 row=11 game=0 link=0 rooms=0 ready=0 tr=1 ts=0)",
+      "response": {
+        "command": "release",
+        "command_id": 4,
+        "result": "session",
+        "result_id": 3,
+        "session": 3783746704,
+        "sequence": 660,
+        "active": false,
+        "touch": false,
+        "buttons": 0,
+        "x": 0,
+        "y": 0,
+        "session_remaining_ms": 0,
+        "input_remaining_ms": 0,
+        "text": "mode=shell page=0 app=0 view=4 row=11 game=0 link=0 rooms=0 ready=0 tr=1 ts=0"
+      }
+    },
+    {
+      "journal_row_1based": 361,
+      "utc": "2026-10-07T10:37:19.572036+00:00",
+      "command": "pulse",
+      "unit": "A",
+      "error": "no release response after 3 identical requests",
+      "response": null
+    },
+    {
+      "journal_row_1based": 362,
+      "utc": "2026-10-07T10:37:23.621892+00:00",
+      "command": "release",
+      "unit": "A",
+      "error": "release: session (mode=shell page=0 app=0 view=4 row=11 game=0 link=0 rooms=0 ready=0 tr=1 ts=0)",
+      "response": {
+        "command": "release",
+        "command_id": 4,
+        "result": "session",
+        "result_id": 3,
+        "session": 2916771916,
+        "sequence": 768,
+        "active": false,
+        "touch": false,
+        "buttons": 0,
+        "x": 0,
+        "y": 0,
+        "session_remaining_ms": 0,
+        "input_remaining_ms": 0,
+        "text": "mode=shell page=0 app=0 view=4 row=11 game=0 link=0 rooms=0 ready=0 tr=1 ts=0"
+      }
+    },
+    {
+      "journal_row_1based": 378,
+      "utc": "2026-10-07T10:38:12.422487+00:00",
+      "command": "pulse",
+      "unit": "B",
+      "error": "no release response after 3 identical requests",
+      "response": null
+    },
+    {
+      "journal_row_1based": 379,
+      "utc": "2026-10-07T10:38:16.440304+00:00",
+      "command": "release",
+      "unit": "B",
+      "error": "release: session (mode=shell page=0 app=0 view=4 row=11 game=0 link=0 rooms=0 ready=0 tr=1 ts=0)",
+      "response": {
+        "command": "release",
+        "command_id": 4,
+        "result": "session",
+        "result_id": 3,
+        "session": 2608491544,
+        "sequence": 799,
+        "active": false,
+        "touch": false,
+        "buttons": 0,
+        "x": 0,
+        "y": 0,
+        "session_remaining_ms": 0,
+        "input_remaining_ms": 0,
+        "text": "mode=shell page=0 app=0 view=4 row=11 game=0 link=0 rooms=0 ready=0 tr=1 ts=0"
+      }
+    },
+    {
+      "journal_row_1based": 388,
+      "utc": "2026-10-07T10:39:10.467970+00:00",
+      "command": "release",
+      "unit": "A",
+      "error": "release: session (mode=shell page=9 app=9 view=4 row=11 game=0 link=0 rooms=0 ready=0 tr=1 ts=0)",
+      "response": {
+        "command": "release",
+        "command_id": 4,
+        "result": "session",
+        "result_id": 3,
+        "session": 2844129934,
+        "sequence": 841,
+        "active": false,
+        "touch": false,
+        "buttons": 0,
+        "x": 0,
+        "y": 0,
+        "session_remaining_ms": 0,
+        "input_remaining_ms": 0,
+        "text": "mode=shell page=9 app=9 view=4 row=11 game=0 link=0 rooms=0 ready=0 tr=1 ts=0"
+      }
+    },
+    {
+      "journal_row_1based": 388,
+      "utc": "2026-10-07T10:39:10.467970+00:00",
+      "command": "release",
+      "unit": "B",
+      "error": "release: session (mode=shell page=9 app=9 view=4 row=11 game=0 link=0 rooms=0 ready=0 tr=1 ts=0)",
+      "response": {
+        "command": "release",
+        "command_id": 4,
+        "result": "session",
+        "result_id": 3,
+        "session": 2290843641,
+        "sequence": 865,
+        "active": false,
+        "touch": false,
+        "buttons": 0,
+        "x": 0,
+        "y": 0,
+        "session_remaining_ms": 0,
+        "input_remaining_ms": 0,
+        "text": "mode=shell page=9 app=9 view=4 row=11 game=0 link=0 rooms=0 ready=0 tr=1 ts=0"
+      }
+    },
+    {
+      "journal_row_1based": 407,
+      "utc": "2026-10-07T10:40:05.792880+00:00",
+      "command": "release",
+      "unit": "A",
+      "error": "release: session (mode=shell page=9 app=9 view=0 row=11 game=6 link=2 rooms=0 ready=0 tr=1 ts=0)",
+      "response": {
+        "command": "release",
+        "command_id": 4,
+        "result": "session",
+        "result_id": 3,
+        "session": 4017302291,
+        "sequence": 916,
+        "active": false,
+        "touch": false,
+        "buttons": 0,
+        "x": 0,
+        "y": 0,
+        "session_remaining_ms": 0,
+        "input_remaining_ms": 0,
+        "text": "mode=shell page=9 app=9 view=0 row=11 game=6 link=2 rooms=0 ready=0 tr=1 ts=0"
+      }
+    },
+    {
+      "journal_row_1based": 407,
+      "utc": "2026-10-07T10:40:05.792880+00:00",
+      "command": "release",
+      "unit": "B",
+      "error": "release: session (mode=shell page=9 app=9 view=0 row=11 game=6 link=2 rooms=0 ready=0 tr=1 ts=0)",
+      "response": {
+        "command": "release",
+        "command_id": 4,
+        "result": "session",
+        "result_id": 3,
+        "session": 3649204674,
+        "sequence": 940,
+        "active": false,
+        "touch": false,
+        "buttons": 0,
+        "x": 0,
+        "y": 0,
+        "session_remaining_ms": 0,
+        "input_remaining_ms": 0,
+        "text": "mode=shell page=9 app=9 view=0 row=11 game=6 link=2 rooms=0 ready=0 tr=1 ts=0"
+      }
+    },
+    {
+      "journal_row_1based": 523,
+      "utc": "2026-10-07T10:45:46.164341+00:00",
+      "command": "close",
+      "unit": "B",
+      "error": "close: session (mode=shell page=0 app=0 view=1 row=11 game=6 link=2 rooms=0 ready=0 tr=1 ts=0)",
+      "response": {
+        "command": "close",
+        "command_id": 5,
+        "result": "session",
+        "result_id": 3,
+        "session": 1509063785,
+        "sequence": 1546,
+        "active": false,
+        "touch": false,
+        "buttons": 0,
+        "x": 0,
+        "y": 0,
+        "session_remaining_ms": 0,
+        "input_remaining_ms": 0,
+        "text": "mode=shell page=0 app=0 view=1 row=11 game=6 link=2 rooms=0 ready=0 tr=1 ts=0"
+      }
+    }
+  ],
+  "journal_error_interpretation": "Two quit pulses lacked a release reply across logged software restart; later session-result release/close responses retain inactive neutral state. Session errors are debug lease outcomes, not proof of a Doom rejoin failure.",
+  "screenshots": {
+    "selected_image_bindings": [
+      {
+        "name": "070-fresh-live-before-window",
+        "unit": "A",
+        "journal_row_0based": 54,
+        "started_at": "2026-10-07T10:13:55.156204+00:00",
+        "completed_at": "2026-10-07T10:13:58.646338+00:00",
+        "image": {
+          "file": "build-host/runtime-acceptance-070/analysis-closed/images/070-fresh-live-before-window-a.png",
+          "bytes": 41716,
+          "sha256": "1a7913184db0d260a992172cbf33ffca53df0693c76beb3fe41998cc52a12cb1"
+        },
+        "capture_id": 3924454428,
+        "raw_rgb565_bytes": 115200,
+        "raw_rgb565_sha256": "e36f0236757297d5ca97cf57452ceb43946b5a45a5013e496941b77710693276",
+        "png_reencoded_from_validated_raw_matches": true,
+        "reviewer": "root operator, as explicitly reported in task messages",
+        "review": "Root reviewed clean Doom views after fresh admission; a captured view only."
+      },
+      {
+        "name": "070-fresh-live-before-window",
+        "unit": "B",
+        "journal_row_0based": 54,
+        "started_at": "2026-10-07T10:13:55.156204+00:00",
+        "completed_at": "2026-10-07T10:13:58.646338+00:00",
+        "image": {
+          "file": "build-host/runtime-acceptance-070/analysis-closed/images/070-fresh-live-before-window-b.png",
+          "bytes": 37729,
+          "sha256": "ffaa9eb9ce677272670b8089dc7d30cc5b42900c449dc09cf68ba71aa4ced3d3"
+        },
+        "capture_id": 2042009982,
+        "raw_rgb565_bytes": 115200,
+        "raw_rgb565_sha256": "fb64335588468b356f29789db00d75430b810386ae67bc2d36a41f299c59351b",
+        "png_reencoded_from_validated_raw_matches": true,
+        "reviewer": "root operator, as explicitly reported in task messages",
+        "review": "Root reviewed clean Doom views after fresh admission; a captured view only."
+      },
+      {
+        "name": "070-fresh-window-end",
+        "unit": "B",
+        "journal_row_0based": 256,
+        "started_at": "2026-10-07T10:25:29.208005+00:00",
+        "completed_at": "2026-10-07T10:25:32.663675+00:00",
+        "image": {
+          "file": "build-host/runtime-acceptance-070/analysis-closed/images/070-fresh-window-end-b.png",
+          "bytes": 25709,
+          "sha256": "598590491ca7431783ff9d9a04b3c8565b2477a271705149096633d22e13b5a0"
+        },
+        "capture_id": 2026375238,
+        "raw_rgb565_bytes": 115200,
+        "raw_rgb565_sha256": "b95a1f3025409812bc7caa27f40e5079ffce5cd17d1f1bebe8a1a291b140c271",
+        "png_reencoded_from_validated_raw_matches": true,
+        "reviewer": "root operator, as explicitly reported in task messages",
+        "review": "Root reviewed both red BREAK views after the cadence window; preserves possible break contamination."
+      },
+      {
+        "name": "070-fresh-window-end",
+        "unit": "A",
+        "journal_row_0based": 256,
+        "started_at": "2026-10-07T10:25:29.208005+00:00",
+        "completed_at": "2026-10-07T10:25:32.663675+00:00",
+        "image": {
+          "file": "build-host/runtime-acceptance-070/analysis-closed/images/070-fresh-window-end-a.png",
+          "bytes": 24926,
+          "sha256": "54f84a49e86260fdff912e2e26255417654cbd25b6f8af2fd82d972688ab3943"
+        },
+        "capture_id": 1765867057,
+        "raw_rgb565_bytes": 115200,
+        "raw_rgb565_sha256": "48c6cbb141b9839361e708c750d547ce6a036ddbb5b425c26c83bf556ac019d8",
+        "png_reencoded_from_validated_raw_matches": true,
+        "reviewer": "root operator, as explicitly reported in task messages",
+        "review": "Root reviewed both red BREAK views after the cadence window; preserves possible break contamination."
+      },
+      {
+        "name": "070-break-clear-after-window",
+        "unit": "A",
+        "journal_row_0based": 260,
+        "started_at": "2026-10-07T10:26:21.658190+00:00",
+        "completed_at": "2026-10-07T10:26:25.141965+00:00",
+        "image": {
+          "file": "build-host/runtime-acceptance-070/analysis-closed/images/070-break-clear-after-window-a.png",
+          "bytes": 38404,
+          "sha256": "582ad9262c49deb45d6242f12133413e23a7d57b41ba07e85d1cdcf06b6da762"
+        },
+        "capture_id": 783585336,
+        "raw_rgb565_bytes": 115200,
+        "raw_rgb565_sha256": "75da5981faed1a6d98865dd1a8ca5ccecd1fc43a21c41e1ded31ac8a492877d7",
+        "png_reencoded_from_validated_raw_matches": true,
+        "reviewer": "root operator, as explicitly reported in task messages",
+        "review": "Root reviewed clean gameplay after Use, without black score overlay or BREAK."
+      },
+      {
+        "name": "070-break-clear-after-window",
+        "unit": "B",
+        "journal_row_0based": 260,
+        "started_at": "2026-10-07T10:26:21.658190+00:00",
+        "completed_at": "2026-10-07T10:26:25.141965+00:00",
+        "image": {
+          "file": "build-host/runtime-acceptance-070/analysis-closed/images/070-break-clear-after-window-b.png",
+          "bytes": 38416,
+          "sha256": "e7114bf4e4ac6f7693dffbc4136fa743ae10979af245fdf4813eedbb2c9d00db"
+        },
+        "capture_id": 846459687,
+        "raw_rgb565_bytes": 115200,
+        "raw_rgb565_sha256": "f739d1263763893d50214f7483120521716bebd8cd2feab00e6a4d91778b3fdb",
+        "png_reencoded_from_validated_raw_matches": true,
+        "reviewer": "root operator, as explicitly reported in task messages",
+        "review": "Root reviewed clean gameplay after Use, without black score overlay or BREAK."
+      },
+      {
+        "name": "070-return1-live",
+        "unit": "B",
+        "journal_row_0based": 303,
+        "started_at": "2026-10-07T10:30:16.403094+00:00",
+        "completed_at": "2026-10-07T10:30:19.834238+00:00",
+        "image": {
+          "file": "build-host/runtime-acceptance-070/analysis-closed/images/070-return1-live-b.png",
+          "bytes": 41205,
+          "sha256": "5012d5be7a11388b62ba40935b481efaf9ede28411524e7ecdf0fa85f538421a"
+        },
+        "capture_id": 326273520,
+        "raw_rgb565_bytes": 115200,
+        "raw_rgb565_sha256": "b3756e6c71ea2545e1447d405f2e4f74b554e8e354f68948d22686d420ccafd4",
+        "png_reencoded_from_validated_raw_matches": true,
+        "reviewer": "root operator, as explicitly reported in task messages",
+        "review": "Root reviewed clean gameplay after first owned-seat return."
+      },
+      {
+        "name": "070-return1-live",
+        "unit": "A",
+        "journal_row_0based": 303,
+        "started_at": "2026-10-07T10:30:16.403094+00:00",
+        "completed_at": "2026-10-07T10:30:19.834238+00:00",
+        "image": {
+          "file": "build-host/runtime-acceptance-070/analysis-closed/images/070-return1-live-a.png",
+          "bytes": 41227,
+          "sha256": "959c368d8092b030df7f0fbe74d483d601e41b4795ad8999ad548def1ef78377"
+        },
+        "capture_id": 4192355458,
+        "raw_rgb565_bytes": 115200,
+        "raw_rgb565_sha256": "ab3826ae62181a737a70ea36994e1efc32faba97c50175a70b8b8cdf8e966dc6",
+        "png_reencoded_from_validated_raw_matches": true,
+        "reviewer": "root operator, as explicitly reported in task messages",
+        "review": "Root reviewed clean gameplay after first owned-seat return."
+      },
+      {
+        "name": "070-return2-live",
+        "unit": "B",
+        "journal_row_0based": 346,
+        "started_at": "2026-10-07T10:33:33.706328+00:00",
+        "completed_at": "2026-10-07T10:33:37.159792+00:00",
+        "image": {
+          "file": "build-host/runtime-acceptance-070/analysis-closed/images/070-return2-live-b.png",
+          "bytes": 39812,
+          "sha256": "0b87c7b323b09e20e6a75a3c38dd9ca8004b621896b09ace048a7e0c707ef9c8"
+        },
+        "capture_id": 433442334,
+        "raw_rgb565_bytes": 115200,
+        "raw_rgb565_sha256": "8cd0767f69ddc28c476c130eac0f27e09320c6b8624b07b6403fea0541db12dd",
+        "png_reencoded_from_validated_raw_matches": true,
+        "reviewer": "root operator, as explicitly reported in task messages",
+        "review": "Root reviewed clean gameplay after second owned-seat return."
+      },
+      {
+        "name": "070-return2-live",
+        "unit": "A",
+        "journal_row_0based": 346,
+        "started_at": "2026-10-07T10:33:33.706328+00:00",
+        "completed_at": "2026-10-07T10:33:37.159792+00:00",
+        "image": {
+          "file": "build-host/runtime-acceptance-070/analysis-closed/images/070-return2-live-a.png",
+          "bytes": 46389,
+          "sha256": "b7e80586341d2c2f6f6f4bddc84b81b3b859373af15d7fd52043ea08c9775c40"
+        },
+        "capture_id": 786765979,
+        "raw_rgb565_bytes": 115200,
+        "raw_rgb565_sha256": "b38b959afd0f580ff6d120176757818c9b6f1574c40ff41533f05ec06279765e",
+        "png_reencoded_from_validated_raw_matches": true,
+        "reviewer": "root operator, as explicitly reported in task messages",
+        "review": "Root reviewed clean gameplay after second owned-seat return."
+      },
+      {
+        "name": "070-air-baseline-before",
+        "unit": "A",
+        "journal_row_0based": 463,
+        "started_at": "2026-10-07T10:42:42.611953+00:00",
+        "completed_at": "2026-10-07T10:42:46.068434+00:00",
+        "image": {
+          "file": "build-host/runtime-acceptance-070/analysis-closed/images/070-air-baseline-before-a.png",
+          "bytes": 17607,
+          "sha256": "b9ef779bc9d5c162b817776a28aaad603ba23265a1c67f6025266e2c778d49f7"
+        },
+        "capture_id": 1600575389,
+        "raw_rgb565_bytes": 115200,
+        "raw_rgb565_sha256": "b7a8fd4bf806b5b51e7c87736ff72892ff675e344a5ae60a9630255de07fc38f",
+        "png_reencoded_from_validated_raw_matches": true,
+        "reviewer": "root operator, as explicitly reported in task messages",
+        "review": "Root reviewed linked puck and 0:0 before active touches."
+      },
+      {
+        "name": "070-air-baseline-before",
+        "unit": "B",
+        "journal_row_0based": 463,
+        "started_at": "2026-10-07T10:42:42.611953+00:00",
+        "completed_at": "2026-10-07T10:42:46.068434+00:00",
+        "image": {
+          "file": "build-host/runtime-acceptance-070/analysis-closed/images/070-air-baseline-before-b.png",
+          "bytes": 17543,
+          "sha256": "ebb7a1b87287b57ded64ac34e2cb898abee4c9ab122611ef0e021eba4db3f408"
+        },
+        "capture_id": 3343139908,
+        "raw_rgb565_bytes": 115200,
+        "raw_rgb565_sha256": "803f2e4f87aa528cd32c3f72413ac67748759e71b3ee49fc4bc6ec6fb84491b5",
+        "png_reencoded_from_validated_raw_matches": true,
+        "reviewer": "root operator, as explicitly reported in task messages",
+        "review": "Root reviewed linked puck and 0:0 before active touches."
+      },
+      {
+        "name": "070-air-baseline-after",
+        "unit": "B",
+        "journal_row_0based": 507,
+        "started_at": "2026-10-07T10:44:36.657919+00:00",
+        "completed_at": "2026-10-07T10:44:40.155311+00:00",
+        "image": {
+          "file": "build-host/runtime-acceptance-070/analysis-closed/images/070-air-baseline-after-b.png",
+          "bytes": 17753,
+          "sha256": "b9d9c9cfe6c9845ee4919c3034cf7e822cff906b859c9866125ede927a6da1f4"
+        },
+        "capture_id": 2300512417,
+        "raw_rgb565_bytes": 115200,
+        "raw_rgb565_sha256": "ecf0085c86599e53e71a2cc48a8f4dfab06c784178dd90a24e448a28dd1122c0",
+        "png_reencoded_from_validated_raw_matches": true,
+        "reviewer": "root operator, as explicitly reported in task messages",
+        "review": "Root reviewed A 5:4 / B 4:5, linked gameplay without results, and moved paddles."
+      },
+      {
+        "name": "070-air-baseline-after",
+        "unit": "A",
+        "journal_row_0based": 507,
+        "started_at": "2026-10-07T10:44:36.657919+00:00",
+        "completed_at": "2026-10-07T10:44:40.155311+00:00",
+        "image": {
+          "file": "build-host/runtime-acceptance-070/analysis-closed/images/070-air-baseline-after-a.png",
+          "bytes": 17709,
+          "sha256": "fd45af497be103d65221e455ace3ba3907ae939fd7b07dd4f19bfb7172051e70"
+        },
+        "capture_id": 3764580959,
+        "raw_rgb565_bytes": 115200,
+        "raw_rgb565_sha256": "3ad6550a3d71f9b8abb1d41087e133d8f1610f785c3b98523af5aaa545a55a4b",
+        "png_reencoded_from_validated_raw_matches": true,
+        "reviewer": "root operator, as explicitly reported in task messages",
+        "review": "Root reviewed A 5:4 / B 4:5, linked gameplay without results, and moved paddles."
+      },
+      {
+        "name": "070-air-host-exit",
+        "unit": "A",
+        "journal_row_0based": 514,
+        "started_at": "2026-10-07T10:45:07.536322+00:00",
+        "completed_at": "2026-10-07T10:45:10.954371+00:00",
+        "image": {
+          "file": "build-host/runtime-acceptance-070/analysis-closed/images/070-air-host-exit-a.png",
+          "bytes": 18124,
+          "sha256": "8c545acd0f2b779c78a4d1ef71d3933cc25849c8d6706f84157c0e5d63ea2fc2"
+        },
+        "capture_id": 1016300277,
+        "raw_rgb565_bytes": 115200,
+        "raw_rgb565_sha256": "09a468898a31e513335f0d6a8e2a9e0e7c7db306bcae3e348269d042dff6d4b2",
+        "png_reencoded_from_validated_raw_matches": true,
+        "reviewer": "root operator, as explicitly reported in task messages",
+        "review": "Root reviewed A PEER LEFT / CPU TAKES OVER with fresh 0:0 after B exit."
+      },
+      {
+        "name": "070-air-host-exit",
+        "unit": "B",
+        "journal_row_0based": 514,
+        "started_at": "2026-10-07T10:45:07.536322+00:00",
+        "completed_at": "2026-10-07T10:45:10.954371+00:00",
+        "image": {
+          "file": "build-host/runtime-acceptance-070/analysis-closed/images/070-air-host-exit-b.png",
+          "bytes": 21567,
+          "sha256": "ccac2fcc0a2909503ddb84c0c5fc3886870cbdea3aeb6bfc530aa0c13a8fbd28"
+        },
+        "capture_id": 112268593,
+        "raw_rgb565_bytes": 115200,
+        "raw_rgb565_sha256": "d6b46ec085337b38e0e1246edea73765a3b151e0e278eadd82e91c2d9145f53e",
+        "png_reencoded_from_validated_raw_matches": true,
+        "reviewer": "root operator, as explicitly reported in task messages",
+        "review": "Root reviewed A PEER LEFT / CPU TAKES OVER with fresh 0:0 after B exit."
+      },
+      {
+        "name": "070-air-guest-exit",
+        "unit": "B",
+        "journal_row_0based": 520,
+        "started_at": "2026-10-07T10:45:29.096190+00:00",
+        "completed_at": "2026-10-07T10:45:32.522388+00:00",
+        "image": {
+          "file": "build-host/runtime-acceptance-070/analysis-closed/images/070-air-guest-exit-b.png",
+          "bytes": 21567,
+          "sha256": "ccac2fcc0a2909503ddb84c0c5fc3886870cbdea3aeb6bfc530aa0c13a8fbd28"
+        },
+        "capture_id": 4293760146,
+        "raw_rgb565_bytes": 115200,
+        "raw_rgb565_sha256": "d6b46ec085337b38e0e1246edea73765a3b151e0e278eadd82e91c2d9145f53e",
+        "png_reencoded_from_validated_raw_matches": true,
+        "reviewer": "root operator, as explicitly reported in task messages",
+        "review": "Root reviewed both Home after the final native exit."
+      },
+      {
+        "name": "070-air-guest-exit",
+        "unit": "A",
+        "journal_row_0based": 520,
+        "started_at": "2026-10-07T10:45:29.096190+00:00",
+        "completed_at": "2026-10-07T10:45:32.522388+00:00",
+        "image": {
+          "file": "build-host/runtime-acceptance-070/analysis-closed/images/070-air-guest-exit-a.png",
+          "bytes": 21569,
+          "sha256": "47b7bc988bb0b39054045e47b6b0f002d40f85324153d68b261ade5a43ee8d9c"
+        },
+        "capture_id": 159106096,
+        "raw_rgb565_bytes": 115200,
+        "raw_rgb565_sha256": "347fe06a93725594e9d273a2e87218099d51152be4f9c0366fded92128ada21d",
+        "png_reencoded_from_validated_raw_matches": true,
+        "reviewer": "root operator, as explicitly reported in task messages",
+        "review": "Root reviewed both Home after the final native exit."
+      }
+    ],
+    "all_paired_capture_windows_excluded": [
+      {
+        "journal_row": 18,
+        "start_ms": 1791367708882.664,
+        "end_ms": 1791367713096.895,
+        "start_utc": "2026-10-07T10:08:28.882664+00:00",
+        "end_utc": "2026-10-07T10:08:33.096895+00:00",
+        "unit": "both",
+        "valid_bounds": true,
+        "applies_to_units": [
+          "A",
+          "B"
+        ],
+        "success_required_for_exclusion": false
+      },
+      {
+        "journal_row": 31,
+        "start_ms": 1791367822031.565,
+        "end_ms": 1791367825518.579,
+        "start_utc": "2026-10-07T10:10:22.031565+00:00",
+        "end_utc": "2026-10-07T10:10:25.518579+00:00",
+        "unit": "B",
+        "valid_bounds": true,
+        "applies_to_units": [
+          "A",
+          "B"
+        ],
+        "success_required_for_exclusion": false
+      },
+      {
+        "journal_row": 39,
+        "start_ms": 1791367858410.808,
+        "end_ms": 1791367861905.281,
+        "start_utc": "2026-10-07T10:10:58.410808+00:00",
+        "end_utc": "2026-10-07T10:11:01.905281+00:00",
+        "unit": "B",
+        "valid_bounds": true,
+        "applies_to_units": [
+          "A",
+          "B"
+        ],
+        "success_required_for_exclusion": false
+      },
+      {
+        "journal_row": 43,
+        "start_ms": 1791367894672.96,
+        "end_ms": 1791367898522.003,
+        "start_utc": "2026-10-07T10:11:34.672960+00:00",
+        "end_utc": "2026-10-07T10:11:38.522003+00:00",
+        "unit": "A",
+        "valid_bounds": true,
+        "applies_to_units": [
+          "A",
+          "B"
+        ],
+        "success_required_for_exclusion": false
+      },
+      {
+        "journal_row": 54,
+        "start_ms": 1791368035156.204,
+        "end_ms": 1791368038646.338,
+        "start_utc": "2026-10-07T10:13:55.156204+00:00",
+        "end_utc": "2026-10-07T10:13:58.646338+00:00",
+        "unit": "both",
+        "valid_bounds": true,
+        "applies_to_units": [
+          "A",
+          "B"
+        ],
+        "success_required_for_exclusion": false
+      },
+      {
+        "journal_row": 256,
+        "start_ms": 1791368729208.005,
+        "end_ms": 1791368732663.675,
+        "start_utc": "2026-10-07T10:25:29.208005+00:00",
+        "end_utc": "2026-10-07T10:25:32.663675+00:00",
+        "unit": "both",
+        "valid_bounds": true,
+        "applies_to_units": [
+          "A",
+          "B"
+        ],
+        "success_required_for_exclusion": false
+      },
+      {
+        "journal_row": 260,
+        "start_ms": 1791368781658.19,
+        "end_ms": 1791368785141.9648,
+        "start_utc": "2026-10-07T10:26:21.658190+00:00",
+        "end_utc": "2026-10-07T10:26:25.141965+00:00",
+        "unit": "both",
+        "valid_bounds": true,
+        "applies_to_units": [
+          "A",
+          "B"
+        ],
+        "success_required_for_exclusion": false
+      },
+      {
+        "journal_row": 303,
+        "start_ms": 1791369016403.094,
+        "end_ms": 1791369019834.238,
+        "start_utc": "2026-10-07T10:30:16.403094+00:00",
+        "end_utc": "2026-10-07T10:30:19.834238+00:00",
+        "unit": "both",
+        "valid_bounds": true,
+        "applies_to_units": [
+          "A",
+          "B"
+        ],
+        "success_required_for_exclusion": false
+      },
+      {
+        "journal_row": 346,
+        "start_ms": 1791369213706.328,
+        "end_ms": 1791369217159.792,
+        "start_utc": "2026-10-07T10:33:33.706328+00:00",
+        "end_utc": "2026-10-07T10:33:37.159792+00:00",
+        "unit": "both",
+        "valid_bounds": true,
+        "applies_to_units": [
+          "A",
+          "B"
+        ],
+        "success_required_for_exclusion": false
+      },
+      {
+        "journal_row": 384,
+        "start_ms": 1791369514997.02,
+        "end_ms": 1791369519485.893,
+        "start_utc": "2026-10-07T10:38:34.997020+00:00",
+        "end_utc": "2026-10-07T10:38:39.485893+00:00",
+        "unit": "both",
+        "valid_bounds": true,
+        "applies_to_units": [
+          "A",
+          "B"
+        ],
+        "success_required_for_exclusion": false
+      },
+      {
+        "journal_row": 403,
+        "start_ms": 1791369581330.937,
+        "end_ms": 1791369585369.669,
+        "start_utc": "2026-10-07T10:39:41.330937+00:00",
+        "end_utc": "2026-10-07T10:39:45.369669+00:00",
+        "unit": "both",
+        "valid_bounds": true,
+        "applies_to_units": [
+          "A",
+          "B"
+        ],
+        "success_required_for_exclusion": false
+      },
+      {
+        "journal_row": 415,
+        "start_ms": 1791369633095.806,
+        "end_ms": 1791369636934.4521,
+        "start_utc": "2026-10-07T10:40:33.095806+00:00",
+        "end_utc": "2026-10-07T10:40:36.934452+00:00",
+        "unit": "both",
+        "valid_bounds": true,
+        "applies_to_units": [
+          "A",
+          "B"
+        ],
+        "success_required_for_exclusion": false
+      },
+      {
+        "journal_row": 426,
+        "start_ms": 1791369668627.805,
+        "end_ms": 1791369672904.991,
+        "start_utc": "2026-10-07T10:41:08.627805+00:00",
+        "end_utc": "2026-10-07T10:41:12.904991+00:00",
+        "unit": "both",
+        "valid_bounds": true,
+        "applies_to_units": [
+          "A",
+          "B"
+        ],
+        "success_required_for_exclusion": false
+      },
+      {
+        "journal_row": 431,
+        "start_ms": 1791369686303.873,
+        "end_ms": 1791369690412.536,
+        "start_utc": "2026-10-07T10:41:26.303873+00:00",
+        "end_utc": "2026-10-07T10:41:30.412536+00:00",
+        "unit": "both",
+        "valid_bounds": true,
+        "applies_to_units": [
+          "A",
+          "B"
+        ],
+        "success_required_for_exclusion": false
+      },
+      {
+        "journal_row": 451,
+        "start_ms": 1791369713786.1172,
+        "end_ms": 1791369718169.686,
+        "start_utc": "2026-10-07T10:41:53.786117+00:00",
+        "end_utc": "2026-10-07T10:41:58.169686+00:00",
+        "unit": "both",
+        "valid_bounds": true,
+        "applies_to_units": [
+          "A",
+          "B"
+        ],
+        "success_required_for_exclusion": false
+      },
+      {
+        "journal_row": 461,
+        "start_ms": 1791369741308.0781,
+        "end_ms": 1791369744912.904,
+        "start_utc": "2026-10-07T10:42:21.308078+00:00",
+        "end_utc": "2026-10-07T10:42:24.912904+00:00",
+        "unit": "both",
+        "valid_bounds": true,
+        "applies_to_units": [
+          "A",
+          "B"
+        ],
+        "success_required_for_exclusion": false
+      },
+      {
+        "journal_row": 463,
+        "start_ms": 1791369762611.9531,
+        "end_ms": 1791369766068.434,
+        "start_utc": "2026-10-07T10:42:42.611953+00:00",
+        "end_utc": "2026-10-07T10:42:46.068434+00:00",
+        "unit": "both",
+        "valid_bounds": true,
+        "applies_to_units": [
+          "A",
+          "B"
+        ],
+        "success_required_for_exclusion": false
+      },
+      {
+        "journal_row": 507,
+        "start_ms": 1791369876657.919,
+        "end_ms": 1791369880155.311,
+        "start_utc": "2026-10-07T10:44:36.657919+00:00",
+        "end_utc": "2026-10-07T10:44:40.155311+00:00",
+        "unit": "both",
+        "valid_bounds": true,
+        "applies_to_units": [
+          "A",
+          "B"
+        ],
+        "success_required_for_exclusion": false
+      },
+      {
+        "journal_row": 514,
+        "start_ms": 1791369907536.322,
+        "end_ms": 1791369910954.371,
+        "start_utc": "2026-10-07T10:45:07.536322+00:00",
+        "end_utc": "2026-10-07T10:45:10.954371+00:00",
+        "unit": "both",
+        "valid_bounds": true,
+        "applies_to_units": [
+          "A",
+          "B"
+        ],
+        "success_required_for_exclusion": false
+      },
+      {
+        "journal_row": 520,
+        "start_ms": 1791369929096.19,
+        "end_ms": 1791369932522.388,
+        "start_utc": "2026-10-07T10:45:29.096190+00:00",
+        "end_utc": "2026-10-07T10:45:32.522388+00:00",
+        "unit": "both",
+        "valid_bounds": true,
+        "applies_to_units": [
+          "A",
+          "B"
+        ],
+        "success_required_for_exclusion": false
+      }
+    ],
+    "scope": "Complete possible timing brackets must be inside markers and disjoint from every paired capture. No screenshot bytes were parsed as textual UART telemetry."
+  },
+  "acceptance": {
+    "doom_fresh_and_two_owned_returns_same_host": "observed_success",
+    "doom_continuous_active_cadence": "not_accepted_possible_BREAK_contamination",
+    "doom_operator_minimum25": "FAIL",
+    "doom_repository_floor30": "FAIL",
+    "air_linked_active_play_and_departure_fallback": "root_reviewed_bounded_captured_evidence",
+    "air_operator_minimum25": "FAIL",
+    "air_repository_floor30": "FAIL",
+    "air_120_second_qualification": "not_run_short_negative_baseline",
+    "person_heard_music_and_sfx": "PENDING",
+    "overall_release_acceptance": "NOT_ACCEPTED"
+  },
+  "limits": [
+    "Debug active identifies the synthetic input lease, not Arena gameplay activity. Only Use reactivates Arena after idle BREAK; full fresh window may include break periods.",
+    "Doom PERF draw entries and STATS successful submissions are distinct; all minimum failures and anomalous intervals remain in the detailed readout. No outliers were silently removed.",
+    "Native Air used synchronous presentation (native-worker-disabled), distinct from the Doom display worker and the native audio worker.",
+    "Audio telemetry proves engine/backend progress, not sound heard by a person.",
+    "The archived application is the exact build artifact, not a full device readback; install used device-checksum verification.",
+    "Current 0.71 sources/builds and growing captures are not used to identify this 0.70 run."
+  ]
+}

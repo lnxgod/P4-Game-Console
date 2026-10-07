@@ -28,19 +28,22 @@ rank/suit strips. A full-card preview in the spare top-row slot helps read
 very deep piles when pressing/selecting a card or navigating with a controller. Drag previews keep
 whole runs visible and mark legal destinations. Gesture loss or a second
 finger cancels a drag; crossing Exit/New deal during a drag cannot trigger it.
-A high-resolution host negotiates 768x480 and draws directly into that surface.
-The 320x200 fallback remains supported. Touch targets stay canonical 320x200.
+The maintained Tab5 cartridge requires 768×480 and draws directly into that
+surface. Legacy rendering source remains for explicit legacy diagnostics.
+Touch targets stay in canonical 320×200 input units.
 
-## Native-resolution presentation (1.1.0)
+## Native-resolution presentation
 
-The preferred surface is 768x480 RGB565 with an optional `video-highres`
-capability and a complete 320x200 fallback. Fonts, rounded card edges, and
-mathematical suit silhouettes are rasterized at the negotiated resolution;
-no 320x200 framebuffer is enlarged to produce the high-resolution game.
+Version 1.1.1 requires `video-highres` in the manifest and C descriptor.
+The maintained Tab5 surface is **768×480 RGB565**. Fonts, rounded card edges,
+and mathematical suit silhouettes are rasterized directly into that surface;
+no completed 320×200 frame is enlarged. Canonical 320×200 touch coordinates
+remain input units. The compact legacy renderer is preserved only for
+explicitly requested legacy maintenance and labeled host diagnostics.
 Rules, card identities and lifecycle remain unchanged; direct touch gestures
 replace the virtual gamepad.
 Exact ranks, numbers, and suits are drawn by code, so generated art cannot
-change card meaning. Small fallback labels retain the proven compact font.
+change card meaning. Explicit legacy diagnostics retain the proven compact font.
 
 `assets/table-materials-imagegen.png` is original artwork generated with the
 built-in ImageGen tool for this upgrade. It contains emerald and midnight felt
@@ -59,8 +62,9 @@ Reproduce the material include with Pillow installed:
 python3 games/solitaire/tools/convert_table_materials.py
 ```
 
-Focused sanitizer tests include both negotiated surfaces, padded framebuffer
-strides, render captures, and Back lifecycle. Existing rule tests remain in place. Gesture regressions exercise the actual
+Focused sanitizer tests cover the required native surface and explicit legacy
+diagnostic copies, padded framebuffer strides, render captures, and Back
+lifecycle. Existing rule tests remain in place. Gesture regressions exercise the actual
 input mapper, legal/illegal stack drops, stock taps, lost/multiple contacts,
 header actions, and unchanged keyboard support. Optional screenshots come from the actual game renderer:
 
@@ -81,3 +85,17 @@ traces and complete update/audio/render timings are recorded in
 `PRESENTATION_TESTING.json`. The measured host runs stayed below the 33.333 ms
 budget; these CPU measurements exclude display transfer and do not certify
 30 FPS on the ESP32-P4 hardware.
+
+## Native Tab5 validation (1.1.1)
+
+The released descriptor requires `video-highres`, so services without that
+capability cannot start it and the runtime rejects a 320×200 surface. Preserved
+legacy checks use explicit local descriptor copies. The focused ASan/UBSan
+suite and SDL smoke passed at 768×480 for this revision. Default previews render
+directly into the native surface.
+
+These are host checks. The target is 60 FPS, with a measured physical-device
+release floor of 30 FPS at 768×480. Panel readability, input, sound and device
+cadence remain subject to exact-package, OS and Tab5 acceptance; a host CPU
+timing or capture does not qualify that floor. Earlier test records retain
+the results for their recorded sources and artifacts.

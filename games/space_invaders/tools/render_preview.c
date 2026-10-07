@@ -25,7 +25,7 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
     uint16_t *const pixels = calloc(
-        (size_t)P4_GAME_SURFACE_WIDTH * P4_GAME_SURFACE_HEIGHT,
+        (size_t)P4_GAME_SURFACE_HIGH_RES_WIDTH * P4_GAME_SURFACE_HIGH_RES_HEIGHT,
         sizeof(*pixels));
     void *const state = calloc(1U, p4_space_invaders_game.state_bytes);
     if (pixels == NULL || state == NULL) {
@@ -38,7 +38,8 @@ int main(int argc, char **argv)
     const p4_game_services_t services = {
         .available_capabilities = P4_GAME_CAP_VIDEO |
                                   P4_GAME_CAP_CONTROLS |
-                                  P4_GAME_CAP_AUDIO_TONE,
+                                  P4_GAME_CAP_AUDIO_TONE |
+                                  P4_GAME_CAP_VIDEO_HIGH_RES,
         .audio_context = &mixer,
         .play_tone = p4_audio_mixer_service_play_tone,
         .submit_pcm16_stereo = NULL,
@@ -47,9 +48,9 @@ int main(int argc, char **argv)
     p4_game_instance_t instance = {0};
     p4_game_surface_t surface = {
         .pixels = pixels,
-        .stride_pixels = P4_GAME_SURFACE_WIDTH,
-        .width = P4_GAME_SURFACE_WIDTH,
-        .height = P4_GAME_SURFACE_HEIGHT,
+        .stride_pixels = P4_GAME_SURFACE_HIGH_RES_WIDTH,
+        .width = P4_GAME_SURFACE_HIGH_RES_WIDTH,
+        .height = P4_GAME_SURFACE_HIGH_RES_HEIGHT,
     };
     if (!p4_game_instance_start(
             &instance, &p4_space_invaders_game, &services,
@@ -86,9 +87,9 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
     fprintf(output, "P6\n%d %d\n255\n",
-            P4_GAME_SURFACE_WIDTH, P4_GAME_SURFACE_HEIGHT);
+            P4_GAME_SURFACE_HIGH_RES_WIDTH, P4_GAME_SURFACE_HIGH_RES_HEIGHT);
     for (size_t i = 0U;
-         i < (size_t)P4_GAME_SURFACE_WIDTH * P4_GAME_SURFACE_HEIGHT; ++i) {
+         i < (size_t)P4_GAME_SURFACE_HIGH_RES_WIDTH * P4_GAME_SURFACE_HIGH_RES_HEIGHT; ++i) {
         const uint16_t pixel = pixels[i];
         const unsigned red = expand5((pixel >> 11U) & 31U);
         const unsigned green = expand6((pixel >> 5U) & 63U);

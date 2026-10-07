@@ -8,15 +8,15 @@
 
 **Local preview:** `make play-game GAME=space_invaders` from the repository root.
 
-Version 1.1.0. Defend against waves of original alien drones and protect the destructible shields.
+Version 1.1.1. Defend against waves of original alien drones and protect the destructible shields.
 
 A wide battle area uses original purple and teal craft, an animated white/cobalt player ship, a painted nebula and planet backdrop, and metal bunkers that visibly break apart. Four-frame ship animation, short formation tweens, bright projectile cores and impact flares bring movement and damage to life. The wider view maps the original simulation bounds consistently; movement speed, formation steps, firing cadence, shield collisions and scoring retain their existing rules.
 
-The opening screen reuses the original nebula and animated ship art with exact title text and a large Play button. Combat, hazards and RNG wait for Play, A or Start. Release the launch key/contact before firing. Left/Right moves; hold A or B to fire at the bounded 220 ms cooldown; Start pauses; A restarts directly into combat; Back exits from every screen. Keyboard bindings in the SDL host are arrows/WASD, Space/Z for A, X/Shift for B, Enter/P for Start, and Escape/Backspace/Q for Back. Touch remains normalized to 320x200 in both display modes.
+The opening screen reuses the original nebula and animated ship art with exact title text and a large Play button. Combat, hazards and RNG wait for Play, A or Start. Release the launch key/contact before firing. Left/Right moves; hold A or B to fire at the bounded 220 ms cooldown; Start pauses; A restarts directly into combat; Back exits from every screen. Keyboard bindings in the SDL host are arrows/WASD, Space/Z for A, X/Shift for B, Enter/P for Start, and Escape/Backspace/Q for Back. Touch remains in canonical 320×200 input units on the native surface and in explicit legacy diagnostics.
 
 ## Rendering and original art
 
-The game opts into **768x480 RGB565** and retains a 320x200 fallback. It draws directly into the negotiated surface; it does not stretch a rendered low-resolution framebuffer. The high-resolution path uses the shared antialiased Arimo presentation font, native image detail, and a restrained control strip containing only the actions this game uses. During combat, visible Exit, Pause, Left/Right and A/B controls retain their standard canonical touch regions. On the title, Play occupies canonical x191–296/y153–182 and Exit x0–51/y0–23; touch starts only when the contact begins on the visible control. Hidden gameplay touch regions do not start a game. Fallback labels retain their compact pixel font. Rules, game identity, lifecycle, audio, and platform ownership are preserved.
+Version 1.1.1 requires `video-highres` in the manifest and C descriptor and renders directly at **768×480 RGB565** on maintained Tab5. The 320×200 source path remains only for explicitly requested legacy maintenance and labeled host diagnostics. It draws directly into the negotiated surface; it does not stretch a rendered low-resolution framebuffer. The high-resolution path uses the shared antialiased Arimo presentation font, native image detail, and a restrained control strip containing only the actions this game uses. During combat, visible Exit, Pause, Left/Right and A/B controls retain their standard canonical touch regions. On the title, Play occupies canonical x191–296/y153–182 and Exit x0–51/y0–23; touch starts only when the contact begins on the visible control. Hidden gameplay touch regions do not start a game. Explicit legacy diagnostics retain their compact pixel font. Rules, game identity, lifecycle, audio, and platform ownership are preserved.
 
 `assets/hires_atlas_v2.png` is original project artwork produced with the built-in ImageGen tool. `assets/hires_provenance.json` records the exact prompts, generation mode, source hashes, measured crop bounds, and conversion geometry. It contains no imported commercial game assets. Game art/code are MIT; the shared Arimo font is OFL-1.1 with its notice in `third_party/arimo/OFL.txt` (pinned source: `third_party/arimo/source.json`).
 
@@ -34,14 +34,17 @@ python3 games/space_invaders/tools/convert_background.py
 cmake -S games/space_invaders -B build-host/space_invaders -G Ninja
 cmake --build build-host/space_invaders
 ctest --test-dir build-host/space_invaders --output-on-failure
+# Default captures use the maintained 768×480 surface.
 build-host/space_invaders/space_invaders_hires_preview build-host/space_invaders/hires
+# Add explicitly labeled legacy diagnostic captures only when needed.
+build-host/space_invaders/space_invaders_hires_preview build-host/space_invaders/diagnostic --legacy
 cmake -S tools/p4-game-host -B build-host/play-space_invaders -G Ninja -DP4_GAME=space_invaders
 cmake --build build-host/play-space_invaders
 ctest --test-dir build-host/play-space_invaders --output-on-failure
 make play-game GAME=space_invaders
 ```
 
-`tools/render_hires.c` renders opening, gameplay, pause, damaged-bunker/edge, and game-over captures at both resolutions from the real game sources, then verifies Back exits. The focused sanitizer test and all five generic SDL host checks pass. Focused coverage includes 5,000 input-fuzz updates per resolution with padded-stride guards, formation tween progress and pause freeze, completion before the fastest formation step, rendering without mutating gameplay, transparent destroyed shield cells, and transparent bunker silhouette corners. `LOCAL_TESTING.json` records source/art hashes and the tested scope. These are host results; hardware display, physical input, speaker acoustics, and device performance remain pending. Interactive play is recorded separately by the integrating agent.
+`tools/render_hires.c` renders opening, gameplay, pause, damaged-bunker/edge and game-over captures at 768×480 by default; `--legacy` adds labeled 320×200 diagnostics from the real game sources, then verifies Back exits. The focused sanitizer test and all five generic SDL host checks pass. Focused coverage includes 5,000 input-fuzz updates per resolution with padded-stride guards, formation tween progress and pause freeze, completion before the fastest formation step, rendering without mutating gameplay, transparent destroyed shield cells, and transparent bunker silhouette corners. `LOCAL_TESTING.json` records source/art hashes and the tested scope. These are host results; hardware display, physical input, speaker acoustics, and device performance remain pending. Interactive play is recorded separately by the integrating agent.
 
 The current motion pass interpolates the player and projectiles between the unchanged 16 ms simulation steps. New projectile samples and respawns reset their presentation endpoints, and pause holds them still. At a real 60 Hz cadence, the largest player step falls from **1024 to 544 Q8 units** (about **20 to 11 native pixels**), removing periodic double-steps without changing speed, collisions or firing cadence. Native projectiles now use narrow bright cores instead of wide enlarged logical rectangles.
 
@@ -51,10 +54,9 @@ The earlier motion-pass 2,000-frame host CPU trace combined held fire with pulse
 ```sh
 cmake --build build-host/play-space_invaders --target p4_game_benchmark
 build-host/play-space_invaders/p4_game_benchmark 2000 768 games/space_invaders/tests/performance-input.txt
-build-host/play-space_invaders/p4_game_benchmark 2000 320 games/space_invaders/tests/performance-input.txt
 ```
 
-The current standalone cartridge is **402,512 bytes**, including its 9,744-byte launcher icon, below the 524,288-byte limit. Its package SHA-256 is recorded in `LOCAL_TESTING.json`. This sizing build does not install or flash anything.
+The recorded 1.1.0 standalone cartridge was **402,512 bytes**, including its 9,744-byte launcher icon, below the 524,288-byte limit. Its package SHA-256 is recorded in `LOCAL_TESTING.json`. This sizing build does not install or flash anything.
 
 The board-independent cartridge is built through `make console-os-tab5-idf` for the primary Tab5 target and installed through its verified native USB content path. Game code consumes only the public `p4/` API; the OS owns display, touch, timing, audio, storage, and lifecycle services.
 
@@ -63,3 +65,17 @@ The board-independent cartridge is built through `make console-os-tab5-idf` for 
 The presentation pass adds no raster asset bytes and keeps the existing native/fallback art. Focused sanitizer coverage verifies frozen title gameplay/RNG, A and Start launch, canonical Play and Exit through the actual mapper, held launch suppression across repeated update slices, release-to-fire, invalid/dragged-in title touches, direct retry, and Back priority. Existing held-fire, shield, collision, interpolation and padded-stride regressions remain passing. The final focused suite is 1/1 and SDL suite 5/5.
 
 `build-host/presentation-pass/space_invaders/` contains exact-source title/play/pause/result captures at both sizes, pinned RV32 assembly, package log and active 2,000-frame CPU benchmarks. The trace now presses A, releases at frame1 and begins combat controls at frame2; 1,884 native and 1,881 fallback frames change. Native p95/p99/max: **0.118/0.151/0.355 ms**; fallback max: **0.063 ms**. All frames are below33.333ms on the Mac CPU; this is not device FPS. Latest interactive acceptance and hardware limitations remain in `LOCAL_TESTING.json`.
+
+## Native Tab5 validation (1.1.1)
+
+The released descriptor requires `video-highres`, so services without that
+capability cannot start it and the runtime rejects a 320×200 surface. Preserved
+legacy checks use explicit local descriptor copies. The focused ASan/UBSan
+suite and SDL smoke passed at 768×480 for this revision. Default previews render
+directly into the native surface.
+
+These are host checks. The target is 60 FPS, with a measured physical-device
+release floor of 30 FPS at 768×480. Panel readability, input, sound and device
+cadence remain subject to exact-package, OS and Tab5 acceptance; a host CPU
+timing or capture does not qualify that floor. Earlier test records retain
+the results for their recorded sources and artifacts.

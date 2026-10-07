@@ -9,6 +9,7 @@ set(P4_DOOMGENERIC_DIR
 
 set(P4_DOOM_ENGINE_AUDIO_SOURCES
     "p4_doom_net_stub.c"
+    "p4_doom_checkpoint.c"
     "${P4_DOOMGENERIC_DIR}/dummy.c"
     "${P4_DOOMGENERIC_DIR}/am_map.c"
     "${P4_DOOMGENERIC_DIR}/doomdef.c"
@@ -91,18 +92,41 @@ set(P4_DOOM_ENGINE_AUDIO_SOURCES
     "${P4_DOOMGENERIC_DIR}/doomgeneric.c"
 )
 
+# Tab5 runs Doom alongside the SD and Hosted radio DMA clients. These two
+# CPU-only renderer arrays otherwise consume 123 KiB of internal RAM.
+# Leave legacy targets on their reviewed placement and keep vendor sources
+# unchanged; the Tab5 verifier checks the linked symbol addresses.
+set(P4_DOOM_ENGINE_AUDIO_LDFRAGMENTS)
+if(CONFIG_P4_BOARD_M5STACK_TAB5)
+    if(NOT CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY)
+        message(FATAL_ERROR "Tab5 Doom requires external BSS for renderer scratch")
+    endif()
+    list(APPEND P4_DOOM_ENGINE_AUDIO_LDFRAGMENTS "linker-tab5.lf")
+endif()
+
 idf_component_register(
     SRCS ${P4_DOOM_ENGINE_AUDIO_SOURCES}
     INCLUDE_DIRS "${P4_DOOMGENERIC_DIR}" "."
-    REQUIRES doom_audio
+    LDFRAGMENTS ${P4_DOOM_ENGINE_AUDIO_LDFRAGMENTS}
+    REQUIRES doom_audio doom_multiplayer heap
     WHOLE_ARCHIVE
 )
+
+if(CONFIG_P4_BOARD_M5STACK_TAB5)
+    set(P4_DOOM_RASTER_WIDTH 768)
+    set(P4_DOOM_RASTER_HEIGHT 480)
+else()
+    set(P4_DOOM_RASTER_WIDTH 320)
+    set(P4_DOOM_RASTER_HEIGHT 200)
+endif()
 
 target_compile_definitions(${COMPONENT_LIB} PRIVATE
     _DEFAULT_SOURCE
     _POSIX_C_SOURCE=200809L
-    DOOMGENERIC_RESX=320
-    DOOMGENERIC_RESY=200
+    P4_DOOM_NATIVE_WIDTH=${P4_DOOM_RASTER_WIDTH}
+    P4_DOOM_NATIVE_HEIGHT=${P4_DOOM_RASTER_HEIGHT}
+    DOOMGENERIC_RESX=${P4_DOOM_RASTER_WIDTH}
+    DOOMGENERIC_RESY=${P4_DOOM_RASTER_HEIGHT}
     FEATURE_SOUND=1
     NORMALUNIX
     LINUX
@@ -117,3 +141,8 @@ target_compile_options(${COMPONENT_LIB} PRIVATE
     -Wno-error=unused-const-variable
     -Wno-error=unused-but-set-parameter
 )
+
+# Enable owner-task scalar timings only for the actively maintained board.
+if(CONFIG_P4_BOARD_M5STACK_TAB5)
+    target_compile_definitions(${COMPONENT_LIB} PRIVATE P4_DOOM_ENGINE_PERF=1)
+endif()

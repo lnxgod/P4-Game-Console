@@ -1,94 +1,101 @@
 ---
 name: esp32-start
-description: Find the right workflow in the P4 Game Console monorepo. Use for requests to make, draw, play-test, install or fix its games, multiplayer, controllers or Console OS, and when the user is unsure where to start. Select only the matching specialist skills; M5Stack Tab5 is the default board.
+description: Use when working on games, artwork, testing, installation, multiplayer, controllers or Console OS in the P4 Game Console monorepo, or choosing the right repository workflow.
 ---
 
 # ESP32 - Start Here
 
-Read the root `AGENTS.md` and use the user's plain-language request to choose
-from the table below. Open only the skills needed for the task. The user does
-not need to remember skill names or say “use a skill.” Respect board choices
-and authorizations already established in the conversation.
-
-## Know what belongs where
-
-This is the **P4 Game Console monorepo**. Console OS is the launcher and shared
-platform in `apps/console_os` and `components`. Native games live in `games`;
-engine ports and experimental work have their own entries in the root README.
-The **Game Changers AI multiplayer arena** is a Doom-based game mode inside
-the OS, documented in `docs/GAME_CHANGERS_AI_DOOM.md`. It is not the whole
-platform. Pure Hades is one of its map packs. Do not rename game IDs, packages,
-saves or the OS's current branding merely to clarify these documentation names.
+Read the root `AGENTS.md`. Infer the workflow from the user's request and open
+only the matching skills and references. Respect board choices and authorization
+already established in the conversation; users do not need to name a skill.
 
 ## Choose the workflow
 
-| What the user wants | Skill to read |
+| Request | Skill |
 | --- | --- |
-| Set up a Tab5 with Console OS and games | [ESP32 - Set Up](../esp32-setup/SKILL.md) |
-| Make or change a native console game | [ESP32 - Make Game](../esp32-make-game/SKILL.md) |
-| Draw game art, sprites and launcher pictures | [ESP32 - Game Art](../esp32-game-art/SKILL.md) |
-| Package, install or update console games | [ESP32 - Add Game](../esp32-add-game/SKILL.md) |
-| Play and check games on your computer | [ESP32 - Test Game](../esp32-test-game/SKILL.md) |
-| Let friends play on connected consoles | [ESP32 - Multiplayer](../esp32-multiplayer/SKILL.md) |
-| Build, fix and test the Tab5 console OS | [ESP32 - Fix Console](../esp32-fix-console/SKILL.md) |
-| Connect and fix USB or Bluetooth controllers | [ESP32 - Controllers](../esp32-controllers/SKILL.md) |
+| First-time Console OS setup and provisioning | [ESP32 - Set Up](../esp32-setup/SKILL.md) |
+| Make or change a native game | [ESP32 - Make Game](../esp32-make-game/SKILL.md) |
+| Draw sprites, textures or launcher art | [ESP32 - Game Art](../esp32-game-art/SKILL.md) |
+| Package, install or update game content | [ESP32 - Add Game](../esp32-add-game/SKILL.md) |
+| Play-test a native game on the computer | [ESP32 - Test Game](../esp32-test-game/SKILL.md) |
+| Add linked-console play | [ESP32 - Multiplayer](../esp32-multiplayer/SKILL.md) |
+| Build, diagnose or change the shared OS/hardware | [ESP32 - Fix Console](../esp32-fix-console/SKILL.md) |
+| Change shared USB/Bluetooth controller support | [ESP32 - Controllers](../esp32-controllers/SKILL.md) |
 
-A game request normally starts with **Make Game**. Add **Game Art** when assets
-change, **Test Game** for the required native local play loop, **Multiplayer**
-for linked consoles, and **Add Game** when packaging/installing. Same-device
-pass-and-play alone does not require a network protocol. Ordinary button
-mappings use the game API; use **Controllers** when the shared HID service or
-physical controller support changes.
+Game changes use **Make Game**, then **Test Game**. Add **Game Art** for asset
+work, **Multiplayer** for linked consoles and **Add Game** for packaging or
+installation. Same-device pass-and-play and ordinary button mappings remain
+with **Make Game**. Compatible cartridge updates normally need no OS reflash.
+Shared audio, display, storage, build or device problems use **Fix Console**;
+its Tab5 route owns the dual-core and guarded-flash contracts.
+Documentation-only work needs reference/skill validation, not a firmware build.
 
-For Doom, Chex or arena engine work, read the owning `docs/games/` README
-and use **Fix Console** with the engine-specific guide; the native game runner
-does not run those engines. Wacky and Quake use their own documented harnesses.
+## Require native game resolution
 
-For initial OS installation use **Set Up**, which coordinates **Fix Console**
-and **Add Game**. A compatible game update uses **Add Game** and needs no OS
-reflash. For shared audio stutter, display, storage, build or device problems,
-use **Fix Console**. Its Tab5 workflow owns both P4 cores and the guarded
-hardware route. Do not substitute an Elecrow or Waveshare procedure for Tab5.
-Documentation-only edits need reference/skill validation, not a firmware build.
+Every game on maintained Tab5 must render directly at 768×480 RGB565. Follow
+[the presentation standard](../../../docs/GAME_ART.md): native cartridges
+require `video-highres` in both manifest and C descriptor. Canonical 320×200
+touch coordinates remain input units. Never lower the game framebuffer,
+upscale a completed 320×200 frame, or enable a per-title low-resolution override
+to fix readability or performance.
 
-## Older boards, only when requested
+For a blurry, noisy or unreadable game, establish the actual runtime surface
+before changing textures. If it is 320×200, use **Fix Console** to trace the
+manifest, descriptor, OS resolution overrides and framebuffer selection, then
+**Make Game → Game Art → Test Game** for native presentation. Require exact
+package/OS/unit-bound `surface=768x480` evidence plus readable active play before
+closing device acceptance. A high-resolution declaration or enlarged screenshot
+alone is insufficient. Preserve legacy source/recovery contracts only for
+explicitly requested legacy maintenance.
 
-M5Stack Tab5 is the maintained default. Preserve existing ports and exact-unit
-recovery evidence. For explicitly requested legacy maintenance, select:
+## Know the monorepo boundaries
 
-| Older-board task | Skill to read |
+**P4 Game Console** is the monorepo. **Console OS** is the shared platform in
+`apps/console_os` and `components`, currently branded Game Changers AI OS.
+**Doom Arena by Game Changers** is an integrated Doom mode; **Pure Hades** is
+one map pack. Documentation naming never changes game/package/save IDs or
+current OS branding.
+
+Doom, Chex Quest and arena engine work use **Fix Console** with their owning
+`docs/games/` README and engine guide. Wacky Wheels and Quake use their own
+README/harness linked from the [engine inventory](../../../README.md#engine-games-and-ports).
+The native game runner does not run these engines. New game creation uses C
+`.P4G` cartridges through the stable Game API; custom 2D/3D renderers follow
+the same surface, lifecycle and resource contracts.
+
+## Legacy boards, only when requested
+
+**M5Stack Tab5 is the only maintained default.** Initial installation uses
+**Set Up**; OS work uses **Fix Console** and the Tab5 native USB workflow.
+Select these older-board routes only for explicit legacy maintenance:
+
+| Legacy task | Skill |
 | --- | --- |
-| Maintain the older Waveshare 4.3 console | [ESP32 - Waveshare](../esp32-waveshare/SKILL.md) |
-| Fix the older Waveshare console screen | [ESP32 - Waveshare Screen](../esp32-waveshare-screen/SKILL.md) |
-| Fix the older Waveshare console sound | [ESP32 - Waveshare Sound](../esp32-waveshare-sound/SKILL.md) |
-| Check the older Elecrow 10-inch console | [ESP32 - Elecrow Test](../esp32-elecrow-test/SKILL.md) |
-| Fix the older Elecrow 10-inch screen | [ESP32 - Elecrow Screen](../esp32-elecrow-screen/SKILL.md) |
-| Fix the older Elecrow 10-inch speaker | [ESP32 - Elecrow Sound](../esp32-elecrow-sound/SKILL.md) |
+| Waveshare 4.3 console | [ESP32 - Waveshare](../esp32-waveshare/SKILL.md) |
+| Waveshare screen | [ESP32 - Waveshare Screen](../esp32-waveshare-screen/SKILL.md) |
+| Waveshare sound | [ESP32 - Waveshare Sound](../esp32-waveshare-sound/SKILL.md) |
+| Elecrow 10-inch console | [ESP32 - Elecrow Test](../esp32-elecrow-test/SKILL.md) |
+| Elecrow screen | [ESP32 - Elecrow Screen](../esp32-elecrow-screen/SKILL.md) |
+| Elecrow speaker | [ESP32 - Elecrow Sound](../esp32-elecrow-sound/SKILL.md) |
 
-Olimex Rev.B uses **Fix Console** with `docs/boards/OLIMEX_ESP32_P4_PC.md`;
-there is no separate Olimex skill. Never transfer flash authorization between
-boards or units.
+Olimex Rev.B uses **Fix Console** with `docs/boards/OLIMEX_ESP32_P4_PC.md`.
+Preserve legacy source and exact-unit recovery evidence. Flash authorization
+never transfers between boards or units.
 
-## Keep the library understandable
+## Keep game status honest
 
-For a new or changed game, keep its own README current: what it is, controls,
-local versus linked players, data requirements, build/play/install commands,
-asset notices and honest test status. Link new entries from the root README
-and `games/README.md` (or the engine-port entry) and follow `docs/GAME_LIBRARY.md`.
-A manifest's enabled flag or a successful upload is not proof of complete play,
-speaker quality or device frame rate. Preserve recorded failed/pending acceptance.
+Follow [library policy](../../../docs/GAME_LIBRARY.md),
+[performance](../../../docs/GAME_PERFORMANCE.md),
+[presentation](../../../docs/GAME_ART.md#complete-game-presentation) and
+[launch quality](../../../docs/LAUNCH_QUALITY.md) for game/release work.
+Keep each game's README current and link new titles from the root inventory
+and `games/README.md`. Drafts stay disabled until qualified; retired IDs stay
+reserved. Standard content excludes disabled games and `GAMES/WIP`; named
+developer installs require explicit opt-in. Tide Maze is disabled and removed
+from the product library at the owner's request; preserve its source, saves and
+failed device acceptance. Preserve Blast Circuit's featured status.
 
-New games use native C `.P4G` cartridges and stable OS services. Keep toolchain
-locks, game/save identities, data licensing and factory-backup gates intact.
-Read the selected specialist's contracts for the task instead of loading every
-skill or running every test by default.
-
-## Standard and development content
-
-Standard bundles exclude disabled manifests and every `GAMES/WIP` title.
-Byte Buddy, Red Dragon and Skyline Leap require an explicit
-`make install-dev GAME=<slug> PORT=<port>`; see the
-[developer install guide](../../../games/README.md#developer-installs).
-Tide Maze remains in the normal bundle by the owner's request; preserve its
-open device-lag acceptance. Feature Blast Circuit, with Wacky Wheels as an
-installed fallback. Preserve hidden games' source, package IDs and saves.
+A build, enabled flag or upload does not prove physical play, speaker quality
+or P4 frame rate. Preserve failed/pending acceptance and exact artifact/unit
+bindings. The selected specialist owns the task's detailed checks; do not load
+all skills or run every test by default.

@@ -1,6 +1,6 @@
 ---
 name: esp32-waveshare-screen
-description: Qualify and extend the Waveshare ESP32-P4-WIFI6-Touch-LCD-4.3 MIPI-DSI display path.
+description: "Use for explicitly requested legacy Waveshare ESP32-P4-WIFI6-Touch-LCD-4.3 MIPI-DSI display-service changes, blank/corrupt/tearing output or panel qualification."
 ---
 
 # ESP32 - Waveshare Screen
@@ -20,8 +20,11 @@ zero-backlight startup, refresh-confirmed buffer handoff, bounded PPA/CPU
 scaling and stage-specific failures. Existing device evidence applies only to
 its recorded images and units; a new panel/revision still needs exact matching.
 
-For a display-service change, run its host CMake/CTest target and the selected
-Waveshare build/verifier. For game-only pixels use `$esp32-test-game`.
+For a display-service change, run its host CMake/CTest target and use
+`$esp32-waveshare` for candidate checks and the exact-board local build. Its
+frozen `0.42` verifier applies only to reproducing the historical baseline;
+current candidates need matching scoped verification. For game-only pixels
+use `$esp32-make-game` and `$esp32-test-game`.
 Measure moving scanout, frame completions, timeouts and tearing separately on
 hardware before claiming a display improvement.
 

@@ -1,0 +1,1510 @@
+{
+  "schema": "p4-console-bounded-multiplayer-runtime-v1",
+  "version": "0.73",
+  "board": "m5stack-tab5",
+  "publication": "Staged official runtime record; root review pending. Distinct from installation.",
+  "record_scope": "A hosts one Doom Arena session; B fresh late join and two owned-seat returns. Fresh/return1 paired sampled cadence qualifies from earlier immutable prefixes; return2 lifecycle and root visual checks complete with A cadence only because B diagnostic corruption is unqualified. No native game or full release acceptance.",
+  "identity": {
+    "application": {
+      "file": "build-host/runtime-acceptance-073/binding-preparation-v1/p4_console_os.bin",
+      "bytes": 4460976,
+      "sha256": "947edff0c2cee5f19c917346e434e54532fa30bcce2eb02149f51361baaaf0ce"
+    },
+    "install": {
+      "file": "hardware/test-runs/2026-10-07-tab5-073-multiplayer-debug-install.json",
+      "bytes": 28520,
+      "sha256": "e45fcc876998bcab95fee64ef5f9aaf2ef10e0915d9646cec3a692d061935c9e"
+    },
+    "unit_identities_sha256": {
+      "A": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+      "B": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93"
+    },
+    "verification_method": "device-checksum, not full readback",
+    "attribution": "Exact guarded-install and immutable reader binding; no live identity query."
+  },
+  "source": {
+    "decision": {
+      "file": "build-host/runtime-acceptance-073/decision-closed-ahost.json",
+      "bytes": 57804,
+      "sha256": "bc733d9dcb581d56616ca6f6ac3db91f34ea23f578ba7f6217763dde9ae108f6"
+    },
+    "derivation": {
+      "file": "build-host/runtime-acceptance-073/derive-closed-decision.py",
+      "bytes": 10340,
+      "sha256": "a2a83572f8f2b4f6363168c1579d1f5fd180a5e95e9149a9320810c48fb736ed"
+    },
+    "runtime_record_derivation": {
+      "file": "build-host/runtime-acceptance-073/derive-runtime-record.py",
+      "bytes": 6731,
+      "sha256": "7d01deb8fe51388831eea3f073bf549cbc831e4abbd58febe94e3b1017a66fc7"
+    },
+    "reader_seal": {
+      "file": "build-host/073-diag-reader/seal.json",
+      "bytes": 2935,
+      "sha256": "65906a249447a2b0336d5feffa9b43450aaa7aa568a87c489a89d865673c1887"
+    },
+    "closed_analysis": {
+      "binding": {
+        "file": "build-host/runtime-acceptance-073/binding-closed-ahost.json",
+        "bytes": 2616,
+        "sha256": "88c4294915796a1e0e7457342426ca9a826c6f20d2d6c9a8b94d97b3cd8f7718"
+      },
+      "closed_journal_attribution_seal": {
+        "file": "build-host/runtime-acceptance-073/attribution-amendment-closed-v1/seal.json",
+        "bytes": 1107,
+        "sha256": "7f1a1a3a56fc7ad4b87a6fa1b6f70db4a9d5bf56b79a8dac45a0e4068dab0d08"
+      },
+      "original_closed_receipt": {
+        "file": "build-host/runtime-acceptance-073/analysis-closed-ahost-original/receipt.json",
+        "bytes": 1241,
+        "sha256": "4818484e9fbfdbf63450c301c3d630037d87ff4e201c29a2a9aef6637799f505"
+      },
+      "attributed_closed_receipt": {
+        "file": "build-host/runtime-acceptance-073/analysis-closed-ahost-attributed/receipt.json",
+        "bytes": 1241,
+        "sha256": "07f3ef4cc08378bac18f91c98dae31db3f58426e05c5f99e141c38333fb6ffa1"
+      },
+      "closed_attribution_receipt": {
+        "file": "build-host/runtime-acceptance-073/analysis-closed-ahost-attributed/attribution-receipt.json",
+        "bytes": 599,
+        "sha256": "7e6c6dc978c61bdab7c7dde4875a35cac6f0d209a80f5aeab778653bc98b8997"
+      },
+      "closed_summary": {
+        "file": "build-host/runtime-acceptance-073/analysis-closed-ahost-attributed/summary.json",
+        "bytes": 443524731,
+        "sha256": "d24ff513e16f77583a40e34f885e725ad098557b3e8f492026b7a5f4f7c6e0b6"
+      },
+      "closed_readout": {
+        "file": "build-host/runtime-acceptance-073/analysis-closed-ahost-attributed/readout.json",
+        "bytes": 55673,
+        "sha256": "15a708044c37f07b467c98baa1f6f79f4636bf8529b96aacf724c681034f1e8a"
+      },
+      "prior_decision": {
+        "file": "build-host/runtime-acceptance-073/decision-return1-ahost-attributed.json",
+        "bytes": 17832,
+        "sha256": "734e0ef2421e41c3b59582c79430b2e8a631d71e36627146231dac57ef37d546"
+      },
+      "host_start_clarification": {
+        "file": "build-host/runtime-acceptance-073/host-start-clarification-return1.json",
+        "bytes": 8108,
+        "sha256": "b92b57935de8dfdf38317632cb9441fd1ef81e706a424453964cc477bfa2bf25"
+      },
+      "rejected_prefixes": {
+        "file": "build-host/runtime-acceptance-073/return2-diagnostic-rejection-preserved.json",
+        "bytes": 1662,
+        "sha256": "d72c560661985984902a2937c460a428b2298af1b0b2144520774037829d7e21"
+      }
+    },
+    "raw_prefixes": {
+      "prefix-fresh-ahost": {
+        "commands.jsonl": {
+          "file": "build-host/runtime-acceptance-073/prefix-fresh-ahost/commands.jsonl",
+          "bytes": 184644,
+          "sha256": "6794cd6e19ef81390c1c61566e5587b24aca939bc5f42e2a0f1a7410ce3e4721"
+        },
+        "a.rx": {
+          "file": "build-host/runtime-acceptance-073/prefix-fresh-ahost/a.rx",
+          "bytes": 2447606,
+          "sha256": "91bd3492310dddd1d327247e934cd8c30c7d01d98cff867d03ab20c5644aca61"
+        },
+        "b.rx": {
+          "file": "build-host/runtime-acceptance-073/prefix-fresh-ahost/b.rx",
+          "bytes": 1589616,
+          "sha256": "2c2e02d849f57bd88f09c53f51bc04c7d86a6316d09cd6545a5f4d8a0ead9f36"
+        },
+        "receipt.json": {
+          "file": "build-host/runtime-acceptance-073/prefix-fresh-ahost/receipt.json",
+          "bytes": 678,
+          "sha256": "3f20b2f078e7761e0bc1c613b89d441a3be22830465c28640ace0ae32c9d6e4b"
+        }
+      },
+      "prefix-return1-ahost": {
+        "commands.jsonl": {
+          "file": "build-host/runtime-acceptance-073/prefix-return1-ahost/commands.jsonl",
+          "bytes": 358796,
+          "sha256": "615313f427f5781b77cbaf8d802fd0d7fff66b72cb181faf74cc4eb91e9163c1"
+        },
+        "a.rx": {
+          "file": "build-host/runtime-acceptance-073/prefix-return1-ahost/a.rx",
+          "bytes": 3695623,
+          "sha256": "87408ca75d15b960671b07ef932bd660020e3fe95f941e10c73a531b74a2a270"
+        },
+        "b.rx": {
+          "file": "build-host/runtime-acceptance-073/prefix-return1-ahost/b.rx",
+          "bytes": 3081059,
+          "sha256": "1c22a4143b1e9669ba1c156b819eb97c9a02bf9832f21be544cd7c677d925b07"
+        },
+        "receipt.json": {
+          "file": "build-host/runtime-acceptance-073/prefix-return1-ahost/receipt.json",
+          "bytes": 678,
+          "sha256": "8534af01399ac0b9531151fe01bd6c3bdd3399a4baea3cf10582c1492ba86072"
+        }
+      },
+      "prefix-return2-ahost": {
+        "commands.jsonl": {
+          "file": "build-host/runtime-acceptance-073/prefix-return2-ahost/commands.jsonl",
+          "bytes": 547660,
+          "sha256": "0230bd001a1cb68d85246098ddb3871fd75f23b15591b1367696bbb33bb6337f"
+        },
+        "a.rx": {
+          "file": "build-host/runtime-acceptance-073/prefix-return2-ahost/a.rx",
+          "bytes": 5764027,
+          "sha256": "f0d53b998a65fdd2474d920e2a517637084c902a49985877de871fbad6cb58c3"
+        },
+        "b.rx": {
+          "file": "build-host/runtime-acceptance-073/prefix-return2-ahost/b.rx",
+          "bytes": 5363245,
+          "sha256": "3ad9de9f209e58d5b9d5d723c945d6675c2989cdd83bd4836bfbb49d45e7f90a"
+        },
+        "receipt.json": {
+          "file": "build-host/runtime-acceptance-073/prefix-return2-ahost/receipt.json",
+          "bytes": 678,
+          "sha256": "153b09a161039b28d7ba526d85fef1cd468accfd1eb077d8a41412c6a9c291af"
+        }
+      },
+      "prefix-closed-ahost": {
+        "commands.jsonl": {
+          "file": "build-host/runtime-acceptance-073/prefix-closed-ahost/commands.jsonl",
+          "bytes": 580997,
+          "sha256": "0c0d190daf4deabf8b53a223fa88abb5602fca087fdde2fd97a9effd6cc89f46"
+        },
+        "a.rx": {
+          "file": "build-host/runtime-acceptance-073/prefix-closed-ahost/a.rx",
+          "bytes": 6043381,
+          "sha256": "f6293c5ee8d36739f98a1059ba8e7c3dc747dfa5dcee700ebcd6df8306b0ea99"
+        },
+        "b.rx": {
+          "file": "build-host/runtime-acceptance-073/prefix-closed-ahost/b.rx",
+          "bytes": 5575181,
+          "sha256": "03c80ee8b3e575d47aeb67081a21f92a8412bbfd642ae2b0986b084a212b67db"
+        },
+        "receipt.json": {
+          "file": "build-host/runtime-acceptance-073/prefix-closed-ahost/receipt.json",
+          "bytes": 678,
+          "sha256": "966f50f85e2a4bb9ea9eded610addaed5a4a850abff4bf38d58ba8db40c7141c"
+        }
+      }
+    },
+    "failed_evidence_preserved": {
+      "file": "build-host/runtime-acceptance-073/return2-diagnostic-rejection-preserved.json",
+      "bytes": 1662,
+      "sha256": "d72c560661985984902a2937c460a428b2298af1b0b2144520774037829d7e21"
+    }
+  },
+  "session": {
+    "session": "862fcc45",
+    "host": "A",
+    "guest": "B",
+    "host_boot_during_all_admissions": 1,
+    "host_generation": 1,
+    "host_visit": 1,
+    "initial_lobby_start_command_row_zero_based": 23,
+    "initial_lobby_start_reply_utc": "2026-10-07T13:56:27.995053+00:00",
+    "single_lobby_and_engine_launch": true,
+    "additional_host_lobby_start_or_restart_before_final_shutdown_recorded": false,
+    "later_Start_buttons": "Rows34/38 occurred in Doom and opened/closed SCORE; two later both-console taps at456,80 checked SCORE. Do not confuse with lobby Start.",
+    "limits": "Recorded lifecycle and command evidence only; no claim about unlogged physical actions or every moment being stall-free.",
+    "guest_admissions": [
+      {
+        "attempt": "fresh",
+        "boot": 1,
+        "generation": 1,
+        "visit": 1,
+        "slot": 1,
+        "same_unit_log_ms": {
+          "admission_accepted": 505228,
+          "wad_validation": 505395,
+          "handoff_begin": 535576,
+          "engine_start": 536718,
+          "replay": 561085,
+          "ready": 572100,
+          "accepted_to_ready": 66872,
+          "validation_to_handoff": 30181,
+          "engine_to_replay": 24367,
+          "replay_to_ready": 11015
+        },
+        "ready_tic": 14524,
+        "paired_host_armed_tic": 14524
+      },
+      {
+        "attempt": "return1",
+        "boot": 2,
+        "generation": 1,
+        "visit": 1,
+        "slot": 1,
+        "same_unit_log_ms": {
+          "admission_accepted": 91565,
+          "wad_validation": 91733,
+          "handoff_begin": 121915,
+          "engine_start": 123057,
+          "replay": 147387,
+          "ready": 158025,
+          "accepted_to_ready": 66460,
+          "validation_to_handoff": 30182,
+          "engine_to_replay": 24330,
+          "replay_to_ready": 10638
+        },
+        "ready_tic": 31339,
+        "paired_host_armed_tic": 31339
+      },
+      {
+        "attempt": "return2",
+        "boot": 3,
+        "generation": 1,
+        "visit": 1,
+        "slot": 1,
+        "same_unit_log_ms": {
+          "admission_accepted": 123874,
+          "wad_validation": 124043,
+          "handoff_begin": 154230,
+          "engine_start": 155375,
+          "replay": 179706,
+          "ready": 191452,
+          "accepted_to_ready": 67578,
+          "validation_to_handoff": 30187,
+          "engine_to_replay": 24331,
+          "replay_to_ready": 11746
+        },
+        "ready_tic": 53988,
+        "paired_host_armed_tic": 53988
+      }
+    ],
+    "raw_landmarks": {
+      "A": [
+        {
+          "kind": "line",
+          "start": 4282,
+          "end": 4325,
+          "text": "I (1769) app_init: App version:      0.73",
+          "context": {
+            "boot": 1,
+            "visit": 0,
+            "epoch": 1,
+            "session": null,
+            "phase": "boot"
+          }
+        },
+        {
+          "kind": "line",
+          "start": 375080,
+          "end": 375184,
+          "text": "I (63625) p4_console_os: P4_CONSOLE_OS MULTIPLAYER_LOBBY_CREATED session=862fcc45 transport=wifi-local",
+          "context": {
+            "boot": 1,
+            "visit": 1,
+            "epoch": 20,
+            "session": "862fcc45",
+            "phase": "lobby-host"
+          }
+        },
+        {
+          "kind": "line",
+          "start": 499691,
+          "end": 499820,
+          "text": "I (119325) p4_doom_touch_audio: P4_DOOM START board=m5stack-tab5 input=panel-matched-touch sound=es8388 runtime=build-candidate",
+          "context": {
+            "boot": 1,
+            "visit": 1,
+            "epoch": 24,
+            "session": "862fcc45",
+            "phase": "outside-doom"
+          }
+        },
+        {
+          "kind": "line",
+          "start": 502430,
+          "end": 502647,
+          "text": "I (121188) p4_doom_touch_audio: P4_DOOM_E6 ENGINE_START wad=/doom/freedoom2.wad touch=ready overlay=visible sfx_request=enabled music_request=enabled music_synth=procedural-16voice controller=shared-platform-gamepad",
+          "context": {
+            "boot": 1,
+            "visit": 1,
+            "epoch": 25,
+            "session": "862fcc45",
+            "phase": "outside-doom"
+          }
+        },
+        {
+          "kind": "line",
+          "start": 1517935,
+          "end": 1518035,
+          "text": "I (505091) doom_gc: GAME_CHANGERS_AI ADMISSION_ACCEPTED side=host kind=fresh slot=1 frontier=12180",
+          "context": {
+            "boot": 1,
+            "visit": 1,
+            "epoch": 27,
+            "session": "862fcc45",
+            "phase": "admission-accepted"
+          }
+        },
+        {
+          "kind": "line",
+          "start": 1620309,
+          "end": 1620377,
+          "text": "I (571861) doom_gc: GAME_CHANGERS_AI REJOIN_ARMED slot=1 tic=14524",
+          "context": {
+            "boot": 1,
+            "visit": 1,
+            "epoch": 28,
+            "session": "862fcc45",
+            "phase": "rejoin-armed"
+          }
+        },
+        {
+          "kind": "line",
+          "start": 2671346,
+          "end": 2671448,
+          "text": "I (1032882) doom_gc: GAME_CHANGERS_AI ADMISSION_ACCEPTED side=host kind=return slot=1 frontier=29010",
+          "context": {
+            "boot": 1,
+            "visit": 1,
+            "epoch": 31,
+            "session": "862fcc45",
+            "phase": "admission-accepted"
+          }
+        },
+        {
+          "kind": "line",
+          "start": 2781515,
+          "end": 2781584,
+          "text": "I (1099215) doom_gc: GAME_CHANGERS_AI REJOIN_ARMED slot=1 tic=31339",
+          "context": {
+            "boot": 1,
+            "visit": 1,
+            "epoch": 32,
+            "session": "862fcc45",
+            "phase": "rejoin-armed"
+          }
+        },
+        {
+          "kind": "line",
+          "start": 4688996,
+          "end": 4689098,
+          "text": "I (1747438) doom_gc: GAME_CHANGERS_AI ADMISSION_ACCEPTED side=host kind=return slot=1 frontier=51620",
+          "context": {
+            "boot": 1,
+            "visit": 1,
+            "epoch": 35,
+            "session": "862fcc45",
+            "phase": "admission-accepted"
+          }
+        },
+        {
+          "kind": "line",
+          "start": 4797315,
+          "end": 4797384,
+          "text": "I (1814876) doom_gc: GAME_CHANGERS_AI REJOIN_ARMED slot=1 tic=53988",
+          "context": {
+            "boot": 1,
+            "visit": 1,
+            "epoch": 36,
+            "session": "862fcc45",
+            "phase": "rejoin-armed"
+          }
+        },
+        {
+          "kind": "line",
+          "start": 6027657,
+          "end": 6027829,
+          "text": "I (2330463) p4_doom_touch_audio: P4_DOOM_E6 CLEANUP audio_released=1 touch_released=1 bus=ESP_OK dark=ESP_OK video=ESP_OK display=ESP_OK blob=ESP_OK complete=1 retained=0",
+          "context": {
+            "boot": 1,
+            "visit": 1,
+            "epoch": 38,
+            "session": "862fcc45",
+            "phase": "terminal"
+          }
+        },
+        {
+          "kind": "line",
+          "start": 6027829,
+          "end": 6027938,
+          "text": "I (2330465) p4_doom_touch_audio: P4_DOOM_E6 EXIT status=confirmed action=restart-to-home cleanup_complete=1",
+          "context": {
+            "boot": 1,
+            "visit": 1,
+            "epoch": 39,
+            "session": "862fcc45",
+            "phase": "terminal"
+          }
+        },
+        {
+          "kind": "line",
+          "start": 6030936,
+          "end": 6030979,
+          "text": "I (1778) app_init: App version:      0.73",
+          "context": {
+            "boot": 2,
+            "visit": 0,
+            "epoch": 40,
+            "session": null,
+            "phase": "boot"
+          }
+        }
+      ],
+      "B": [
+        {
+          "kind": "line",
+          "start": 4284,
+          "end": 4327,
+          "text": "I (1769) app_init: App version:      0.73",
+          "context": {
+            "boot": 1,
+            "visit": 0,
+            "epoch": 1,
+            "session": null,
+            "phase": "boot"
+          }
+        },
+        {
+          "kind": "line",
+          "start": 742228,
+          "end": 742320,
+          "text": "I (505228) p4_console_os: GAME_CHANGERS_AI ADMISSION_ACCEPTED side=guest kind=fresh slot=1",
+          "context": {
+            "boot": 1,
+            "visit": 1,
+            "epoch": 30,
+            "session": "862fcc45",
+            "phase": "admission-accepted"
+          }
+        },
+        {
+          "kind": "line",
+          "start": 748362,
+          "end": 748491,
+          "text": "I (535582) p4_doom_touch_audio: P4_DOOM START board=m5stack-tab5 input=panel-matched-touch sound=es8388 runtime=build-candidate",
+          "context": {
+            "boot": 1,
+            "visit": 1,
+            "epoch": 30,
+            "session": "862fcc45",
+            "phase": "admission-accepted"
+          }
+        },
+        {
+          "kind": "line",
+          "start": 751066,
+          "end": 751283,
+          "text": "I (536718) p4_doom_touch_audio: P4_DOOM_E6 ENGINE_START wad=/doom/freedoom2.wad touch=ready overlay=visible sfx_request=enabled music_request=enabled music_synth=procedural-16voice controller=shared-platform-gamepad",
+          "context": {
+            "boot": 1,
+            "visit": 1,
+            "epoch": 31,
+            "session": "862fcc45",
+            "phase": "admission-accepted"
+          }
+        },
+        {
+          "kind": "line",
+          "start": 755220,
+          "end": 755288,
+          "text": "I (572100) doom_gc: GAME_CHANGERS_AI REJOIN_READY slot=1 tic=14524",
+          "context": {
+            "boot": 1,
+            "visit": 1,
+            "epoch": 33,
+            "session": "862fcc45",
+            "phase": "rejoin-ready"
+          }
+        },
+        {
+          "kind": "line",
+          "start": 1780473,
+          "end": 1780644,
+          "text": "I (941398) p4_doom_touch_audio: P4_DOOM_E6 CLEANUP audio_released=1 touch_released=1 bus=ESP_OK dark=ESP_OK video=ESP_OK display=ESP_OK blob=ESP_OK complete=1 retained=0",
+          "context": {
+            "boot": 1,
+            "visit": 1,
+            "epoch": 34,
+            "session": "862fcc45",
+            "phase": "terminal"
+          }
+        },
+        {
+          "kind": "line",
+          "start": 1780644,
+          "end": 1780752,
+          "text": "I (941400) p4_doom_touch_audio: P4_DOOM_E6 EXIT status=confirmed action=restart-to-home cleanup_complete=1",
+          "context": {
+            "boot": 1,
+            "visit": 1,
+            "epoch": 35,
+            "session": "862fcc45",
+            "phase": "terminal"
+          }
+        },
+        {
+          "kind": "line",
+          "start": 1783750,
+          "end": 1783793,
+          "text": "I (1778) app_init: App version:      0.73",
+          "context": {
+            "boot": 2,
+            "visit": 0,
+            "epoch": 36,
+            "session": null,
+            "phase": "boot"
+          }
+        },
+        {
+          "kind": "line",
+          "start": 2156925,
+          "end": 2157017,
+          "text": "I (91565) p4_console_os: GAME_CHANGERS_AI ADMISSION_ACCEPTED side=guest kind=return slot=1",
+          "context": {
+            "boot": 2,
+            "visit": 1,
+            "epoch": 60,
+            "session": "862fcc45",
+            "phase": "admission-accepted"
+          }
+        },
+        {
+          "kind": "line",
+          "start": 2163062,
+          "end": 2163191,
+          "text": "I (121921) p4_doom_touch_audio: P4_DOOM START board=m5stack-tab5 input=panel-matched-touch sound=es8388 runtime=build-candidate",
+          "context": {
+            "boot": 2,
+            "visit": 1,
+            "epoch": 60,
+            "session": "862fcc45",
+            "phase": "admission-accepted"
+          }
+        },
+        {
+          "kind": "line",
+          "start": 2165765,
+          "end": 2165982,
+          "text": "I (123057) p4_doom_touch_audio: P4_DOOM_E6 ENGINE_START wad=/doom/freedoom2.wad touch=ready overlay=visible sfx_request=enabled music_request=enabled music_synth=procedural-16voice controller=shared-platform-gamepad",
+          "context": {
+            "boot": 2,
+            "visit": 1,
+            "epoch": 61,
+            "session": "862fcc45",
+            "phase": "admission-accepted"
+          }
+        },
+        {
+          "kind": "line",
+          "start": 2169922,
+          "end": 2169990,
+          "text": "I (158025) doom_gc: GAME_CHANGERS_AI REJOIN_READY slot=1 tic=31339",
+          "context": {
+            "boot": 2,
+            "visit": 1,
+            "epoch": 63,
+            "session": "862fcc45",
+            "phase": "rejoin-ready"
+          }
+        },
+        {
+          "kind": "line",
+          "start": 3997413,
+          "end": 3997584,
+          "text": "I (682185) p4_doom_touch_audio: P4_DOOM_E6 CLEANUP audio_released=1 touch_released=1 bus=ESP_OK dark=ESP_OK video=ESP_OK display=ESP_OK blob=ESP_OK complete=1 retained=0",
+          "context": {
+            "boot": 2,
+            "visit": 1,
+            "epoch": 64,
+            "session": "862fcc45",
+            "phase": "terminal"
+          }
+        },
+        {
+          "kind": "line",
+          "start": 3997584,
+          "end": 3997692,
+          "text": "I (682187) p4_doom_touch_audio: P4_DOOM_E6 EXIT status=confirmed action=restart-to-home cleanup_complete=1",
+          "context": {
+            "boot": 2,
+            "visit": 1,
+            "epoch": 65,
+            "session": "862fcc45",
+            "phase": "terminal"
+          }
+        },
+        {
+          "kind": "line",
+          "start": 4000690,
+          "end": 4000733,
+          "text": "I (1778) app_init: App version:      0.73",
+          "context": {
+            "boot": 3,
+            "visit": 0,
+            "epoch": 66,
+            "session": null,
+            "phase": "boot"
+          }
+        },
+        {
+          "kind": "line",
+          "start": 4374773,
+          "end": 4374866,
+          "text": "I (123874) p4_console_os: GAME_CHANGERS_AI ADMISSION_ACCEPTED side=guest kind=return slot=1",
+          "context": {
+            "boot": 3,
+            "visit": 1,
+            "epoch": 91,
+            "session": "862fcc45",
+            "phase": "admission-accepted"
+          }
+        },
+        {
+          "kind": "line",
+          "start": 4380912,
+          "end": 4381041,
+          "text": "I (154238) p4_doom_touch_audio: P4_DOOM START board=m5stack-tab5 input=panel-matched-touch sound=es8388 runtime=build-candidate",
+          "context": {
+            "boot": 3,
+            "visit": 1,
+            "epoch": 91,
+            "session": "862fcc45",
+            "phase": "admission-accepted"
+          }
+        },
+        {
+          "kind": "line",
+          "start": 4383615,
+          "end": 4383832,
+          "text": "I (155375) p4_doom_touch_audio: P4_DOOM_E6 ENGINE_START wad=/doom/freedoom2.wad touch=ready overlay=visible sfx_request=enabled music_request=enabled music_synth=procedural-16voice controller=shared-platform-gamepad",
+          "context": {
+            "boot": 3,
+            "visit": 1,
+            "epoch": 92,
+            "session": "862fcc45",
+            "phase": "admission-accepted"
+          }
+        },
+        {
+          "kind": "line",
+          "start": 4387969,
+          "end": 4388037,
+          "text": "I (191452) doom_gc: GAME_CHANGERS_AI REJOIN_READY slot=1 tic=53988",
+          "context": {
+            "boot": 3,
+            "visit": 1,
+            "epoch": 94,
+            "session": "862fcc45",
+            "phase": "rejoin-ready"
+          }
+        },
+        {
+          "kind": "line",
+          "start": 5557502,
+          "end": 5557673,
+          "text": "I (656787) p4_doom_touch_audio: P4_DOOM_E6 CLEANUP audio_released=1 touch_released=1 bus=ESP_OK dark=ESP_OK video=ESP_OK display=ESP_OK blob=ESP_OK complete=1 retained=0",
+          "context": {
+            "boot": 3,
+            "visit": 1,
+            "epoch": 95,
+            "session": "862fcc45",
+            "phase": "terminal"
+          }
+        },
+        {
+          "kind": "line",
+          "start": 5557673,
+          "end": 5557781,
+          "text": "I (656789) p4_doom_touch_audio: P4_DOOM_E6 EXIT status=confirmed action=restart-to-home cleanup_complete=1",
+          "context": {
+            "boot": 3,
+            "visit": 1,
+            "epoch": 96,
+            "session": "862fcc45",
+            "phase": "terminal"
+          }
+        },
+        {
+          "kind": "line",
+          "start": 5560779,
+          "end": 5560822,
+          "text": "I (1778) app_init: App version:      0.73",
+          "context": {
+            "boot": 4,
+            "visit": 0,
+            "epoch": 97,
+            "session": null,
+            "phase": "boot"
+          }
+        }
+      ]
+    },
+    "timing_scope": "Admission timing subtracts same-unit same-boot ESP log milliseconds, not command UTC or diagnostic capture clocks."
+  },
+  "active_play": {
+    "result": "Qualified sampled submission cadence exceeds30FPS on A/B for fresh and return1, and on A for return2. B return2 is UNAVAILABLE; zero accepted samples is not a pass.",
+    "method": "Complete thirteen-part DIAG_V2 groups; adjacent sequence and unchanging drop counter; capture-time intervals conservatively bounded by same-boot STATUS mono_us requests/replies. Exclude screenshots, break/menu, incomplete groups and uncertain bounds. Async emit time is separate.",
+    "windows": [
+      {
+        "id": "073-ahost-fresh-b-01",
+        "command_window": {
+          "start_utc": "2026-10-07T14:06:54.968554+00:00",
+          "end_utc": "2026-10-07T14:09:43.696050+00:00",
+          "elapsed_ms": 168727.49609375,
+          "verified_guarded_pulses": 60,
+          "pulse_commands_observed": 60,
+          "pulse_commands_planned": 60
+        },
+        "eligible_completed_command_window": true,
+        "units": {
+          "A": {
+            "measurement_status": "QUALIFIED_SAMPLED_SUBMISSION_CADENCE",
+            "cadence": {
+              "interval_count": 32,
+              "sampled_duration_us": 144570258,
+              "weighted_submitted_fps": 33.20184985766574,
+              "minimum_submitted_fps": 30.679514,
+              "below_25": 0,
+              "below_30": 0
+            },
+            "frame_delta": 4800,
+            "error_counter_deltas": {
+              "video_failures": 0,
+              "video_timeouts": 0,
+              "audio_write_failures": 0,
+              "backend_write_failures": 0,
+              "music_parse_failures": 0
+            },
+            "network_counter_deltas": {
+              "frames": 4800,
+              "poll_calls": 66702,
+              "poll_us": 33522169,
+              "tx_attempts": 4813,
+              "tx_failures": 0,
+              "rx_packets": 15394,
+              "rx_session_rejected": 0,
+              "peer_departures": 0,
+              "host_blocked_peer_polls": 62344
+            },
+            "audio_counter_deltas": {
+              "audio_frames_forwarded": 2313216,
+              "audio_nonzero_frames": 2312581,
+              "backend_write_successes": 18072,
+              "music_events": 5369,
+              "music_notes": 2612,
+              "music_loops": 1
+            },
+            "endpoint_audio_flags": {
+              "audio_gate": [
+                1
+              ],
+              "audio_telemetry_snapshot_valid": [
+                1
+              ],
+              "backend_telemetry_valid": [
+                1
+              ],
+              "backend_running": [
+                1
+              ],
+              "tx_enabled": [
+                1
+              ],
+              "audio_write_failures": [
+                0
+              ],
+              "backend_write_failures": [
+                0
+              ],
+              "music_playing": [
+                1
+              ],
+              "music_paused": [
+                0
+              ],
+              "music_parse_failures": [
+                0
+              ]
+            },
+            "audio_worker_min_stack_hwm": 4092,
+            "audio_start_proof": [
+              "not-proven"
+            ],
+            "foreground_diagnostic_capture": {
+              "total_us": 7485,
+              "calls": 32,
+              "mean_us_per_call": 233.90625,
+              "scope": "Foreground periodic diagnostic capture/publish timing, not async logger emission duration."
+            }
+          },
+          "B": {
+            "measurement_status": "QUALIFIED_SAMPLED_SUBMISSION_CADENCE",
+            "cadence": {
+              "interval_count": 33,
+              "sampled_duration_us": 144451235,
+              "weighted_submitted_fps": 34.26761979570476,
+              "minimum_submitted_fps": 31.966067,
+              "below_25": 0,
+              "below_30": 0
+            },
+            "frame_delta": 4950,
+            "error_counter_deltas": {
+              "video_failures": 0,
+              "video_timeouts": 0,
+              "audio_write_failures": 0,
+              "backend_write_failures": 0,
+              "music_parse_failures": 0
+            },
+            "network_counter_deltas": {
+              "frames": 4950,
+              "poll_calls": 72746,
+              "poll_us": 35037643,
+              "tx_attempts": 15348,
+              "tx_failures": 0,
+              "rx_packets": 4812,
+              "rx_session_rejected": 0,
+              "peer_departures": 0,
+              "host_blocked_peer_polls": 0
+            },
+            "audio_counter_deltas": {
+              "audio_frames_forwarded": 2311296,
+              "audio_nonzero_frames": 2311212,
+              "backend_write_successes": 18057,
+              "music_events": 5995,
+              "music_notes": 2928,
+              "music_loops": 1
+            },
+            "endpoint_audio_flags": {
+              "audio_gate": [
+                1
+              ],
+              "audio_telemetry_snapshot_valid": [
+                1
+              ],
+              "backend_telemetry_valid": [
+                1
+              ],
+              "backend_running": [
+                1
+              ],
+              "tx_enabled": [
+                1
+              ],
+              "audio_write_failures": [
+                0
+              ],
+              "backend_write_failures": [
+                0
+              ],
+              "music_playing": [
+                1
+              ],
+              "music_paused": [
+                0
+              ],
+              "music_parse_failures": [
+                0
+              ]
+            },
+            "audio_worker_min_stack_hwm": 4092,
+            "audio_start_proof": [
+              "not-proven"
+            ],
+            "foreground_diagnostic_capture": {
+              "total_us": 8431,
+              "calls": 33,
+              "mean_us_per_call": 255.4848484848485,
+              "scope": "Foreground periodic diagnostic capture/publish timing, not async logger emission duration."
+            }
+          }
+        },
+        "source": {
+          "file": "build-host/runtime-acceptance-073/decision-return1-ahost-attributed.json",
+          "bytes": 17832,
+          "sha256": "734e0ef2421e41c3b59582c79430b2e8a631d71e36627146231dac57ef37d546"
+        }
+      },
+      {
+        "id": "073-ahost-return1-b-01",
+        "command_window": {
+          "start_utc": "2026-10-07T14:14:33.597482+00:00",
+          "end_utc": "2026-10-07T14:17:22.543526+00:00",
+          "elapsed_ms": 168946.0439453125,
+          "verified_guarded_pulses": 60,
+          "pulse_commands_observed": 60,
+          "pulse_commands_planned": 60
+        },
+        "eligible_completed_command_window": true,
+        "units": {
+          "A": {
+            "measurement_status": "QUALIFIED_SAMPLED_SUBMISSION_CADENCE",
+            "cadence": {
+              "interval_count": 36,
+              "sampled_duration_us": 163118776,
+              "weighted_submitted_fps": 33.104711379148654,
+              "minimum_submitted_fps": 31.445875,
+              "below_25": 0,
+              "below_30": 0
+            },
+            "frame_delta": 5400,
+            "error_counter_deltas": {
+              "video_failures": 0,
+              "video_timeouts": 0,
+              "audio_write_failures": 0,
+              "backend_write_failures": 0,
+              "music_parse_failures": 0
+            },
+            "network_counter_deltas": {
+              "frames": 5400,
+              "poll_calls": 75149,
+              "poll_us": 37834995,
+              "tx_attempts": 5459,
+              "tx_failures": 0,
+              "rx_packets": 16563,
+              "rx_session_rejected": 0,
+              "peer_departures": 0,
+              "host_blocked_peer_polls": 70125
+            },
+            "audio_counter_deltas": {
+              "audio_frames_forwarded": 2609920,
+              "audio_nonzero_frames": 2609129,
+              "backend_write_successes": 20390,
+              "music_events": 6313,
+              "music_notes": 3086,
+              "music_loops": 1
+            },
+            "endpoint_audio_flags": {
+              "audio_gate": [
+                1
+              ],
+              "audio_telemetry_snapshot_valid": [
+                1
+              ],
+              "backend_telemetry_valid": [
+                1
+              ],
+              "backend_running": [
+                1
+              ],
+              "tx_enabled": [
+                1
+              ],
+              "audio_write_failures": [
+                0
+              ],
+              "backend_write_failures": [
+                0
+              ],
+              "music_playing": [
+                1
+              ],
+              "music_paused": [
+                0
+              ],
+              "music_parse_failures": [
+                0
+              ]
+            },
+            "audio_worker_min_stack_hwm": 4092,
+            "audio_start_proof": [
+              "not-proven"
+            ],
+            "foreground_diagnostic_capture": {
+              "total_us": 7454,
+              "calls": 36,
+              "mean_us_per_call": 207.05555555555554,
+              "scope": "Foreground periodic diagnostic capture/publish timing, not async logger emission duration."
+            }
+          },
+          "B": {
+            "measurement_status": "QUALIFIED_SAMPLED_SUBMISSION_CADENCE",
+            "cadence": {
+              "interval_count": 32,
+              "sampled_duration_us": 141105119,
+              "weighted_submitted_fps": 34.01719253005981,
+              "minimum_submitted_fps": 32.325106,
+              "below_25": 0,
+              "below_30": 0
+            },
+            "frame_delta": 4800,
+            "error_counter_deltas": {
+              "video_failures": 0,
+              "video_timeouts": 0,
+              "audio_write_failures": 0,
+              "backend_write_failures": 0,
+              "music_parse_failures": 0
+            },
+            "network_counter_deltas": {
+              "frames": 4800,
+              "poll_calls": 64361,
+              "poll_us": 31917249,
+              "tx_attempts": 14288,
+              "tx_failures": 0,
+              "rx_packets": 4715,
+              "rx_session_rejected": 0,
+              "peer_departures": 0,
+              "host_blocked_peer_polls": 0
+            },
+            "audio_counter_deltas": {
+              "audio_frames_forwarded": 2257664,
+              "audio_nonzero_frames": 2257602,
+              "backend_write_successes": 17638,
+              "music_events": 5423,
+              "music_notes": 2701,
+              "music_loops": 0
+            },
+            "endpoint_audio_flags": {
+              "audio_gate": [
+                1
+              ],
+              "audio_telemetry_snapshot_valid": [
+                1
+              ],
+              "backend_telemetry_valid": [
+                1
+              ],
+              "backend_running": [
+                1
+              ],
+              "tx_enabled": [
+                1
+              ],
+              "audio_write_failures": [
+                0
+              ],
+              "backend_write_failures": [
+                0
+              ],
+              "music_playing": [
+                1
+              ],
+              "music_paused": [
+                0
+              ],
+              "music_parse_failures": [
+                0
+              ]
+            },
+            "audio_worker_min_stack_hwm": 4084,
+            "audio_start_proof": [
+              "not-proven"
+            ],
+            "foreground_diagnostic_capture": {
+              "total_us": 6385,
+              "calls": 32,
+              "mean_us_per_call": 199.53125,
+              "scope": "Foreground periodic diagnostic capture/publish timing, not async logger emission duration."
+            }
+          }
+        },
+        "source": {
+          "file": "build-host/runtime-acceptance-073/decision-return1-ahost-attributed.json",
+          "bytes": 17832,
+          "sha256": "734e0ef2421e41c3b59582c79430b2e8a631d71e36627146231dac57ef37d546"
+        }
+      },
+      {
+        "id": "073-ahost-return2-b-01",
+        "command_window": {
+          "start_utc": "2026-10-07T14:26:13.624943+00:00",
+          "end_utc": "2026-10-07T14:29:02.595678+00:00",
+          "elapsed_ms": 168970.73486328125,
+          "verified_guarded_pulses": 60,
+          "pulse_commands_observed": 60,
+          "pulse_commands_planned": 60
+        },
+        "eligible_completed_command_window": true,
+        "units": {
+          "A": {
+            "measurement_status": "QUALIFIED_SAMPLED_SUBMISSION_CADENCE",
+            "cadence": {
+              "interval_count": 36,
+              "sampled_duration_us": 163797277,
+              "weighted_submitted_fps": 32.96758101784562,
+              "minimum_submitted_fps": 30.733636,
+              "below_25": 0,
+              "below_30": 0
+            },
+            "frame_delta": 5400,
+            "error_counter_deltas": {
+              "video_failures": 0,
+              "video_timeouts": 0,
+              "audio_write_failures": 0,
+              "backend_write_failures": 0,
+              "music_parse_failures": 0
+            },
+            "network_counter_deltas": {
+              "frames": 5400,
+              "poll_calls": 73845,
+              "poll_us": 37476459,
+              "tx_attempts": 5613,
+              "tx_failures": 0,
+              "rx_packets": 16624,
+              "rx_session_rejected": 0,
+              "peer_departures": 0,
+              "host_blocked_peer_polls": 68583
+            },
+            "audio_counter_deltas": {
+              "audio_frames_forwarded": 2620800,
+              "audio_nonzero_frames": 2619642,
+              "backend_write_successes": 20475,
+              "music_events": 6566,
+              "music_notes": 3211,
+              "music_loops": 1
+            },
+            "endpoint_audio_flags": {
+              "audio_gate": [
+                1
+              ],
+              "audio_telemetry_snapshot_valid": [
+                1
+              ],
+              "backend_telemetry_valid": [
+                1
+              ],
+              "backend_running": [
+                1
+              ],
+              "tx_enabled": [
+                1
+              ],
+              "audio_write_failures": [
+                0
+              ],
+              "backend_write_failures": [
+                0
+              ],
+              "music_playing": [
+                1
+              ],
+              "music_paused": [
+                0
+              ],
+              "music_parse_failures": [
+                0
+              ]
+            },
+            "audio_worker_min_stack_hwm": 4092,
+            "audio_start_proof": [
+              "not-proven"
+            ],
+            "foreground_diagnostic_capture": {
+              "total_us": 10746,
+              "calls": 36,
+              "mean_us_per_call": 298.5,
+              "scope": "Foreground diagnostic capture/publish only; excludes async serial output."
+            }
+          },
+          "B": {
+            "measurement_status": "UNAVAILABLE_STRICT_DIAGNOSTIC_REJECTION",
+            "cadence": {
+              "interval_count": 0,
+              "sampled_duration_us": 0,
+              "weighted_submitted_fps": null,
+              "minimum_submitted_fps": null,
+              "below_25": 0,
+              "below_30": 0
+            },
+            "audio": "unavailable for this window",
+            "network": "unavailable for this window",
+            "reason": "Complete corrupted PERF line raw4396152..4396803 loses required diagnostic identity metadata; frozen parser globally rejects B bundles. No repair/trim/policy relaxation."
+          }
+        },
+        "source": {
+          "file": "build-host/runtime-acceptance-073/analysis-closed-ahost-attributed/readout.json",
+          "bytes": 55673,
+          "sha256": "15a708044c37f07b467c98baa1f6f79f4636bf8529b96aacf724c681034f1e8a"
+        }
+      }
+    ]
+  },
+  "audio": {
+    "scope": "Software telemetry only; person-heard confirmation pending.",
+    "audio_start_proof_not_proven": "Actual firmware field is the legacy low-readback-at-start hardware witness, intentionally unset on Tab5; unrelated to multiplayer Start. See prior host-start clarification anchor.",
+    "result": "Available accepted intervals show enabled audio backend, nonzero software frames and music events/notes, with zero observed write/parse failure increments. B return2 unavailable; person-heard confirmation remains pending."
+  },
+  "physical_review": {
+    "observer": "/root",
+    "scope": "Root-reported inspection of saved framebuffer images; no additional physical inspection by this offline analyst.",
+    "score_and_break": [
+      {
+        "observer": "/root",
+        "observation_basis": "Root-reported visual inspection, separately attributed; not inferred from counters.",
+        "observation": "Root viewed both TAKE A BREAK overlays after idle.",
+        "journal_row_zero_based": 434,
+        "started_at": "2026-10-07T14:20:04.654095+00:00",
+        "time": "2026-10-07T14:20:08.076947+00:00",
+        "request": {
+          "command": "screenshot",
+          "unit": "both",
+          "name": "073-return1-idle-overlay",
+          "scale": 4,
+          "parallel": true
+        },
+        "responses": {
+          "A": {
+            "capture_id": 3777333052,
+            "native_width": 180,
+            "native_height": 320,
+            "width": 320,
+            "height": 180,
+            "format": "rgb565-le",
+            "rotation": 1,
+            "scale": 4,
+            "bytes": 115200,
+            "sha256": "02d0226401f78277abf83f10d0d125a2e3e96b33323849a37bd5a43a010712a3",
+            "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-20261007T1358/images/073-return1-idle-overlay-a.png"
+          },
+          "B": {
+            "capture_id": 1114423422,
+            "native_width": 180,
+            "native_height": 320,
+            "width": 320,
+            "height": 180,
+            "format": "rgb565-le",
+            "rotation": 1,
+            "scale": 4,
+            "bytes": 115200,
+            "sha256": "c9807de2542b8b715a44b774230f48086576895d6ca2349f72897c368a945e57",
+            "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-20261007T1358/images/073-return1-idle-overlay-b.png"
+          }
+        }
+      },
+      {
+        "observer": "/root",
+        "observation_basis": "Root-reported visual inspection, separately attributed; not inferred from counters.",
+        "observation": "Root viewed BREAK text/rectangle gone and live world restored after b180.",
+        "journal_row_zero_based": 437,
+        "started_at": "2026-10-07T14:20:19.628453+00:00",
+        "time": "2026-10-07T14:20:23.068778+00:00",
+        "request": {
+          "command": "screenshot",
+          "unit": "both",
+          "scale": 4,
+          "parallel": true,
+          "name": "073-break-cleared-immediate"
+        },
+        "responses": {
+          "A": {
+            "capture_id": 3417684104,
+            "native_width": 180,
+            "native_height": 320,
+            "width": 320,
+            "height": 180,
+            "format": "rgb565-le",
+            "rotation": 1,
+            "scale": 4,
+            "bytes": 115200,
+            "sha256": "3e11a68fae235ff0823f5122db065d5161522ee078d7e23549cd731837b241c3",
+            "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-20261007T1358/images/073-break-cleared-immediate-a.png"
+          },
+          "B": {
+            "capture_id": 3692926466,
+            "native_width": 180,
+            "native_height": 320,
+            "width": 320,
+            "height": 180,
+            "format": "rgb565-le",
+            "rotation": 1,
+            "scale": 4,
+            "bytes": 115200,
+            "sha256": "7fe6b40d66455743925a36e350869085bc9e098318938a7ede9fc9af5fd1654c",
+            "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-20261007T1358/images/073-break-cleared-immediate-b.png"
+          }
+        }
+      },
+      {
+        "observer": "/root",
+        "observation_basis": "Root-reported visual inspection, separately attributed; not inferred from counters.",
+        "observation": "Root viewed SCORE panel open with Doom Arena By GameChangers identity and CLOSE.",
+        "journal_row_zero_based": 441,
+        "started_at": "2026-10-07T14:20:41.879914+00:00",
+        "time": "2026-10-07T14:20:45.279091+00:00",
+        "request": {
+          "command": "screenshot",
+          "unit": "both",
+          "scale": 4,
+          "parallel": true,
+          "name": "073-score-touch-open"
+        },
+        "responses": {
+          "B": {
+            "capture_id": 1528220155,
+            "native_width": 180,
+            "native_height": 320,
+            "width": 320,
+            "height": 180,
+            "format": "rgb565-le",
+            "rotation": 1,
+            "scale": 4,
+            "bytes": 115200,
+            "sha256": "0bfa223c27cde5e27e7b29b1655a82fbebf81bac0002498597cb0ee60ef6cc5e",
+            "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-20261007T1358/images/073-score-touch-open-b.png"
+          },
+          "A": {
+            "capture_id": 1483324522,
+            "native_width": 180,
+            "native_height": 320,
+            "width": 320,
+            "height": 180,
+            "format": "rgb565-le",
+            "rotation": 1,
+            "scale": 4,
+            "bytes": 115200,
+            "sha256": "825e14664bb64914d612afe2de7187d68c5addaafa0330bee5e0cb2744b0d691",
+            "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-20261007T1358/images/073-score-touch-open-a.png"
+          }
+        }
+      },
+      {
+        "observer": "/root",
+        "observation_basis": "Root-reported visual inspection, separately attributed; not inferred from counters.",
+        "observation": "Root viewed score panel gone; BREAK text represented subsequent idle.",
+        "journal_row_zero_based": 445,
+        "started_at": "2026-10-07T14:20:58.714959+00:00",
+        "time": "2026-10-07T14:21:02.183026+00:00",
+        "request": {
+          "command": "screenshot",
+          "unit": "both",
+          "scale": 4,
+          "parallel": true,
+          "name": "073-score-touch-closed-immediate"
+        },
+        "responses": {
+          "A": {
+            "capture_id": 1424308024,
+            "native_width": 180,
+            "native_height": 320,
+            "width": 320,
+            "height": 180,
+            "format": "rgb565-le",
+            "rotation": 1,
+            "scale": 4,
+            "bytes": 115200,
+            "sha256": "e95fe3e450041d0f43956da5386e4e06641a81010579905279bd20b7bc429146",
+            "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-20261007T1358/images/073-score-touch-closed-immediate-a.png"
+          },
+          "B": {
+            "capture_id": 741999754,
+            "native_width": 180,
+            "native_height": 320,
+            "width": 320,
+            "height": 180,
+            "format": "rgb565-le",
+            "rotation": 1,
+            "scale": 4,
+            "bytes": 115200,
+            "sha256": "9a2bf035575abe07bcfe232132455c46009042242cbaa0d32b61a55eab361b5a",
+            "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-20261007T1358/images/073-score-touch-closed-immediate-b.png"
+          }
+        }
+      },
+      {
+        "observer": "/root",
+        "observation_basis": "Root-reported visual inspection, separately attributed; not inferred from counters.",
+        "observation": "Root viewed BREAK gone on both and live world restored after b180.",
+        "journal_row_zero_based": 449,
+        "started_at": "2026-10-07T14:21:09.660331+00:00",
+        "time": "2026-10-07T14:21:13.107338+00:00",
+        "request": {
+          "command": "screenshot",
+          "unit": "both",
+          "scale": 4,
+          "parallel": true,
+          "name": "073-break-clear-before-return2"
+        },
+        "responses": {
+          "A": {
+            "capture_id": 3287685989,
+            "native_width": 180,
+            "native_height": 320,
+            "width": 320,
+            "height": 180,
+            "format": "rgb565-le",
+            "rotation": 1,
+            "scale": 4,
+            "bytes": 115200,
+            "sha256": "49a5ba1e8a2af83ddbff6548ceeb193b9ac3026e6a49ccb0a6c8ca600e0bce95",
+            "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-20261007T1358/images/073-break-clear-before-return2-a.png"
+          },
+          "B": {
+            "capture_id": 280384182,
+            "native_width": 180,
+            "native_height": 320,
+            "width": 320,
+            "height": 180,
+            "format": "rgb565-le",
+            "rotation": 1,
+            "scale": 4,
+            "bytes": 115200,
+            "sha256": "b473f8448678f07de502730aa60fac26db6201e1ea042a95c466ddaf6da56ead",
+            "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-20261007T1358/images/073-break-clear-before-return2-b.png"
+          }
+        }
+      }
+    ],
+    "timing_limits": "Input and following screenshot were in one guarded batch without LLM gap; about3.4s transfer means this is not optical first-frame latency proof.",
+    "return2_endpoint": {
+      "root_report": "Both endpoint views clean active world, move/fire.",
+      "reported_endpoint_utc": "2026-10-07T14:29:06.178029+00:00",
+      "claim_limit": "Root visual observation; does not replace missing B cadence telemetry or prove optical frame timing."
+    }
+  },
+  "closure": {
+    "ports_closed_utc": "2026-10-07T14:34:26.178243+00:00",
+    "final_successful_both_home_status_utc": "2026-10-07T14:34:24.223280+00:00",
+    "final_home_journal_row_zero_based": 706,
+    "both_inputs_neutral": true,
+    "all_cleanup_complete_and_retained_zero": true,
+    "guest_final_boot": 4,
+    "host_final_boot": 2,
+    "failed_quit_batches_preserved": [
+      {
+        "journal_row_zero_based": 241,
+        "time": "2026-10-07T14:10:59.084519+00:00",
+        "name": "073-ahost-return1-b-quit-2",
+        "error": "pulse failed for B: {'error': 'no release response after 3 identical requests', 'response': None}"
+      },
+      {
+        "journal_row_zero_based": 467,
+        "time": "2026-10-07T14:22:21.334193+00:00",
+        "name": "073-ahost-return2-b-quit-2",
+        "error": "pulse failed for B: {'error': 'no release response after 3 identical requests', 'response': None}"
+      },
+      {
+        "journal_row_zero_based": 678,
+        "time": "2026-10-07T14:33:18.179703+00:00",
+        "name": "073-ahost-return3-b-quit-2",
+        "error": "pulse failed for B: {'error': 'no release response after 3 identical requests', 'response': None}"
+      },
+      {
+        "journal_row_zero_based": 700,
+        "time": "2026-10-07T14:34:08.094914+00:00",
+        "name": "073-ahost-stop1-b-quit-2",
+        "error": "pulse failed for A: {'error': 'no release response after 3 identical requests', 'response': None}"
+      }
+    ],
+    "limits": "Missing release acknowledgements/session errors during reboot remain failed command receipts; successful raw cleanup, new boots and later Home statuses establish terminal state."
+  },
+  "known_issues": [
+    "B full closed capture has a complete malformed PERF record at raw4396152..4396803 losing required DIAG identity. Frozen parser rejects every B full-prefix group; no parser relaxation, trimming or raw repair was made.",
+    "Earlier prefix-return2 additionally ended mid-DIAG line; its failure and raw bytes remain retained.",
+    "The exact malformed pre-dispatch journal row56 remains failed. Only its reviewed global unknown-command attribution is removed; the unchanged amendment has19passing tests and a separate closed-scope review.",
+    "Fresh admission and both returns still take about66\u201368seconds from logged admission acceptance to READY; loading latency remains material.",
+    "Host blocked-peer polls count repeated polls, not dropped inputs. Zero transport failure counters do not prove zero packet loss or no rubberbanding.",
+    "Serial DIAG text has no checksum; accepted intact groups do not provide optical scanout/frame-tail timing."
+  ],
+  "acceptance": {
+    "overall_goal_complete": false,
+    "full_release_acceptance": "not-assigned",
+    "native_games": "not-covered",
+    "fresh_and_first_return_paired_sample_floor_30fps": "PASS_BOUNDED_MEASUREMENTS",
+    "second_return_A_sample_floor_30fps": "PASS_BOUNDED_MEASUREMENTS",
+    "second_return_B_sample_floor_30fps": "UNAVAILABLE_CORRUPTED_DIAGNOSTICS",
+    "same_host_late_join_and_two_returns": "OBSERVED_NO_ADDITIONAL_LOBBY_START_OR_RESTART",
+    "score_break_repaint": "ROOT_VISUALLY_OBSERVED_AT_SAVED_ENDPOINTS",
+    "audio_person_heard": "PENDING",
+    "rubberband_absence": "NOT_PROVEN"
+  },
+  "limits": [
+    "Cadence uses complete DIAG_V2 groups and adjacent accepted intervals bounded by same-boot STATUS mono_us fences. Async emission time is separate.",
+    "Sampled durations are sums of eligible intervals, not a claim of common continuous coverage. Snapshots, break/menu and uncertain bounds remain excluded.",
+    "Submitted-frame counters do not prove physical scanout/frame-tail pacing, input effect or absence of rubberbanding.",
+    "Audio counters prove software forwarding and music activity only; audio_start_proof remains not-proven and no person-heard result is claimed.",
+    "Network blocked-peer polls count repeated polls, not dropped inputs or lost packets. Zero transport failure counters do not prove zero packet loss.",
+    "The failed row56 remains failed. Only its exact reviewed pre-dispatch validation error is attributed; unknown errors remain global poison.",
+    "B closed-prefix corruption prevents all B bundle qualification; the independently saved fresh/return1 measurements retain their exact previous source scope.",
+    "The three command windows do not prove physical scanout/frame-tail pacing, no rubberbanding, or overall release acceptance."
+  ]
+}

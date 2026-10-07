@@ -74,7 +74,8 @@ bool p4_yahtzee_network_available(const p4_game_context_t *context)
 bool p4_yahtzee_local_turn(const p4_yahtzee_state_t *state)
 {
     return state != NULL && (state->mode == P4_YAHTZEE_LOCAL ||
-        (state->local_player_slot < state->player_count &&
+        (!state->network_error && state->network_started &&
+         state->local_player_slot < state->player_count &&
          state->current_player == state->local_player_slot));
 }
 
@@ -148,7 +149,7 @@ static bool apply_snapshot(p4_yahtzee_state_t *state,
     if (revision == 0U || revision < state->network_revision ||
         player_count < P4_YAHTZEE_MIN_PLAYERS ||
         player_count > P4_YAHTZEE_PLAYERS ||
-        (state->network_started && state->player_count != player_count) ||
+        (state->network_bound && state->player_count != player_count) ||
         bytes[6] >= player_count ||
         bytes[7] > P4_YAHTZEE_ROLLS_PER_TURN ||
         (bytes[8] & UINT8_C(0xe0)) != 0U ||
@@ -287,6 +288,8 @@ bool p4_yahtzee_perform_action(
     uint8_t argument)
 {
     if (state == NULL ||
+        (state->mode == P4_YAHTZEE_NETWORK &&
+         (state->network_error || !state->network_started)) ||
         (kind == P4_YAHTZEE_NET_RESTART
             ? state->phase != P4_YAHTZEE_GAME_OVER
             : !p4_yahtzee_local_turn(state))) {
@@ -299,38 +302,68 @@ bool p4_yahtzee_perform_action(
     return apply_host_action(context, state, kind, argument);
 }
 
+static void end_network_match(p4_yahtzee_state_t *state)
+{
+    state->network_error = true;
+    state->phase = P4_YAHTZEE_NETWORK_WAIT;
+    state->roll_animation_ms = 0U;
+    state->animation_step_ms = 0U;
+    state->accessory_pending = false;
+}
+
+bool p4_yahtzee_accept_network_status(
+    p4_yahtzee_state_t *state,
+    const p4_game_multiplayer_status_t *status)
+{
+    if (state->network_error) {
+        end_network_match(state);
+        return false;
+    }
+    if (status == NULL || status->state != P4_GAME_MULTIPLAYER_CONNECTED) {
+        if (status == NULL || state->network_bound ||
+            status->state != P4_GAME_MULTIPLAYER_WAITING) {
+            end_network_match(state);
+        }
+        return false;
+    }
+    if (status->player_count < P4_YAHTZEE_MIN_PLAYERS ||
+        status->player_count > P4_YAHTZEE_PLAYERS ||
+        status->local_player_slot >= status->player_count ||
+        (status->role != P4_GAME_MULTIPLAYER_ROLE_HOST &&
+         status->role != P4_GAME_MULTIPLAYER_ROLE_CLIENT) ||
+        (state->network_bound &&
+         (state->network_generation != status->generation ||
+          state->network_seed != status->session_seed ||
+          state->network_role != status->role ||
+          state->local_player_slot != status->local_player_slot ||
+          state->player_count != status->player_count))) {
+        end_network_match(state);
+        return false;
+    }
+    if (!state->network_bound) {
+        state->network_generation = status->generation;
+        state->network_seed = status->session_seed;
+        state->network_role = status->role;
+        state->local_player_slot = status->local_player_slot;
+        state->player_count = status->player_count;
+        state->network_bound = true;
+    }
+    return true;
+}
+
 void p4_yahtzee_poll_network(
     p4_game_context_t *context,
     p4_yahtzee_state_t *state)
 {
+    if (state->network_error) {
+        end_network_match(state);
+        return;
+    }
     p4_game_multiplayer_status_t status;
-    if (!p4_game_multiplayer_read_status(context, &status)) {
-        state->network_error = true;
+    const bool status_ok = p4_game_multiplayer_read_status(context, &status);
+    if (!p4_yahtzee_accept_network_status(state, status_ok ? &status : NULL)) {
         return;
     }
-    if (status.state == P4_GAME_MULTIPLAYER_PEER_LEFT ||
-        status.state == P4_GAME_MULTIPLAYER_ERROR ||
-        status.state == P4_GAME_MULTIPLAYER_OFFLINE) {
-        state->network_error = true;
-        return;
-    }
-    if (status.state != P4_GAME_MULTIPLAYER_CONNECTED) {
-        return;
-    }
-    if (status.player_count < P4_YAHTZEE_MIN_PLAYERS ||
-        status.player_count > P4_YAHTZEE_PLAYERS ||
-        status.local_player_slot >= status.player_count ||
-        (status.role != P4_GAME_MULTIPLAYER_ROLE_HOST &&
-         status.role != P4_GAME_MULTIPLAYER_ROLE_CLIENT) ||
-        (state->network_started &&
-         state->player_count != status.player_count)) {
-        state->network_error = true;
-        return;
-    }
-    state->player_count = status.player_count;
-    state->local_player_slot = status.local_player_slot;
-    state->network_role = status.role;
-    state->network_seed = status.session_seed;
     if (!state->network_started &&
         status.role == P4_GAME_MULTIPLAYER_ROLE_HOST) {
         p4_yahtzee_reset_match(state, (uint32_t)status.session_seed ^
@@ -344,6 +377,10 @@ void p4_yahtzee_poll_network(
         state->shared_accessory = context->services != NULL &&
             (context->services->available_capabilities & P4_GAME_CAP_DICE_ACCESSORY) != 0U;
         state->network_started = send_snapshot(context, state);
+        if (!state->network_started) {
+            state->phase = P4_YAHTZEE_NETWORK_WAIT;
+            return;
+        }
     }
     p4_game_multiplayer_message_t message;
     for (size_t received = 0U; received < 4U &&

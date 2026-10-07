@@ -199,7 +199,7 @@ static int 	leveljuststarted = 1; 	// kluge until AM_LevelInit() is called
 
 boolean    	automapactive = false;
 static int 	finit_width = SCREENWIDTH;
-static int 	finit_height = SCREENHEIGHT - 32;
+static int 	finit_height = P4_DOOM_SCALE_Y(168);
 
 // location of window on screen
 static int 	f_x;
@@ -1318,12 +1318,12 @@ void AM_drawMarks(void)
 	{
 	    //      w = SHORT(marknums[i]->width);
 	    //      h = SHORT(marknums[i]->height);
-	    w = 5; // because something's wrong with the wad, i guess
-	    h = 6; // because something's wrong with the wad, i guess
+	    w = P4_DOOM_SCALE_X(5); // because something's wrong with the wad, i guess
+	    h = P4_DOOM_SCALE_Y(6); // because something's wrong with the wad, i guess
 	    fx = CXMTOF(markpoints[i].x);
 	    fy = CYMTOF(markpoints[i].y);
 	    if (fx >= f_x && fx <= f_w - w && fy >= f_y && fy <= f_h - h)
-		V_DrawPatch(fx, fy, marknums[i]);
+		V_DrawPatchNative(fx, fy, marknums[i]);
 	}
     }
 

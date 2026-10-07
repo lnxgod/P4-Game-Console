@@ -172,7 +172,7 @@ static p4_game_services_t local_services(audio_mock_t *audio)
 {
     return (p4_game_services_t){
         .available_capabilities = P4_GAME_CAP_VIDEO |
-            P4_GAME_CAP_CONTROLS | P4_GAME_CAP_AUDIO_TONE,
+            P4_GAME_CAP_CONTROLS | P4_GAME_CAP_AUDIO_TONE | P4_GAME_CAP_VIDEO_HIGH_RES,
         .audio_context = audio,
         .game_id = "org.p4console.texas-holdem",
         .play_tone = play_tone,
@@ -790,11 +790,19 @@ static bool test_local_cpu_lifecycle(void)
 static bool test_local_lifecycle_render_and_touch(void)
 {
     audio_mock_t audio = {0};
-    const p4_game_services_t services = local_services(&audio);
+    p4_game_services_t services = local_services(&audio);
+    services.available_capabilities &= ~(uint32_t)P4_GAME_CAP_VIDEO_HIGH_RES;
+    /* Retain this explicit legacy renderer fixture until the instance is stopped. */
+    p4_game_descriptor_t legacy = p4_texas_holdem_game;
+    legacy.required_capabilities &= ~(uint32_t)P4_GAME_CAP_VIDEO_HIGH_RES;
+    legacy.optional_capabilities |= P4_GAME_CAP_VIDEO_HIGH_RES;
     p4_game_instance_t instance = {0};
     texas_holdem_state_t state;
-    CHECK(p4_game_instance_start(
+    CHECK(!p4_game_instance_start(
         &instance, &p4_texas_holdem_game, &services,
+        &state, sizeof(state)));
+    CHECK(p4_game_instance_start(
+        &instance, &legacy, &services,
         &state, sizeof(state)));
     CHECK(state.phase == TEXAS_HOLDEM_PHASE_SETUP);
     CHECK(state.player_count == 4U);

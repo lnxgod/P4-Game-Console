@@ -19,6 +19,7 @@ if(COMMAND idf_component_register)
         REQUIRES
             freertos
             platform_audio
+            p4_midi
     )
 
     if(CONFIG_DOOM_AUDIO_ENGINE_ADAPTER)
@@ -39,7 +40,12 @@ else()
     cmake_minimum_required(VERSION 3.16)
     project(doom_audio_core VERSION 0.1.0 LANGUAGES C)
 
+    if(NOT TARGET p4_midi)
+        add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/../../../../components/p4_midi"
+                         "${CMAKE_CURRENT_BINARY_DIR}/p4_midi")
+    endif()
     add_library(doom_audio_core STATIC ${DOOM_AUDIO_CORE_SOURCES})
+    target_link_libraries(doom_audio_core PRIVATE p4_midi)
     target_include_directories(doom_audio_core PUBLIC include)
     target_compile_features(doom_audio_core PUBLIC c_std_11)
 

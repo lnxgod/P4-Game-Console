@@ -1,9 +1,9 @@
 # P4 Game SDK v1
 
 P4 Game SDK v1 is the stable C interface for storage-installed Console OS
-games. New and visually upgraded games draw native 768x480 RGB565 frames,
-negotiated through the existing optional high-resolution capability, with a
-tested 320x200 fallback. A game owns bounded gameplay state. Console OS owns the panel, touch, audio, timing, USB, filesystem, and
+games. Every maintained Tab5 game draws native 768x480 RGB565 frames; native
+cartridges require the existing high-resolution capability. Legacy fallback
+ABI/source paths remain preserved for explicit legacy maintenance. A game owns bounded gameplay state. Console OS owns the panel, touch, audio, timing, USB, filesystem, and
 app lifecycle.
 
 ## Supported authoring path
@@ -217,10 +217,13 @@ letting an unloadable game reach the SD card.
 - bounded `title`, `subtitle`, `folder`, `license`, and RGB565 accent;
 - required and optional capabilities.
 
-Use optional `video-highres` for a dual-resolution game, or place it in
-`required_capabilities` only when the game cannot render at 320x200. The
-creator generates the portable optional form by default; `--high-res` remains
-a compatible explicit option and `--low-res` is a legacy opt-out.
+For maintained Tab5 games, place `video-highres` in `required_capabilities`
+and `P4_GAME_CAP_VIDEO_HIGH_RES` in the C descriptor's required capabilities.
+The creator emits both requirements by default, including with `--high-res`;
+verify manifest and compiled descriptor remain aligned after edits.
+Use `--low-res` and optional dual-resolution declarations only for explicitly
+requested legacy maintenance. Retained fallback code does not authorize
+low-resolution Tab5 gameplay.
 
 Use `scripts/new-game.py --dry-run` to inspect a starter plan. The creator
 never overwrites an existing game.
@@ -254,8 +257,10 @@ Include only headers under `components/p4_game_api/include/p4/`:
 actual wall-clock delta clamped to `1..P4_GAME_MAX_FRAME_DELTA_MS`, and does
 not issue catch-up bursts after a slow frame. Return
 `P4_GAME_EXIT_TO_LAUNCHER` when Back is pressed.
-`render` receives the caller-owned surface; supplied drawing primitives clip
-to its bounds.
+`render` borrows the current caller-owned surface; supplied drawing primitives
+clip to its bounds. Render the complete supplied frame. Console OS may rotate
+its pixels after presentation, so never retain the surface's pixels pointer
+between callbacks.
 
 The native cartridge entry is
 [`components/p4_game_api/runtime/cartridge_main.c`](../components/p4_game_api/runtime/cartridge_main.c).
@@ -266,21 +271,23 @@ rather than owning a private frame loop.
 
 ## High-resolution video mode
 
-The ABI's fallback and input contract remains `P4_GAME_SURFACE_WIDTH` ×
-`P4_GAME_SURFACE_HEIGHT` (320×200). New game authoring defaults to native
-768×480; see [the presentation standard](GAME_ART.md). A game that declares the
+The ABI's legacy fallback constants remain `P4_GAME_SURFACE_WIDTH` ×
+`P4_GAME_SURFACE_HEIGHT` (320×200), and input remains canonical 320×200.
+Every maintained Tab5 game must render native 768×480; see
+[the presentation standard](GAME_ART.md). A game that declares the
 `video-highres` manifest capability and
 `P4_GAME_CAP_VIDEO_HIGH_RES` descriptor capability may receive
 `P4_GAME_SURFACE_HIGH_RES_WIDTH` × `P4_GAME_SURFACE_HIGH_RES_HEIGHT`
 (768×480) instead. Check `surface->width` and `surface->height` during every
 render; do not infer the selected mode from the board.
 
-Declaring high resolution as optional is the preferred portable form. Console
-OS selects 768×480 when the target supports it and otherwise starts the game
-with 320×200. Declaring it as required makes launch fail cleanly on a target
-without that surface. The Tab5 and Waveshare 4.3 Console OS paths and the SDL3
-host runner support the high-resolution surface now. Other targets retain the
-fallback until their platform implementation supports negotiation.
+High resolution is required for maintained Tab5 cartridges. Declaring it as
+required makes launch fail cleanly on a target without that surface rather
+than silently degrading presentation. The Tab5 and Waveshare 4.3 Console OS
+paths and SDL3 host runner support the high-resolution surface. Existing
+optional declarations and OS per-title low-resolution overrides are legacy
+behavior; inspect the actual launch record and correct the maintained path.
+Other boards retain their source/recovery contracts for explicit legacy work.
 
 Input deliberately does not change modes. `p4_game_input_t` touch points and
 the standard control hit regions always use canonical 320×200 coordinates.
@@ -486,8 +493,9 @@ cartridge code runs.
 
 Games inherit a stable logical console rather than a board definition:
 
-- Every `.P4G` targets a clipped RGB565 Game API surface: new games request
-  native 768x480 with `video-highres` and retain a 320x200 fallback. On
+- Every `.P4G` targets a clipped RGB565 Game API surface: maintained Tab5 games
+  require native 768x480 with `video-highres`. Legacy fallback source remains
+  preserved for explicit legacy maintenance. On
   Waveshare 4.3, the OS viewport is always 768x480 landscape. A game must not
   infer scanout rotation, pin maps, stride layout, or backlight behavior.
 - Input is a complete normalized snapshot. Use only the Game API buttons,
@@ -544,9 +552,13 @@ two native-API paths:
    `p4_game_submit_pcm16_stereo()`.
 
 Each accepted stream call copies 1–256 frames of already-mixed signed 16 kHz
-PCM16 stereo into a fixed 512-frame FIFO; the caller may reuse its buffer as
-soon as the call returns. Stream audio and tones are saturating-mixed before
-Console OS writes the shared backend. A `false` result means the optional
+PCM16 stereo into a bounded Console OS-owned FIFO; the caller may reuse its
+buffer as soon as the call returns. Its current capacity is defined by
+`P4_GAME_AUDIO_STREAM_BUFFER_FRAMES` in
+[`p4/audio.h`](../components/p4_game_api/include/p4/audio.h); see
+[the audio scheduling contract](GAME_PERFORMANCE.md)
+for producer timing and buffering behavior. Stream audio and tones are
+saturating-mixed before Console OS writes the shared backend. A `false` result means the optional
 service is unavailable, the request is invalid, or the FIFO is full. Drop or
 degrade that block—never busy-wait inside a game callback. In every game,
 `stop` must call `p4_game_stop_audio()` (directly or through the provided game

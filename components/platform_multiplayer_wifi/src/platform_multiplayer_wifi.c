@@ -3,6 +3,7 @@
 #include "platform/ble_host.h"
 #include "p4/multiplayer.h"
 #include "discovery.h"
+#include <errno.h>
 #include <string.h>
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wsign-conversion"
@@ -33,17 +34,30 @@ static size_t s_count;
 static platform_multiplayer_wifi_handler_t s_handler;
 static void *s_context;
 static int s_socket=-1;
+static bool s_poll_drained;
 static uint32_t s_peer_ip, s_local_ip, s_gateway_ip;
 static int64_t s_last_rx;
 static uint32_t s_peer_ips[3];
 static int64_t s_peer_seen[3];
 static bool s_ip_ready, s_associated;
 static esp_netif_t *s_sta, *s_ap;
+/* Only the Wi-Fi worker advances these checkpoints. A failed or cancelled
+ * request retains completed setup, especially netifs and event handlers. */
+enum { INIT_NETIF, INIT_EVENT_LOOP, INIT_STA, INIT_AP, INIT_WIFI,
+       INIT_STORAGE, INIT_WIFI_HANDLER, INIT_IP_HANDLER, INIT_COMPLETE };
+static unsigned s_init_step;
+static bool s_wifi_init_attempted;
 #define LOCK() ((void)xSemaphoreTake(s_lock,portMAX_DELAY))
 #define UNLOCK() ((void)xSemaphoreGive(s_lock))
 
+static bool current_request(unsigned generation)
+{
+    LOCK(); bool current=s_generation==generation; UNLOCK(); return current;
+}
+
 static void close_link_locked(void)
 {
+    s_poll_drained=false;
     if (s_socket>=0) { close(s_socket); s_socket=-1; }
     s_status.ready=false; s_status.connected=false; s_status.route_id=0;
     memset(s_peer_ips,0,sizeof(s_peer_ips));memset(s_peer_seen,0,sizeof(s_peer_seen));
@@ -75,6 +89,10 @@ static void wifi_event(void *arg, esp_event_base_t base, int32_t id, void *data)
 {
     (void)arg;
     LOCK();
+    if ((base==IP_EVENT && id==IP_EVENT_STA_GOT_IP) ||
+        (base==WIFI_EVENT && (id==WIFI_EVENT_AP_STACONNECTED ||
+            id==WIFI_EVENT_AP_STADISCONNECTED || id==WIFI_EVENT_STA_DISCONNECTED)))
+        s_poll_drained=false;
     if (base==IP_EVENT && id==IP_EVENT_STA_GOT_IP && s_mode==MODE_CLIENT) {
         const ip_event_got_ip_t *event=data;
         s_local_ip=event->ip_info.ip.addr; s_gateway_ip=event->ip_info.gw.addr;
@@ -90,35 +108,69 @@ static void wifi_event(void *arg, esp_event_base_t base, int32_t id, void *data)
     }
     UNLOCK();
 }
-static esp_err_t initialize(void)
+static esp_err_t initialize(unsigned generation)
 {
     /* Serialize C6 activation through the already shared NimBLE owner. Its
      * VHCI initializer must run before Hosted RPC on pinned Hosted 1.4.7. */
+    if(!current_request(generation)) return ESP_ERR_INVALID_STATE;
     esp_err_t e=platform_ble_host_start();
     if(e!=ESP_OK) return e;
     int64_t deadline=esp_timer_get_time()+INT64_C(15000000);
     while(!platform_ble_host_ready()) {
+        if(!current_request(generation)) return ESP_ERR_INVALID_STATE;
         if(platform_ble_host_status().state==PLATFORM_BLE_HOST_ERROR) return ESP_FAIL;
         if(esp_timer_get_time()>=deadline) return ESP_ERR_TIMEOUT;
         vTaskDelay(pdMS_TO_TICKS(25));
     }
-    e=esp_netif_init(); if(e!=ESP_OK && e!=ESP_ERR_INVALID_STATE) return e;
-    e=esp_event_loop_create_default(); if(e!=ESP_OK && e!=ESP_ERR_INVALID_STATE) return e;
-    s_sta=esp_netif_create_default_wifi_sta(); s_ap=esp_netif_create_default_wifi_ap();
-    if(!s_sta || !s_ap) return ESP_ERR_NO_MEM;
-    wifi_init_config_t config=WIFI_INIT_CONFIG_DEFAULT();
-    e=esp_wifi_init(&config); if(e!=ESP_OK) return e;
-    e=esp_wifi_set_storage(WIFI_STORAGE_RAM); if(e!=ESP_OK) return e;
-    e=esp_event_handler_register(WIFI_EVENT,ESP_EVENT_ANY_ID,wifi_event,NULL); if(e!=ESP_OK) return e;
-    return esp_event_handler_register(IP_EVENT,IP_EVENT_STA_GOT_IP,wifi_event,NULL);
+    for(;s_init_step<INIT_COMPLETE;++s_init_step) {
+        if(!current_request(generation)) return ESP_ERR_INVALID_STATE;
+        switch(s_init_step) {
+        case INIT_NETIF:
+            e=esp_netif_init(); if(e==ESP_ERR_INVALID_STATE) e=ESP_OK; break;
+        case INIT_EVENT_LOOP:
+            e=esp_event_loop_create_default(); if(e==ESP_ERR_INVALID_STATE) e=ESP_OK; break;
+        case INIT_STA:
+            s_sta=esp_netif_create_default_wifi_sta(); e=s_sta?ESP_OK:ESP_ERR_NO_MEM; break;
+        case INIT_AP:
+            s_ap=esp_netif_create_default_wifi_ap(); e=s_ap?ESP_OK:ESP_ERR_NO_MEM; break;
+        case INIT_WIFI: {
+            /* A Hosted reply can time out after the C6 applied init. Repeating
+             * it would register duplicate remote handlers; first resolve the
+             * remote state on the next user-selected attempt. */
+            if(s_wifi_init_attempted) {
+                wifi_mode_t mode;
+                e=esp_wifi_get_mode(&mode);
+                if(!current_request(generation)) return ESP_ERR_INVALID_STATE;
+                if(e==ESP_OK) break;
+                if(e!=ESP_ERR_WIFI_NOT_INIT) return e;
+            }
+            wifi_init_config_t config=WIFI_INIT_CONFIG_DEFAULT();
+            s_wifi_init_attempted=true;
+            e=esp_wifi_init(&config); break;
+        }
+        case INIT_STORAGE: e=esp_wifi_set_storage(WIFI_STORAGE_RAM); break;
+        case INIT_WIFI_HANDLER:
+            e=esp_event_handler_register(WIFI_EVENT,ESP_EVENT_ANY_ID,wifi_event,NULL); break;
+        case INIT_IP_HANDLER:
+            e=esp_event_handler_register(IP_EVENT,IP_EVENT_STA_GOT_IP,wifi_event,NULL); break;
+        default: return ESP_ERR_INVALID_STATE;
+        }
+        if(e!=ESP_OK) return e;
+    }
+    return current_request(generation)?ESP_OK:ESP_ERR_INVALID_STATE;
 }
-static esp_err_t start_mode(unsigned mode, uint32_t session, uint16_t game, const wifi_ap_record_t *target)
+static esp_err_t start_mode(unsigned generation, unsigned mode, uint32_t session, uint16_t game, const wifi_ap_record_t *target)
 {
+    if(!current_request(generation)) return ESP_ERR_INVALID_STATE;
     (void)esp_wifi_scan_stop(); (void)esp_wifi_stop();
-    LOCK(); close_link_locked(); UNLOCK();
+    LOCK(); bool current=s_generation==generation;
+    if(current) close_link_locked();
+    UNLOCK();
+    if(!current) return ESP_ERR_INVALID_STATE;
     if(mode==MODE_OFF) return ESP_OK;
     esp_err_t e=esp_wifi_set_mode(mode==MODE_HOST?WIFI_MODE_AP:WIFI_MODE_STA);
     if(e!=ESP_OK) return e;
+    if(!current_request(generation)) return ESP_ERR_INVALID_STATE;
     wifi_config_t config={0};
     if(mode==MODE_HOST) {
         char name[33]; if(!p4_wifi_room_name(name,session,game)) return ESP_ERR_INVALID_ARG;
@@ -133,14 +185,21 @@ static esp_err_t start_mode(unsigned mode, uint32_t session, uint16_t game, cons
         e=esp_wifi_set_config(WIFI_IF_STA,&config);
     }
     if(e!=ESP_OK) return e;
+    if(!current_request(generation)) return ESP_ERR_INVALID_STATE;
     e=esp_wifi_start(); if(e!=ESP_OK) return e;
+    if(!current_request(generation)) return ESP_ERR_INVALID_STATE;
     /* Disable station power save to avoid bursty race input. */
     (void)esp_wifi_set_ps(WIFI_PS_NONE);
+    if(!current_request(generation)) return ESP_ERR_INVALID_STATE;
     if(mode==MODE_CLIENT) return esp_wifi_connect();
     if(mode==MODE_HOST) {
         esp_netif_ip_info_t ip;
         e=esp_netif_get_ip_info(s_ap,&ip);
-        if(e==ESP_OK) { LOCK(); s_local_ip=ip.ip.addr; s_ip_ready=true; UNLOCK(); }
+        if(e==ESP_OK) {
+            LOCK();
+            if(s_generation==generation) { s_local_ip=ip.ip.addr; s_ip_ready=true; }
+            UNLOCK();
+        }
     }
     return e;
 }
@@ -156,6 +215,7 @@ static void scan_rooms(unsigned generation)
         if(e==ESP_OK) for(unsigned i=0;i<count && i<RAW_APS && s_count<4;++i) {
             uint32_t session; uint16_t game;
             if(records[i].authmode!=WIFI_AUTH_OPEN || !p4_wifi_room_parse(records[i].ssid,&session,&game)) continue;
+            if(s_game && game!=s_game) continue;
             uint64_t id=0; for(unsigned j=0;j<6;++j) id=(id<<8)|records[i].bssid[j];
             if(!id) continue;
             s_rooms[s_count]=(platform_multiplayer_wifi_lobby_t){.lobby_id=id,.session_id=session,.game_token=game,.rssi=records[i].rssi,.players_present=1,.player_capacity=4};
@@ -167,6 +227,7 @@ static void scan_rooms(unsigned generation)
 }
 static esp_err_t open_socket_locked(void)
 {
+    s_poll_drained=false;
     s_socket=socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP);
     if(s_socket<0) return ESP_FAIL;
     int yes=1;
@@ -180,7 +241,7 @@ static esp_err_t open_socket_locked(void)
 static void worker(void *arg)
 {
     (void)arg;
-    bool initialized=false, attempted=false;
+    bool initialized=false;
     unsigned applied=UINT32_MAX;
     int64_t next_scan=0, join_deadline=0;
     for(;;) {
@@ -188,9 +249,10 @@ static void worker(void *arg)
         uint16_t game=s_game; wifi_ap_record_t target=s_target; UNLOCK();
         if(generation!=applied) {
             esp_err_t e=ESP_OK;
-            if(mode!=MODE_OFF && !attempted) { attempted=true; e=initialize(); initialized=(e==ESP_OK); }
-            if(mode!=MODE_OFF && !initialized && e==ESP_OK) e=ESP_ERR_INVALID_STATE;
-            if(initialized && e==ESP_OK) e=start_mode(mode,session,game,&target);
+            /* One attempt per selection. Idle polling never retries a failure;
+             * Back/reselect creates a new generation and resumes setup. */
+            if(mode!=MODE_OFF && !initialized) { e=initialize(generation); initialized=(e==ESP_OK); }
+            if(initialized && e==ESP_OK) e=start_mode(generation,mode,session,game,&target);
             LOCK();
             if(generation==s_generation) {
                 s_status.available=initialized && mode!=MODE_OFF && e==ESP_OK;
@@ -205,7 +267,7 @@ static void worker(void *arg)
         if(s_ip_ready && s_socket<0 && s_status.available && s_generation==applied) {
             s_status.last_error=open_socket_locked(); s_status.starting=false;
         }
-        if(mode==MODE_CLIENT && s_status.starting && esp_timer_get_time()>join_deadline) {
+        if(s_generation==applied && mode==MODE_CLIENT && s_status.starting && esp_timer_get_time()>join_deadline) {
             s_status.starting=false; s_status.last_error=ESP_ERR_TIMEOUT;
         }
         bool scan=initialized && s_status.available && mode==MODE_BROWSER && s_generation==applied;
@@ -234,7 +296,9 @@ esp_err_t platform_multiplayer_wifi_enable(platform_multiplayer_wifi_handler_t h
     return request_mode(MODE_BROWSER,0,0);
 }
 void platform_multiplayer_wifi_disable(void) { if(s_lock) (void)request_mode(MODE_OFF,0,0); }
-esp_err_t platform_multiplayer_wifi_browse(void) { return request_mode(MODE_BROWSER,0,0); }
+esp_err_t platform_multiplayer_wifi_browse_game(uint16_t game_token)
+{ return request_mode(MODE_BROWSER,0,game_token); }
+esp_err_t platform_multiplayer_wifi_browse(void) { return platform_multiplayer_wifi_browse_game(0); }
 esp_err_t platform_multiplayer_wifi_host(uint32_t session,uint16_t game)
 { return session && game ? request_mode(MODE_HOST,session,game) : ESP_ERR_INVALID_ARG; }
 size_t platform_multiplayer_wifi_list_lobbies(platform_multiplayer_wifi_lobby_t *out,size_t capacity)
@@ -264,9 +328,15 @@ void platform_multiplayer_wifi_poll(void)
     for(unsigned i=0;i<8;++i) {
         uint8_t bytes[P4_MP_MAX_DATAGRAM_BYTES+1]; struct sockaddr_in from; socklen_t len=sizeof(from);
         LOCK();
+        s_poll_drained=false;
         expire_routes_locked();
-        ssize_t n=s_socket>=0?recvfrom(s_socket,bytes,sizeof(bytes),MSG_DONTWAIT,(struct sockaddr *)&from,&len):-1;
-        if(n<0) { UNLOCK(); break; }
+        if(s_socket<0) { UNLOCK(); return; }
+        ssize_t n=recvfrom(s_socket,bytes,sizeof(bytes),MSG_DONTWAIT,(struct sockaddr *)&from,&len);
+        if(n<0) {
+            const int receive_error=errno;
+            s_poll_drained=receive_error==EAGAIN || receive_error==EWOULDBLOCK;
+            UNLOCK(); return;
+        }
         p4_mp_packet_view_t packet;
         bool valid=len==sizeof(from) && from.sin_family==AF_INET && from.sin_port==htons(PORT) &&
             from.sin_addr.s_addr!=s_local_ip && (size_t)n<=P4_MP_MAX_DATAGRAM_BYTES &&
@@ -287,6 +357,14 @@ void platform_multiplayer_wifi_poll(void)
         uint64_t route=P4_MP_WIFI_ROUTE_PREFIX|from.sin_addr.s_addr; platform_multiplayer_wifi_handler_t handler=s_handler; void *ctx=s_context;
         UNLOCK(); if(handler) handler(ctx,route,bytes,(size_t)n);
     }
+    /* Eight datagrams, including rejected ones, do not prove an empty socket. */
+    LOCK(); s_poll_drained=false; UNLOCK();
+}
+bool platform_multiplayer_wifi_poll_drained(void)
+{
+    if(!s_lock) return false;
+    LOCK(); const bool drained=s_socket>=0 && s_poll_drained; UNLOCK();
+    return drained;
 }
 esp_err_t platform_multiplayer_wifi_send_to(uint64_t route,const uint8_t *bytes,size_t length)
 {
@@ -316,7 +394,8 @@ esp_err_t platform_multiplayer_wifi_send(const uint8_t *bytes,size_t length)
 void platform_multiplayer_wifi_reset_route(void)
 {
     if(!s_lock) return;
-    LOCK(); memset(s_peer_ips,0,sizeof(s_peer_ips));memset(s_peer_seen,0,sizeof(s_peer_seen));
+    LOCK(); s_poll_drained=false;
+    memset(s_peer_ips,0,sizeof(s_peer_ips));memset(s_peer_seen,0,sizeof(s_peer_seen));
     s_peer_ip=0; s_last_rx=0; s_status.route_id=0; s_status.connected=false;
     if(s_socket>=0) { uint8_t discard[P4_MP_MAX_DATAGRAM_BYTES+1]; for(unsigned i=0;i<16;++i) if(recv(s_socket,discard,sizeof(discard),MSG_DONTWAIT)<0) break; }
     UNLOCK();

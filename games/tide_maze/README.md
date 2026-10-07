@@ -2,9 +2,17 @@
 
 [Game index](../README.md) · [Build and install](../README.md#build-and-play) · [Console OS](../../apps/console_os/README.md)
 
-**Availability:** Included candidate; device lag acceptance open. **Folder:** `GAMES/ARCADE`.
+**Availability:** Removed from product library; disabled development source. **Folder:** `GAMES/ARCADE`.
 
 **Package:** `TIDE_MAZE.P4G`. **Players:** Solo; 2 linked co-op.
+
+Removed from the product and default install library at the owner’s request on
+2026-10-07 after unacceptable tilt/gameplay feel and lag. The manifest is disabled;
+standard bundles and registry selection exclude it. Source, launcher/game IDs,
+network protocol and saves are preserved for possible development. The 0.2.4
+source rework has no accepted device run. Earlier failed acceptance remains
+failed; disabling the title does not qualify that rework. Any future install
+requires explicit developer opt-in; see [developer installs](../README.md#developer-installs).
 
 **Local preview:** `make play-game GAME=tide_maze` from the repository root.
 
@@ -43,6 +51,30 @@ candidate is measured and played on the device. See the dedicated
 In linked co-op each player steers one marble, shares collected pearls and stirs
 the water. Both must reach the dock. Start through Console OS Multiplayer / Host
 and Join; both consoles need the same cartridge. A normal launcher start is solo.
+
+Version 0.2.2 restores the guest's existing pearl and completion sound cues
+when accepted snapshots report those transitions. Initial, stale, malformed,
+repeated and reset snapshots stay silent. This is best-effort state-derived
+feedback: multiple updates can coalesce cues. Game identity, co-op rules and
+protocol 1 are unchanged. Automated paired-state tests cover pickup, clear,
+final win and pause/resume completion; actual speaker audibility on both roles
+and the outstanding device-lag acceptance remain pending.
+
+Version 0.2.3 requires direct 768x480 RGB565 rendering in both its manifest
+and C descriptor. Console OS cannot choose its optional low-resolution mode
+for this cartridge. Native launch tests reject a host without high-resolution
+support and reject a 320x200 runtime surface; legacy renderer guard and pixel
+tests remain separate compatibility checks. This mode requirement preserves
+the perspective scene, motion filter, maze rules and protocol 1. Actual native
+device cadence and physical tilt/touch acceptance remain open.
+
+Version 0.2.4 caches the fixed water grid's projection constants in a 7,068-byte
+read-only table. It projects only vertices bordering a wet cell; the three
+mazes use 353, 344 and 342 of the 589 grid vertices. Dynamic water heights,
+texture sampling, painter order and marble physics remain unchanged. The
+projection preserves the original integer truncation at both render sizes;
+it does not cache or upscale a completed frame. Device cadence still needs
+measurement with this exact package and OS.
 
 ## Controls
 
@@ -89,6 +121,21 @@ sizes and padded-stride guards. Shared mesh tests independently check geometry,
 UV wrapping and clipping. The faster existing raster helpers are tested against
 original scalar pixel oracles and inspected with the pinned RV32 `-Os` compiler.
 
+The guest-audio regression uses real game callbacks and audio-service requests;
+fixture placement isolates pickup/completion rather than testing navigation.
+It covers both peers and rejects replayed, malformed, stale, initial and reset
+sound triggers.
+
+The 0.2.2 focused CMake/CTest run passed all 10 targets under ASan/UBSan.
+The SDL headless configure attempt could not find PkgConfig, so that smoke
+and interactive desktop play remain unverified for this revision.
+
+The 0.2.3 focused run passed all 10 targets under ASan/UBSan, including the
+required native-capability and runtime-surface checks. Its SDL 3.4.18 headless
+run passed all five host targets after configuring the local PkgConfig path.
+These checks preserve the 192 original-scene pixel hashes and do not establish
+physical tilt/touch feel or device cadence.
+
 Host timing excludes the ESP32-P4, display and transport. A device transfer or
 catalog registration is installation evidence only. The lag complaint remains
 open until active device cadence and physical responsiveness support acceptance.
@@ -102,8 +149,10 @@ adds cosmetic travelling waves; authoritative physics stays in the solver.
 
 The shared `p4/mesh.h` renderer uses clipped, bounded convex faces and scanline
 texture sampling. It has no full-frame cache, z-buffer, allocator or per-pixel
-division. The game controls painter order, camera and scene. Surfaces remain
-768x480 RGB565 with 320x200 fallback; input stays canonical 320x200.
+division. The game controls painter order, camera and scene. Maintained Tab5
+rendering requires 768x480 RGB565. The bounded 320x200 renderer remains for
+explicit legacy compatibility tests; input stays canonical 320x200 regardless
+of render size.
 
 The host owns both marbles and synchronized rules. Clients send 20-byte intents;
 the host publishes 64-byte snapshots at 20 Hz using protocol 1. Guest marble

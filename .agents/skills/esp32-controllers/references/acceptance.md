@@ -11,8 +11,12 @@
 
 For each supported controller, record its product name/model, transport,
 VID/PID when available, USB class/protocol or BLE services, captured report
-descriptor/map hash, fixture revision when wired, board revision, controller
-firmware, and firmware Git state. Then verify:
+descriptor/map hash for HID or the configuration-descriptor hash for wired
+XUSB, fixture revision when wired, board revision, controller firmware, and
+firmware Git state. Match connection evidence to the selected transport:
+HID uses `GAMEPAD_CONNECTED`; wired XUSB uses `XUSB_READY` and `XUSB_CONNECTED`
+as documented in [its service README](../../../../components/platform_gamepad_xusb/README.md).
+Then verify:
 
 1. cold-plug and hot-plug enumeration;
 2. every advertised button and direction;

@@ -109,6 +109,7 @@ bool p4_doom_mp_launch_config_valid(
             config->session_id == 0U && config->self_peer_id == 0U &&
             config->remote_peer_id == 0U && config->route_id == 0U &&
             config->local_player_slot == 0U && config->player_count == 0U &&
+            config->initial_player_mask == 0U &&
             config->input_delay_tics == 0U && config->start_tic == 0U &&
             config->session_seed == 0U &&
             config->setup.game == P4_DOOM_MP_GAME_DOOM &&
@@ -119,12 +120,26 @@ bool p4_doom_mp_launch_config_valid(
             !config->setup.no_monsters && !config->setup.fast_monsters &&
             !config->setup.respawn_monsters;
     }
+    const bool arena = config->setup.game == P4_DOOM_MP_GAME_GAME_CHANGERS_AI;
+    if (arena) {
+        if (config->player_count != P4_MP_MAX_PLAYERS ||
+            !(config->initial_player_mask & 1U) ||
+            (config->initial_player_mask & ~UINT8_C(0x0f)) ||
+            config->local_player_slot >= P4_MP_MAX_PLAYERS ||
+            (config->role == P4_MP_ROLE_HOST && config->local_player_slot != 0U) ||
+            (config->role == P4_MP_ROLE_CLIENT && config->local_player_slot == 0U) ||
+            (!config->rejoining && !(config->initial_player_mask &
+                (1U << config->local_player_slot)))) return false;
+    } else if (config->initial_player_mask != 0U) return false;
+    const bool solo_host = arena && config->role == P4_MP_ROLE_HOST &&
+        config->initial_player_mask == 1U && !config->rejoining &&
+        config->remote_peer_id == 0U && config->route_id == 0U;
     return (config->role == P4_MP_ROLE_HOST ||
             config->role == P4_MP_ROLE_CLIENT) &&
         config->session_id != 0U && config->self_peer_id != 0U &&
-        config->remote_peer_id != 0U &&
-        config->self_peer_id != config->remote_peer_id &&
-        config->route_id != 0U && config->player_count >= 2U &&
+        (solo_host || (config->remote_peer_id != 0U &&
+            config->self_peer_id != config->remote_peer_id && config->route_id != 0U)) &&
+        config->player_count >= 2U &&
         config->player_count <= P4_MP_MAX_PLAYERS &&
         config->local_player_slot < config->player_count &&
         config->input_delay_tics <= 15U && config->session_seed != 0U &&

@@ -1,0 +1,397 @@
+{
+  "schema": 1,
+  "board": "m5stack-tab5",
+  "product": "Game Changers AI OS",
+  "operation": "app-only",
+  "toolchain": {
+    "schema": 1,
+    "esp_idf": {
+      "version": "5.5.3",
+      "git_tag": "v5.5.3",
+      "git_commit": "2c211b236707889e8400c4dc5644dd5c4ee071e0",
+      "repository": "https://github.com/espressif/esp-idf.git"
+    },
+    "target": {
+      "chip": "esp32p4",
+      "silicon_family": "revision_1_x",
+      "min_revision_full": 100,
+      "max_revision_full": 199
+    },
+    "managed_components": {
+      "espressif/esp_codec_dev": "1.5.4",
+      "espressif/esp_hosted": "1.4.7",
+      "espressif/esp_lcd_lt8912b": "0.2.0",
+      "espressif/esp_tinyusb": "2.0.1",
+      "espressif/esp_wifi_remote": "0.14.5",
+      "espressif/usb": "1.5.0",
+      "espressif/usb_host_hid": "1.2.0"
+    },
+    "policy": {
+      "commit_dependencies_lock": true,
+      "upgrade_only_with_hardware_regression": true
+    }
+  },
+  "peripheral_scope": {
+    "global_pin_map_authorized": false,
+    "pcb_revision": "not separately marked/confirmed; bounded common C145 interfaces only",
+    "published_variants_reviewed": [
+      "initial 2025-05-09 ILI9881C/GT911",
+      "2025-10-14 ST7123",
+      "2026-04-28 ST7121"
+    ],
+    "official_source": {
+      "commit": "73ee07b1ad56f865f13a2739be8bb6808c1da58a",
+      "manual_sha256": "6c054369e4fb1a7d04fa95fb31adda26feaa9de3540942f733eb2c1a68cd81e1",
+      "manual_url": "https://docs.m5stack.com/en/core/Tab5",
+      "repository": "https://github.com/espressif/esp-bsp",
+      "schematic_sha256": "13cf3fd9954d39aa198e57b1bb94ec56af7d49107c80a245acc5bd90ac8ea329",
+      "schematic_url": "https://m5stack-doc.oss-cn-shenzhen.aliyuncs.com/1132/Tab5_Schematics_PDF.pdf"
+    },
+    "review": "Official C145 schematic and Tab5 manual give one shared P4/expander/audio/SD wiring map for all three published panel assemblies. The pinned BSP supplies distinct panel timings/init and GPIO23 handling, selected by the touch controller. Unknown panel firmware fails closed. No factory-binary pin inference used. INA226 0x41/5 mOhm shunt, BMI270 0x68 and RX8130CE 0x32 use the same published shared I2C1 map; identity and configuration readback precede telemetry. The RTC backup control matches the fitted rechargeable supply. Charger/rail controls stay excluded. USB-A J10 and its masked 0x44/P3 enable are additionally scoped by the pinned USB-controller schematic/BSP review. USB-C Serial/JTAG remains independent. User subsequently approved the exact C6 radio scope and requested battery charging. These narrowly scoped authorizations extend the prior 0.44 scope.",
+    "allowed": {
+      "display": {
+        "backlight_gpio": 22,
+        "bus": "MIPI-DSI",
+        "dphy_ldo_channel": 3,
+        "dphy_ldo_mv": 2500,
+        "logical_height": 720,
+        "logical_width": 1280,
+        "native_height": 1280,
+        "native_width": 720,
+        "panels": [
+          "ILI9881C",
+          "ST7123",
+          "ST7121"
+        ],
+        "reset": "PI4IOE5V6408 0x43 P4, release as input pull-up",
+        "rotation_cw_degrees": 90
+      },
+      "i2c": {
+        "expanders": [
+          67,
+          68
+        ],
+        "port": 1,
+        "scl": 32,
+        "sda": 31
+      },
+      "touch": {
+        "controllers": [
+          "GT911 at 0x14",
+          "ST7123/ST7121 at 0x55"
+        ],
+        "interrupt_gpio": 23,
+        "reset": "expander 0x43 P5"
+      },
+      "audio": {
+        "address_7bit": 16,
+        "amp_enable": "expander 0x43 P1 active high",
+        "bclk": 27,
+        "codec": "ES8388",
+        "dout": 26,
+        "i2s_port": 1,
+        "lrclk": 29,
+        "mclk": 30
+      },
+      "sd": {
+        "clk": 43,
+        "cmd": 44,
+        "data": [
+          39,
+          40,
+          41,
+          42
+        ],
+        "format_on_failure": false,
+        "power_ldo_channel": 4,
+        "slot": 0,
+        "width": 4
+      },
+      "sensors": {
+        "provenance": "third_party/tab5-sensors.json",
+        "power": "INA226 at 0x41, 5 mOhm shunt, voltage-based 2S estimate",
+        "motion": "BMI270 at 0x68, 4g / 2000 degrees per second",
+        "clock": "RX8130CE 0x32: read/init plus explicit UTC calendar write 0x10..0x16, VLF-only W0C 0x1D=0xBD after calendar readback, and clearing a pre-existing STOP bit at 0x1E after valid calendar; no alarms, timers, clock-output or offset configuration."
+      },
+      "usb_host": {
+        "connector": "J10 dedicated USB-A; native HS peripheral 0",
+        "power_enable": "PI4IOE5V6408 0x44/P3 active high; U27 MT9700 current-limited switch",
+        "driver_scope": "Masked direction/latch/high-impedance operations preserve every other expander bit; rollback powers off",
+        "provenance": "hardware/evidence/tab5-usb-gamepad-20261004-build.json",
+        "source_schematic_sha256": "13cf3fd9954d39aa198e57b1bb94ec56af7d49107c80a245acc5bd90ac8ea329",
+        "user_scope": "Requested native Xbox-compatible USB controller support in Core OS and approved the complete 0.43 update",
+        "acceptance": "USB host startup may be observed; no controller model is hardware-qualified by this install"
+      },
+      "c6_local_multiplayer": {
+        "evidence": "design/tab5-bluetooth/proposal.json",
+        "scope": "User explicitly approved C6 Bluetooth and local Wi-Fi Host/Join on 2026-10-05. Shared I2C1 GPIO31/32, masked expander 0x44/P0 WLAN 3.3V enable only; SDMMC slot1 GPIO12 CLK,13 CMD,11/10/9/8 D0-D3 at initial 10 MHz, GPIO15 C6 EN high-low-high reset. No C6 flash writes or unrelated pins/rails. Exact P4 artifact and backed-up unit must pass the installation guard.",
+        "broad_flash_authorization": false,
+        "hardware_acceptance": "pending"
+      },
+      "battery_charger_500ma": {
+        "authorized": true,
+        "date": "2026-10-05",
+        "basis": "User confirms attached batteries and requests fixing charging; pinned official M5Unified and C145 schematic in third_party/tab5-sensors.json.",
+        "scope": "Shared I2C1 GPIO31/32, expander 0x44 P7 CHG_EN, P5 QC disabled, P6 charge status input. 500 mA selection only; preserve all other pins. Exact-artifact guarded install required.",
+        "hardware_acceptance": "pending"
+      }
+    },
+    "usb_console": "native FS USB Serial/JTAG GPIO24/25 only",
+    "excluded": [
+      "C6 firmware writes",
+      "external 5V",
+      "camera",
+      "mic",
+      "expansion GPIO",
+      "All expander 0x44 controls except P0 radio power, P3 USB-A, P5/P7 charger control and P6 charger-status input"
+    ],
+    "sensor_reference": "third_party/tab5-sensors.json",
+    "rtc_reference": {
+      "url": "https://download.epsondevice.com/td/pdf/app/RX8130CE_en.pdf",
+      "revision": "ETM50E-10",
+      "sha256": "db027a5fa2dd17b333da81e95063764eb5536d2878c63b64949348d2ec4b8a22",
+      "sections": [
+        "13.2 register table",
+        "14.5 VLF write-zero-to-clear",
+        "18.5 sequential calendar setting without STOP",
+        "18.6 sequential calendar reading"
+      ]
+    }
+  },
+  "usb_host_enabled": true,
+  "charger_control_enabled": true,
+  "ble_multiplayer_enabled": true,
+  "wifi_multiplayer_enabled": true,
+  "units": {
+    "A": {
+      "identity_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+      "backup_sha256": "849ea1fd532207c96557daab6433cf2986919b80234ed541cba36b5e63d582df",
+      "model_confirmed": true,
+      "predecessor": {
+        "file": "hardware/backups/tab5-060-app-predecessor.bin",
+        "bytes": 4329312,
+        "sha256": "036692bcc1a2e792cfd3ce510069ce41d1797351f2a95c724fa4e28ad10b5ff7"
+      },
+      "port_at_authorization": "/dev/cu.usbmodem1101",
+      "predecessor_evidence": "hardware/backups/tab5-a-install-3xu8f1ye/receipt.json",
+      "predecessor_install_receipt": {
+        "file": "hardware/backups/tab5-a-install-3xu8f1ye/receipt.json",
+        "bytes": 1628,
+        "sha256": "14069465f80b7083db59b5bbe02e54fa484b97a7b5d33e41638707beb16ac471"
+      },
+      "predecessor_binding": "Exact preserved 0.60 build artifact, bound to this unit by its successful checksum-verified 0.60 install receipt. The guard rechecks the live predecessor checksum on the same connection before any 0.61 write.",
+      "backup_evidence": {
+        "file": "hardware/backups/tab5-a-multiplayer-preinstall-20261007/receipt.json",
+        "bytes": 1985,
+        "sha256": "8a1fd149431f6f8c7ea1fc22ebc8383699914b2f83838d1a9efb2de17fc43d6d"
+      }
+    },
+    "B": {
+      "identity_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+      "backup_sha256": "1005bc51f3c0877c5722695e2a2fb058dcef024658953a16372c16137c7fb842",
+      "model_confirmed": true,
+      "predecessor": {
+        "file": "hardware/backups/tab5-060-app-predecessor.bin",
+        "bytes": 4329312,
+        "sha256": "036692bcc1a2e792cfd3ce510069ce41d1797351f2a95c724fa4e28ad10b5ff7"
+      },
+      "port_at_authorization": "/dev/cu.usbmodem101",
+      "predecessor_evidence": "hardware/backups/tab5-b-install-i6p7mmpf/receipt.json",
+      "predecessor_install_receipt": {
+        "file": "hardware/backups/tab5-b-install-i6p7mmpf/receipt.json",
+        "bytes": 1627,
+        "sha256": "7dcde77989a276e35ec040bcc25ef8ed557488414ca363a6d4efaa072fa030e3"
+      },
+      "predecessor_binding": "Exact preserved 0.60 build artifact, bound to this unit by its successful checksum-verified 0.60 install receipt. The guard rechecks the live predecessor checksum on the same connection before any 0.61 write.",
+      "backup_evidence": {
+        "file": "hardware/backups/tab5-b-multiplayer-preinstall-20261007/receipt.json",
+        "bytes": 2044,
+        "sha256": "99a51ce406d438ca98797bb54d991773536b2a1232ff6b8e8ad1f410800bd272"
+      }
+    }
+  },
+  "version": "0.61",
+  "install_authorized": true,
+  "firmware_only": true,
+  "created_at": "2026-10-07T03:47:11.262631+00:00",
+  "operator_request": "Go ahead and flash it to the Tab5s and test hosting and joining a Doom Arena game.",
+  "selected_scope": "Exact A/B app-only successor to the installed and checksum-verified 0.60 image: retain game-first multiplayer hierarchy, Doom Arena host/join and startup recovery fixes, and bounded USB debug input/status controls; buffer Doom WAD validation reads to eliminate byte-at-a-time filesystem overhead observed during two-unit runtime validation. Preserve upstream 0.59 curated standard library, Pure Hades and USB batch behavior, all existing peripheral selections, partitions, settings, and microSD games/saves. No content bundle installation.",
+  "source_commit": "51aefe10080498c3e95e9b78a8b0ecd553e00b5f",
+  "verification_method": "device-checksum",
+  "previous_install_evidence": "hardware/test-runs/2026-10-07-tab5-060-multiplayer-debug-install.json",
+  "physical_acceptance": "Pending installation, exact-image launcher/health evidence, USB debug controls and two-unit Doom Arena host/join acceptance. Successful build and checksum verification alone do not qualify gameplay.",
+  "artifacts": {
+    "0x2000": {
+      "file": "apps/console_os/build-tab5/bootloader/bootloader.bin",
+      "bytes": 23136,
+      "sha256": "058cf4c0434733d72800c383e1bddb54aa33cf667b21254c8bd9d2f4f7f43443"
+    },
+    "0x8000": {
+      "file": "apps/console_os/build-tab5/partition_table/partition-table.bin",
+      "bytes": 3072,
+      "sha256": "606f2ba90d4e68e36eb704e2dff8e2b509ce2adf1a398297d1fe0fc626590871"
+    },
+    "0x10000": {
+      "file": "apps/console_os/build-tab5/ota_data_initial.bin",
+      "bytes": 8192,
+      "sha256": "7d2c7ac4888bfd75cd5f56e8d61f69595121183afc81556c876732fd3782c62f"
+    },
+    "0x20000": {
+      "file": "apps/console_os/build-tab5/p4_console_os.bin",
+      "bytes": 4329008,
+      "sha256": "0733e6f5955da30587b3052020dc46014cbc73c495e1b494a2c2fce3f66f6107"
+    }
+  },
+  "paired_protected_game": {
+    "payload_sha256": "5a2f96266b305ad7abc549aeaa838b3d21b9cfd666c2b4c2f775aa5cd7d373ff",
+    "lineage_header": {
+      "file": "apps/console_os/build-tab5/generated/protected-games/p4_protected_game_lineage.h",
+      "bytes": 1141,
+      "sha256": "877068af79618b5889112868907fd9b3a63b1ace00213e16909d4acdb5f79973"
+    },
+    "historical_package": {
+      "file": "apps/console_os/build-tab5/dev-games/GAMES/LORD.P4G",
+      "bytes": 434820,
+      "sha256": "bc737068ddf41e651132e7003f5cf60d59bb85f01d8421a5859d2f33996fb46e",
+      "payload_sha256": "5a2f96266b305ad7abc549aeaa838b3d21b9cfd666c2b4c2f775aa5cd7d373ff",
+      "save_identity_unchanged": true,
+      "installed_by_default": false
+    },
+    "save_identity_unchanged": true,
+    "installed_by_default": false,
+    "package_installed_by_this_update": false,
+    "current_package": {
+      "file": "apps/console_os/build-tab5/dev-games/GAMES/LORD.P4G",
+      "bytes": 434820,
+      "sha256": "bc737068ddf41e651132e7003f5cf60d59bb85f01d8421a5859d2f33996fb46e"
+    },
+    "comparison": "Generated protected payload allowlist is byte-identical to the previously recorded lineage and matches the 0.59 historical package payload."
+  },
+  "installer_sha256": "3c9544c4cc4ef3e004f4e7cbba86c7ed64bb2b7c04abe657336ab1b721c5ba01",
+  "build_verifier": {
+    "result": "tab5-build-candidate-verified",
+    "board": "m5stack-tab5",
+    "version": "0.61",
+    "image_bytes": 4329008,
+    "ble_multiplayer_enabled": true,
+    "wifi_multiplayer_enabled": true,
+    "image_sha256": "0733e6f5955da30587b3052020dc46014cbc73c495e1b494a2c2fce3f66f6107",
+    "native_cartridges": null,
+    "content_bundle_verified": false,
+    "usb_host_enabled": true,
+    "charger_control_enabled": true,
+    "hardware_verified": false,
+    "flash_authorized": false
+  },
+  "write_review": {
+    "offset": "0x20000",
+    "erase_all": false,
+    "force_revision": false,
+    "verification": "device-checksum",
+    "preserve": "bootloader, partition table, OTA selector, NVS, settings, microSD games and saves",
+    "full_readback": "Available only when explicitly selected for recovery/diagnostics; this authorization uses the installer default device checksum."
+  },
+  "additional_operator_request": "add remote controls for debugging",
+  "source_branch": "codex/tab5-multiplayer-debug",
+  "source_files_sha256": {
+    "Makefile": "93759820f610a37cc9ca850714af310042921bcdf7b76e271316d70a626a2b3d",
+    "apps/console_os/CMakeLists.txt": "e63b5c764171aa157d3ceea5667d7a3815fe7a5f2aa7947a48ce80ed2096119f",
+    "apps/console_os/app-metadata.json": "2da2332c18e29ec17c9bf22f0dc6e7c5182ecd047e8264260f59364d4a952b38",
+    "apps/console_os/build-tab5/generated/protected-games/p4_protected_game_lineage.h": "877068af79618b5889112868907fd9b3a63b1ace00213e16909d4acdb5f79973",
+    "apps/console_os/build-tab5/sdkconfig": "3e351eb41ea87c9da640124162e11a14965c274c41df767d8ac3806bb3614030",
+    "apps/console_os/components/platform_readonly_blob/CMakeLists.txt": "185f00f2fd9d139b6cd1d407a66c85117f807f2816662f9a3033568652b24299",
+    "apps/console_os/components/platform_readonly_blob/include/platform/readonly_blob_loading.h": "43e6fb59dddf551a793802836b56c727735d4619d17f897dabbdafb4e72c3f06",
+    "apps/console_os/components/platform_readonly_blob/platform_game_storage_blob.c": "d94287f2faa49550aaaeb12f52f336bb256abfc880a5668d62aac499fe577d83",
+    "apps/console_os/dependencies-olimex.lock": "fe859ab1fa7237a27ff65cc0bbe8d1bb0cf6b536fbffdb10a64e06f609432a87",
+    "apps/console_os/dependencies-tab5.lock": "ef504de8027e393a97de7c16da2b2598bb08ade02660de3608af719ad3924bdd",
+    "apps/console_os/dependencies-waveshare.lock": "bfcf00ff616e3b532c52b6733869bbb5f1bffee28a29d12833f23a881f1afa9e",
+    "apps/console_os/dependencies.lock": "02d604c6abda80f1d264f7b2a57fde151a35fdd5437bbeb52819f8cdb7e76606",
+    "apps/console_os/main/CMakeLists.txt": "50022776bab21cee943d658fc685b00831c2bca235d86bd711cba74851946465",
+    "apps/console_os/main/console_debug.h": "8fbcc0b6d1b69d04fbfbf52e7bde25747ce96b2e7f0c8c709b3d6b52599dc305",
+    "apps/console_os/main/console_os_main.c": "a46308333d97a7c017ce5057e1d2066860307aa9d0b1b488324aef2e21cf4f88",
+    "apps/console_os/main/doom_gc_p4mp.c": "f7bf161b9eef39b4c4dad8b5a3c9c21296bf28294665f9cf0d82d731ac24c377",
+    "apps/console_os/main/doom_p4mp_adapter.c": "acd78fe64516b4bc77dc4915162bc0bc1bc4b22d953c7756bd8c5c480e930dee",
+    "apps/console_os/main/doom_p4mp_adapter.h": "9ff500847de1b91ad0c8f634b6a1dadee96ac4f5e928b41d8cc9430051f405fa",
+    "apps/doom_embedded_touch_audio/main/doom_embedded_touch_audio_main.c": "aa8e07353441c7a7d812a8880b956860f3312b3c031028623609ec95aecbe26e",
+    "apps/doom_embedded_touch_audio/tests/CMakeLists.txt": "f852575d1bdea4df494b09b41db2dd697cceaa71a65bd878d4ce3654400e5883",
+    "apps/doom_embedded_touch_audio/tests/test_debug_input.py": "5f9255736bca3f78c50c6e3eec2c6f2698c965bb20dfc8ae42df58fbc06f16d3",
+    "components/console_shell/include/console/brand.h": "39b9f51a708262d709fdd957328d449517c8b17e8583b3a25a42d71d311d4012",
+    "components/console_shell/include/console/shell.h": "6e2a08de27e95c72a97b61ac42ff9017097b24e406dfeeeabd3434e352dc9507",
+    "components/console_shell/src/console_shell.c": "7dc62da4e4b22aaa44840fad0eedcf6a50db6317bb914a0539c4d0a932d6e3a9",
+    "components/console_shell/src/nextgen.inc": "66b5145831b39c779d3509a3d69a2f030c8dc98ee9c771e0b385f997ecfb49ae",
+    "components/console_shell/tests/test_console_shell.c": "e0fc9777a42ac52883df7dfae316c6f970beeef69c0332079f56ba2f2818c1a6",
+    "components/console_shell/tests/test_nextgen.c": "3589346348b2d2afc08f5c744db78c65a1369b68e3ddc05054ad566f46bb7f60",
+    "components/doom_multiplayer/tests/CMakeLists.txt": "e73a47911359af9898f69ca3e2a83e1f90c1a94522f58d09b4d60f6aab197d3c",
+    "components/doom_multiplayer/tests/test_doom_gc_startup_lease.c": "c3988e93e205a27bc34912b3961bca785a7ffdcbe9bfe98143f6ac8ba11eeca4",
+    "components/doom_multiplayer/tests/test_doom_gc_startup_vfs.c": "9f4274de72d2727d77c7cecb78d00e10f74614898aad7c4e0b0cbe9189083001",
+    "components/doom_multiplayer/tests/test_doom_gc_startup_vfs.h": "bff722b0748443c0a0364cd3e5ef81b88d11d744b3a6d24707e4cc0d8ac0b3b4",
+    "components/p4_multiplayer/include/p4/multiplayer.h": "2edf880ca2aff608c9ae339b2eb7244b0430bb59f770881230a029b5ad24cdb8",
+    "components/p4_multiplayer/src/session.c": "8eace1f54eca80b83ff500c8043e80a0a17780831249fe6c276c5257601a482e",
+    "components/p4_multiplayer/tests/CMakeLists.txt": "74314eaae58bbc36f91eab45907bcb05fefca1500182a9e3bdb7ab59db97a947",
+    "components/p4_multiplayer/tests/test_join_retry.c": "da56981ee88f2fc344a9d20b6e869eccbdb0bdcbe64de97dc0d4727b4bba4e5d",
+    "components/p4_usb_content_transfer/CMakeLists.txt": "8ca1b6a00cf82b55739a09160f6c88fe3392fc1c16a268beed8b47bf28f7a6c4",
+    "components/p4_usb_content_transfer/include/p4/debug_control.h": "0d19eb0a93128e4d518698a9ffc4c3f7b5fe5bcde402eca1b3193bcc8936fc23",
+    "components/p4_usb_content_transfer/src/debug_control.c": "acc2faf57ed31569dc0cb58f271c67220a28bf2d076c49269a5377711e4367be",
+    "components/p4_usb_content_transfer/tests/CMakeLists.txt": "82040ed24cc60fb0d81ea6956064fd49ebab0ac077fc569275fd4ca37e783cd2",
+    "components/p4_usb_content_transfer/tests/test_debug_control.c": "1eaca0bb94aa891e4852171465038a10cdfac5c773e6c9cf5ee00c3fea1e56e8",
+    "components/platform_game_storage/CMakeLists.txt": "4c78f980a88fcab6beffa6f773c86a5afeb300b9adcf707625ad38cd2873767d",
+    "components/platform_game_storage/include/platform/game_storage.h": "6389c7e2dc8a84e0c424d503aa6fa7a41784b918dab55c891b33b3f809a14a0e",
+    "components/platform_game_storage/src/platform_game_storage.c": "4b734638e2fa0644f14fe6c5deb3c300a5c4462ffa29f21c8afa47431ba66671",
+    "components/platform_game_storage/src/storage_block_read.c": "68a588533f7718fd9fa598e4da630e41e72cb32bf99ef1a66a91e4a87b4bb939",
+    "components/platform_game_storage/src/storage_block_read.h": "00b8af741ee83a61837e88ca81b87b0a69e649d845035c501c11039f050688d5",
+    "components/platform_game_storage/src/verified_wad.c": "a48b816ebfc6f0c3ea8517c677498492a7dd7d50b7274f209a118102246c31a8",
+    "components/platform_game_storage/src/verified_wad.h": "97d1d5281f60d0937c9317194d82b381b0d038c4935703bbde27fff6de5e97f8",
+    "components/platform_game_storage/tests/CMakeLists.txt": "c8ff217aa93ba89d26772e0ddaabab53c7df1f0c75be064cca07a91c5d00677e",
+    "components/platform_game_storage/tests/test_arena_vfs.c": "b9a9ef8ffbb555373612d75afc3f36dc2d7eec6736e3282f98200f455b382fce",
+    "components/platform_game_storage/tests/test_storage_block_read.c": "6be8cd3b0868d49cfbabfdaa13f7ea4bf61222b40f65f5ca29565cf6ca470300",
+    "components/platform_game_storage/tests/test_verified_wad.c": "576aee27d4b0db9165a4052588fd897c80472b534359dbf81f60441ce768d4b5",
+    "components/platform_multiplayer_wifi/include/platform/multiplayer_wifi.h": "8c3c61f254b4c418148c723d48efaa4a6fccb6bd1fee864c29e64b78a7da399d",
+    "components/platform_multiplayer_wifi/src/platform_multiplayer_wifi.c": "85723a2f0b3005421693ff01279912c7c07da9011fce82d741a2f48eb7bff2bc",
+    "components/platform_multiplayer_wifi/tests/test_wifi.c": "d0ff2944ec128804932e9840372fdf2487a1e1d1f08977bc01e88bb613715c60",
+    "hardware/boards/m5stack-tab5/board-profile.json": "dd9fb1a0c35457d0f096df391ec206100252c611682cf99c30e333d7798a5895",
+    "scripts/flash-console-os-tab5.py": "3c9544c4cc4ef3e004f4e7cbba86c7ed64bb2b7c04abe657336ab1b721c5ba01",
+    "scripts/p4-debug-control.py": "3033b73e35b40a5dc835d6c15b8bfac5cf28507dbb7025dbe23af6386a0753a5",
+    "scripts/tests/test-console-multiplayer-flow.py": "108859912fd427e8b844dd75b6fd7bcdbdc05a6105086251f764de7dd2d17650",
+    "scripts/tests/test-p4-debug-control.py": "7706c984ecaf44c67c2bac0cb78e132e12bba3dfb3b188dc6433bc60c8ddc72d",
+    "scripts/verify-console-os-tab5.py": "1e63815e17cd39ba09dce7a04cf2c0c774c0fc591e5ad42867b6f13fb94d63b3",
+    "third_party/tab5-bsp.json": "94006cbf842b8afaa113826f89a0a3cbd5120ca0912a9cebd1f70380c2fbe60d",
+    "third_party/tab5-sensors.json": "c7336584a9621eb3c64dfa7dcbb9716b406588575ad3fbb30af868984973e434",
+    "toolchain.lock.json": "6c45009fd4ba924dac63e442d4bcdbff134cf81037cadb8f2d12209c41564a55"
+  },
+  "source_files_removed": [],
+  "source_binding_scope": "Unchanged tracked inputs are bound by source_commit; locally changed runtime/build/test inputs and exact environment, board, generated protected lineage, verifier and installer files are bound by source_files_sha256. Markdown/design narratives are excluded because acceptance records are completed after testing.",
+  "supersedes_installed_authorization": {
+    "file": "hardware/evidence/tab5-0.60-multiplayer-debug-authorization.json",
+    "bytes": 22218,
+    "sha256": "0adc51bfb1eeae2b82654e016c5d4dc3c18e67f611645c1d6d9b8faeb556cdfc"
+  },
+  "update_package": {
+    "file": "apps/console_os/build-tab5/P4UPDATE.P4U",
+    "bytes": 4329264,
+    "sha256": "742922a4ec844656f12343f63060618eb918401bb7c74e3477869c4602c33c97"
+  },
+  "unchanged_comparison_inputs": {
+    "0x2000": {
+      "source": "Extracted from both verified current 0.59 full recovery snapshots; identical on A/B and matching the prior 0.59 authorization byte count and SHA-256. Staged because app-only builds omit bootloader generation.",
+      "written": false
+    },
+    "0x8000": {
+      "source": "Existing generated partition table; exact bytes match both current 0.59 recovery snapshots and prior 0.59 authorization.",
+      "written": false
+    },
+    "0x10000": {
+      "source": "Deterministic 8192-byte all-0xFF initial OTA helper, regenerated locally and matching prior 0.59 authorization byte count and SHA-256. This is not the live selector. The guard checks and preserves each live active OTA slot-0 selector.",
+      "written": false
+    }
+  },
+  "build_log": {
+    "file": "build-host/tab5-multiplayer-debug-061-build.log",
+    "bytes": 45681,
+    "sha256": "bc9a6d76c5c3f07fff8889b12507c529e6da0238c10c9f9199878da569504323"
+  },
+  "previous_install_evidence_binding": {
+    "file": "hardware/test-runs/2026-10-07-tab5-060-multiplayer-debug-install.json",
+    "bytes": 14278,
+    "sha256": "ee74725818df2c0ee951daf1ecd6353ec2fb140cbddb2736179004b0c9eee2ea"
+  }
+}

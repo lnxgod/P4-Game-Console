@@ -7,8 +7,12 @@
  */
 
 #include "platform/readonly_blob.h"
+#include "platform/readonly_blob_loading.h"
 
 #include <errno.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <sys/ioctl.h>
 #include <fcntl.h>
 #include <limits.h>
 #include <stdbool.h>
@@ -19,6 +23,7 @@
 #include <sys/types.h>
 
 #include "esp_log.h"
+#include "esp_timer.h"
 #include "esp_vfs.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
@@ -36,11 +41,61 @@ typedef struct {
     SemaphoreHandle_t lock;
     platform_game_storage_doom_title_t title;
     bool registered;
+    int sprite_fd;
+    struct {
+        uint64_t reads, bytes, progress_calls, progress_us, progress_max_us;
+        int64_t began_us;
+    } sprite_stats;
 } game_storage_blob_context_t;
 
-static game_storage_blob_context_t s_context;
+static game_storage_blob_context_t s_context = {.sprite_fd = -1};
 static const uint8_t s_arena_marker[3];
 static const char *const TAG = "p4_wad_vfs";
+
+static void sprite_diagnostics_end(game_storage_blob_context_t *context)
+{
+    if (context->sprite_fd < 0) return;
+    const unsigned file = (unsigned)(
+        context->open_data[context->sprite_fd] - s_arena_marker);
+    const int64_t elapsed = esp_timer_get_time() - context->sprite_stats.began_us;
+    ESP_LOGI(TAG, "P4_SPRITE_VFS file=%u elapsed_us=%llu reads=%llu bytes=%llu "
+        "progress_calls=%llu progress_us=%llu progress_max_us=%llu",
+        file, (unsigned long long)(elapsed > 0 ? elapsed : 0),
+        (unsigned long long)context->sprite_stats.reads,
+        (unsigned long long)context->sprite_stats.bytes,
+        (unsigned long long)context->sprite_stats.progress_calls,
+        (unsigned long long)context->sprite_stats.progress_us,
+        (unsigned long long)context->sprite_stats.progress_max_us);
+    memset(&context->sprite_stats, 0, sizeof(context->sprite_stats));
+}
+
+__attribute__((weak)) bool platform_readonly_blob_loading_progress(void)
+{
+    return false;
+}
+
+static bool loading_progress(game_storage_blob_context_t *context, int fd)
+{
+    if (context->sprite_fd != fd)
+        return platform_readonly_blob_loading_progress();
+    const int64_t began = esp_timer_get_time();
+    const bool result = platform_readonly_blob_loading_progress();
+    const int64_t elapsed = esp_timer_get_time() - began;
+    const uint64_t duration = elapsed > 0 ? (uint64_t)elapsed : 0U;
+    ++context->sprite_stats.progress_calls;
+    context->sprite_stats.progress_us += duration;
+    if (duration > context->sprite_stats.progress_max_us)
+        context->sprite_stats.progress_max_us = duration;
+    return result;
+}
+
+static void sprite_diagnostics_read(game_storage_blob_context_t *context,
+    int fd, ssize_t result)
+{
+    if (context->sprite_fd != fd) return;
+    ++context->sprite_stats.reads;
+    if (result > 0) context->sprite_stats.bytes += (uint64_t)result;
+}
 
 static bool take_lock(game_storage_blob_context_t *context)
 {
@@ -70,7 +125,7 @@ static bool resolve_path(
     }
     if (context->title == PLATFORM_GAME_STORAGE_DOOM_TITLE_GAME_CHANGERS_AI &&
         strcmp(path,"freedoom2.wad")==0) {
-        *size_bytes=PLATFORM_GAME_STORAGE_FREEDOOM2_WAD_BYTES;
+        *size_bytes=PLATFORM_GAME_STORAGE_ARENA_BASE_WAD_BYTES;
         return true;
     }
     if (context->title == PLATFORM_GAME_STORAGE_DOOM_TITLE_GAME_CHANGERS_AI &&
@@ -149,6 +204,11 @@ static int fill_stat(struct stat *metadata, uint64_t size_bytes)
     metadata->st_mode = S_IFREG | S_IRUSR | S_IRGRP | S_IROTH;
     metadata->st_nlink = 1;
     metadata->st_size = (off_t)size_bytes;
+    /* The pinned Newlib ROM falls back to a 128-byte buffer and disables
+     * seek optimization when this is zero. Supply the verified block size
+     * so stdio can buffer and align seeks to the storage read granularity. */
+    metadata->st_blksize = 4096;
+    metadata->st_blocks = (blkcnt_t)((size_bytes + 511U) / 512U);
     return 0;
 }
 
@@ -210,11 +270,69 @@ static int storage_close(void *opaque, int fd)
         give_lock(context);
         return -1;
     }
+    if (context->sprite_fd == fd) {
+        sprite_diagnostics_end(context);
+        platform_game_storage_arena_sprite_end();
+        context->sprite_fd = -1;
+    }
     context->open_data[fd] = NULL;
     context->file_sizes[fd] = 0U;
     context->positions[fd] = 0U;
     give_lock(context);
     return 0;
+}
+
+enum { P4_BLOB_SPRITE_HINT = 0x50345348 };
+/* Optional engine hook: unsupported streams/platforms retain ordinary reads. */
+void P4_DoomSpriteHeaderHint(FILE *stream, int active)
+{
+#if defined(ESP_PLATFORM) && defined(CONFIG_LIBC_NEWLIB) && CONFIG_LIBC_NEWLIB
+    /* Diagnostic only: these fields belong to the pinned Newlib ABI.
+     * Read once on the stream-owning task, never on gameplay reads. */
+    if (stream && active == 1)
+        ESP_LOGI(TAG, "P4_SPRITE_STDIO fd=%d flags=0x%04x buffer=%ld blksize=%ld",
+            fileno(stream), (unsigned)(unsigned short)stream->_flags,
+            (long)stream->_bf._size, (long)stream->_blksize);
+#endif
+    if (stream) (void)ioctl(fileno(stream), P4_BLOB_SPRITE_HINT, active);
+}
+static int storage_ioctl(void *opaque, int fd, int command, va_list args)
+{
+    game_storage_blob_context_t *context = opaque;
+    if (command != P4_BLOB_SPRITE_HINT) { errno = ENOTTY; return -1; }
+    const int active = va_arg(args, int);
+    if (active != 0 && active != 1) { errno = EINVAL; return -1; }
+    if (!take_lock(context)) return -1;
+    int result = -1;
+    if (!valid_fd(context, fd)) errno = EBADF;
+    else if (context->title != PLATFORM_GAME_STORAGE_DOOM_TITLE_GAME_CHANGERS_AI)
+        errno = ENOTTY;
+    else if (!active) {
+        if (context->sprite_fd == fd) {
+            sprite_diagnostics_end(context);
+            platform_game_storage_arena_sprite_end();
+            context->sprite_fd = -1;
+        }
+        result = 0;
+    } else if (context->sprite_fd == fd) result = 0;
+    else if (context->sprite_fd >= 0) errno = EBUSY;
+    else if (platform_game_storage_arena_sprite_begin(
+            (unsigned)(context->open_data[fd] - s_arena_marker))) {
+        context->sprite_fd = fd;
+        memset(&context->sprite_stats, 0, sizeof(context->sprite_stats));
+        context->sprite_stats.began_us = esp_timer_get_time();
+        result = 0;
+    } else errno = ENOMEM; /* Optional allocation failure: normal reader remains. */
+    give_lock(context);
+    return result;
+}
+static esp_err_t storage_arena_read(game_storage_blob_context_t *context,
+    int fd, size_t offset, void *out, size_t bytes)
+{
+    const unsigned file = (unsigned)(context->open_data[fd] - s_arena_marker);
+    return context->sprite_fd == fd
+        ? platform_game_storage_arena_sprite_read(file, offset, out, bytes)
+        : platform_game_storage_read_arena_wad(file, offset, out, bytes);
 }
 
 static ssize_t storage_read_at_locked(
@@ -237,8 +355,25 @@ static ssize_t storage_read_at_locked(
         size_bytes = (size_t)available;
     }
     if (context->title == PLATFORM_GAME_STORAGE_DOOM_TITLE_GAME_CHANGERS_AI) {
-        if (platform_game_storage_read_arena_wad(
-                (unsigned)(context->open_data[fd]-s_arena_marker),
+        if (size_bytes != 0U && loading_progress(context, fd)) {
+            /* Engine startup reads entire texture/sprite lumps. Bound each
+             * storage call to one verified SD block so the loading service
+             * can maintain the admitted transport lease between reads. */
+            const size_t block_bytes=4096U;
+            size_t completed=0U;
+            while (completed<size_bytes) {
+                const size_t position=(size_t)offset+completed;
+                size_t chunk=block_bytes-position%block_bytes;
+                if (chunk>size_bytes-completed) chunk=size_bytes-completed;
+                const esp_err_t result=storage_arena_read(context,fd,
+                    position,(uint8_t *)destination+completed,chunk);
+                (void)loading_progress(context, fd);
+                if (result!=ESP_OK) { errno=EIO; return -1; }
+                completed+=chunk;
+            }
+            return (ssize_t)size_bytes;
+        }
+        if (storage_arena_read(context,fd,
                 (size_t)offset,destination,size_bytes)!=ESP_OK) {
             errno=EIO; return -1;
         }
@@ -273,6 +408,7 @@ static ssize_t storage_read(void *opaque, int fd,
     }
     const ssize_t result = storage_read_at_locked(
         context, fd, destination, size_bytes, context->positions[fd]);
+    sprite_diagnostics_read(context, fd, result);
     if (result > 0) {
         context->positions[fd] += (uint64_t)result;
     }
@@ -306,6 +442,7 @@ static ssize_t storage_pread(void *opaque, int fd, void *destination,
     }
     const ssize_t result = storage_read_at_locked(
         context, fd, destination, size_bytes, (uint64_t)offset);
+    sprite_diagnostics_read(context, fd, result);
     give_lock(context);
     return result;
 }
@@ -400,6 +537,7 @@ static const esp_vfs_dir_ops_t s_directory_operations = {
 #endif
 
 static const esp_vfs_fs_ops_t s_operations = {
+    .ioctl_p = storage_ioctl,
     .lseek_p = storage_lseek,
     .read_p = storage_read,
     .pread_p = storage_pread,
@@ -416,6 +554,9 @@ static void clear_snapshot(game_storage_blob_context_t *context)
     if (context == NULL) {
         return;
     }
+    sprite_diagnostics_end(context);
+    platform_game_storage_arena_sprite_end();
+    context->sprite_fd = -1;
     context->deh_data = NULL;
     context->deh_bytes = 0U;
     context->wad_data = NULL;
@@ -427,7 +568,7 @@ esp_err_t platform_readonly_blob_register(
 {
     const bool arena_config = config && config->file_name &&
         strcmp(config->file_name,"freedoom2.wad")==0 &&
-        config->size_bytes==(size_t)PLATFORM_GAME_STORAGE_FREEDOOM2_WAD_BYTES;
+        config->size_bytes==(size_t)PLATFORM_GAME_STORAGE_ARENA_BASE_WAD_BYTES;
     const bool doom_config = config != NULL &&
         config->file_name != NULL &&
         strcmp(config->file_name, "doom1.wad") == 0 &&
@@ -465,7 +606,7 @@ esp_err_t platform_readonly_blob_register(
             result=platform_game_storage_read_arena_wad(P4_GCA_PWAD,0,probe,sizeof(probe));
         if (result==ESP_OK)
             result=platform_game_storage_read_arena_wad(P4_GCA_DWANGO,0,probe,sizeof(probe));
-        snapshot.wad_size_bytes=(size_t)PLATFORM_GAME_STORAGE_FREEDOOM2_WAD_BYTES;
+        snapshot.wad_size_bytes=(size_t)PLATFORM_GAME_STORAGE_ARENA_BASE_WAD_BYTES;
     } else result = platform_game_storage_get_locked_doom_snapshot(s_context.title,&snapshot);
     if (result != ESP_OK) {
         s_context.title = PLATFORM_GAME_STORAGE_DOOM_TITLE_DOOM;

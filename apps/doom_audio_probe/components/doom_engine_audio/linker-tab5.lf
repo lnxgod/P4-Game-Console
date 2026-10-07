@@ -1,0 +1,11 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+# Renderer scratch is accessed only by the Doom task, never ISR or DMA.
+[scheme:p4_doom_tab5_renderer_scratch]
+entries:
+    bss -> extern_ram
+
+[mapping:p4_doom_tab5_renderer_scratch]
+archive: libdoom_engine_audio.a
+entries:
+    r_plane:visplanes (p4_doom_tab5_renderer_scratch)
+    r_plane:openings (p4_doom_tab5_renderer_scratch)

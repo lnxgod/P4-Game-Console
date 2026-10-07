@@ -1,0 +1,659 @@
+{
+  "schema": "p4-tab5-native-readability-and-removal-v1",
+  "recorded_at": "2026-10-07T21:21:30.771673+00:00",
+  "result": "Blast 0.2.9 installed and runtime surface verified at 768x480; clean device loop windows measured 19.09-19.50 FPS. Owner accepted this candidate at approximately 19 FPS for commit, with the global 30 FPS floor unmet. Earlier Blast/Tide failures and user-requested Tide removal remain preserved.",
+  "board": "M5Stack Tab5",
+  "unit": {
+    "device_identity_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+    "binding_source": "Exact-unit binding supplied by the installing/testing root agent.",
+    "raw_device_identifiers_recorded": false
+  },
+  "application": {
+    "version": "0.77",
+    "sha256": "59de8d8306f07624f579afe11aea82e171925e9ab7eebf649535b6a66e96e9b4",
+    "install_receipt": {
+      "path": "hardware/test-runs/2026-10-07-tab5-077-multiplayer-debug-install.json",
+      "bytes": 22781,
+      "sha256": "971447d28c22c536f3ef884fb628643f014bd1ac525e4fb007e18e43b4c94fd8",
+      "local_ignored_evidence": false
+    },
+    "live_boot_version_observed": "0.77"
+  },
+  "evidence": {
+    "journal_prefix": {
+      "path": "build-host/blast-device-20261007/journal.jsonl",
+      "prefix_bytes": 66260,
+      "prefix_lines": 215,
+      "prefix_sha256": "f4b6c44f43703ecfca8b0c50c2ea8e1050ad2ae7f079cf1634709588aa502aea",
+      "prefix_last_utc": "2026-10-07T21:16:08Z",
+      "append_only_prefix_binding": true,
+      "local_ignored_evidence": true
+    },
+    "console_prefix": {
+      "path": "build-host/blast-device-20261007/console.log",
+      "prefix_bytes": 114934,
+      "prefix_sha256": "cc7da5804dc8f0aac05b0ba3ceeb46f920c90dc4085a711313cf4f905a699d50",
+      "append_only_prefix_binding": true,
+      "local_ignored_evidence": true
+    },
+    "raw_evidence_tracking": "Local ignored inputs are referenced by path/hash; raw serial logs, device ports and hardware identifiers are not copied into this tracked receipt.",
+    "current_journal_prefix": {
+      "path": "build-host/blast-device-20261007/journal.jsonl",
+      "prefix_bytes": 112249,
+      "prefix_lines": 345,
+      "prefix_sha256": "ccf8819866086581c5ac01932df041b62f564364d4d5b589894c6eb0df8b733d",
+      "prefix_last_utc": "2026-10-07T21:27:30Z",
+      "append_only_prefix_binding": true,
+      "local_ignored_evidence": true
+    },
+    "current_console_prefix": {
+      "path": "build-host/blast-device-20261007/console.log",
+      "prefix_bytes": 142153,
+      "prefix_sha256": "6d93cd4abe7c3d2ee0cb91db7d6e9479a24a5298c3d25cff4fbc96ba49ffc0af",
+      "observed_at": "2026-10-07T21:47:49.380309+00:00",
+      "append_only_prefix_binding": true,
+      "local_ignored_evidence": true
+    }
+  },
+  "historical_measurements": [
+    {
+      "app": "org.p4console.blast-circuit",
+      "version": "0.2.8",
+      "package": {
+        "path": "build-host/blast-device-20261007/installed/BLAST_CIRCUIT.P4G",
+        "bytes": 462836,
+        "sha256": "178660e67f4fbb63140d141c25feb317807e8c9d46a898d4d2ac6fa1c8eefb51",
+        "local_ignored_evidence": true
+      },
+      "native_surface": {
+        "width": 768,
+        "height": 480,
+        "format": "RGB565",
+        "verified_by": "CARTRIDGE_START",
+        "launch_utc": "2026-10-07T21:02:14Z",
+        "journal_line": 26
+      },
+      "cadence": {
+        "result": "FAIL: measured device game-loop average below 30 FPS",
+        "target_fps": 60,
+        "release_floor_fps": 30,
+        "metric": "device game-loop cadence from uncapped cumulative wall-time differences",
+        "formula": "1000000 * (end.samples - start.samples) / (end.wall_total_us - start.wall_total_us)",
+        "start": {
+          "journal_line": 50,
+          "utc": "2026-10-07T21:02:39Z",
+          "firmware_tick_ms": 40810,
+          "samples": 300,
+          "wall_total_us": 24083453,
+          "wall_avg_us": 80278,
+          "wall_max_us": 105955,
+          "update_render_avg_us": 58685,
+          "update_render_max_us": 83273,
+          "input_avg_us": 496,
+          "input_max_us": 1041,
+          "audio_avg_us": 3,
+          "audio_max_us": 7,
+          "present_avg_us": 20596,
+          "present_max_us": 23866,
+          "reuse_avg_us": 25,
+          "reuse_max_us": 458,
+          "transform_avg_us": 20408,
+          "transform_max_us": 21159,
+          "handoff_avg_us": 56,
+          "handoff_max_us": 628,
+          "deadline_rebases": 299,
+          "audio_discarded_us": 0
+        },
+        "end": {
+          "journal_line": 53,
+          "utc": "2026-10-07T21:03:02Z",
+          "firmware_tick_ms": 64258,
+          "samples": 600,
+          "wall_total_us": 47531453,
+          "wall_avg_us": 79219,
+          "wall_max_us": 105955,
+          "update_render_avg_us": 57517,
+          "update_render_max_us": 83273,
+          "input_avg_us": 495,
+          "input_max_us": 3305,
+          "audio_avg_us": 3,
+          "audio_max_us": 7,
+          "present_avg_us": 20577,
+          "present_max_us": 23866,
+          "reuse_avg_us": 25,
+          "reuse_max_us": 458,
+          "transform_avg_us": 20403,
+          "transform_max_us": 21206,
+          "handoff_avg_us": 54,
+          "handoff_max_us": 628,
+          "deadline_rebases": 599,
+          "audio_discarded_us": 0
+        },
+        "delta_samples": 300,
+        "delta_wall_us": 23448000,
+        "duration_seconds": 23.448,
+        "average_fps": 12.794268167860798,
+        "screenshots_overlap_window": false,
+        "wall_max_scope": "Cumulative from this launch; not an isolated window maximum.",
+        "per_frame_distribution_available": false,
+        "p95_interval_us": null,
+        "p99_interval_us": null,
+        "worst_presented_gap_us": null,
+        "strict_presented_cadence_qualified": false
+      },
+      "capture": {
+        "path": "build-host/blast-device-20261007/active-baseline.png",
+        "bytes": 129680,
+        "sha256": "7d2b35c6b5988b23c024a42cca0e3e533d5f64d39e9cc018626a0013cbb37dfa",
+        "local_ignored_evidence": true,
+        "command_begin_utc": "2026-10-07T21:03:17Z",
+        "command_end_utc": "2026-10-07T21:04:29Z",
+        "scale": 1,
+        "image_width": 1280,
+        "image_height": 720,
+        "panel_buffer_rgb565_sha256": "c16eb86f5175ba5bfc062c82c010dd6aaba4e62958a557cddc03a07075b04338",
+        "scope": "Submitted panel-buffer copy, rotated to landscape; not optical panel evidence.",
+        "person_viewed_device_acceptance": false
+      },
+      "phase_limit": "Automated start inputs precede the clean interval. No in-game phase telemetry or human active-play acceptance was recorded; the later capture is not continuous phase proof.",
+      "status": "Failed cadence retained as historical evidence; not release qualified."
+    },
+    {
+      "app": "org.p4console.tide-maze",
+      "version": "0.2.3",
+      "package": {
+        "path": "build-host/blast-device-20261007/tide-baseline/TIDE_MAZE.P4G",
+        "bytes": 198592,
+        "sha256": "dfed6da3c9b9b2b43ae8e37b7d497c03a810f2848618e062ba111e3fdd194b5f",
+        "local_ignored_evidence": true
+      },
+      "native_surface": {
+        "width": 768,
+        "height": 480,
+        "format": "RGB565",
+        "verified_by": "CARTRIDGE_START",
+        "launch_utc": "2026-10-07T21:13:34Z",
+        "journal_line": 168
+      },
+      "cadence": {
+        "result": "FAIL: measured device game-loop average below 30 FPS",
+        "target_fps": 60,
+        "release_floor_fps": 30,
+        "metric": "device game-loop cadence from uncapped cumulative wall-time differences",
+        "formula": "1000000 * (end.samples - start.samples) / (end.wall_total_us - start.wall_total_us)",
+        "start": {
+          "journal_line": 189,
+          "utc": "2026-10-07T21:13:57Z",
+          "firmware_tick_ms": 288246,
+          "samples": 300,
+          "wall_total_us": 22189500,
+          "wall_avg_us": 73965,
+          "wall_max_us": 157999,
+          "update_render_avg_us": 51940,
+          "update_render_max_us": 57659,
+          "input_avg_us": 512,
+          "input_max_us": 1040,
+          "audio_avg_us": 3,
+          "audio_max_us": 26,
+          "present_avg_us": 20579,
+          "present_max_us": 23806,
+          "reuse_avg_us": 27,
+          "reuse_max_us": 378,
+          "transform_avg_us": 20386,
+          "transform_max_us": 21118,
+          "handoff_avg_us": 53,
+          "handoff_max_us": 653,
+          "deadline_rebases": 299,
+          "audio_discarded_us": 0
+        },
+        "end": {
+          "journal_line": 192,
+          "utc": "2026-10-07T21:14:19Z",
+          "firmware_tick_ms": 309756,
+          "samples": 600,
+          "wall_total_us": 43700501,
+          "wall_avg_us": 72834,
+          "wall_max_us": 157999,
+          "update_render_avg_us": 50933,
+          "update_render_max_us": 57659,
+          "input_avg_us": 504,
+          "input_max_us": 1040,
+          "audio_avg_us": 3,
+          "audio_max_us": 26,
+          "present_avg_us": 20576,
+          "present_max_us": 23806,
+          "reuse_avg_us": 26,
+          "reuse_max_us": 378,
+          "transform_avg_us": 20394,
+          "transform_max_us": 21118,
+          "handoff_avg_us": 52,
+          "handoff_max_us": 653,
+          "deadline_rebases": 599,
+          "audio_discarded_us": 0
+        },
+        "delta_samples": 300,
+        "delta_wall_us": 21511001,
+        "duration_seconds": 21.511001,
+        "average_fps": 13.946352380347154,
+        "screenshots_overlap_window": false,
+        "wall_max_scope": "Cumulative from this launch; not an isolated window maximum.",
+        "per_frame_distribution_available": false,
+        "p95_interval_us": null,
+        "p99_interval_us": null,
+        "worst_presented_gap_us": null,
+        "strict_presented_cadence_qualified": false
+      },
+      "capture": {
+        "path": "build-host/blast-device-20261007/tide-baseline/active-native.png",
+        "bytes": 143701,
+        "sha256": "1e97ce0ed4f2edcfa535910807b32579a74f91c3a1bc83eaee81e256880d5e86",
+        "local_ignored_evidence": true,
+        "command_begin_utc": "2026-10-07T21:14:22Z",
+        "command_end_utc": "2026-10-07T21:15:28Z",
+        "scale": 1,
+        "image_width": 1280,
+        "image_height": 720,
+        "panel_buffer_rgb565_sha256": "a2c772e7c01e38c10d1567b648ebec63f4f31edd94da96b01c7a562b3b6ca280",
+        "scope": "Submitted panel-buffer copy, rotated to landscape; not optical panel evidence.",
+        "person_viewed_device_acceptance": false
+      },
+      "phase_limit": "Automated start inputs precede the clean interval. No in-game phase telemetry or human active-play acceptance was recorded; the later capture is not continuous phase proof.",
+      "status": "Failed cadence retained as historical evidence; not release qualified."
+    }
+  ],
+  "tide_removal": {
+    "app": "org.p4console.tide-maze",
+    "version": "0.2.3",
+    "filename": "TIDE_MAZE.P4G",
+    "removed_bytes": 198592,
+    "removed_sha256": "dfed6da3c9b9b2b43ae8e37b7d497c03a810f2848618e062ba111e3fdd194b5f",
+    "result": "PASS: exact-package removal acknowledged by device",
+    "files_removed": 1,
+    "sanitized_device_ack": "P4_H1 REMOVE_PASS name=TIDE_MAZE.P4G bytes=198592 sha256=dfed6da3c9b9b2b43ae8e37b7d497c03a810f2848618e062ba111e3fdd194b5f",
+    "evidence": {
+      "path": "build-host/blast-device-20261007/tide-baseline/removal.log",
+      "bytes": 322,
+      "sha256": "cef15d65ea2816361b1b894a2b30fec34221086aab1f952c5dcbc2012b44c17b",
+      "local_ignored_evidence": true
+    },
+    "authorization": "User chose removal after the failed native-resolution test.",
+    "further_testing": "Stopped at user request; no further Tide device testing authorized by this receipt.",
+    "failed_measurement_preserved": true
+  },
+  "current_blast_candidate": {
+    "app": "org.p4console.blast-circuit",
+    "version": "0.2.9",
+    "package": {
+      "path": "build-host/blast-device-20261007/optimized/BLAST_CIRCUIT.P4G",
+      "bytes": 463948,
+      "sha256": "261aa298185b2ca277f2665821fb6708682712019ff940c0526e4a5611f699b9",
+      "local_ignored_evidence": true
+    },
+    "installed_readback": {
+      "path": "build-host/blast-device-20261007/optimized/installed-readback.P4G",
+      "bytes": 463948,
+      "sha256": "261aa298185b2ca277f2665821fb6708682712019ff940c0526e4a5611f699b9",
+      "local_ignored_evidence": true
+    },
+    "install_log": {
+      "path": "build-host/blast-device-20261007/optimized/install.log",
+      "bytes": 926,
+      "sha256": "218c1a54980a708fdda002b5dcb8891e274337efe20a1d431ce65127be944ce1",
+      "local_ignored_evidence": true
+    },
+    "readback_log": {
+      "path": "build-host/blast-device-20261007/optimized/readback.log",
+      "bytes": 5054,
+      "sha256": "c157f712436659710bb063b4131050267ecf756308fb84c8fcd7c8b4d83036b2",
+      "local_ignored_evidence": true
+    },
+    "installation_result": "PASS: USB push acknowledged and package readback matches exact candidate.",
+    "native_surface": {
+      "width": 768,
+      "height": 480,
+      "format": "RGB565",
+      "verified": true,
+      "start_utc": "2026-10-07T21:20:37Z",
+      "journal_line": 228,
+      "runtime_evidence": "CARTRIDGE_START app=org.p4console.blast-circuit file=BLAST_CIRCUIT.P4G surface=768x480",
+      "package_load_bytes": 463948,
+      "package_read_journal_line": 230
+    },
+    "cadence_result": "Measured clean device game-loop windows: 19.09-19.50 FPS; FAIL against the global 30 FPS release floor, accepted by owner for this exact candidate.",
+    "readability_result": "Root agent reviewed final scale-1 panel-buffer capture: quiet floors, outlined actors and readable timer/score labels. Person-viewed physical display readability and continuous gameplay acceptance remain pending.",
+    "release_qualified": false,
+    "measurements": [
+      {
+        "metric": "CARTRIDGE_TIMING device game-loop cadence",
+        "samples_start": 900,
+        "samples_end": 1200,
+        "sample_delta": 300,
+        "start_utc": "2026-10-07T21:21:34Z",
+        "end_utc": "2026-10-07T21:21:50Z",
+        "start_journal_line": 257,
+        "end_journal_line": 259,
+        "wall_total_us_start": 56427333,
+        "wall_total_us_end": 72072334,
+        "wall_delta_us": 15645001,
+        "average_fps": 19.175454191405933,
+        "formula": "sample_delta * 1000000 / wall_delta_us",
+        "screenshot_overlap": false,
+        "release_floor_fps": 30,
+        "release_floor_passed": false,
+        "strict_presented_frame_floor_qualified": false,
+        "window_p95_us": null,
+        "window_p99_us": null,
+        "start_timing": {
+          "utc": "2026-10-07T21:21:34Z",
+          "journal_line": 257,
+          "cumulative_metrics": {
+            "samples": 900,
+            "wall_total_us": 56427333,
+            "wall_avg_us": 62697,
+            "wall_max_us": 84001,
+            "update_render_avg_us": 40959,
+            "update_render_max_us": 53692,
+            "input_avg_us": 509,
+            "input_max_us": 1921,
+            "audio_avg_us": 3,
+            "audio_max_us": 4,
+            "present_avg_us": 20518,
+            "present_max_us": 23874,
+            "reuse_avg_us": 25,
+            "reuse_max_us": 426,
+            "transform_avg_us": 20344,
+            "transform_max_us": 21105,
+            "handoff_avg_us": 53,
+            "handoff_max_us": 638,
+            "deadline_rebases": 899,
+            "audio_discarded_us": 0
+          }
+        },
+        "end_timing": {
+          "utc": "2026-10-07T21:21:50Z",
+          "journal_line": 259,
+          "cumulative_metrics": {
+            "samples": 1200,
+            "wall_total_us": 72072334,
+            "wall_avg_us": 60060,
+            "wall_max_us": 84001,
+            "update_render_avg_us": 38338,
+            "update_render_max_us": 53692,
+            "input_avg_us": 504,
+            "input_max_us": 1921,
+            "audio_avg_us": 3,
+            "audio_max_us": 6,
+            "present_avg_us": 20499,
+            "present_max_us": 23874,
+            "reuse_avg_us": 24,
+            "reuse_max_us": 426,
+            "transform_avg_us": 20328,
+            "transform_max_us": 21130,
+            "handoff_avg_us": 53,
+            "handoff_max_us": 638,
+            "deadline_rebases": 1199,
+            "audio_discarded_us": 0
+          }
+        },
+        "maxima_scope": "Cumulative since launch; maxima are not window-specific."
+      },
+      {
+        "metric": "CARTRIDGE_TIMING device game-loop cadence",
+        "samples_start": 1800,
+        "samples_end": 2100,
+        "sample_delta": 300,
+        "start_utc": "2026-10-07T21:22:22Z",
+        "end_utc": "2026-10-07T21:22:38Z",
+        "start_journal_line": 265,
+        "end_journal_line": 267,
+        "wall_total_us_start": 103914333,
+        "wall_total_us_end": 119628334,
+        "wall_delta_us": 15714001,
+        "average_fps": 19.091254989738133,
+        "formula": "sample_delta * 1000000 / wall_delta_us",
+        "screenshot_overlap": false,
+        "release_floor_fps": 30,
+        "release_floor_passed": false,
+        "strict_presented_frame_floor_qualified": false,
+        "window_p95_us": null,
+        "window_p99_us": null,
+        "start_timing": {
+          "utc": "2026-10-07T21:22:22Z",
+          "journal_line": 265,
+          "cumulative_metrics": {
+            "samples": 1800,
+            "wall_total_us": 103914333,
+            "wall_avg_us": 57730,
+            "wall_max_us": 137000,
+            "update_render_avg_us": 35914,
+            "update_render_max_us": 53692,
+            "input_avg_us": 511,
+            "input_max_us": 1936,
+            "audio_avg_us": 3,
+            "audio_max_us": 25,
+            "present_avg_us": 20505,
+            "present_max_us": 23874,
+            "reuse_avg_us": 24,
+            "reuse_max_us": 426,
+            "transform_avg_us": 20338,
+            "transform_max_us": 21130,
+            "handoff_avg_us": 53,
+            "handoff_max_us": 638,
+            "deadline_rebases": 1799,
+            "audio_discarded_us": 0
+          }
+        },
+        "end_timing": {
+          "utc": "2026-10-07T21:22:38Z",
+          "journal_line": 267,
+          "cumulative_metrics": {
+            "samples": 2100,
+            "wall_total_us": 119628334,
+            "wall_avg_us": 56965,
+            "wall_max_us": 137000,
+            "update_render_avg_us": 35174,
+            "update_render_max_us": 53692,
+            "input_avg_us": 511,
+            "input_max_us": 1936,
+            "audio_avg_us": 3,
+            "audio_max_us": 25,
+            "present_avg_us": 20488,
+            "present_max_us": 23874,
+            "reuse_avg_us": 24,
+            "reuse_max_us": 426,
+            "transform_avg_us": 20321,
+            "transform_max_us": 21130,
+            "handoff_avg_us": 52,
+            "handoff_max_us": 638,
+            "deadline_rebases": 2099,
+            "audio_discarded_us": 0
+          }
+        },
+        "maxima_scope": "Cumulative since launch; maxima are not window-specific."
+      },
+      {
+        "metric": "CARTRIDGE_TIMING device game-loop cadence",
+        "samples_start": 2100,
+        "samples_end": 2400,
+        "sample_delta": 300,
+        "start_utc": "2026-10-07T21:22:38Z",
+        "end_utc": "2026-10-07T21:22:53Z",
+        "start_journal_line": 267,
+        "end_journal_line": 269,
+        "wall_total_us_start": 119628334,
+        "wall_total_us_end": 135014333,
+        "wall_delta_us": 15385999,
+        "average_fps": 19.49824642520775,
+        "formula": "sample_delta * 1000000 / wall_delta_us",
+        "screenshot_overlap": false,
+        "release_floor_fps": 30,
+        "release_floor_passed": false,
+        "strict_presented_frame_floor_qualified": false,
+        "window_p95_us": null,
+        "window_p99_us": null,
+        "start_timing": {
+          "utc": "2026-10-07T21:22:38Z",
+          "journal_line": 267,
+          "cumulative_metrics": {
+            "samples": 2100,
+            "wall_total_us": 119628334,
+            "wall_avg_us": 56965,
+            "wall_max_us": 137000,
+            "update_render_avg_us": 35174,
+            "update_render_max_us": 53692,
+            "input_avg_us": 511,
+            "input_max_us": 1936,
+            "audio_avg_us": 3,
+            "audio_max_us": 25,
+            "present_avg_us": 20488,
+            "present_max_us": 23874,
+            "reuse_avg_us": 24,
+            "reuse_max_us": 426,
+            "transform_avg_us": 20321,
+            "transform_max_us": 21130,
+            "handoff_avg_us": 52,
+            "handoff_max_us": 638,
+            "deadline_rebases": 2099,
+            "audio_discarded_us": 0
+          }
+        },
+        "end_timing": {
+          "utc": "2026-10-07T21:22:53Z",
+          "journal_line": 269,
+          "cumulative_metrics": {
+            "samples": 2400,
+            "wall_total_us": 135014333,
+            "wall_avg_us": 56255,
+            "wall_max_us": 137000,
+            "update_render_avg_us": 34461,
+            "update_render_max_us": 53692,
+            "input_avg_us": 507,
+            "input_max_us": 1936,
+            "audio_avg_us": 3,
+            "audio_max_us": 25,
+            "present_avg_us": 20497,
+            "present_max_us": 23874,
+            "reuse_avg_us": 24,
+            "reuse_max_us": 426,
+            "transform_avg_us": 20332,
+            "transform_max_us": 21130,
+            "handoff_avg_us": 52,
+            "handoff_max_us": 638,
+            "deadline_rebases": 2399,
+            "audio_discarded_us": 0
+          }
+        },
+        "maxima_scope": "Cumulative since launch; maxima are not window-specific."
+      }
+    ],
+    "excluded_timing_intervals": [
+      {
+        "samples_start": 1500,
+        "samples_end": 1800,
+        "reason": "Scale-4 screenshot at 21:22:07Z\u201321:22:13Z overlaps the window.",
+        "screenshot_journal_lines": [
+          263,
+          264
+        ]
+      },
+      {
+        "samples_start": 5700,
+        "samples_end": 6900,
+        "reason": "Final scale-1 screenshot at 21:25:45Z\u201321:26:40Z overlaps these intervals.",
+        "screenshot_journal_lines": [
+          329,
+          336
+        ]
+      }
+    ],
+    "capture": {
+      "path": "build-host/blast-device-20261007/optimized/active-native.png",
+      "bytes": 108304,
+      "sha256": "95f1f39d1ceeef01d4fbadca32161a7eba48c0839566ee7b87ec780e680e419a",
+      "local_ignored_evidence": true,
+      "capture_begin_utc": "2026-10-07T21:25:45Z",
+      "capture_end_utc": "2026-10-07T21:26:40Z",
+      "begin_journal_line": 329,
+      "end_journal_line": 336,
+      "scale": 1,
+      "landscape_width": 1280,
+      "landscape_height": 720,
+      "raw_rgb565_bytes": 1843200,
+      "raw_rgb565_sha256": "f21c4b17afd6c402283207a78b845e8724bb1702e766be4af6704758e7267ff9",
+      "capture_scope": "Submitted panel-buffer landscape capture, not optical evidence of the physical display. Its 1280x720 panel geometry is separate from the verified 768x480 game surface.",
+      "agent_visual_review": {
+        "reviewer": "Root device-workflow agent",
+        "observed_state": "Round 04 active arena; P1 out",
+        "observations": [
+          "Quiet walkable floor",
+          "Distinct outlined blue, pink and orange bots",
+          "Bombs, crates, hazard and fire distinguishable",
+          "Timer 1:26, P1 OUT and score labels legible"
+        ],
+        "continuous_active_play_proven": false
+      },
+      "person_viewed_device_acceptance": false
+    },
+    "audio_input_attempt": {
+      "input": "B press at 2026-10-07T21:23:33Z",
+      "input_journal_lines": [
+        301,
+        308
+      ],
+      "mute_confirmed": false,
+      "observation": "The marker calls this mute isolation, but the audio stream remained running and its frame counter increased. This does not establish muted or heard-audio acceptance.",
+      "before": {
+        "utc": "2026-10-07T21:23:24Z",
+        "journal_line": 298,
+        "frames": 3000,
+        "audio_running": 1,
+        "audio_frames": 2672768
+      },
+      "after": {
+        "utc": "2026-10-07T21:23:40Z",
+        "journal_line": 310,
+        "frames": 3300,
+        "audio_running": 1,
+        "audio_frames": 2921216
+      },
+      "later": {
+        "utc": "2026-10-07T21:23:55Z",
+        "journal_line": 312,
+        "frames": 3600,
+        "audio_running": 1,
+        "audio_frames": 3164160
+      }
+    },
+    "owner_exception": {
+      "result": "Owner accepted keeping and committing this exact candidate at approximately 19 FPS.",
+      "authorization_source": "Direct user instruction reported by the parent task; device journal marker records the action context, not independent authority.",
+      "journal_marker_utc": "2026-10-07T21:25:45Z",
+      "journal_marker_lines": [
+        327,
+        328
+      ],
+      "scope": {
+        "app": "org.p4console.blast-circuit",
+        "version": "0.2.9",
+        "package_sha256": "261aa298185b2ca277f2665821fb6708682712019ff940c0526e4a5611f699b9",
+        "os_version": "0.77",
+        "os_sha256": "59de8d8306f07624f579afe11aea82e171925e9ab7eebf649535b6a66e96e9b4",
+        "device_identity_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b"
+      },
+      "global_30_fps_floor_changed": false,
+      "global_30_fps_floor_met": false,
+      "person_optical_play_acceptance": "pending"
+    },
+    "global_release_floor_met": false,
+    "phase_limit": "Automated A inputs preceded the clean windows; later scale-1 image shows Round 04 with P1 out. These inputs and one capture do not identify the in-game phase throughout every measurement interval or establish continuous human play."
+  },
+  "limits": [
+    "These short diagnostic windows are not a sustained 120-second active-play qualification.",
+    "CARTRIDGE_TIMING wall deltas are device game-loop intervals, not independently measured unique presented-frame or optical scanout intervals.",
+    "Cumulative maxima include other portions of each launch and cannot isolate the selected clean interval.",
+    "Screenshot command intervals perturb timing and are excluded from the selected clean windows.",
+    "USB debug inputs and a panel-buffer screenshot do not establish human play, physical touch or heard-audio acceptance.",
+    "The owner accepted this exact approximately 19 FPS Blast candidate for commit. This exception does not meet or change the global 30 FPS floor, and person-viewed physical play remains pending."
+  ],
+  "updated_at": "2026-10-07T21:47:49.380309+00:00"
+}

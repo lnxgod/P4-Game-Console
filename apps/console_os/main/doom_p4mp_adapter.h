@@ -33,6 +33,10 @@ typedef struct {
                          const uint8_t *datagram, size_t datagram_length);
     bool (*connected)(void *context, uint64_t route_id);
     const char *(*route_name)(void *context, uint64_t route_id);
+    /** Optional last-poll observation: true only after an explicit empty RX
+     * result. Budget exhaustion, errors or unknown state return false. NULL
+     * disables poll coalescing; true never promises that no new data arrived. */
+    bool (*poll_drained)(void *context);
 } p4_doom_p4mp_transport_t;
 
 /** Transfer the already-connected Console OS P4MP session into Doom. */
@@ -40,6 +44,14 @@ esp_err_t p4_doom_p4mp_prepare(
     p4_mp_session_t *session,
     const p4_doom_mp_launch_config_t *config,
     const p4_doom_p4mp_transport_t *transport);
+
+/** Service the prepared session on its owner task, including content loading. */
+void p4_doom_p4mp_poll(void);
+
+/** Persist a host-issued Arena slot ticket across the guest's software restart.
+ * Called on the foreground network owner task before acknowledging the ticket. */
+bool p4_doom_arena_resume_store(const p4_doom_mp_launch_config_t *config,
+    const uint8_t ticket[16]);
 
 #ifdef __cplusplus
 }

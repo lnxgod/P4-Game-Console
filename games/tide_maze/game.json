@@ -2,7 +2,7 @@
   "schema": 1,
   "format": "p4-native-elf-v1",
   "api_version": 1,
-  "version": "0.2.1",
+  "version": "0.2.4",
   "package_file": "TIDE_MAZE.P4G",
   "component": "tide_maze",
   "entry_symbol": "p4_tide_maze_game",
@@ -14,17 +14,17 @@
   "accent_rgb565": "0x2e5b",
   "required_capabilities": [
     "video",
-    "controls"
+    "controls",
+    "video-highres"
   ],
   "optional_capabilities": [
     "audio-tone",
     "multiplayer-session",
-    "video-highres",
     "motion"
   ],
   "license": "MIT",
   "assets": "native-projected-maze-water-and-marble; original-imagegen-water-material-and-launcher-art",
-  "enabled": true,
+  "enabled": false,
   "multiplayer": {
     "schema": 1,
     "style": "realtime",

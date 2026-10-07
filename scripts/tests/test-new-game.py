@@ -39,8 +39,20 @@ def main() -> None:
         assert manifest["version"] == "1.0.0"
         assert manifest["package_file"] == "STAR_HOP.P4G"
         assert manifest["folder"] == "GAMES/ARCADE"
-        assert "video-highres" in manifest["optional_capabilities"]
-        assert "GAMES/ARCADE" in (created / "README.md").read_text()
+        assert manifest["required_capabilities"] == [
+            "video", "controls", "video-highres"]
+        assert "video-highres" not in manifest["optional_capabilities"]
+        source = (created / "src/star_hop.c").read_text()
+        assert "P4_GAME_CAP_VIDEO_HIGH_RES" in source.split(
+            ".required_capabilities = ", 1)[1].split(",", 1)[0]
+        assert "P4_GAME_CAP_VIDEO_HIGH_RES" not in source.split(
+            ".optional_capabilities = ", 1)[1].split(",", 1)[0]
+        readme = (created / "README.md").read_text()
+        assert "GAMES/ARCADE" in readme
+        assert "requires `video-highres`" in readme
+        assert "native 768x480 RGB565" in readme
+        assert "320x200 touch coordinates are input units" in readme
+        assert "with 320x200 fallback" not in readme
         compile_result = subprocess.run(
             ["cc", "-std=c11", "-Wall", "-Wextra", "-Wpedantic",
              "-Wconversion", "-Wshadow", "-Werror",
@@ -91,7 +103,17 @@ target_link_options(starter_motion PRIVATE -fsanitize=address,undefined)
         assert not (games / "moon_run").exists()
         dry_report = json.loads(dry_run.stdout)
         assert dry_report["launcher_id"] == 101
-        assert dry_report["optional_capabilities"] == ["audio-tone", "save", "video-highres"]
+        assert dry_report["optional_capabilities"] == ["audio-tone", "save"]
+        assert dry_report["required_capabilities"] == [
+            "video", "controls", "video-highres"]
+
+        explicit_optional_high_res = run(
+            CREATOR, "Native Demo", "--optional-capability", "video-highres",
+            "--games-root", str(games), "--dry-run")
+        assert explicit_optional_high_res.returncode == 0, explicit_optional_high_res.stderr
+        explicit_report = json.loads(explicit_optional_high_res.stdout)
+        assert "video-highres" in explicit_report["required_capabilities"]
+        assert "video-highres" not in explicit_report["optional_capabilities"]
 
         capability_created = run(
             CREATOR, "Save Test", "--optional-capability", "save",
@@ -155,9 +177,12 @@ target_link_options(starter_motion PRIVATE -fsanitize=address,undefined)
         high_res_manifest = json.loads(
             (games / "card_table/game.json").read_text())
         assert "video-highres" in high_res_manifest[
+            "required_capabilities"]
+        assert "video-highres" not in high_res_manifest[
             "optional_capabilities"]
         high_res_source = (games / "card_table/src/card_table.c").read_text()
-        assert "P4_GAME_CAP_VIDEO_HIGH_RES" in high_res_source
+        assert "P4_GAME_CAP_VIDEO_HIGH_RES" in high_res_source.split(
+            ".required_capabilities = ", 1)[1].split(",", 1)[0]
         high_res_compile = subprocess.run(
             ["cc", "-std=c11", "-Wall", "-Wextra", "-Wpedantic",
              "-Wconversion", "-Wshadow", "-Werror",
@@ -174,7 +199,23 @@ target_link_options(starter_motion PRIVATE -fsanitize=address,undefined)
         low_res = run(CREATOR, "Legacy Demo", "--low-res",
                       "--games-root", str(games), "--dry-run")
         assert low_res.returncode == 0, low_res.stderr
-        assert "video-highres" not in json.loads(low_res.stdout)["optional_capabilities"]
+        legacy_report = json.loads(low_res.stdout)
+        assert legacy_report["required_capabilities"] == ["video", "controls"]
+        assert "video-highres" not in legacy_report["optional_capabilities"]
+        legacy_created = run(CREATOR, "Legacy Demo", "--low-res",
+                             "--games-root", str(games))
+        assert legacy_created.returncode == 0, legacy_created.stderr
+        legacy_source = (games / "legacy_demo/src/legacy_demo.c").read_text()
+        assert "P4_GAME_CAP_VIDEO_HIGH_RES" not in legacy_source
+        assert "explicit legacy" in (games / "legacy_demo/README.md").read_text()
+
+        legacy_optional = run(
+            CREATOR, "Legacy Native", "--low-res", "--optional-capability",
+            "video-highres", "--games-root", str(games), "--dry-run")
+        assert legacy_optional.returncode == 0, legacy_optional.stderr
+        legacy_optional_report = json.loads(legacy_optional.stdout)
+        assert legacy_optional_report["required_capabilities"] == ["video", "controls"]
+        assert legacy_optional_report["optional_capabilities"] == ["video-highres"]
 
         invalid_folder = run(
             CREATOR, "Bad Folder", "--folder", "GAMES/TOO/DEEP",

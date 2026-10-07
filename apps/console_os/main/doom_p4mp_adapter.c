@@ -57,6 +57,7 @@ typedef struct {
     uint32_t tx_window_failures;
     uint32_t next_stats_tic;
     uint32_t saved_session_timeout_ms;
+    p4_doom_net_stats_t stats;
     boolean prepared;
     boolean configured;
     boolean runtime_started;
@@ -65,6 +66,13 @@ typedef struct {
 
 static const char *const TAG = "p4_doom_net";
 static p4_doom_p4mp_state_t s_net;
+static p4_doom_net_stats_t s_poll_stats;
+static boolean s_frame_tail_ordinary;
+
+static void count_stat(uint32_t *value)
+{
+    if (*value != UINT32_MAX) ++*value;
+}
 
 static void disconnect_remote(uint8_t slot, const char *reason);
 
@@ -108,7 +116,9 @@ static esp_err_t send_packet(
     const uint8_t *payload,
     uint16_t payload_length)
 {
+    count_stat(&s_net.stats.tx_attempts);
     if (s_net.session == NULL) {
+        count_stat(&s_net.stats.tx_failures);
         return ESP_ERR_INVALID_STATE;
     }
     size_t datagram_length = 0U;
@@ -116,10 +126,13 @@ static esp_err_t send_packet(
             s_net.session, type, ack, payload, payload_length,
             s_net.datagram, sizeof(s_net.datagram),
             &datagram_length) != P4_MP_OK) {
+        count_stat(&s_net.stats.tx_failures);
         return ESP_ERR_INVALID_STATE;
     }
-    return s_net.transport.send(
+    const esp_err_t result = s_net.transport.send(
         s_net.transport.context, s_net.datagram, datagram_length);
+    if (result != ESP_OK) count_stat(&s_net.stats.tx_failures);
+    return result;
 }
 
 static bool send_input_tic(const p4_doom_mp_tic_t *tic)
@@ -389,6 +402,7 @@ static void disconnect_remote(uint8_t slot, const char *reason)
         slot == s_net.config.local_player_slot) {
         return;
     }
+    if (!s_net.peer_failed) count_stat(&s_net.stats.peer_departures);
     s_net.peer_failed = true;
     ESP_LOGE(TAG,
              "P4_DOOM_MP PEER_DISCONNECTED slot=%u reason=%s "
@@ -403,14 +417,17 @@ static void frame_received(
     size_t datagram_length)
 {
     (void)context;
+    count_stat(&s_net.stats.rx_packets);
     if (!s_net.prepared || s_net.session == NULL ||
         route_id != s_net.config.route_id) {
+        count_stat(&s_net.stats.rx_session_rejected);
         return;
     }
     p4_mp_event_t event;
     const p4_mp_status_t status = p4_mp_session_receive(
         s_net.session, route_id, now_ms(), datagram, datagram_length, &event);
     if (status != P4_MP_OK) {
+        count_stat(&s_net.stats.rx_session_rejected);
         return;
     }
     if (event.type == P4_MP_EVENT_INPUT ||
@@ -470,6 +487,8 @@ esp_err_t p4_doom_p4mp_prepare(
 {
     restore_session_timeout();
     memset(&s_net, 0, sizeof(s_net));
+    memset(&s_poll_stats, 0, sizeof(s_poll_stats));
+    s_frame_tail_ordinary=false;
     (void)p4_doom_gc_prepare(NULL, NULL, NULL);
     if (config != NULL && config->setup.game == P4_DOOM_MP_GAME_GAME_CHANGERS_AI)
         return p4_doom_gc_prepare(session, config, transport);
@@ -677,7 +696,7 @@ void P4_DoomNetSubmitTic(const ticcmd_t *command, int tic_number)
     flush_complete_tics();
 }
 
-void P4_DoomNetPoll(void)
+static void poll_network_runtime(void)
 {
     if (p4_doom_gc_active()) { p4_doom_gc_poll(); return; }
     if (!s_net.prepared) {
@@ -721,6 +740,46 @@ void P4_DoomNetPoll(void)
     }
     flush_complete_tics();
     fail_lockstep_if_stalled(now_us);
+}
+
+static void poll_network_timed(boolean opportunistic)
+{
+    const int64_t start_us = esp_timer_get_time();
+    if (opportunistic && p4_doom_gc_active()) p4_doom_gc_poll_opportunistic();
+    else poll_network_runtime();
+    const int64_t end_us = esp_timer_get_time();
+    const uint64_t elapsed = end_us >= start_us ? (uint64_t)(end_us - start_us) : 0;
+    count_stat(&s_poll_stats.poll_calls);
+    s_poll_stats.poll_us = UINT64_MAX - s_poll_stats.poll_us < elapsed
+        ? UINT64_MAX : s_poll_stats.poll_us + elapsed;
+    if (elapsed > s_poll_stats.poll_max_us) s_poll_stats.poll_max_us = elapsed;
+}
+
+void P4_DoomNetPoll(void) { poll_network_timed(false); }
+void P4_DoomNetPollOpportunistic(void) { poll_network_timed(true); }
+void P4_DoomNetSetFrameTail(boolean ordinary) { s_frame_tail_ordinary=ordinary; }
+void P4_DoomNetPollFrameTail(boolean allow)
+{ poll_network_timed(allow && s_frame_tail_ordinary); }
+
+void P4_DoomNetGetStats(p4_doom_net_stats_t *stats)
+{
+    if (!stats) return;
+    if (p4_doom_gc_active()) p4_doom_gc_get_stats(stats);
+    else *stats = s_net.stats;
+    stats->poll_calls = s_poll_stats.poll_calls;
+    stats->poll_us = s_poll_stats.poll_us;
+    stats->poll_max_us = s_poll_stats.poll_max_us;
+}
+
+void P4_DoomNetGetLoadingProgress(p4_doom_loading_progress_t *progress)
+{
+    if (!progress) return;
+    p4_doom_gc_get_loading_progress(progress);
+}
+
+void p4_doom_p4mp_poll(void)
+{
+    P4_DoomNetPoll();
 }
 
 boolean P4_DoomNetFailed(void)

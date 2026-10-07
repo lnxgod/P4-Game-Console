@@ -1,0 +1,61 @@
+{
+  "schema": 1,
+  "recorded_utc": "2026-10-07T20:16:17.433440+00:00",
+  "board": "m5stack-tab5",
+  "version": "0.77",
+  "result": "failed",
+  "scope": "Solo Doom Arena host startup and initial live play before planned guest admission.",
+  "inputs": {
+    "install": {
+      "file": "hardware/test-runs/2026-10-07-tab5-077-multiplayer-debug-install.json",
+      "bytes": 22781,
+      "sha256": "971447d28c22c536f3ef884fb628643f014bd1ac525e4fb007e18e43b4c94fd8"
+    },
+    "prefix": {
+      "file": "build-host/runtime-acceptance-077/prefix-20261007T2004-host-watchdog/receipt.json",
+      "bytes": 1089,
+      "sha256": "00f586851b915eecd5d41c33c06555b1ceb47567ba148c76f93ae5111ffbd9e4"
+    },
+    "diagnostics": {
+      "file": "build-host/runtime-acceptance-077/host-watchdog-20261007T2004-diagnostics/receipt.json",
+      "bytes": 3012,
+      "sha256": "26d59833bfbfec32957794cf91171840e12c7497538814d38612c057d34d494b"
+    },
+    "review": {
+      "file": "build-host/host-watchdog-077-prepare-review/receipt.json",
+      "bytes": 889,
+      "sha256": "d34cb821817a72fdcfb36b99b1a36e2e69e5a694d3f5f6c25e75ba7006e20241"
+    }
+  },
+  "units": {
+    "A": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+    "B": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93"
+  },
+  "host": "B",
+  "guest": "A",
+  "host_session": "a48027aa",
+  "observations": {
+    "host_ready": true,
+    "host_watchdog": "IDLE0 starvation; watchdog enabled; reset at431091ms uptime",
+    "ready_to_watchdog_ms": 22212,
+    "guest_admission_attempted": false,
+    "warmup_input_steps_completed": 0,
+    "strict_runtime_gate": "Rejected absent A epoch; no fabricated generation",
+    "qualified_fps_windows": 0,
+    "sound_heard": "pending",
+    "sd_read_errors_reported": 0,
+    "sd_reformatted": false
+  },
+  "diagnostic_only": {
+    "validation_to_snapshot_ms": 28749,
+    "snapshot_to_engine_ms": 1159,
+    "engine_to_ready_ms": 10412,
+    "validation_to_ready_ms": 40320,
+    "read_seconds": 25.062519,
+    "submitted_frame_fps": 32.391,
+    "submitted_frame_window_seconds": 13.89269,
+    "limits": "Single solo host, missing two-sided status bounds; not sustained active paired cadence or physical display acceptance."
+  },
+  "physical_acceptance": false,
+  "next_action": "Review and test the narrow positive main-loop scheduler block in the separately versioned successor; retain this failure."
+}

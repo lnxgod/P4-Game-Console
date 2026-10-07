@@ -1,10 +1,10 @@
-# Game Changers AI multiplayer arena
+# Doom Arena by Game Changers
 
 [Monorepo](../../../README.md) · [Console OS](../../../apps/console_os/README.md) · [Full arena guide](../../GAME_CHANGERS_AI_DOOM.md)
 
 This is the **Doom-based arena game mode** in the P4 Game Console monorepo.
 Console OS hosts it and provides shared services; the arena is one game within
-that platform. It currently appears as **Multiplayer → Host → Game Changers AI**,
+that platform. It currently appears as **Multiplayer → Doom Arena by Game Changers → Local Wi-Fi → Host or Join**,
 with no separate launcher tile or `.P4G` package.
 
 ## What you can play
@@ -12,8 +12,14 @@ with no separate launcher tile or `.P4G` package.
 Two to four consoles use **Local Wi-Fi**, with one playing host and up to three
 guests. The host chooses from **29 arenas**: the five-map Pure Hades pack,
 or DWANGO 5 MAP01–MAP24. Pure Hades loops through its five maps. The DWANGO pack
-loops through its 24 maps. During a match, **Menu/Start → Choose Arena** proposes
+loops through its 24 maps. During a match, **Menu/Back → Choose Arena** proposes
 a map; active players vote Yes/No and a strict majority changes it.
+
+Scores stay hidden until you tap the small **SCORE** button or press controller
+**Start**. Tap **CLOSE** or press Start again to dismiss them. The touch **P**
+shortcut also toggles scores in Arena. This local panel does not pause play;
+vote and break prompts remain visible, and opening the menu or changing maps
+closes the scores.
 
 Current-visit kills persist across map changes. Fifteen seconds without
 movement/fire puts a connected player on a break; release and press **Use**
@@ -24,10 +30,13 @@ serial retain their separate two-player behavior.
 
 ## Build, content and launch
 
-The game is integrated in the Tab5 0.58 OS source. Use
+The compact-content game is staged for the Tab5 0.79 candidate OS source. Use
 `make console-os-tab5-idf` and the [guarded Tab5 route](../../boards/M5STACK_TAB5.md)
-for firmware. Each console also needs the identical verified **16-file bundle**
-on microSD: Freedoom Phase 2, Pure Hades, DWANGO 5, MIDI and the required notices.
+for firmware. Each console also needs the identical verified **17-file bundle**
+on microSD: the separate compact Freedoom-derived Arena base, Pure Hades,
+DWANGO 5, MIDI and the required notices. All 29 Arena maps are retained.
+The compact base uses `/GCADOOM/ARENA2.WAD`; ordinary campaign Freedoom
+remains `/FREEDOOM2.WAD`. Every peer needs the new matching content identity.
 To prepare it locally from the repository root:
 
 ```sh
@@ -39,7 +48,8 @@ The [full arena guide](../../GAME_CHANGERS_AI_DOOM.md) gives exact hashes,
 content installation commands, menu controls, scoring/vote rules, limits and
 host tests. [Pure Hades's README](../../../game-data/pure-hades/README.md) covers
 the original pack and music credits. Freedoom/DWANGO remain ignored local
-inputs; the Pure Hades exception does not permit republishing other WADs.
+inputs. The generated compact WAD also stays outside Git; its recipe and
+derivative notice are tracked. The Pure Hades exception does not permit republishing other WADs.
 
 ## Code and acceptance
 
@@ -49,7 +59,10 @@ and the [engine integration](../../../apps/doom_audio_probe/components/doom_engi
 Host/content tooling is under [`scripts/doom`](../../../scripts/doom/).
 
 Rules, voting, storage and four-instance lossy-network tests are recorded in
-the detailed guide. The [0.58 installation record](../../../test-runs/2026-10-06-tab5-no-reboot-content.json)
-binds firmware, content and startup checks for the two recorded Tab5 units. **Physical multiplayer play, controls/audio and
+the detailed guide. The [0.62 installation record](../../../hardware/test-runs/2026-10-07-tab5-062-multiplayer-debug-install.json)
+binds the installed firmware for the two recorded Tab5 units. Its follow-up
+reached READY on both, then failed when the slower guest was disconnected during
+level loading. The 0.63 candidate addresses this failure; it still needs device
+acceptance. **Physical multiplayer play, controls/audio and
 sustained device cadence remain pending**; four real consoles have not been
 qualified. Keep this distinction when describing the game publicly.

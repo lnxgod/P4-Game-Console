@@ -7,6 +7,8 @@ idf_component_register(
         "src/file_transfer.c"
         "src/h1_usb_drive_control.c"
         "src/clock_control.c"
+        "src/debug_control.c"
+        "src/debug_snapshot.c"
     INCLUDE_DIRS "include"
     REQUIRES
         esp_timer
@@ -29,6 +31,8 @@ else()
     add_library(p4_h1_usb_drive_control STATIC
         src/h1_usb_drive_control.c
         src/clock_control.c
+        src/debug_control.c
+        src/debug_snapshot.c
     )
     target_include_directories(p4_h1_usb_drive_control PUBLIC include)
     target_compile_features(p4_h1_usb_drive_control PUBLIC c_std_11)

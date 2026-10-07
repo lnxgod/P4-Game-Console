@@ -9,7 +9,15 @@ complete with device qualification explicitly pending.
 
 Native games target **60 presented FPS**, with **30 FPS the release floor on
 the actual ESP32-P4** during sustained representative play. Render native
-768×480 RGB565 with the tested 320×200 fallback and canonical 320×200 touch.
+768×480 RGB565 for every maintained Tab5 game. Require high resolution in
+the native manifest and descriptor, then verify the selected runtime surface.
+Canonical 320×200 touch coordinates are input units, not a framebuffer target.
+Never use a 320×200 framebuffer, upscale a completed low-resolution frame or
+enable a per-title low-resolution override to satisfy the frame-rate floor or
+repair readability. Optimize the measured native update/render/presentation
+cost instead. Keep an unmet native cadence or readability gate open until it
+passes; a fallback benchmark cannot close it. Preserve existing fallback source
+and bounded ABI tests for explicitly requested legacy maintenance.
 Native C is the supported authoring route, including custom software 2D/3D
 engines and raycasters. A language or engine choice does not guarantee cadence;
 measure the real P4 candidate. Native games have no script-renderer ceiling.
@@ -64,7 +72,12 @@ and their evidence, since an OS update alone does not replace that code.
 
 Console OS owns pacing, buffers, asynchronous display submission and safe
 reuse fences. Games render the complete supplied surface and use bounded
-non-blocking services. Do not add display waits, sleeps, DMA ownership or a
+non-blocking services. The supplied `surface.pixels` and stride belong to the
+current frame and may change on every frame. Read them from the supplied
+surface each time; do not cache the pixel pointer across callbacks or retain
+it after presentation. Render the complete current frame rather than relying
+on the contents of a previously borrowed buffer.
+Do not add display waits, sleeps, DMA ownership or a
 private frame loop to a game. Diagnose input/update/render/presentation phases
 at the shared boundary when needed; a proposed OS buffering fix is not proof
 that any installed unit has it or meets the frame budget.
@@ -73,21 +86,41 @@ that any installed unit has it or meets the frame budget.
 
 ### Use the P4's two cores through shared OS services
 
-Keep native game simulation, rendering and cartridge callbacks on the Console
-OS foreground core (core 0 on the Tab5 configuration). The Tab5 0.54 candidate
-uses `components/p4_game_platform/src/audio_worker.c` to mix and feed I2S from
-a bounded core-1 task. PCM/tone callbacks copy commands without waiting;
-the worker owns its mixer and board audio session until joined shutdown.
+The maintained Tab5 candidate keeps game/update/render callbacks on core 0.
+The shared native video presenter borrows rotating framebuffer leases for
+direct 768x480 RGB565 rendering and runs the PPA presentation backend on core 1
+at priority 2. Native audio output runs on core 1 at priority 4 through
+`components/p4_game_platform/src/audio_worker.c`. PCM/tone callbacks copy
+bounded commands without waiting; the audio worker owns its mixer and board
+audio session until joined shutdown.
 The C6 radio is a separate communications processor, not another game-rendering
 core. Do not add FreeRTOS tasks, I2S handles or board-specific affinity inside
 cartridges. Other independent work belongs in an appropriate shared service.
 
-SMP being enabled does not prove useful parallel execution. Record actual
-`AUDIO_WORKER game_core=0 audio_core=1` evidence, queue rejections, underruns,
-clipping, write failures and stack reserve alongside frame timings. Keep each
-mutable resource single-owned, copy bounded messages across cores, and join
-workers before closing peripherals, unloading cartridge code or freeing data.
-Never hold a queue/telemetry lock during I2S, display, SD or radio waits.
+The video worker owns exactly two native PSRAM framebuffers. The foreground
+borrows one writable lease, fills the entire current frame, and commits it
+without a framebuffer copy. A committed frame stays immutable until the
+backend consumes its source; bounded admission and reuse fences prevent an
+in-flight frame from being overwritten. The OS refreshes the game surface
+pointer when it acquires the next lease. Drain and join the worker before
+freeing buffers, unloading the cartridge or returning display ownership to the
+launcher. A failed join retains the worker and its resources until safe
+shutdown. If worker allocation requires synchronous recovery, preserve the
+same direct 768x480 surface; no low-resolution fallback is allowed.
+
+SMP configuration and worker creation do not prove useful parallel execution
+or the device 30 FPS floor. On the exact OS/package/unit candidate, record
+actual game/video/audio core IDs and priorities, completed-backend frame
+intervals, and concurrent stage timing showing game/update/render work
+overlapping backend presentation. Keep accepted submissions, completed
+backend work and physical scanout evidence distinct. Include queue and backend
+timeouts, hard errors, audio queue rejections, underruns, clipping, write
+failures and stack reserve. Exercise busy gameplay, title/ready, pause and
+results transitions, plus stop/restart and synchronous native recovery. These
+source changes remain a candidate until device cadence and readability pass.
+Keep each mutable resource single-owned and join workers before closing
+peripherals or freeing data. Never hold a queue/telemetry lock during I2S,
+display, SD or radio waits.
 
 Budget PCM buffering against measured producer jitter: 512 frames at 16 kHz
 hold only 32 ms and necessarily overflow when a frame submits 39 ms of audio.
@@ -103,8 +136,10 @@ review first. The optimized native CPU benchmark compiles real game sources:
 ```sh
 cmake --build build-host/play-<slug> --target p4_game_benchmark
 build-host/play-<slug>/p4_game_benchmark 2000 768 path/to/input-tape.txt
-build-host/play-<slug>/p4_game_benchmark 2000 320 path/to/input-tape.txt
 ```
+
+The benchmark's 320-size mode is retained for explicit legacy diagnostics;
+it cannot qualify maintained Tab5 performance or presentation.
 
 Tape rows are increasing frame indices, held button masks and canonical touch
 x/y; `30 16 -1 -1` presses A, and a later mask-zero row releases it. Use -1/-1

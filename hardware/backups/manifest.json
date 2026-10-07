@@ -137,7 +137,7 @@
       "write_status": "ready-for-guarded-first-console-os-layout-write; peripheral acceptance remains shared-code build evidence until observed on unit 2"
     },
     {
-      "captured_at": "2026-10-05T02:32:08.346852+00:00",
+      "captured_at": "2026-10-07T03:27:20.719133+00:00",
       "board_claim": "M5Stack Tab5 A; operator confirmed 2026-10-04",
       "physical_confirmation": {
         "source": "operator_attestation_2026-10-04",
@@ -161,12 +161,12 @@
         }
       },
       "backup": {
-        "file": "hardware/backups/tab5-a-pre-project-20261004.bin",
+        "file": "hardware/backups/tab5-a-multiplayer-preinstall-20261007/complete-flash.bin",
         "bytes": 16777216,
-        "sha256": "afe3e5df1ef2580aac055abc13a9c62bdfbd4816b46384d92978bdfa1abf16c8",
+        "sha256": "849ea1fd532207c96557daab6433cf2986919b80234ed541cba36b5e63d582df",
         "git_ignored": true,
         "mode": "0600",
-        "source": "complete live flash before Console OS; contains existing usb_bridge_forwarder bf4b2a3-dirty built Sep 21 2026; not claimed to be factory firmware"
+        "source": "Complete live pre-update Console OS 0.59 recovery snapshot; not factory firmware. Historical pre-project backup record retained separately."
       },
       "saved_partition_table": [
         {
@@ -184,21 +184,28 @@
           "size": 4096
         },
         {
-          "name": "factory",
-          "type": 0,
+          "name": "otadata",
+          "type": 1,
           "subtype": 0,
           "offset": "0x10000",
-          "size": 1048576,
-          "app": {
-            "version": "bf4b2a3-dirty",
-            "project": "usb_bridge_forwarder",
-            "time": "00:00:00",
-            "date": "Sep 21 2026",
-            "idf": "v5.5.2"
-          }
+          "size": 8192
+        },
+        {
+          "name": "ota_0",
+          "type": 0,
+          "subtype": 16,
+          "offset": "0x20000",
+          "size": 8323072
+        },
+        {
+          "name": "ota_1",
+          "type": 0,
+          "subtype": 17,
+          "offset": "0x810000",
+          "size": 8323072
         }
       ],
-      "write_status": "current-console-os-app-installed; exact readback, three warm restarts, catalog and boot health verified; gameplay/audio acceptance pending",
+      "write_status": "Read-only current Console OS 0.59 recovery captured; active OTA slot 0; new multiplayer/debug firmware installation remains pending.",
       "saved_firmware_board_markers": [
         "m5stack-tab5",
         "tab5_board",
@@ -215,13 +222,72 @@
       "runtime_panel": "ST7121 firmware 1 (1.80.1.16)",
       "console_os_evidence": "hardware/evidence/tab5-console-os-20261004-startup-recovery-testing.json",
       "current_console_application": {
-        "file": "apps/console_os/build-tab5/p4_console_os.bin",
-        "bytes": 1383072,
-        "sha256": "37c4e4c3a7beca110793760e334aa7dde38f81898d1ac14685d95305611df87e"
-      }
+        "file": "hardware/backups/tab5-a-multiplayer-preinstall-20261007/predecessor.bin",
+        "bytes": 4320112,
+        "sha256": "bdbee71be4ef0eae3a1398fa3d0d2c6213b547f992379ba624e2796bef03befc",
+        "version": "0.59",
+        "project": "p4_console_os",
+        "idf": "v5.5.3",
+        "elf_sha256": "606a7784d172e10811ee34c96459d6e168e655e9ab95f98fe216e7c6afdb9cba",
+        "esp_checksum_valid": true,
+        "appended_sha256_valid": true,
+        "active_ota_slot": 0
+      },
+      "backup_history": [
+        {
+          "captured_at": "2026-10-05T02:32:08.346852+00:00",
+          "backup": {
+            "file": "hardware/backups/tab5-a-pre-project-20261004.bin",
+            "bytes": 16777216,
+            "sha256": "afe3e5df1ef2580aac055abc13a9c62bdfbd4816b46384d92978bdfa1abf16c8",
+            "git_ignored": true,
+            "mode": "0600",
+            "source": "complete live flash before Console OS; contains existing usb_bridge_forwarder bf4b2a3-dirty built Sep 21 2026; not claimed to be factory firmware"
+          },
+          "saved_partition_table": [
+            {
+              "name": "nvs",
+              "type": 1,
+              "subtype": 2,
+              "offset": "0x9000",
+              "size": 24576
+            },
+            {
+              "name": "phy_init",
+              "type": 1,
+              "subtype": 1,
+              "offset": "0xf000",
+              "size": 4096
+            },
+            {
+              "name": "factory",
+              "type": 0,
+              "subtype": 0,
+              "offset": "0x10000",
+              "size": 1048576,
+              "app": {
+                "version": "bf4b2a3-dirty",
+                "project": "usb_bridge_forwarder",
+                "time": "00:00:00",
+                "date": "Sep 21 2026",
+                "idf": "v5.5.2"
+              }
+            }
+          ],
+          "console_os_evidence": "hardware/evidence/tab5-console-os-20261004-startup-recovery-testing.json",
+          "current_console_application": {
+            "file": "apps/console_os/build-tab5/p4_console_os.bin",
+            "bytes": 1383072,
+            "sha256": "37c4e4c3a7beca110793760e334aa7dde38f81898d1ac14685d95305611df87e"
+          },
+          "note": "Historical record retained unchanged. Its backup binary was unavailable in this checkout; current recovery is the newly captured complete live Console OS image, not a factory image."
+        }
+      ],
+      "current_backup_evidence": "hardware/backups/tab5-a-multiplayer-preinstall-20261007/receipt.json",
+      "current_backup_verified_at": "2026-10-07T03:27:20.771739+00:00"
     },
     {
-      "captured_at": "2026-10-05T02:52:01.209290+00:00",
+      "captured_at": "2026-10-07T03:23:37.150582+00:00",
       "board_claim": "M5Stack Tab5 B; operator identified newly connected second unit 2026-10-04",
       "physical_confirmation": {
         "source": "operator_attestation_2026-10-04",
@@ -231,7 +297,7 @@
         "pcb_revision": null,
         "panel_label": null
       },
-      "port": "/dev/cu.usbmodem2101",
+      "port": "/dev/cu.usbmodem101",
       "device": {
         "chip": "ESP32-P4",
         "revision": "v1.3",
@@ -245,12 +311,12 @@
         }
       },
       "backup": {
-        "file": "hardware/backups/tab5-b-pre-project-20261004.bin",
+        "file": "hardware/backups/tab5-b-multiplayer-preinstall-20261007/complete-flash.bin",
         "bytes": 16777216,
-        "sha256": "5539e586c84d653cbe96d8c94b9aa775ad0ce5f134c3b28a5192af01429dc1c9",
+        "sha256": "1005bc51f3c0877c5722695e2a2fb058dcef024658953a16372c16137c7fb842",
         "git_ignored": true,
         "mode": "0600",
-        "source": "complete live flash before Console OS; pre-existing bridge firmware, not claimed as factory image"
+        "source": "Complete live pre-update Console OS 0.59 recovery snapshot; not factory firmware. Historical pre-project backup record retained separately."
       },
       "saved_partition_table": [
         {
@@ -268,28 +334,94 @@
           "size": 4096
         },
         {
-          "name": "factory",
-          "type": 0,
+          "name": "otadata",
+          "type": 1,
           "subtype": 0,
           "offset": "0x10000",
-          "size": 1048576,
-          "app": {
-            "version": "bf4b2a3-dirty",
-            "project": "usb_bridge_forwarder",
-            "time": "00:00:00",
-            "date": "Sep 21 2026",
-            "idf": "v5.5.2"
-          }
+          "size": 8192
+        },
+        {
+          "name": "ota_0",
+          "type": 0,
+          "subtype": 16,
+          "offset": "0x20000",
+          "size": 8323072
+        },
+        {
+          "name": "ota_1",
+          "type": 0,
+          "subtype": 17,
+          "offset": "0x810000",
+          "size": 8323072
         }
       ],
-      "write_status": "current-console-os-app-installed; exact readback, three warm restarts, catalog and boot health verified; gameplay/audio acceptance pending",
+      "write_status": "Read-only current Console OS 0.59 recovery captured; active OTA slot 0; new multiplayer/debug firmware installation remains pending.",
       "runtime_panel": "ST7123 firmware 3 (1.71.1.3)",
       "console_os_evidence": "hardware/evidence/tab5-console-os-20261004-startup-recovery-testing.json",
       "current_console_application": {
-        "file": "apps/console_os/build-tab5/p4_console_os.bin",
-        "bytes": 1383072,
-        "sha256": "37c4e4c3a7beca110793760e334aa7dde38f81898d1ac14685d95305611df87e"
-      }
+        "file": "hardware/backups/tab5-b-multiplayer-preinstall-20261007/predecessor.bin",
+        "bytes": 4320112,
+        "sha256": "bdbee71be4ef0eae3a1398fa3d0d2c6213b547f992379ba624e2796bef03befc",
+        "version": "0.59",
+        "project": "p4_console_os",
+        "idf": "v5.5.3",
+        "elf_sha256": "606a7784d172e10811ee34c96459d6e168e655e9ab95f98fe216e7c6afdb9cba",
+        "esp_checksum_valid": true,
+        "appended_sha256_valid": true,
+        "active_ota_slot": 0
+      },
+      "backup_history": [
+        {
+          "captured_at": "2026-10-05T02:52:01.209290+00:00",
+          "backup": {
+            "file": "hardware/backups/tab5-b-pre-project-20261004.bin",
+            "bytes": 16777216,
+            "sha256": "5539e586c84d653cbe96d8c94b9aa775ad0ce5f134c3b28a5192af01429dc1c9",
+            "git_ignored": true,
+            "mode": "0600",
+            "source": "complete live flash before Console OS; pre-existing bridge firmware, not claimed as factory image"
+          },
+          "saved_partition_table": [
+            {
+              "name": "nvs",
+              "type": 1,
+              "subtype": 2,
+              "offset": "0x9000",
+              "size": 24576
+            },
+            {
+              "name": "phy_init",
+              "type": 1,
+              "subtype": 1,
+              "offset": "0xf000",
+              "size": 4096
+            },
+            {
+              "name": "factory",
+              "type": 0,
+              "subtype": 0,
+              "offset": "0x10000",
+              "size": 1048576,
+              "app": {
+                "version": "bf4b2a3-dirty",
+                "project": "usb_bridge_forwarder",
+                "time": "00:00:00",
+                "date": "Sep 21 2026",
+                "idf": "v5.5.2"
+              }
+            }
+          ],
+          "console_os_evidence": "hardware/evidence/tab5-console-os-20261004-startup-recovery-testing.json",
+          "current_console_application": {
+            "file": "apps/console_os/build-tab5/p4_console_os.bin",
+            "bytes": 1383072,
+            "sha256": "37c4e4c3a7beca110793760e334aa7dde38f81898d1ac14685d95305611df87e"
+          },
+          "note": "Historical record retained unchanged. Its backup binary was unavailable in this checkout; current recovery is the newly captured complete live Console OS image, not a factory image."
+        }
+      ],
+      "current_backup_evidence": "hardware/backups/tab5-b-multiplayer-preinstall-20261007/receipt.json",
+      "current_backup_verified_at": "2026-10-07T03:26:13.076516+00:00"
     }
   ],
   "accessory_backups": [

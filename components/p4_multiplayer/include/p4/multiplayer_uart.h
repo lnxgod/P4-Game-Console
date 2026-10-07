@@ -91,6 +91,29 @@ esp_err_t p4_mp_uart_endpoint_send_raw(
     const uint8_t *bytes,
     size_t bytes_length);
 
+/**
+ * Try one complete ASCII console record on native USB, without waiting. The
+ * record must begin/end with LF, contain only printable ASCII between them,
+ * and fit P4_MP_UART_RAW_TX_MAX_BYTES including both LF bytes. A successful
+ * call copies the complete record; timeout admits none. Never retry a suffix.
+ * Zero-wait stdout/stderr locks preserve ordinary task-level stdio/ESP_LOG
+ * writes. Call outside an existing stdio write; raw write(2), ROM/ISR output,
+ * and custom logging sinks are outside this standard-stream contract.
+ * Pinned newlib stream flags are checked while locked; unbuffered (including
+ * allocation fallback), string, nonwriting or caller-locked streams reject
+ * with NOT_SUPPORTED. Other libc implementations are unsupported.
+ *
+ * Safe from the diagnostic consumer: this does not read or update foreground
+ * route state, counters or last_error. Readiness is published atomically after
+ * endpoint initialization. The endpoint retains its USB driver until reboot;
+ * external driver uninstall is unsupported. Before publication this returns
+ * INVALID_STATE, and non-native-USB targets return NOT_SUPPORTED.
+ * This is a task API, not an ISR API. Delivery/physical drain is not guaranteed.
+ */
+esp_err_t p4_mp_uart_endpoint_try_console_record(
+    const uint8_t *bytes,
+    size_t bytes_length);
+
 /** Wait until queued H1 bytes have left the UART before changing baud. */
 esp_err_t p4_mp_uart_endpoint_wait_tx_done(uint32_t timeout_ms);
 

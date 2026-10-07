@@ -14,6 +14,7 @@ import struct
 import sys
 import time
 from pathlib import Path
+from typing import BinaryIO
 
 import serial
 
@@ -107,7 +108,15 @@ CONTENT_SPECS = {
 }
 
 
-ARENA_BUNDLE = json.loads((ROOT / "third_party/game-data.json").read_text())["game_changers_ai_bundle"]
+CONTENT_METADATA = json.loads((ROOT / "third_party/game-data.json").read_text())
+ORIGINAL_FREEDOOM2 = next(g for g in CONTENT_METADATA["game_data"]
+                         if g["id"] == "freedoom-0.13.0-phase-2")
+CONTENT_SPECS["freedoom2"] = ContentSpec(
+    command="freedoom2", kind=CONTENT_KIND_FREEDOOM2,
+    bytes=ORIGINAL_FREEDOOM2["size_bytes"], sha256=ORIGINAL_FREEDOOM2["sha256"],
+    default_path=ROOT / ORIGINAL_FREEDOOM2["local_path"],
+)
+ARENA_BUNDLE = CONTENT_METADATA["game_changers_ai_bundle"]
 for arena_file in ARENA_BUNDLE["files"]:
     CONTENT_SPECS[arena_file["command"]] = ContentSpec(
         command=arena_file["command"], kind=arena_file["usb_kind"],
@@ -120,8 +129,13 @@ def arena_inputs(iwad: Path, pack: Path, dwango: Path):
     result = []
     for entry in ARENA_BUNDLE["files"]:
         spec = CONTENT_SPECS[entry["command"]]
-        path = iwad if entry["symbol"] == "BASE" else (dwango if entry["symbol"].startswith("DWANGO") else pack) / entry.get("pack_path", entry["filename"])
-        result.append((spec, path.resolve()))
+        if entry["symbol"] == "BASE":
+            path = iwad
+        elif entry.get("source_group") == "repository":
+            path = ROOT / entry["local_path"]
+        else:
+            path = (dwango if entry["symbol"].startswith("DWANGO") else pack) / entry.get("pack_path", entry["filename"])
+        result.append((spec, path.absolute()))
     # No serial connection or device writes until every local input passes.
     for spec, path in result:
         validate_content(path, spec)
@@ -209,14 +223,18 @@ def write_all(connection: serial.Serial, data: bytes) -> None:
 class WireReader:
     """Retain trailing bytes when USB delivers multiple protocol frames at once."""
 
-    def __init__(self, connection: serial.Serial) -> None:
+    def __init__(self, connection: serial.Serial, raw_log: BinaryIO | None = None) -> None:
         self.connection = connection
+        self.raw_log = raw_log
         self.buffer = bytearray()
         self.boot_ready_events = 0
         self.resume_events = 0
         self.audit_tail = b""
 
     def observe(self, block: bytes) -> None:
+        if self.raw_log is not None:
+            self.raw_log.write(block)
+            self.raw_log.flush()
         markers = (b"P4_CONSOLE_OS READY board=", b"P4_USB_CONTENT READY resume=1 reboot=0")
         combined = self.audit_tail + block
         self.boot_ready_events += combined.count(markers[0])
@@ -239,6 +257,19 @@ class WireReader:
                 result = bytes(self.buffer[location:location + frame_bytes])
                 del self.buffer[:location + frame_bytes]
                 return result
+            if marker == ACK_MAGIC:
+                terminal = self.buffer.find(DONE_MAGIC)
+                if terminal >= 0 and len(self.buffer) >= terminal + 41:
+                    status = self.buffer[terminal + 4]
+                    received = struct.unpack_from("<I", self.buffer, terminal + 5)[0]
+                    del self.buffer[:terminal + 41]
+                    # Keep the same whole-file retry policy as a missing ACK.
+                    # READY remains buffered and must still be observed before
+                    # restarting; never replay an ambiguous individual chunk.
+                    raise TransferTimeout(
+                        "device ended transfer while waiting for P4A1: "
+                        f"status={status_name(status)}({status}) received_bytes={received}"
+                    )
             # Native Serial/JTAG may reboot on port-open. A manifest sent
             # before the driver starts is lost; retry only upon an explicit
             # service-ready marker, never while the card is hashing a file.
@@ -370,11 +401,15 @@ def parser() -> argparse.ArgumentParser:
             "input", nargs="?", type=Path, default=spec.default_path
         )
         content.add_argument("--port")
-    arena = subparsers.add_parser("game-changers-ai", help="install the verified Freedoom + Pure Hades + DWANGO 5 bundle and notices")
-    arena.add_argument("input", nargs="?", type=Path, default=CONTENT_SPECS["freedoom2"].default_path)
+        content.add_argument("--raw-log", type=Path,
+                             help="create a new binary log of all received USB bytes")
+    arena = subparsers.add_parser("game-changers-ai", help="install the verified compact Arena base + Pure Hades + DWANGO 5 bundle and all 17 files/notices")
+    arena.add_argument("input", nargs="?", type=Path, default=CONTENT_SPECS["arena-base"].default_path)
     arena.add_argument("--dwango", type=Path, default=CONTENT_SPECS["dwango5"].default_path.parent)
     arena.add_argument("--pack", type=Path, default=CONTENT_SPECS["pure-hades"].default_path.parent)
     arena.add_argument("--port")
+    arena.add_argument("--raw-log", type=Path,
+                       help="create a new binary log of all received USB bytes")
     chex = subparsers.add_parser(
         "chex",
         help="install the verified CHEX.WAD and CHEX.DEH pair",
@@ -388,6 +423,8 @@ def parser() -> argparse.ArgumentParser:
         default=CONTENT_SPECS["chex-deh"].default_path,
     )
     chex.add_argument("--port")
+    chex.add_argument("--raw-log", type=Path,
+                      help="create a new binary log of all received USB bytes")
     return result
 
 
@@ -400,28 +437,29 @@ def main(argv: list[str] | None = None) -> int:
         if arena_files:
             files = arena_files
         elif args.kind == "chex":
-            files = [(CONTENT_SPECS["chex-wad"], args.wad.resolve()),
-                     (CONTENT_SPECS["chex-deh"], args.deh.resolve())]
+            files = [(CONTENT_SPECS["chex-wad"], args.wad.absolute()),
+                     (CONTENT_SPECS["chex-deh"], args.deh.absolute())]
         else:
-            files = [(CONTENT_SPECS[args.kind], args.input.resolve())]
+            files = [(CONTENT_SPECS[args.kind], args.input.absolute())]
         # Preflight the complete batch before opening native USB. Reopening
         # between files can itself reset the Tab5 on this host.
         for spec, path in files:
             validate_content(path, spec)
-        with open_port(port) as connection:
-            reader = WireReader(connection)
+        with (args.raw_log.open("xb") if args.raw_log else nullcontext(None)) as raw_log, \
+                open_port(port) as connection:
+            reader = WireReader(connection, raw_log=raw_log)
             for spec, path in files:
                 for attempt in range(2):
                     try:
                         install_content(spec, path, port, connection=connection, reader=reader)
                         break
-                    except TransferTimeout:
+                    except TransferTimeout as error:
                         # Never replay an ambiguous chunk. Wait until the
                         # device has closed/discarded staging and is idle, then
                         # retry the exact file once on this same connection.
                         if attempt or not wait_for_content_ready(connection, reader, 30.0):
                             raise
-                        print(f"P4_H1 RETRY kind={spec.command} device_ready=1 connection_reused=1")
+                        print(f"P4_H1 RETRY kind={spec.command} device_ready=1 connection_reused=1 reason={error}")
             print(f"P4_H1 BATCH PASS files={len(files)} connections=1 "
                   f"boot_ready_events={reader.boot_ready_events} resume_events={reader.resume_events}")
     except (OSError, serial.SerialException, TransferError) as error:

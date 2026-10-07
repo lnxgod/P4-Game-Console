@@ -1231,6 +1231,13 @@ esp_err_t platform_multiplayer_ble_set_handler(
 void platform_multiplayer_ble_disable(void)
 {
     portENTER_CRITICAL(&s_lock);
+    /* The shared host may be running for Wi-Fi or a controller while this
+     * client is off. Do not cancel another client's discovery or issue a
+     * synchronous HCI advertising stop from the launcher's input task. */
+    if (!s_ble.status.enabled) {
+        portEXIT_CRITICAL(&s_lock);
+        return;
+    }
     s_ble.status.enabled = false;
     s_ble.status.ready = false;
     s_ble.status.state = PLATFORM_MULTIPLAYER_BLE_OFF;

@@ -5,8 +5,12 @@ if(COMMAND idf_component_register)
     set(TOUCH_BOARD_DEPS)
     idf_build_get_property(P4_ACTIVE_BOARD_PROFILE P4_BOARD_PROFILE)
     if(P4_ACTIVE_BOARD_PROFILE STREQUAL "m5stack-tab5")
-        set(TOUCH_SOURCE src/platform_touch_tab5.c)
-        set(TOUCH_BOARD_DEPS platform_tab5 espressif__esp_lcd_touch_st7123)
+        set(TOUCH_SOURCE
+            src/platform_touch_tab5.c
+            src/platform_touch_tab5_io.c
+            src/platform_touch_sampler.c
+            src/platform_touch_sample_queue.c)
+        set(TOUCH_BOARD_DEPS platform_tab5 espressif__esp_lcd_touch_st7123 p4_frame_scheduler)
     endif()
     idf_component_register(
         SRCS ${TOUCH_SOURCE} ${PLATFORM_TOUCH_PURE_SOURCES}

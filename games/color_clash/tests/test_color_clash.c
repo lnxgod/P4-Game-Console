@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 
+#include "test_game_start.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -278,7 +279,7 @@ static void test_render_resolution_negotiation(void)
     };
     p4_game_instance_t instance = {0};
     color_clash_state_t state;
-    CHECK(p4_game_instance_start(
+    CHECK(test_start_game(
         &instance, &p4_color_clash_game, &low_res_services,
         &state, sizeof(state)));
     state = simple_state(2U);
@@ -395,7 +396,7 @@ static void test_playable_hand_order_and_lift(void)
         .available_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS,
     };
     p4_game_instance_t instance = {0};
-    CHECK(p4_game_instance_start(&instance, &p4_color_clash_game, &services,
+    CHECK(test_start_game(&instance, &p4_color_clash_game, &services,
                                  &state, sizeof(state)));
     state = simple_state(2U);
     set_mixed_order_hand(&state);
@@ -794,7 +795,7 @@ static void test_uno_controls(void)
     };
     p4_game_instance_t instance = {0};
     color_clash_state_t state;
-    CHECK(p4_game_instance_start(&instance, &p4_color_clash_game, &services,
+    CHECK(test_start_game(&instance, &p4_color_clash_game, &services,
                                  &state, sizeof(state)));
 
     state = simple_state(2U);
@@ -868,7 +869,7 @@ static void test_lifecycle_touch_and_framebuffer(void)
     };
     p4_game_instance_t instance = {0};
     color_clash_state_t state;
-    CHECK(p4_game_instance_start(&instance, &p4_color_clash_game, &services,
+    CHECK(test_start_game(&instance, &p4_color_clash_game, &services,
                                  &state, sizeof(state)));
     CHECK(state.phase == COLOR_CLASH_MENU);
     CHECK(state.color_aid == COLOR_CLASH_COLOR_AID_SYMBOLS);
@@ -967,7 +968,7 @@ static void test_hand_touch_scrolling(void)
     };
     p4_game_instance_t instance = {0};
     color_clash_state_t state;
-    CHECK(p4_game_instance_start(&instance, &p4_color_clash_game, &services,
+    CHECK(test_start_game(&instance, &p4_color_clash_game, &services,
                                  &state, sizeof(state)));
     state = simple_state(2U);
     state.hand_counts[0] = 12U;
@@ -1015,7 +1016,7 @@ static void test_color_chooser_render(void)
     };
     p4_game_instance_t instance = {0};
     color_clash_state_t state;
-    CHECK(p4_game_instance_start(&instance, &p4_color_clash_game, &services,
+    CHECK(test_start_game(&instance, &p4_color_clash_game, &services,
                                  &state, sizeof(state)));
     state = simple_state(2U);
     state.color_aid = COLOR_CLASH_COLOR_AID_SYMBOLS;
@@ -1099,7 +1100,7 @@ static void test_network_player_counts(void)
         color_clash_state_t states[COLOR_CLASH_MAX_PLAYERS];
         for (uint8_t slot = 0U; slot < player_count; ++slot) {
             services[slot] = network_services(&link.endpoints[slot]);
-            CHECK(p4_game_instance_start(
+            CHECK(test_start_game(
                 &instances[slot], &p4_color_clash_game, &services[slot],
                 &states[slot], sizeof(states[slot])));
             CHECK(states[slot].phase == COLOR_CLASH_NETWORK_WAIT);
@@ -1170,7 +1171,7 @@ static void test_network_bots(void)
     color_clash_state_t states[2];
     for (uint8_t slot = 0U; slot < 2U; ++slot) {
         services[slot] = network_services(&link.endpoints[slot]);
-        CHECK(p4_game_instance_start(
+        CHECK(test_start_game(
             &instances[slot], &p4_color_clash_game, &services[slot],
             &states[slot], sizeof(states[slot])));
     }
@@ -1314,7 +1315,7 @@ static void test_network_uno_calls(void)
     color_clash_state_t states[2];
     for (uint8_t slot = 0U; slot < 2U; ++slot) {
         services[slot] = network_services(&link.endpoints[slot]);
-        CHECK(p4_game_instance_start(
+        CHECK(test_start_game(
             &instances[slot], &p4_color_clash_game, &services[slot],
             &states[slot], sizeof(states[slot])));
     }
@@ -1358,7 +1359,7 @@ static void test_four_player_network(void)
     color_clash_state_t states[COLOR_CLASH_MAX_PLAYERS];
     for (uint8_t slot = 0U; slot < link.player_count; ++slot) {
         services[slot] = network_services(&link.endpoints[slot]);
-        CHECK(p4_game_instance_start(
+        CHECK(test_start_game(
             &instances[slot], &p4_color_clash_game, &services[slot],
             &states[slot], sizeof(states[slot])));
         CHECK(states[slot].phase == COLOR_CLASH_NETWORK_WAIT);
@@ -1430,7 +1431,7 @@ static void test_four_player_gamechanger_network_round(void)
     color_clash_state_t states[COLOR_CLASH_MAX_PLAYERS];
     for (uint8_t slot = 0U; slot < link.player_count; ++slot) {
         services[slot] = network_services(&link.endpoints[slot]);
-        CHECK(p4_game_instance_start(
+        CHECK(test_start_game(
             &instances[slot], &p4_color_clash_game, &services[slot],
             &states[slot], sizeof(states[slot])));
     }
@@ -1507,9 +1508,9 @@ int main(void)
     CHECK(p4_color_clash_game.launcher_id == 114U);
     CHECK(p4_color_clash_game.state_bytes <= P4_GAME_MAX_STATE_BYTES);
     CHECK((p4_color_clash_game.required_capabilities &
-           P4_GAME_CAP_VIDEO_HIGH_RES) == 0U);
-    CHECK((p4_color_clash_game.optional_capabilities &
            P4_GAME_CAP_VIDEO_HIGH_RES) != 0U);
+    CHECK((p4_color_clash_game.optional_capabilities &
+           P4_GAME_CAP_VIDEO_HIGH_RES) == 0U);
     test_deck_and_matching();
     test_action_rules();
     test_drawn_card_choice();

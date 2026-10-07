@@ -2,6 +2,8 @@
 #include "platform/touch.h"
 #include "platform/tab5.h"
 #include "platform_touch_frame.h"
+#include "platform_touch_tab5_io.h"
+#include "platform_touch_sampler_private.h"
 #include "driver/gpio.h"
 #include "esp_lcd_panel_io.h"
 #include "esp_lcd_touch_gt911.h"
@@ -16,6 +18,7 @@ struct platform_touch {
     uint32_t sequence;
     bool gt911;
     bool ready;
+    bool sampler_claimed;
     platform_touch_frame_t last;
 };
 static platform_touch_t *s_owner;
@@ -29,6 +32,7 @@ esp_err_t platform_touch_destroy(platform_touch_t **touch)
 {
     if (!touch || !*touch || *touch != s_owner) return ESP_ERR_INVALID_ARG;
     platform_touch_t *t=*touch;
+    if (t->sampler_claimed) return ESP_ERR_INVALID_STATE;
     t->ready=false;
     esp_err_t ret;
     if (t->driver) {
@@ -64,13 +68,12 @@ esp_err_t platform_touch_create(const platform_touch_config_t *cfg,
     s_owner=t;
     t->gt911=ili;
     platform_touch_frame_neutral(&t->last);
-    esp_lcd_panel_io_i2c_config_t io;
-    if (ili) { io=(esp_lcd_panel_io_i2c_config_t)ESP_LCD_TOUCH_IO_I2C_GT911_CONFIG(); io.dev_addr=0x14; }
-    else { io=(esp_lcd_panel_io_i2c_config_t)ESP_LCD_TOUCH_IO_I2C_ST7123_CONFIG(); }
-    io.scl_speed_hz=PLATFORM_TOUCH_I2C_CLOCK_HZ;
+    _Static_assert(PLATFORM_TOUCH_I2C_CLOCK_HZ==PLATFORM_TOUCH_TAB5_IO_CLOCK_HZ,
+        "Tab5 touch adapter must preserve the platform I2C clock");
+    const uint8_t address=ili?0x14U:ESP_LCD_TOUCH_IO_I2C_ST7123_ADDRESS;
     const esp_lcd_touch_config_t config={.x_max=720,.y_max=1280,
         .rst_gpio_num=GPIO_NUM_NC,.int_gpio_num=GPIO_NUM_NC};
-    ret=esp_lcd_new_panel_io_i2c(cfg->bus,&io,&t->io);
+    ret=platform_touch_tab5_io_create(cfg->bus,address,&t->io);
     if (ret==ESP_OK) ret=ili?esp_lcd_touch_new_i2c_gt911(t->io,&config,&t->driver):esp_lcd_touch_new_i2c_st7123(t->io,&config,&t->driver);
     t->ready=ret==ESP_OK;
     *out=t;
@@ -102,7 +105,7 @@ static esp_err_t read_st712x(platform_touch_t *t, uint16_t *x, uint16_t *y,
     }
     return ESP_OK;
 }
-esp_err_t platform_touch_poll(platform_touch_t *t,platform_touch_frame_t *out)
+static esp_err_t poll_hardware(platform_touch_t *t,platform_touch_frame_t *out)
 {
     if (!out) return ESP_ERR_INVALID_ARG;
     platform_touch_frame_fail_closed(out,0,0);
@@ -156,4 +159,33 @@ esp_err_t platform_touch_gt911_restore_reviewed_baseline(platform_touch_t *t,
     if (!out) return ESP_ERR_INVALID_ARG;
     memset(out,0,sizeof(*out)); out->result=ESP_ERR_NOT_SUPPORTED;
     return ESP_ERR_NOT_SUPPORTED;
+}
+
+
+esp_err_t platform_touch_sampler_claim(platform_touch_t *t)
+{
+    if (!t || t!=s_owner || !t->ready || !t->driver || t->sampler_claimed)
+        return ESP_ERR_INVALID_STATE;
+    t->sampler_claimed=true;
+    return ESP_OK;
+}
+esp_err_t platform_touch_sampler_release(platform_touch_t *t)
+{
+    if (!t || t!=s_owner || !t->sampler_claimed) return ESP_ERR_INVALID_STATE;
+    t->sampler_claimed=false;
+    return ESP_OK;
+}
+esp_err_t platform_touch_poll_sampled(platform_touch_t *t,platform_touch_frame_t *out)
+{
+    if (!out) return ESP_ERR_INVALID_ARG;
+    platform_touch_frame_fail_closed(out,0,0);
+    if (!t || t!=s_owner || !t->sampler_claimed) return ESP_ERR_INVALID_STATE;
+    return poll_hardware(t,out);
+}
+esp_err_t platform_touch_poll(platform_touch_t *t,platform_touch_frame_t *out)
+{
+    if (!out) return ESP_ERR_INVALID_ARG;
+    platform_touch_frame_fail_closed(out,0,0);
+    if (!t || t!=s_owner || t->sampler_claimed) return ESP_ERR_INVALID_STATE;
+    return poll_hardware(t,out);
 }

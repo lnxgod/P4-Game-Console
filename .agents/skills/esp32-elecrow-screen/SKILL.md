@@ -1,6 +1,6 @@
 ---
 name: esp32-elecrow-screen
-description: Add, change, diagnose, flash, or test screen output on the Elecrow ESP32-P4 10 in variant (10.1-inch DHE04310D). Use for MIPI-DSI, EK79007, RGB565 framebuffers, display timing, backlight control, display_diag, LVGL, Doom or other game video, blank/corrupt/tearing screens, and any firmware that renders to the attached panel.
+description: "Use for explicitly requested legacy Elecrow ESP32-P4 10 in variant (10.1-inch DHE04310D) display-service work: MIPI-DSI, EK79007 timing, backlight, RGB565 framebuffer ownership, display diagnostics, or blank/corrupt/tearing physical output. Ordinary game drawing uses Make Game and Test Game."
 ---
 
 # ESP32 - Elecrow Screen
@@ -8,8 +8,8 @@ description: Add, change, diagnose, flash, or test screen output on the Elecrow 
 Use the hardware-tested display service and the pinned vendor/Espressif sources. Do not recreate the EK79007 driver or copy panel code into a game.
 
 If a game only renders through the existing P4 surface and `p4/draw.h` APIs,
-use `$esp32-add-game` and its focused game tests. Do not run panel diagnostics
-unless the request changes the display service or diagnoses physical output.
+use `$esp32-make-game` and `$esp32-test-game` for authoring and focused tests.
+Do not run panel diagnostics unless the request changes the display service or diagnoses physical output.
 
 ## Load the display contract
 
@@ -59,10 +59,16 @@ Choose checks at the boundary that changed:
   game's host tests.
 - Scaling, submit, cache, or framebuffer ownership in `platform_display`: run
   the focused component tests and build the exact consuming app.
-- Panel power, MIPI-DSI, DPI timing, pixel format, or backlight: run the
-  established diagnostic sequence below and one physical acceptance.
+- Panel power, MIPI-DSI, DPI timing, pixel format, or backlight: run focused
+  component checks, build the exact consuming app, and prepare one separately
+  authorized physical acceptance.
 
-For that panel-level diagnostic:
+The sequence below is historical M1 diagnostic replay only. It requires the
+original reviewed source, artifact, exact unit and single-app `0x10000` layout;
+`verify-display-diag.py` is frozen to that contract. Read
+[the recorded installation history](../esp32-elecrow-test/references/current-unit.md)
+before any device action. Do not apply this route to the recorded dual-OTA
+`0x20000` layout or to a changed diagnostic.
 
 ```sh
 make verify
@@ -78,17 +84,25 @@ not repeat an unchanged build or diagnostic. Keep reproducible builds enabled
 and update reviewed reproducibility evidence only when that evidence is part of
 the changed contract.
 
-Use only the guarded app-partition write for the diagnostic:
+Only an explicitly requested, authorized replay of that exact historical
+contract may use its preserved guarded app-partition command:
 
 ```sh
 make flash-app APP=display_diag PORT=/dev/cu.<port>
 ```
 
-The preflash verifier must pass after the flash-time rebuild. Do not use full-project flash for a display-only test.
+The frozen preflash verifier must pass after the flash-time rebuild. For a
+current Console OS or display-service successor, follow the layout-matching
+exact-artifact process in `$esp32-elecrow-test`. If no matching recorded
+authorization and guarded route exists, stop before writing and prepare them
+separately; do not repurpose the historical gate. Do not use a full-project
+flash for a display-only test.
 
 ## Qualify runtime behavior
 
-Require all of the following before recording `hardware-tested`:
+For the historical M1 diagnostic, require all of the following before
+recording `hardware-tested`. A successor uses its own reviewed startup and
+frame contract and still requires separate physical output acceptance:
 
 - exact application readback hash matches the reviewed binary;
 - `PANEL_READY` reports 1024×600, RGB565, 900 Mbps, and 51 MHz;

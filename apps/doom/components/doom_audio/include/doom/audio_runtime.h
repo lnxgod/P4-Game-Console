@@ -76,7 +76,13 @@ bool doom_audio_runtime_update_voice(size_t voice_index,
                                      uint8_t separation);
 bool doom_audio_runtime_voice_active(size_t voice_index);
 
-/** Nonblocking music controls used by the engine's MUS adapter. */
+/**
+ * Nonblocking single-producer music controls used by the MUS/SMF adapter.
+ * True means the desired state was accepted. Pending changes coalesce before
+ * the next worker chunk; superseded songs need not start. SFX queue saturation
+ * cannot drop music controls. Playback and heap work run outside the mailbox
+ * critical section; play keeps its own song reference until consumed/replaced.
+ */
 bool doom_audio_runtime_music_play(doom_music_song_t *song, bool looping);
 bool doom_audio_runtime_music_stop(void);
 bool doom_audio_runtime_music_pause(void);

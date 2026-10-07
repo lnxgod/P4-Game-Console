@@ -132,3 +132,16 @@ bool doom_touch_audio_compose_frame(
         source, source_stride_pixels, destination, destination_stride_pixels,
         input->active_actions);
 }
+
+bool doom_touch_audio_compose_frame_sized(
+    const uint32_t *source, size_t source_stride_pixels,
+    uint32_t *destination, size_t destination_stride_pixels,
+    size_t width, size_t height, const doom_touch_input_t *input)
+{
+    if (input == NULL || input->version != DOOM_TOUCH_INPUT_VERSION ||
+        input->size != sizeof(*input) ||
+        input->read_index >= DOOM_TOUCH_EVENT_CAPACITY ||
+        input->event_count > DOOM_TOUCH_EVENT_CAPACITY) return false;
+    return doom_touch_overlay_render_xrgb8888_sized(source,source_stride_pixels,
+        destination,destination_stride_pixels,width,height,input->active_actions);
+}

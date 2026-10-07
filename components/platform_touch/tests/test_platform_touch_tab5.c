@@ -1,4 +1,6 @@
 #include "platform/touch.h"
+#include "platform_touch_sampler_private.h"
+#include "platform_touch_tab5_io.h"
 #include "platform/tab5.h"
 #include "esp_lcd_touch_st7123.h"
 #include <assert.h>
@@ -19,8 +21,8 @@ esp_err_t platform_tab5_panel_detect(platform_tab5_panel_t *out) { *out=panel;re
 esp_err_t gpio_config(const gpio_config_t *cfg) { assert(cfg->pin_bit_mask==(UINT64_C(1)<<23));pin_mode=cfg->mode;return ESP_OK; }
 esp_err_t gpio_set_level(gpio_num_t pin,unsigned level) { assert(pin==23 && level==0);return ESP_OK; }
 int64_t esp_timer_get_time(void) { return 12345; }
-esp_err_t esp_lcd_new_panel_io_i2c(i2c_master_bus_handle_t bus,const esp_lcd_panel_io_i2c_config_t *cfg,esp_lcd_panel_io_handle_t *out)
-{ assert(bus==platform_tab5_i2c());address=cfg->dev_addr;*out=(void *)&io_token;return ESP_OK; }
+esp_err_t platform_touch_tab5_io_create(i2c_master_bus_handle_t bus,uint8_t address_7bit,esp_lcd_panel_io_handle_t *out)
+{ assert(bus==platform_tab5_i2c());assert(address_7bit==0x14U || address_7bit==0x55U);address=address_7bit;*out=(void *)&io_token;return ESP_OK; }
 esp_err_t esp_lcd_panel_io_del(esp_lcd_panel_io_handle_t io) { assert(io==(void *)&io_token);return io_delete_result; }
 esp_err_t esp_lcd_panel_io_rx_param(esp_lcd_panel_io_handle_t io,int reg,void *out,size_t bytes)
 {
@@ -75,6 +77,17 @@ int main(void)
         assert(driver_kind==(kind==TAB5_PANEL_ILI9881C?1:2));
         assert(pin_mode==(kind==TAB5_PANEL_ILI9881C?GPIO_MODE_OUTPUT:GPIO_MODE_INPUT));
         assert(platform_touch_create(&cfg,&second)==ESP_ERR_INVALID_STATE && !second);
+        /* A sampler owns all peripheral access until a successful join. */
+        assert(platform_touch_sampler_claim(t)==ESP_OK);
+        assert(platform_touch_sampler_claim(t)==ESP_ERR_INVALID_STATE);
+        platform_touch_frame_t claimed;
+        assert(platform_touch_poll(t,&claimed)==ESP_ERR_INVALID_STATE);
+        assert(platform_touch_destroy(&t)==ESP_ERR_INVALID_STATE && t);
+        points_count=0;
+        assert(platform_touch_poll_sampled(t,&claimed)==ESP_OK && claimed.valid);
+        assert(platform_touch_sampler_release(t)==ESP_OK);
+        assert(platform_touch_poll_sampled(t,&claimed)==ESP_ERR_INVALID_STATE && !claimed.valid);
+        assert(platform_touch_sampler_release(t)==ESP_ERR_INVALID_STATE);
         points_count=2;points[0]=(esp_lcd_touch_point_data_t){.x=0,.y=0};
         points[1]=(esp_lcd_touch_point_data_t){.x=719,.y=1279};
         platform_touch_frame_t f;

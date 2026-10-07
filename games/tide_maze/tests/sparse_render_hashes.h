@@ -1,0 +1,28 @@
+// SPDX-License-Identifier: MIT
+// Captured before the fixed-grid projection and dry-vertex optimization.
+static const uint64_t tm_sparse_render_hashes[]={
+UINT64_C(0xed79e6a6af384261),
+UINT64_C(0xad38777bd4a554a4),
+UINT64_C(0x234d34641f36e535),
+UINT64_C(0x118b0258a5338887),
+UINT64_C(0x5829afe807f825e3),
+UINT64_C(0x7c74b107ae4f3820),
+UINT64_C(0xf9804012a3c0b77c),
+UINT64_C(0x7ecac4a78700c785),
+UINT64_C(0xe6a1a533c5ae2ce5),
+UINT64_C(0x22cfc5838a6ba628),
+UINT64_C(0xa5de3bd366ea3a1f),
+UINT64_C(0x6b4523f3902fe24f),
+UINT64_C(0x7cb4f8b361ea85d5),
+UINT64_C(0xaff7678dad24c4c1),
+UINT64_C(0xb8f94ada57e9c028),
+UINT64_C(0x2115ebacc0fbac97),
+UINT64_C(0xc3e939e69efa90d7),
+UINT64_C(0xa8aeb882d2d1a8e4),
+UINT64_C(0x7ba4ddfaecd279e3),
+UINT64_C(0xd0c48cc14fbd62b1),
+UINT64_C(0x4fcdd93a86854e55),
+UINT64_C(0x8e31596e39980aee),
+UINT64_C(0xe7d82162033c571f),
+UINT64_C(0x34bcaab0d8e4733f),
+};

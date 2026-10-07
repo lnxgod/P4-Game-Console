@@ -5,6 +5,7 @@
 #include "p4/game.h"
 #include "p4_yahtzee_internal.h"
 extern const p4_game_descriptor_t p4_p4_yahtzee_game;
+#include "legacy_surface.h"
 static int failures;
 #define CHECK(x) do {if(!(x)){fprintf(stderr,"FAIL %d: %s\n",__LINE__,#x);++failures;}} while(0)
 static void frame(p4_game_instance_t *i,p4_game_surface_t *s,uint16_t *m,const char *name)
@@ -29,14 +30,22 @@ static void step(p4_game_instance_t *i,uint32_t buttons,bool touch,uint16_t x,ui
 }
 int main(void)
 {
- CHECK((p4_p4_yahtzee_game.optional_capabilities&P4_GAME_CAP_VIDEO_HIGH_RES)!=0U);
+ CHECK((p4_p4_yahtzee_game.required_capabilities&P4_GAME_CAP_VIDEO_HIGH_RES)!=0U);
+ CHECK((p4_p4_yahtzee_game.optional_capabilities&P4_GAME_CAP_VIDEO_HIGH_RES)==0U);
+ /* Real cartridge admission must reject low-resolution-only services. */
+ p4_game_instance_t rejected={0};
+ p4_yahtzee_state_t rejected_state;
+ const p4_game_services_t legacy_services={.available_capabilities=P4_GAME_CAP_VIDEO|P4_GAME_CAP_CONTROLS};
+ CHECK(!p4_game_instance_start(&rejected,&p4_p4_yahtzee_game,&legacy_services,&rejected_state,sizeof(rejected_state)));
+ CHECK(!rejected.active);
  for(unsigned mode=0;mode<2U;++mode){
  const uint16_t width=mode==0U?320U:768U,height=mode==0U?200U:480U;
  const size_t stride=(size_t)width+7U,words=stride*height;
  uint16_t *memory=calloc(words+32U,sizeof(*memory));CHECK(memory!=NULL);if(memory==NULL)continue;
  p4_yahtzee_state_t state;p4_game_instance_t instance={0};
  const p4_game_services_t services={.available_capabilities=P4_GAME_CAP_VIDEO|P4_GAME_CAP_CONTROLS|(mode==0U?0U:P4_GAME_CAP_VIDEO_HIGH_RES)};
- CHECK(p4_game_instance_start(&instance,&p4_p4_yahtzee_game,&services,&state,sizeof(state)));
+ CHECK(test_start_game(&instance,&p4_p4_yahtzee_game,&services,&state,sizeof(state)));
+ CHECK((instance.descriptor==&p4_p4_yahtzee_game)==(mode!=0U));
  p4_game_surface_t surface={.pixels=memory+16U,.stride_pixels=stride,.width=width,.height=height};
  frame(&instance,&surface,memory,"initial");
  step(&instance,P4_BUTTON_RIGHT,false,0U,0U);step(&instance,P4_BUTTON_RIGHT,false,0U,0U);step(&instance,P4_BUTTON_A,false,0U,0U);CHECK(state.player_count==4U);

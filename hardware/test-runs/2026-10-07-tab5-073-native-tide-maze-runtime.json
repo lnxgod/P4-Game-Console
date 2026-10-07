@@ -1,0 +1,1854 @@
+{
+  "schema": "p4-tab5-native-multiplayer-runtime-v1",
+  "recorded_at": "2026-10-07T15:33:38.148986+00:00",
+  "result": "PASS bounded linked PLAY controls, replication, departure, clean exit and sampled native30FPS floor; broader game acceptance remains pending",
+  "scope": "Tide Maze0.2.2 Bhost/Aguest on OS0.73, session cdd5d7af. Saved immutable prefix only; no full puzzle, pearl/goal, reverse-host, rejoin or heard-audio acceptance.",
+  "os_install": {
+    "path": "hardware/test-runs/2026-10-07-tab5-073-multiplayer-debug-install.json",
+    "bytes": 28520,
+    "sha256": "e45fcc876998bcab95fee64ef5f9aaf2ef10e0915d9646cec3a692d061935c9e"
+  },
+  "application": {
+    "file": "apps/console_os/build-tab5/p4_console_os.bin",
+    "bytes": 4460976,
+    "sha256": "947edff0c2cee5f19c917346e434e54532fa30bcce2eb02149f51361baaaf0ce",
+    "version": "0.73",
+    "write_offset": "0x20000"
+  },
+  "board": "M5Stack Tab5 v1.3",
+  "game": {
+    "title": "Tide Maze",
+    "app": "org.p4console.tide-maze",
+    "version": "0.2.2",
+    "api": 1,
+    "session_hex": "cdd5d7af",
+    "host": "B",
+    "guest": "A",
+    "transport": "wifi-local",
+    "surface": "320x200",
+    "content_readback_receipt": {
+      "path": "build-host/native-refresh-073-20261007T1438/receipt.json",
+      "bytes": 61142,
+      "sha256": "06b19417adad22b4b7935bebcaa6667a1d4af8a3b736ef0d578a1a16c0061914"
+    },
+    "verified_readbacks": {
+      "A": {
+        "TIDE_MAZE.P4G": {
+          "path": "build-host/native-refresh-073-20261007T1438/A/TIDE_MAZE.P4G",
+          "bytes": 198592,
+          "sha256": "8d0bc6c199247da78b89fea77216957b7cedd1aaf5c8b9852b0658589fa6af27"
+        }
+      },
+      "B": {
+        "TIDE_MAZE.P4G": {
+          "path": "build-host/native-refresh-073-20261007T1438/B/TIDE_MAZE.P4G",
+          "bytes": 198592,
+          "sha256": "8d0bc6c199247da78b89fea77216957b7cedd1aaf5c8b9852b0658589fa6af27"
+        }
+      }
+    }
+  },
+  "evidence": {
+    "prefix_receipt": {
+      "path": "build-host/runtime-acceptance-073/prefix-tide-native/receipt.json",
+      "bytes": 691,
+      "sha256": "030f842d3d3d53b26ad4f9732facffeb942212461641229535c572eb316a0c91"
+    },
+    "prefix_captured_at": "2026-10-07T15:29:04.262869+00:00",
+    "raw_inputs": {
+      "commands.jsonl": {
+        "path": "build-host/runtime-acceptance-073/prefix-tide-native/commands.jsonl",
+        "bytes": 558344,
+        "sha256": "cccd61a6a35fd3d97327bbb553459fa11618501086b5a942f43a354c0f4b1c9c"
+      },
+      "a.rx": {
+        "path": "build-host/runtime-acceptance-073/prefix-tide-native/a.rx",
+        "bytes": 10835365,
+        "sha256": "0b284ec19990e9777c73805534025b20718ebd2e34f2752d22be2844325c6a3e"
+      },
+      "b.rx": {
+        "path": "build-host/runtime-acceptance-073/prefix-tide-native/b.rx",
+        "bytes": 10886383,
+        "sha256": "ccd6d72823da392dc1838809c155d905bcd87a0c48c69c57e7573088e35083a7"
+      }
+    },
+    "analysis_run_receipt": {
+      "path": "build-host/native-mp-tracker-073/tide73-analysis-run-receipt.json",
+      "bytes": 4351,
+      "sha256": "9a7e2fcabf12006bd76844effb16313ebb465d8cfb05cd073ecde9c014aa99d1"
+    },
+    "analysis": {
+      "path": "build-host/native-mp-tracker-073/tide73-bhost-1-analysis.json",
+      "bytes": 1067073,
+      "sha256": "98d1d51bfeceb61dbe455800d4cf961176d0ef94e5be8b929f5bda759eb15ae0"
+    },
+    "window": {
+      "path": "build-host/native-mp-tracker-073/tide73-bhost-1-windows.json",
+      "bytes": 668,
+      "sha256": "2277239ee99e8730a8d3cf31f3574930fabf1b4816d2135b9177b504743774e1"
+    },
+    "independent_lifecycle_audio_review": {
+      "path": "build-host/native-mp-tracker-073/tide73-audio-lifecycle-review.json",
+      "bytes": 87968,
+      "sha256": "18f759b1e21d7e2961e0dda2ed5cd4b8e6eb44747ecea84d21941e750a909cb2"
+    },
+    "independent_cadence_review": {
+      "path": "build-host/native-mp-tracker-073/tide73-cadence-review.json",
+      "bytes": 7781,
+      "sha256": "3abbabfba51b6d6bb1cd5dc8cce93c283289b5a675c660c6d20d5b0a07841d95"
+    }
+  },
+  "phase": {
+    "declaration": {
+      "id": "tm73-clean",
+      "app": "org.p4console.tide-maze",
+      "state": "PLAY",
+      "units": [
+        "A",
+        "B"
+      ],
+      "start_utc": "2026-10-07T15:27:21.143551+00:00",
+      "end_utc": "2026-10-07T15:28:06.185597+00:00",
+      "roles": {
+        "A": "guest",
+        "B": "host"
+      },
+      "evidence": "Root observed two linked marbles in PLAY before the window and PLAY0:32 without failure after it; host and guest movement visibly replicated. During the window guest up250ms and host down350ms were admitted, followed by neutral motion. Bounded PLAY-phase cadence only, no full puzzle or continuous-input duration claim.",
+      "music_evidence": null
+    },
+    "interpretation": "Short guest-up250ms and host-down350ms controls, then neutral PLAY. Three wholly bounded adjacent sample intervals per unit. No continuous45-second measurement, full-puzzle completion or continuously active-input claim."
+  },
+  "units": {
+    "A": {
+      "role": "guest",
+      "device_binding_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+      "parser_epoch": 5,
+      "cadence": {
+        "result": "PASS sampled30FPS floor;60FPS target unmet",
+        "summary": {
+          "interval_count": 3,
+          "frames": 900,
+          "wall_us": 27353000,
+          "weighted_fps": 32.90315504697839,
+          "minimum_interval_fps": 32.85854560410162
+        },
+        "measured_wall_seconds": 27.353,
+        "eligible_intervals": [
+          {
+            "from_raw_offset": 10471154,
+            "to_raw_offset": 10472616,
+            "endpoint_fields": [
+              {
+                "app": "org.p4console.tide-maze",
+                "samples": 2700,
+                "wall_total_us": 82524334,
+                "wall_avg_us": 30564,
+                "wall_max_us": 105000,
+                "update_render_avg_us": 10256,
+                "update_render_max_us": 12310,
+                "input_avg_us": 591,
+                "input_max_us": 2471,
+                "audio_avg_us": 1,
+                "audio_max_us": 26,
+                "present_avg_us": 18165,
+                "present_max_us": 20321,
+                "reuse_avg_us": 24,
+                "reuse_max_us": 586,
+                "transform_avg_us": 15384,
+                "transform_max_us": 17102,
+                "handoff_avg_us": 53,
+                "handoff_max_us": 164,
+                "deadline_rebases": 2699,
+                "audio_discarded_us": 0
+              },
+              {
+                "app": "org.p4console.tide-maze",
+                "samples": 3000,
+                "wall_total_us": 91638336,
+                "wall_avg_us": 30546,
+                "wall_max_us": 105000,
+                "update_render_avg_us": 10255,
+                "update_render_max_us": 12310,
+                "input_avg_us": 592,
+                "input_max_us": 2471,
+                "audio_avg_us": 1,
+                "audio_max_us": 26,
+                "present_avg_us": 18167,
+                "present_max_us": 20321,
+                "reuse_avg_us": 24,
+                "reuse_max_us": 586,
+                "transform_avg_us": 15384,
+                "transform_max_us": 17102,
+                "handoff_avg_us": 53,
+                "handoff_max_us": 164,
+                "deadline_rebases": 2999,
+                "audio_discarded_us": 0
+              }
+            ],
+            "endpoint_uptime_ms": [
+              685012,
+              694126
+            ],
+            "possible_utc_window": [
+              "2026-10-07T15:27:31.715613+00:00",
+              "2026-10-07T15:28:04.101746+00:00"
+            ],
+            "duration_ms": 9114,
+            "delta": {
+              "samples": 300,
+              "wall_total_us": 9114002
+            },
+            "screenshot_journal_indices": [],
+            "eligible_clean_interval": true,
+            "exclusions": [],
+            "fps": 32.91638514013932
+          },
+          {
+            "from_raw_offset": 10472616,
+            "to_raw_offset": 10473693,
+            "endpoint_fields": [
+              {
+                "app": "org.p4console.tide-maze",
+                "samples": 3000,
+                "wall_total_us": 91638336,
+                "wall_avg_us": 30546,
+                "wall_max_us": 105000,
+                "update_render_avg_us": 10255,
+                "update_render_max_us": 12310,
+                "input_avg_us": 592,
+                "input_max_us": 2471,
+                "audio_avg_us": 1,
+                "audio_max_us": 26,
+                "present_avg_us": 18167,
+                "present_max_us": 20321,
+                "reuse_avg_us": 24,
+                "reuse_max_us": 586,
+                "transform_avg_us": 15384,
+                "transform_max_us": 17102,
+                "handoff_avg_us": 53,
+                "handoff_max_us": 164,
+                "deadline_rebases": 2999,
+                "audio_discarded_us": 0
+              },
+              {
+                "app": "org.p4console.tide-maze",
+                "samples": 3300,
+                "wall_total_us": 100768381,
+                "wall_avg_us": 30535,
+                "wall_max_us": 105000,
+                "update_render_avg_us": 10261,
+                "update_render_max_us": 12310,
+                "input_avg_us": 592,
+                "input_max_us": 2471,
+                "audio_avg_us": 1,
+                "audio_max_us": 26,
+                "present_avg_us": 18166,
+                "present_max_us": 20321,
+                "reuse_avg_us": 24,
+                "reuse_max_us": 586,
+                "transform_avg_us": 15381,
+                "transform_max_us": 17102,
+                "handoff_avg_us": 53,
+                "handoff_max_us": 164,
+                "deadline_rebases": 3299,
+                "audio_discarded_us": 0
+              }
+            ],
+            "endpoint_uptime_ms": [
+              694126,
+              703256
+            ],
+            "possible_utc_window": [
+              "2026-10-07T15:27:37.204532+00:00",
+              "2026-10-07T15:28:04.101746+00:00"
+            ],
+            "duration_ms": 9130,
+            "delta": {
+              "samples": 300,
+              "wall_total_us": 9130045
+            },
+            "screenshot_journal_indices": [],
+            "eligible_clean_interval": true,
+            "exclusions": [],
+            "fps": 32.85854560410162
+          },
+          {
+            "from_raw_offset": 10473693,
+            "to_raw_offset": 10474772,
+            "endpoint_fields": [
+              {
+                "app": "org.p4console.tide-maze",
+                "samples": 3300,
+                "wall_total_us": 100768381,
+                "wall_avg_us": 30535,
+                "wall_max_us": 105000,
+                "update_render_avg_us": 10261,
+                "update_render_max_us": 12310,
+                "input_avg_us": 592,
+                "input_max_us": 2471,
+                "audio_avg_us": 1,
+                "audio_max_us": 26,
+                "present_avg_us": 18166,
+                "present_max_us": 20321,
+                "reuse_avg_us": 24,
+                "reuse_max_us": 586,
+                "transform_avg_us": 15381,
+                "transform_max_us": 17102,
+                "handoff_avg_us": 53,
+                "handoff_max_us": 164,
+                "deadline_rebases": 3299,
+                "audio_discarded_us": 0
+              },
+              {
+                "app": "org.p4console.tide-maze",
+                "samples": 3600,
+                "wall_total_us": 109877334,
+                "wall_avg_us": 30521,
+                "wall_max_us": 105000,
+                "update_render_avg_us": 10261,
+                "update_render_max_us": 12310,
+                "input_avg_us": 591,
+                "input_max_us": 2471,
+                "audio_avg_us": 1,
+                "audio_max_us": 26,
+                "present_avg_us": 18165,
+                "present_max_us": 20321,
+                "reuse_avg_us": 24,
+                "reuse_max_us": 586,
+                "transform_avg_us": 15382,
+                "transform_max_us": 17102,
+                "handoff_avg_us": 53,
+                "handoff_max_us": 164,
+                "deadline_rebases": 3599,
+                "audio_discarded_us": 0
+              }
+            ],
+            "endpoint_uptime_ms": [
+              703256,
+              712365
+            ],
+            "possible_utc_window": [
+              "2026-10-07T15:27:37.204532+00:00",
+              "2026-10-07T15:28:04.101746+00:00"
+            ],
+            "duration_ms": 9109,
+            "delta": {
+              "samples": 300,
+              "wall_total_us": 9108953
+            },
+            "screenshot_journal_indices": [],
+            "eligible_clean_interval": true,
+            "exclusions": [],
+            "fps": 32.93463035762727
+          }
+        ],
+        "scope": "Native sample/wall_total_us deltas with conservative serial-order UTC bounds inside declared PLAY phase. Whole screenshot intervals excluded; not optical scanout or full puzzle acceptance."
+      },
+      "audio": {
+        "eligible_intervals": [
+          {
+            "from_raw_offset": 10470953,
+            "to_raw_offset": 10472415,
+            "endpoint_fields": [
+              {
+                "app": "org.p4console.tide-maze",
+                "game_core": 0,
+                "audio_core": 1,
+                "running": 1,
+                "queued": 0,
+                "rejected": 0,
+                "underrun": 0,
+                "clipped": 0,
+                "frames": 1325696,
+                "write_failures": 0,
+                "stack": 2052
+              },
+              {
+                "app": "org.p4console.tide-maze",
+                "game_core": 0,
+                "audio_core": 1,
+                "running": 1,
+                "queued": 0,
+                "rejected": 0,
+                "underrun": 0,
+                "clipped": 0,
+                "frames": 1471616,
+                "write_failures": 0,
+                "stack": 2052
+              }
+            ],
+            "endpoint_uptime_ms": [
+              685009,
+              694123
+            ],
+            "possible_utc_window": [
+              "2026-10-07T15:27:31.715613+00:00",
+              "2026-10-07T15:28:04.101746+00:00"
+            ],
+            "duration_ms": 9114,
+            "delta": {
+              "frames": 145920,
+              "underrun": 0,
+              "rejected": 0,
+              "write_failures": 0,
+              "clipped": 0
+            },
+            "screenshot_journal_indices": [],
+            "eligible_clean_interval": true,
+            "exclusions": [],
+            "fps": null
+          },
+          {
+            "from_raw_offset": 10472415,
+            "to_raw_offset": 10473492,
+            "endpoint_fields": [
+              {
+                "app": "org.p4console.tide-maze",
+                "game_core": 0,
+                "audio_core": 1,
+                "running": 1,
+                "queued": 0,
+                "rejected": 0,
+                "underrun": 0,
+                "clipped": 0,
+                "frames": 1471616,
+                "write_failures": 0,
+                "stack": 2052
+              },
+              {
+                "app": "org.p4console.tide-maze",
+                "game_core": 0,
+                "audio_core": 1,
+                "running": 1,
+                "queued": 0,
+                "rejected": 0,
+                "underrun": 0,
+                "clipped": 0,
+                "frames": 1617664,
+                "write_failures": 0,
+                "stack": 2052
+              }
+            ],
+            "endpoint_uptime_ms": [
+              694123,
+              703253
+            ],
+            "possible_utc_window": [
+              "2026-10-07T15:27:37.204532+00:00",
+              "2026-10-07T15:28:04.101746+00:00"
+            ],
+            "duration_ms": 9130,
+            "delta": {
+              "frames": 146048,
+              "underrun": 0,
+              "rejected": 0,
+              "write_failures": 0,
+              "clipped": 0
+            },
+            "screenshot_journal_indices": [],
+            "eligible_clean_interval": true,
+            "exclusions": [],
+            "fps": null
+          },
+          {
+            "from_raw_offset": 10473492,
+            "to_raw_offset": 10474571,
+            "endpoint_fields": [
+              {
+                "app": "org.p4console.tide-maze",
+                "game_core": 0,
+                "audio_core": 1,
+                "running": 1,
+                "queued": 0,
+                "rejected": 0,
+                "underrun": 0,
+                "clipped": 0,
+                "frames": 1617664,
+                "write_failures": 0,
+                "stack": 2052
+              },
+              {
+                "app": "org.p4console.tide-maze",
+                "game_core": 0,
+                "audio_core": 1,
+                "running": 1,
+                "queued": 0,
+                "rejected": 0,
+                "underrun": 0,
+                "clipped": 0,
+                "frames": 1763328,
+                "write_failures": 0,
+                "stack": 2052
+              }
+            ],
+            "endpoint_uptime_ms": [
+              703253,
+              712362
+            ],
+            "possible_utc_window": [
+              "2026-10-07T15:27:37.204532+00:00",
+              "2026-10-07T15:28:04.101746+00:00"
+            ],
+            "duration_ms": 9109,
+            "delta": {
+              "frames": 145664,
+              "underrun": 0,
+              "rejected": 0,
+              "write_failures": 0,
+              "clipped": 0
+            },
+            "screenshot_journal_indices": [],
+            "eligible_clean_interval": true,
+            "exclusions": [],
+            "fps": null
+          }
+        ],
+        "sample_frames_delta": 437632,
+        "observed_worker_count": 16,
+        "all_adjacent_delta_totals": {
+          "frames": 2196608,
+          "underrun": 0,
+          "rejected": 0,
+          "write_failures": 0,
+          "clipped": 0
+        },
+        "lifetime_underrun_frames": 0,
+        "heard_music": "NOT_APPLICABLE title has event tones only",
+        "heard_sfx": "PENDING pearl/clear cues not established or heard"
+      },
+      "lifecycle_markers": [
+        {
+          "raw_start": 9748858,
+          "raw_end": 9748979,
+          "uptime_ms": 560370,
+          "text": "I (560370) p4_console_os: P4_CONSOLE_OS MULTIPLAYER_LOBBY_SELECTION choice=join session=cdd5d7af game=Tide Maze found=1",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:25:29.159034+00:00",
+            "utc_upper": "2026-10-07T15:25:29.847766+00:00",
+            "prior_journal_index": 663,
+            "following_journal_index": 664,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 9867361,
+          "raw_end": 9867494,
+          "uptime_ms": 575356,
+          "text": "I (575356) p4_console_os: P4_CONSOLE_OS MULTIPLAYER_LOBBY_JOIN_SELECTED session=cdd5d7af lobby=[redacted] transport=wifi-local",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:25:44.183050+00:00",
+            "utc_upper": "2026-10-07T15:25:44.877518+00:00",
+            "prior_journal_index": 669,
+            "following_journal_index": 670,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 9869443,
+          "raw_end": 9869675,
+          "uptime_ms": 579267,
+          "text": "I (579267) p4_console_os: P4_CONSOLE_OS MULTIPLAYER_LOBBY_READY game=org.p4console.tide-maze mode=1 episode=1 map=1 skill=5 players=2 local_slot=1 role=client tick_hz=20 input_delay=0 transport=wifi-local route=[redacted]",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:25:48.234356+00:00",
+            "utc_upper": "2026-10-07T15:25:48.665747+00:00",
+            "prior_journal_index": 680,
+            "following_journal_index": 681,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 9989132,
+          "raw_end": 9989405,
+          "uptime_ms": 602151,
+          "text": "I (602151) p4_console_os: P4_CONSOLE_OS CARTRIDGE_START app=org.p4console.tide-maze file=TIDE_MAZE.P4G api=1 source=microsd-games-directory runtime=psram-elf audio=ready signals=offline saves=session-only multiplayer=connected surface=320x200 save_bytes=0 save_sequence=0",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:26:10.963379+00:00",
+            "utc_upper": "2026-10-07T15:26:11.715807+00:00",
+            "prior_journal_index": 691,
+            "following_journal_index": 692,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 9989787,
+          "raw_end": 9989879,
+          "uptime_ms": 602436,
+          "text": "I (602436) game_loader: P4_CARTRIDGE_PACKAGE_READ app=org.p4console.tide-maze bytes=198592",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:26:10.963379+00:00",
+            "utc_upper": "2026-10-07T15:26:11.715807+00:00",
+            "prior_journal_index": 691,
+            "following_journal_index": 692,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 9989879,
+          "raw_end": 9989983,
+          "uptime_ms": 602442,
+          "text": "I (602442) game_loader: P4_CARTRIDGE_PACKAGE_VERIFIED app=org.p4console.tide-maze payload_bytes=198336",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:26:10.963379+00:00",
+            "utc_upper": "2026-10-07T15:26:11.715807+00:00",
+            "prior_journal_index": 691,
+            "following_journal_index": 692,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 10597860,
+          "raw_end": 10597953,
+          "uptime_ms": 750093,
+          "text": "I (750093) game_loader: P4_CARTRIDGE_LOAD_DONE app=org.p4console.tide-maze cartridge_exit=0",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:28:39.089306+00:00",
+            "utc_upper": "2026-10-07T15:28:39.777326+00:00",
+            "prior_journal_index": 738,
+            "following_journal_index": 739,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 10597953,
+          "raw_end": 10598065,
+          "uptime_ms": 750096,
+          "text": "I (750096) p4_console_os: P4_CONSOLE_OS NATIVE_MULTIPLAYER_STOP game=org.p4console.tide-maze state=2 dropped=0",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:28:39.089306+00:00",
+            "utc_upper": "2026-10-07T15:28:39.777326+00:00",
+            "prior_journal_index": 738,
+            "following_journal_index": 739,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 10598065,
+          "raw_end": 10598179,
+          "uptime_ms": 750097,
+          "text": "I (750097) p4_console_os: P4_CONSOLE_OS AUDIO_WORKER_STOP core=1 frames=2367104 underrun=0 rejected=0 stack=2052",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:28:39.089306+00:00",
+            "utc_upper": "2026-10-07T15:28:39.777326+00:00",
+            "prior_journal_index": 738,
+            "following_journal_index": 739,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 10598266,
+          "raw_end": 10598529,
+          "uptime_ms": 750289,
+          "text": "I (750289) p4_console_os: P4_CONSOLE_OS CARTRIDGE_STOP app=org.p4console.tide-maze result=ESP_OK frames=4836 deadline_misses=4835 max_frame_ms=100 max_late_ms=93 display_ack_misses=0 return=launcher audio_frames=2367232 audio_stream_underrun_frames=0 amp_safe=1",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:28:39.089306+00:00",
+            "utc_upper": "2026-10-07T15:28:39.777326+00:00",
+            "prior_journal_index": 738,
+            "following_journal_index": 739,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        }
+      ],
+      "capture_payloads_verified": 13,
+      "prior_wacky_boundary": [
+        {
+          "raw_start": 7011940,
+          "raw_end": 7012008,
+          "uptime_ms": null,
+          "text": "Guru Meditation Error: Core  1 panic'ed (Stack protection fault). ",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:16:08.965472+00:00",
+            "utc_upper": "2026-10-07T15:16:19.536986+00:00",
+            "prior_journal_index": 585,
+            "following_journal_index": 587,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 7016203,
+          "raw_end": 7016217,
+          "uptime_ms": null,
+          "text": "Rebooting...",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:16:08.965472+00:00",
+            "utc_upper": "2026-10-07T15:16:19.536986+00:00",
+            "prior_journal_index": 585,
+            "following_journal_index": 587,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 7016217,
+          "raw_end": 7016248,
+          "uptime_ms": null,
+          "text": "ESP-ROM:esp32p4-eco2-20240710",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:16:08.965472+00:00",
+            "utc_upper": "2026-10-07T15:16:19.536986+00:00",
+            "prior_journal_index": 585,
+            "following_journal_index": 587,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 7016267,
+          "raw_end": 7016324,
+          "uptime_ms": null,
+          "text": "rst:0xc (SW_CPU_RESET),boot:0x30f (SPI_FAST_FLASH_BOOT)",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:16:08.965472+00:00",
+            "utc_upper": "2026-10-07T15:16:19.536986+00:00",
+            "prior_journal_index": 585,
+            "following_journal_index": 587,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        }
+      ],
+      "prior_parse_anomalies": [
+        {
+          "kind": "AUDIO_WORKER",
+          "app": "org.p4console.p4-air-hockey",
+          "epoch": 1,
+          "raw_start": 1233643,
+          "raw_end": 1233967,
+          "launch_app": "org.p4console.p4-air-hockey",
+          "launch_active": true,
+          "tag_uptime_ms": 324573,
+          "tag": "p4_console_os",
+          "text": "P4_CONSOLE_OS AUDIO_WORKER app=org.p4console.p4-air-hockey game_core=0 audio_core=1 running=1 queued=0",
+          "fields": {
+            "app": "org.p4console.p4-air-hockey",
+            "game_core": 0,
+            "audio_core": 1,
+            "running": 1,
+            "queued": 0
+          },
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T14:50:03.844557+00:00",
+            "utc_upper": "2026-10-07T14:50:21.255988+00:00",
+            "prior_journal_index": 138,
+            "following_journal_index": 143,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          },
+          "parse_errors": [
+            "missing-or-malformed-frames",
+            "missing-or-malformed-underrun",
+            "missing-or-malformed-rejected",
+            "missing-or-malformed-write_failures",
+            "missing-or-malformed-clipped"
+          ],
+          "interleaved_line": true
+        }
+      ],
+      "tide_parse_anomalies": [],
+      "fatal_or_boot_reset_markers_after_tide_launch": []
+    },
+    "B": {
+      "role": "host",
+      "device_binding_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+      "parser_epoch": 5,
+      "cadence": {
+        "result": "PASS sampled30FPS floor;60FPS target unmet",
+        "summary": {
+          "interval_count": 3,
+          "frames": 900,
+          "wall_us": 27355000,
+          "weighted_fps": 32.90074940595869,
+          "minimum_interval_fps": 32.85573146879248
+        },
+        "measured_wall_seconds": 27.355,
+        "eligible_intervals": [
+          {
+            "from_raw_offset": 10520678,
+            "to_raw_offset": 10522198,
+            "endpoint_fields": [
+              {
+                "app": "org.p4console.tide-maze",
+                "samples": 2700,
+                "wall_total_us": 82523611,
+                "wall_avg_us": 30564,
+                "wall_max_us": 116231,
+                "update_render_avg_us": 10231,
+                "update_render_max_us": 12034,
+                "input_avg_us": 615,
+                "input_max_us": 4700,
+                "audio_avg_us": 1,
+                "audio_max_us": 27,
+                "present_avg_us": 18150,
+                "present_max_us": 20001,
+                "reuse_avg_us": 24,
+                "reuse_max_us": 78,
+                "transform_avg_us": 15384,
+                "transform_max_us": 17001,
+                "handoff_avg_us": 54,
+                "handoff_max_us": 487,
+                "deadline_rebases": 2699,
+                "audio_discarded_us": 0
+              },
+              {
+                "app": "org.p4console.tide-maze",
+                "samples": 3000,
+                "wall_total_us": 91636784,
+                "wall_avg_us": 30545,
+                "wall_max_us": 116231,
+                "update_render_avg_us": 10233,
+                "update_render_max_us": 12034,
+                "input_avg_us": 612,
+                "input_max_us": 4700,
+                "audio_avg_us": 1,
+                "audio_max_us": 27,
+                "present_avg_us": 18154,
+                "present_max_us": 20001,
+                "reuse_avg_us": 24,
+                "reuse_max_us": 120,
+                "transform_avg_us": 15385,
+                "transform_max_us": 17001,
+                "handoff_avg_us": 54,
+                "handoff_max_us": 487,
+                "deadline_rebases": 2999,
+                "audio_discarded_us": 0
+              }
+            ],
+            "endpoint_uptime_ms": [
+              255103,
+              264216
+            ],
+            "possible_utc_window": [
+              "2026-10-07T15:27:31.715613+00:00",
+              "2026-10-07T15:28:04.101746+00:00"
+            ],
+            "duration_ms": 9113,
+            "delta": {
+              "samples": 300,
+              "wall_total_us": 9113173
+            },
+            "screenshot_journal_indices": [],
+            "eligible_clean_interval": true,
+            "exclusions": [],
+            "fps": 32.919379452140326
+          },
+          {
+            "from_raw_offset": 10522198,
+            "to_raw_offset": 10523274,
+            "endpoint_fields": [
+              {
+                "app": "org.p4console.tide-maze",
+                "samples": 3000,
+                "wall_total_us": 91636784,
+                "wall_avg_us": 30545,
+                "wall_max_us": 116231,
+                "update_render_avg_us": 10233,
+                "update_render_max_us": 12034,
+                "input_avg_us": 612,
+                "input_max_us": 4700,
+                "audio_avg_us": 1,
+                "audio_max_us": 27,
+                "present_avg_us": 18154,
+                "present_max_us": 20001,
+                "reuse_avg_us": 24,
+                "reuse_max_us": 120,
+                "transform_avg_us": 15385,
+                "transform_max_us": 17001,
+                "handoff_avg_us": 54,
+                "handoff_max_us": 487,
+                "deadline_rebases": 2999,
+                "audio_discarded_us": 0
+              },
+              {
+                "app": "org.p4console.tide-maze",
+                "samples": 3300,
+                "wall_total_us": 100767611,
+                "wall_avg_us": 30535,
+                "wall_max_us": 116231,
+                "update_render_avg_us": 10242,
+                "update_render_max_us": 12034,
+                "input_avg_us": 611,
+                "input_max_us": 4700,
+                "audio_avg_us": 1,
+                "audio_max_us": 27,
+                "present_avg_us": 18155,
+                "present_max_us": 20001,
+                "reuse_avg_us": 24,
+                "reuse_max_us": 121,
+                "transform_avg_us": 15385,
+                "transform_max_us": 17001,
+                "handoff_avg_us": 54,
+                "handoff_max_us": 487,
+                "deadline_rebases": 3299,
+                "audio_discarded_us": 0
+              }
+            ],
+            "endpoint_uptime_ms": [
+              264216,
+              273347
+            ],
+            "possible_utc_window": [
+              "2026-10-07T15:27:37.204532+00:00",
+              "2026-10-07T15:28:04.101746+00:00"
+            ],
+            "duration_ms": 9131,
+            "delta": {
+              "samples": 300,
+              "wall_total_us": 9130827
+            },
+            "screenshot_journal_indices": [],
+            "eligible_clean_interval": true,
+            "exclusions": [],
+            "fps": 32.85573146879248
+          },
+          {
+            "from_raw_offset": 10523274,
+            "to_raw_offset": 10524352,
+            "endpoint_fields": [
+              {
+                "app": "org.p4console.tide-maze",
+                "samples": 3300,
+                "wall_total_us": 100767611,
+                "wall_avg_us": 30535,
+                "wall_max_us": 116231,
+                "update_render_avg_us": 10242,
+                "update_render_max_us": 12034,
+                "input_avg_us": 611,
+                "input_max_us": 4700,
+                "audio_avg_us": 1,
+                "audio_max_us": 27,
+                "present_avg_us": 18155,
+                "present_max_us": 20001,
+                "reuse_avg_us": 24,
+                "reuse_max_us": 121,
+                "transform_avg_us": 15385,
+                "transform_max_us": 17001,
+                "handoff_avg_us": 54,
+                "handoff_max_us": 487,
+                "deadline_rebases": 3299,
+                "audio_discarded_us": 0
+              },
+              {
+                "app": "org.p4console.tide-maze",
+                "samples": 3600,
+                "wall_total_us": 109878611,
+                "wall_avg_us": 30521,
+                "wall_max_us": 116231,
+                "update_render_avg_us": 10244,
+                "update_render_max_us": 12034,
+                "input_avg_us": 610,
+                "input_max_us": 4700,
+                "audio_avg_us": 1,
+                "audio_max_us": 27,
+                "present_avg_us": 18153,
+                "present_max_us": 20001,
+                "reuse_avg_us": 24,
+                "reuse_max_us": 199,
+                "transform_avg_us": 15385,
+                "transform_max_us": 17001,
+                "handoff_avg_us": 54,
+                "handoff_max_us": 487,
+                "deadline_rebases": 3599,
+                "audio_discarded_us": 0
+              }
+            ],
+            "endpoint_uptime_ms": [
+              273347,
+              282458
+            ],
+            "possible_utc_window": [
+              "2026-10-07T15:27:37.204532+00:00",
+              "2026-10-07T15:28:04.101746+00:00"
+            ],
+            "duration_ms": 9111,
+            "delta": {
+              "samples": 300,
+              "wall_total_us": 9111000
+            },
+            "screenshot_journal_indices": [],
+            "eligible_clean_interval": true,
+            "exclusions": [],
+            "fps": 32.927230819888045
+          }
+        ],
+        "scope": "Native sample/wall_total_us deltas with conservative serial-order UTC bounds inside declared PLAY phase. Whole screenshot intervals excluded; not optical scanout or full puzzle acceptance."
+      },
+      "audio": {
+        "eligible_intervals": [
+          {
+            "from_raw_offset": 10520477,
+            "to_raw_offset": 10521997,
+            "endpoint_fields": [
+              {
+                "app": "org.p4console.tide-maze",
+                "game_core": 0,
+                "audio_core": 1,
+                "running": 1,
+                "queued": 0,
+                "rejected": 0,
+                "underrun": 0,
+                "clipped": 0,
+                "frames": 1325056,
+                "write_failures": 0,
+                "stack": 2052
+              },
+              {
+                "app": "org.p4console.tide-maze",
+                "game_core": 0,
+                "audio_core": 1,
+                "running": 1,
+                "queued": 0,
+                "rejected": 0,
+                "underrun": 0,
+                "clipped": 0,
+                "frames": 1470848,
+                "write_failures": 0,
+                "stack": 2052
+              }
+            ],
+            "endpoint_uptime_ms": [
+              255100,
+              264213
+            ],
+            "possible_utc_window": [
+              "2026-10-07T15:27:31.715613+00:00",
+              "2026-10-07T15:28:04.101746+00:00"
+            ],
+            "duration_ms": 9113,
+            "delta": {
+              "frames": 145792,
+              "underrun": 0,
+              "rejected": 0,
+              "write_failures": 0,
+              "clipped": 0
+            },
+            "screenshot_journal_indices": [],
+            "eligible_clean_interval": true,
+            "exclusions": [],
+            "fps": null
+          },
+          {
+            "from_raw_offset": 10521997,
+            "to_raw_offset": 10523073,
+            "endpoint_fields": [
+              {
+                "app": "org.p4console.tide-maze",
+                "game_core": 0,
+                "audio_core": 1,
+                "running": 1,
+                "queued": 0,
+                "rejected": 0,
+                "underrun": 0,
+                "clipped": 0,
+                "frames": 1470848,
+                "write_failures": 0,
+                "stack": 2052
+              },
+              {
+                "app": "org.p4console.tide-maze",
+                "game_core": 0,
+                "audio_core": 1,
+                "running": 1,
+                "queued": 0,
+                "rejected": 0,
+                "underrun": 0,
+                "clipped": 0,
+                "frames": 1616896,
+                "write_failures": 0,
+                "stack": 2052
+              }
+            ],
+            "endpoint_uptime_ms": [
+              264213,
+              273344
+            ],
+            "possible_utc_window": [
+              "2026-10-07T15:27:37.204532+00:00",
+              "2026-10-07T15:28:04.101746+00:00"
+            ],
+            "duration_ms": 9131,
+            "delta": {
+              "frames": 146048,
+              "underrun": 0,
+              "rejected": 0,
+              "write_failures": 0,
+              "clipped": 0
+            },
+            "screenshot_journal_indices": [],
+            "eligible_clean_interval": true,
+            "exclusions": [],
+            "fps": null
+          },
+          {
+            "from_raw_offset": 10523073,
+            "to_raw_offset": 10524151,
+            "endpoint_fields": [
+              {
+                "app": "org.p4console.tide-maze",
+                "game_core": 0,
+                "audio_core": 1,
+                "running": 1,
+                "queued": 0,
+                "rejected": 0,
+                "underrun": 0,
+                "clipped": 0,
+                "frames": 1616896,
+                "write_failures": 0,
+                "stack": 2052
+              },
+              {
+                "app": "org.p4console.tide-maze",
+                "game_core": 0,
+                "audio_core": 1,
+                "running": 1,
+                "queued": 0,
+                "rejected": 0,
+                "underrun": 0,
+                "clipped": 0,
+                "frames": 1762688,
+                "write_failures": 0,
+                "stack": 2052
+              }
+            ],
+            "endpoint_uptime_ms": [
+              273344,
+              282455
+            ],
+            "possible_utc_window": [
+              "2026-10-07T15:27:37.204532+00:00",
+              "2026-10-07T15:28:04.101746+00:00"
+            ],
+            "duration_ms": 9111,
+            "delta": {
+              "frames": 145792,
+              "underrun": 0,
+              "rejected": 0,
+              "write_failures": 0,
+              "clipped": 0
+            },
+            "screenshot_journal_indices": [],
+            "eligible_clean_interval": true,
+            "exclusions": [],
+            "fps": null
+          }
+        ],
+        "sample_frames_delta": 437632,
+        "observed_worker_count": 18,
+        "all_adjacent_delta_totals": {
+          "frames": 2479616,
+          "underrun": 0,
+          "rejected": 0,
+          "write_failures": 0,
+          "clipped": 0
+        },
+        "lifetime_underrun_frames": 0,
+        "heard_music": "NOT_APPLICABLE title has event tones only",
+        "heard_sfx": "PENDING pearl/clear cues not established or heard"
+      },
+      "lifecycle_markers": [
+        {
+          "raw_start": 9681160,
+          "raw_end": 9681265,
+          "uptime_ms": 112086,
+          "text": "I (112086) p4_console_os: P4_CONSOLE_OS MULTIPLAYER_LOBBY_CREATED session=cdd5d7af transport=wifi-local",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:25:10.923222+00:00",
+            "utc_upper": "2026-10-07T15:25:29.158927+00:00",
+            "prior_journal_index": 651,
+            "following_journal_index": 662,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 9918539,
+          "raw_end": 9918769,
+          "uptime_ms": 149246,
+          "text": "I (149246) p4_console_os: P4_CONSOLE_OS MULTIPLAYER_LOBBY_READY game=org.p4console.tide-maze mode=1 episode=1 map=1 skill=5 players=2 local_slot=0 role=host tick_hz=20 input_delay=0 transport=wifi-local route=[redacted]",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:25:48.234356+00:00",
+            "utc_upper": "2026-10-07T15:25:48.665747+00:00",
+            "prior_journal_index": 680,
+            "following_journal_index": 681,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 10038484,
+          "raw_end": 10038757,
+          "uptime_ms": 172286,
+          "text": "I (172286) p4_console_os: P4_CONSOLE_OS CARTRIDGE_START app=org.p4console.tide-maze file=TIDE_MAZE.P4G api=1 source=microsd-games-directory runtime=psram-elf audio=ready signals=offline saves=session-only multiplayer=connected surface=320x200 save_bytes=0 save_sequence=0",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:26:10.963379+00:00",
+            "utc_upper": "2026-10-07T15:26:11.715807+00:00",
+            "prior_journal_index": 691,
+            "following_journal_index": 692,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 10039139,
+          "raw_end": 10039231,
+          "uptime_ms": 172528,
+          "text": "I (172528) game_loader: P4_CARTRIDGE_PACKAGE_READ app=org.p4console.tide-maze bytes=198592",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:26:10.963379+00:00",
+            "utc_upper": "2026-10-07T15:26:11.715807+00:00",
+            "prior_journal_index": 691,
+            "following_journal_index": 692,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 10039231,
+          "raw_end": 10039335,
+          "uptime_ms": 172533,
+          "text": "I (172533) game_loader: P4_CARTRIDGE_PACKAGE_VERIFIED app=org.p4console.tide-maze payload_bytes=198336",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:26:10.963379+00:00",
+            "utc_upper": "2026-10-07T15:26:11.715807+00:00",
+            "prior_journal_index": 691,
+            "following_journal_index": 692,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 10767169,
+          "raw_end": 10767262,
+          "uptime_ms": 339033,
+          "text": "I (339033) game_loader: P4_CARTRIDGE_LOAD_DONE app=org.p4console.tide-maze cartridge_exit=0",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:28:57.966088+00:00",
+            "utc_upper": "2026-10-07T15:28:58.715139+00:00",
+            "prior_journal_index": 745,
+            "following_journal_index": 746,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 10767262,
+          "raw_end": 10767374,
+          "uptime_ms": 339035,
+          "text": "I (339035) p4_console_os: P4_CONSOLE_OS NATIVE_MULTIPLAYER_STOP game=org.p4console.tide-maze state=3 dropped=0",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:28:57.966088+00:00",
+            "utc_upper": "2026-10-07T15:28:58.715139+00:00",
+            "prior_journal_index": 745,
+            "following_journal_index": 746,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 10767374,
+          "raw_end": 10767488,
+          "uptime_ms": 339036,
+          "text": "I (339036) p4_console_os: P4_CONSOLE_OS AUDIO_WORKER_STOP core=1 frames=2668032 underrun=0 rejected=0 stack=2052",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:28:57.966088+00:00",
+            "utc_upper": "2026-10-07T15:28:58.715139+00:00",
+            "prior_journal_index": 745,
+            "following_journal_index": 746,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 10767575,
+          "raw_end": 10767838,
+          "uptime_ms": 339230,
+          "text": "I (339230) p4_console_os: P4_CONSOLE_OS CARTRIDGE_STOP app=org.p4console.tide-maze result=ESP_OK frames=5477 deadline_misses=5476 max_frame_ms=100 max_late_ms=98 display_ack_misses=0 return=launcher audio_frames=2668160 audio_stream_underrun_frames=0 amp_safe=1",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:28:57.966088+00:00",
+            "utc_upper": "2026-10-07T15:28:58.715139+00:00",
+            "prior_journal_index": 745,
+            "following_journal_index": 746,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        }
+      ],
+      "capture_payloads_verified": 13,
+      "prior_wacky_boundary": [
+        {
+          "raw_start": 9182120,
+          "raw_end": 9182188,
+          "uptime_ms": null,
+          "text": "Guru Meditation Error: Core  1 panic'ed (Stack protection fault). ",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:23:18.945062+00:00",
+            "utc_upper": "2026-10-07T15:23:29.464034+00:00",
+            "prior_journal_index": 604,
+            "following_journal_index": 606,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 9186383,
+          "raw_end": 9186397,
+          "uptime_ms": null,
+          "text": "Rebooting...",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:23:18.945062+00:00",
+            "utc_upper": "2026-10-07T15:23:29.464034+00:00",
+            "prior_journal_index": 604,
+            "following_journal_index": 606,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 9186397,
+          "raw_end": 9186428,
+          "uptime_ms": null,
+          "text": "ESP-ROM:esp32p4-eco2-20240710",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:23:18.945062+00:00",
+            "utc_upper": "2026-10-07T15:23:29.464034+00:00",
+            "prior_journal_index": 604,
+            "following_journal_index": 606,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 9186447,
+          "raw_end": 9186504,
+          "uptime_ms": null,
+          "text": "rst:0xc (SW_CPU_RESET),boot:0x30f (SPI_FAST_FLASH_BOOT)",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:23:18.945062+00:00",
+            "utc_upper": "2026-10-07T15:23:29.464034+00:00",
+            "prior_journal_index": 604,
+            "following_journal_index": 606,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        }
+      ],
+      "prior_parse_anomalies": [],
+      "tide_parse_anomalies": [],
+      "fatal_or_boot_reset_markers_after_tide_launch": []
+    }
+  },
+  "root_observations": [
+    {
+      "at": "2026-10-07T15:26:15.111765+00:00",
+      "screenshot_journal_index": 693,
+      "observation": "Guest initially showed Catching wave; no immediate gameplay readiness claim from this screenshot."
+    },
+    {
+      "at": "2026-10-07T15:26:25.329108+00:00",
+      "screenshot_journal_index": 695,
+      "observation": "Both PLAY2:19, two marbles and0/4."
+    },
+    {
+      "at": "2026-10-07T15:26:51.258844+00:00",
+      "screenshot_journal_index": 706,
+      "observation": "Host down movement replicated on both views."
+    },
+    {
+      "at": "2026-10-07T15:27:12.041834+00:00",
+      "screenshot_journal_index": 717,
+      "observation": "Guest target movement replicated on both, with distinct marbles."
+    },
+    {
+      "at": "2026-10-07T15:28:12.954912+00:00",
+      "screenshot_journal_index": 732,
+      "observation": "Both remained PLAY0:32 without failure after the declared sample window."
+    },
+    {
+      "at": "2026-10-07T15:28:43.257330+00:00",
+      "screenshot_journal_index": 741,
+      "observation": "Guest A returned Home; survivor B showed Your friend drifted away at0:02."
+    },
+    {
+      "at": "2026-10-07T15:29:02.215818+00:00",
+      "screenshot_journal_index": 748,
+      "observation": "Host Back returned B Home; both Home."
+    }
+  ],
+  "screenshot_receipts": [
+    {
+      "journal_index": 617,
+      "started_at": "2026-10-07T15:24:16.039264+00:00",
+      "finished_at": "2026-10-07T15:24:20.328749+00:00",
+      "name": "tm73home-tide-maze-home-chooser",
+      "scale": 4,
+      "parallel": true,
+      "units": {
+        "A": {
+          "capture_id": 1920409453,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "144deeea4214ad2f6f6024e5643584b09ea011ace79a064508a8dd3dab52d48d"
+        },
+        "B": {
+          "capture_id": 271025432,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "aadb4fc39db59c0ca395e3fabcf9d03335bd475b7838d89be1a06755110a4a65"
+        }
+      }
+    },
+    {
+      "journal_index": 637,
+      "started_at": "2026-10-07T15:24:40.915233+00:00",
+      "finished_at": "2026-10-07T15:24:44.583098+00:00",
+      "name": "tm73select-tide-maze-b-select",
+      "scale": 4,
+      "parallel": true,
+      "units": {
+        "A": {
+          "capture_id": 133115323,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "9d0788b0cd11f5268aa19a5aad143bc670804fe64c11f126d4701844fe265592"
+        },
+        "B": {
+          "capture_id": 3565301784,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "0aed75f3b121ef26c9c06a9bdf1b30ec023f30d57a2bcf2972de18a6c6af545b"
+        }
+      }
+    },
+    {
+      "journal_index": 646,
+      "started_at": "2026-10-07T15:24:59.565338+00:00",
+      "finished_at": "2026-10-07T15:25:03.677998+00:00",
+      "name": "tm73roles-tide-maze-b-roles",
+      "scale": 4,
+      "parallel": true,
+      "units": {
+        "A": {
+          "capture_id": 3215028941,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "5ba45c3aa8a42312ecc1ff1f62b6791703bcdbe72344e04232332f31da11e44e"
+        },
+        "B": {
+          "capture_id": 1210588715,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "6cc05f484a30c3c070c4b859f0c420988da17baef60f82867d9d1a7d2c917b64"
+        }
+      }
+    },
+    {
+      "journal_index": 659,
+      "started_at": "2026-10-07T15:25:13.231456+00:00",
+      "finished_at": "2026-10-07T15:25:17.471782+00:00",
+      "name": "tm73create-tide-maze-b-create",
+      "scale": 4,
+      "parallel": true,
+      "units": {
+        "A": {
+          "capture_id": 2108065649,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "fa7964e623808730f4779d6e850d9c346f45df1483e6b26d140be96f27fab5f5"
+        },
+        "B": {
+          "capture_id": 1283447988,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "b470cf3fdc6bac44217ecfa36657b58e000d6f3b77b8cd275749d52e1df96f83"
+        }
+      }
+    },
+    {
+      "journal_index": 665,
+      "started_at": "2026-10-07T15:25:29.848026+00:00",
+      "finished_at": "2026-10-07T15:25:33.904712+00:00",
+      "name": "tm73room-tide-maze-b-select-room",
+      "scale": 4,
+      "parallel": true,
+      "units": {
+        "A": {
+          "capture_id": 2699524686,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "210f93d7b63ae80b40848ae0d25710ff015939b7e76eb6f752eeefcfab1d49e3"
+        },
+        "B": {
+          "capture_id": 3727321808,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "b470cf3fdc6bac44217ecfa36657b58e000d6f3b77b8cd275749d52e1df96f83"
+        }
+      }
+    },
+    {
+      "journal_index": 682,
+      "started_at": "2026-10-07T15:25:48.665992+00:00",
+      "finished_at": "2026-10-07T15:25:52.903085+00:00",
+      "name": "tm73join-tide-maze-b-join",
+      "scale": 4,
+      "parallel": true,
+      "units": {
+        "A": {
+          "capture_id": 2221483126,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "cc02bfd0c5ac924854020fe88053f556bd3fac743f45af65258e213287c608da"
+        },
+        "B": {
+          "capture_id": 2948889969,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "462a2be28cebfd6b7e9a643358c4215e3fc28871777f8a5929773dea30ee5820"
+        }
+      }
+    },
+    {
+      "journal_index": 693,
+      "started_at": "2026-10-07T15:26:11.715923+00:00",
+      "finished_at": "2026-10-07T15:26:15.111765+00:00",
+      "name": "tm73start-tide-maze-b-start",
+      "scale": 4,
+      "parallel": true,
+      "units": {
+        "A": {
+          "capture_id": 3019972156,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "7a9288bd97cf4d110872165fa5a40125fe9cacf107636e89eab47f0c11d30444"
+        },
+        "B": {
+          "capture_id": 94327062,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "06bfe483549d38a3d3cc7a8ea070dabef614dda75f24f6bea7c59f789c22faff"
+        }
+      }
+    },
+    {
+      "journal_index": 695,
+      "started_at": "2026-10-07T15:26:21.881420+00:00",
+      "finished_at": "2026-10-07T15:26:25.329108+00:00",
+      "name": "tm73-ready",
+      "scale": 4,
+      "parallel": true,
+      "units": {
+        "A": {
+          "capture_id": 3450143916,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "110c227eb3670822a837557ae7fb07e10a1ef11ceffb61008dba0aca609f22e7"
+        },
+        "B": {
+          "capture_id": 2419193945,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "e0679201809dd5ad5dfeadf3d567d6723373da0d8a67bffdd5655683ee2741c1"
+        }
+      }
+    },
+    {
+      "journal_index": 706,
+      "started_at": "2026-10-07T15:26:47.816733+00:00",
+      "finished_at": "2026-10-07T15:26:51.258844+00:00",
+      "name": "tm73-host-move",
+      "scale": 4,
+      "parallel": true,
+      "units": {
+        "A": {
+          "capture_id": 4154526010,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "754f57e24dcd1da6032a435ef0886a37fd17dd7bda4b3f7abadac1507ed9c523"
+        },
+        "B": {
+          "capture_id": 3628697031,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "e59b4c357dbcea69c3125ba58cc219b0ea93b401e841e7cf25a65ebd5f031092"
+        }
+      }
+    },
+    {
+      "journal_index": 717,
+      "started_at": "2026-10-07T15:27:08.632593+00:00",
+      "finished_at": "2026-10-07T15:27:12.041834+00:00",
+      "name": "tm73-guest-move",
+      "scale": 4,
+      "parallel": true,
+      "units": {
+        "A": {
+          "capture_id": 2551047371,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "16941143e943688e2ee6c623e484831ee69de91a79c5ce6f01ae963075c92863"
+        },
+        "B": {
+          "capture_id": 899539655,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "098b085f4d480ba2098e866659b2954a41065790084d531e6e72e1ec94797de8"
+        }
+      }
+    },
+    {
+      "journal_index": 732,
+      "started_at": "2026-10-07T15:28:09.477799+00:00",
+      "finished_at": "2026-10-07T15:28:12.954912+00:00",
+      "name": "tm73-clean-end",
+      "scale": 4,
+      "parallel": true,
+      "units": {
+        "A": {
+          "capture_id": 1015431412,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "cde3a3a4c86597729925cbfb32c48de0469bf5c41aea7ba7e48c7da1bbed6ca0"
+        },
+        "B": {
+          "capture_id": 2060848512,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "01ec04f4bd2ce4a21cd86d36291b12f59b571d88b27045dcd04f625efec5ede5"
+        }
+      }
+    },
+    {
+      "journal_index": 741,
+      "started_at": "2026-10-07T15:28:39.823988+00:00",
+      "finished_at": "2026-10-07T15:28:43.257330+00:00",
+      "name": "tm73depart-tide-maze-b-depart-guest",
+      "scale": 4,
+      "parallel": true,
+      "units": {
+        "A": {
+          "capture_id": 2959812254,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "8a55b40b7351966055c1f1142c9ece5dce7ddf6904853a564aa4edd81b14b832"
+        },
+        "B": {
+          "capture_id": 842769689,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "6fbee15b571be286604a84ca3721f7a0f22e1c2e0b40fed48844273fbb5ef2e8"
+        }
+      }
+    },
+    {
+      "journal_index": 748,
+      "started_at": "2026-10-07T15:28:58.791014+00:00",
+      "finished_at": "2026-10-07T15:29:02.215818+00:00",
+      "name": "tm73finish-tide-maze-b-finish-after-guest-left",
+      "scale": 4,
+      "parallel": true,
+      "units": {
+        "A": {
+          "capture_id": 2457772341,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "8a55b40b7351966055c1f1142c9ece5dce7ddf6904853a564aa4edd81b14b832"
+        },
+        "B": {
+          "capture_id": 924814306,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "4dd79eaf08f673609db99dabaf5b83b8044c6addaf077773b8d6b49894f4b79d"
+        }
+      }
+    }
+  ],
+  "observation_basis": "Visual findings are supplied by root operator who inspected the paired screenshots. Offline reviewers verified saved P4T1 RGB565 payload identity; those receipt hashes are not PNG file hashes.",
+  "audio_assessment": "All observed worker loss counters and adjacent deltas are zero, including screenshot-overlapping intervals. Counters can advance during silence; no pearl/clear cue was established or heard. Current title implements event tones and no music. Per-speaker SFX acceptance remains pending.",
+  "audio_contract_sources": [
+    {
+      "path": "games/tide_maze/src/tide_maze.c",
+      "bytes": 4091,
+      "sha256": "78de0b7fafdefd53036b670574e1b767aa94179e07788f855e5183af8358d9e0"
+    },
+    {
+      "path": "games/tide_maze/README.md",
+      "bytes": 8455,
+      "sha256": "e790209697fcda18032846a6d19d250057cdc5b681b3a26d4c9381c73623d0ce"
+    }
+  ],
+  "save_scope": "Both CARTRIDGE_START markers say saves=session-only and save_bytes=0/save_sequence=0. Persistent save/relaunch is not applicable to this observed linked mode and is not claimed.",
+  "counter_scope": "Stop deadline_misses/max_frame/max_late counters are retained as lifetime values, including setup and captures. Sampled cadence exceeds30FPS, but the60FPS target is unmet. Whole snapshot commands are excluded from both units for cadence; no slow interval is discarded.",
+  "historical_scope": "Earlier Wacky panics and Air parse anomaly remain in saved-prefix history. Tide uses separate subsequent launches (parser epoch5; not a hardware boot-number claim). No prior-game counter or uptime is joined into the Tide intervals.",
+  "pending": [
+    "Full puzzle and pearl collection/goal completion",
+    "Triggered and heard pearl/clear SFX on both speakers",
+    "Reverse host direction",
+    "Rejoin behavior",
+    "60FPS target and broader release acceptance"
+  ]
+}

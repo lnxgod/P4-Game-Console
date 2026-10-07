@@ -8,6 +8,17 @@ static p4_doom_lockstep_t nodes[4];
 static p4_doom_lockstep_frame_t frames[4];
 int main(void)
 {
+    /* An authenticated, ordered host frame can restore a departed roster bit. */
+    assert(p4_doom_lockstep_init(&nodes[1], 1, 3));
+    uint8_t restored[P4_DOOM_LOCKSTEP_BYTES] = {'G', 'C', 1, 3};
+    p4_doom_mp_tic_t neutral = {.tick=0};
+    assert(p4_doom_lockstep_submit(&nodes[1], &neutral));
+    assert(p4_doom_lockstep_receive(&nodes[1], restored, sizeof(restored)));
+    assert(p4_doom_lockstep_pop(&nodes[1], &frames[1]));
+    neutral.tick = 1;
+    assert(p4_doom_lockstep_submit(&nodes[1], &neutral));
+    restored[3] = 7; restored[4] = 1;
+    assert(p4_doom_lockstep_receive(&nodes[1], restored, sizeof(restored)));
     for (uint8_t i=0; i<4; ++i) assert(p4_doom_lockstep_init(&nodes[i], i, 4));
     for (uint32_t tick=0; tick<1200; ++tick) {
         const uint8_t count = tick<800 ? 4 : 3;

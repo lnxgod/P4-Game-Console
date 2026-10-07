@@ -1,0 +1,1864 @@
+{
+  "schema": "p4-tab5-native-multiplayer-runtime-v1",
+  "recorded_at": "2026-10-07T15:44:22.843844+00:00",
+  "result": "PARTIAL linked smoke and clean exits; both attempted bomb escapes FAILED; active-play cadence and audio acceptance remain unqualified",
+  "scope": "Blast Circuit0.2.7 B host/A guest on OS0.73, session eccafd55. Root-reviewed movement and replicated outcome screenshots; both humans died on the attempted bomb/escape sequences. No full human-played match, successful escape, reverse host, rejoin, save/relaunch or heard-audio acceptance.",
+  "os_install": {
+    "path": "hardware/test-runs/2026-10-07-tab5-073-multiplayer-debug-install.json",
+    "bytes": 28520,
+    "sha256": "e45fcc876998bcab95fee64ef5f9aaf2ef10e0915d9646cec3a692d061935c9e"
+  },
+  "application": {
+    "file": "apps/console_os/build-tab5/p4_console_os.bin",
+    "bytes": 4460976,
+    "sha256": "947edff0c2cee5f19c917346e434e54532fa30bcce2eb02149f51361baaaf0ce",
+    "version": "0.73",
+    "write_offset": "0x20000"
+  },
+  "board": "M5Stack Tab5 v1.3",
+  "game": {
+    "title": "Blast Circuit",
+    "app": "org.p4console.blast-circuit",
+    "version": "0.2.7",
+    "api": 1,
+    "session_hex": "eccafd55",
+    "host": "B",
+    "guest": "A",
+    "transport": "wifi-local",
+    "surface": "320x200",
+    "content_readback_receipt": {
+      "path": "build-host/native-refresh-073-20261007T1438/receipt.json",
+      "bytes": 61142,
+      "sha256": "06b19417adad22b4b7935bebcaa6667a1d4af8a3b736ef0d578a1a16c0061914"
+    },
+    "verified_readbacks": {
+      "A": {
+        "BLAST_CIRCUIT.P4G": {
+          "path": "build-host/native-refresh-073-20261007T1438/A/BLAST_CIRCUIT.P4G",
+          "bytes": 462532,
+          "sha256": "611536b5eb78bdb19d48130cd4dd5a0d6101c7ed8491f41b63bb70f5b91f135c"
+        }
+      },
+      "B": {
+        "BLAST_CIRCUIT.P4G": {
+          "path": "build-host/native-refresh-073-20261007T1438/B/BLAST_CIRCUIT.P4G",
+          "bytes": 462532,
+          "sha256": "611536b5eb78bdb19d48130cd4dd5a0d6101c7ed8491f41b63bb70f5b91f135c"
+        }
+      }
+    }
+  },
+  "evidence": {
+    "prefix_receipt": {
+      "path": "build-host/runtime-acceptance-073/prefix-blast-native/receipt.json",
+      "bytes": 691,
+      "sha256": "399b706cd7dacd04038acdb5e19e45daf20f8feb1759074da405a8518fe5e8d5"
+    },
+    "prefix_captured_at": "2026-10-07T15:37:39.727885+00:00",
+    "raw_inputs": {
+      "commands.jsonl": {
+        "path": "build-host/runtime-acceptance-073/prefix-blast-native/commands.jsonl",
+        "bytes": 662223,
+        "sha256": "4374581bf9260b0570eff23792f83bc616da50bf63066ea1b964868b794bd97c"
+      },
+      "a.rx": {
+        "path": "build-host/runtime-acceptance-073/prefix-blast-native/a.rx",
+        "bytes": 12638015,
+        "sha256": "38f58e4b472135396e54c9bd2118a1f8fc701fe8f77ace1590b070b7ea11ed78"
+      },
+      "b.rx": {
+        "path": "build-host/runtime-acceptance-073/prefix-blast-native/b.rx",
+        "bytes": 12689087,
+        "sha256": "4f2b389d9124bb863667036b14d746e34f76f941633246b367166cd8d9926169"
+      }
+    },
+    "analysis_run_receipt": {
+      "path": "build-host/native-mp-tracker-073/blast73-analysis-run-receipt.json",
+      "bytes": 4051,
+      "sha256": "c1b6c39845aa83fe811d44b06c0744e97bce9f80c5412d8e5dfd70ee0bb345fc"
+    },
+    "records_only_analysis": {
+      "path": "build-host/native-mp-tracker-073/blast73-records-only-analysis.json",
+      "bytes": 1128070,
+      "sha256": "7d8939dc771b8cb9ea54b281343b56de136650600a1d9d2eb3d8d36c47504361"
+    },
+    "independent_lifecycle_audio_review": {
+      "path": "build-host/native-mp-tracker-073/blast73-audio-lifecycle-review.json",
+      "bytes": 164534,
+      "sha256": "d171e57501664d09f4443c53cd24de6c1f41fad23b363522529aa0ada6edd7d0"
+    }
+  },
+  "phase": {
+    "marker_start": "2026-10-07T15:36:27.418576+00:00",
+    "marker_end": "2026-10-07T15:36:53.789882+00:00",
+    "start_marker_label_is_not_phase_proof": "bc73-clean-play-start",
+    "actual_observation": "Both humans OUT before the window while CPUs continued; endpoint showed automatic round2 with both alive and1:55. This crosses spectator play and a round transition.",
+    "active_play_eligible": false,
+    "temporal_eligible_intervals": 0,
+    "cadence_acceptance": "UNAVAILABLE: no sample pair wholly bracketed inside the marks and phase independently ineligible. Informational adjacent arithmetic retained without a release-floor claim."
+  },
+  "units": {
+    "A": {
+      "role": "guest",
+      "device_binding_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+      "parser_launch_epoch": 6,
+      "cadence": {
+        "result": "UNQUALIFIED",
+        "active_play_eligible": false,
+        "eligible_interval_count": 0,
+        "informational_only": {
+          "frames": 600,
+          "wall_total_us": 17563047,
+          "fps": 34.162637041283325,
+          "min_pair_fps": 33.670169711123414,
+          "possible_utc": [
+            "2026-10-07T15:36:25.453737+00:00",
+            "2026-10-07T15:36:51.128380+00:00"
+          ],
+          "temporal_eligibility": false,
+          "phase_eligibility": false,
+          "scope": "Adjacent math only, starts before declared mark; spectator/cross-round, not PLAY or 30 FPS qualification"
+        }
+      },
+      "audio": {
+        "worker_count": 16,
+        "first_sample": {
+          "first_worker": {
+            "kind": "AUDIO_WORKER",
+            "app": "org.p4console.blast-circuit",
+            "epoch": 6,
+            "raw_start": 11676033,
+            "raw_end": 11676243,
+            "launch_app": "org.p4console.blast-circuit",
+            "launch_active": true,
+            "tag_uptime_ms": 1130836,
+            "tag": "p4_console_os",
+            "text": "P4_CONSOLE_OS AUDIO_WORKER app=org.p4console.blast-circuit game_core=0 audio_core=1 running=1 queued=1232 rejected=0 underrun=432 clipped=0 frames=165504 write_failures=0 stack=2072",
+            "fields": {
+              "app": "org.p4console.blast-circuit",
+              "game_core": 0,
+              "audio_core": 1,
+              "running": 1,
+              "queued": 1232,
+              "rejected": 0,
+              "underrun": 432,
+              "clipped": 0,
+              "frames": 165504,
+              "write_failures": 0,
+              "stack": 2072
+            },
+            "utc": {
+              "status": "bounded",
+              "utc_lower": "2026-10-07T15:34:49.380210+00:00",
+              "utc_upper": "2026-10-07T15:35:05.832427+00:00",
+              "prior_journal_index": 832,
+              "following_journal_index": 836,
+              "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+            },
+            "parse_errors": [],
+            "interleaved_line": false
+          },
+          "pre_first_sample_underrun": 432,
+          "zero_baseline_observed": false,
+          "launch_to_first_sample_possible_utc": [
+            "2026-10-07T15:34:49.002550+00:00",
+            "2026-10-07T15:35:05.832427+00:00"
+          ],
+          "whole_screenshot_utc_overlaps": [
+            833
+          ],
+          "raw_capture_intersections": [
+            833
+          ],
+          "limit": "First counter already nonzero. No earlier AUDIO_WORKER zero observation; timing of these losses within the bracket is unresolved."
+        },
+        "loss_intervals": [
+          {
+            "from_raw": 11676033,
+            "to_raw": 11679501,
+            "uptime_ms": [
+              1130836,
+              1140176
+            ],
+            "possible_utc": [
+              "2026-10-07T15:34:49.380210+00:00",
+              "2026-10-07T15:35:28.902249+00:00"
+            ],
+            "delta": {
+              "frames": 149376,
+              "underrun": 240,
+              "rejected": 0,
+              "write_failures": 0,
+              "clipped": 0
+            },
+            "whole_screenshot_utc_overlaps": [
+              833,
+              840,
+              841
+            ],
+            "raw_capture_intersections": [
+              {
+                "journal_index": 840,
+                "entire_envelope_range_between_samples": false
+              }
+            ],
+            "wholly_within_declared_window": false,
+            "active_play_eligible": false
+          },
+          {
+            "from_raw": 11795799,
+            "to_raw": 11914215,
+            "uptime_ms": [
+              1149132,
+              1158174
+            ],
+            "possible_utc": [
+              "2026-10-07T15:35:06.303169+00:00",
+              "2026-10-07T15:35:28.902249+00:00"
+            ],
+            "delta": {
+              "frames": 144640,
+              "underrun": 192,
+              "rejected": 0,
+              "write_failures": 0,
+              "clipped": 0
+            },
+            "whole_screenshot_utc_overlaps": [
+              840,
+              841
+            ],
+            "raw_capture_intersections": [
+              {
+                "journal_index": 841,
+                "entire_envelope_range_between_samples": true
+              }
+            ],
+            "wholly_within_declared_window": false,
+            "active_play_eligible": false
+          },
+          {
+            "from_raw": 12035781,
+            "to_raw": 12154203,
+            "uptime_ms": [
+              1184825,
+              1193697
+            ],
+            "possible_utc": [
+              "2026-10-07T15:35:49.802274+00:00",
+              "2026-10-07T15:36:10.610361+00:00"
+            ],
+            "delta": {
+              "frames": 141952,
+              "underrun": 176,
+              "rejected": 0,
+              "write_failures": 0,
+              "clipped": 0
+            },
+            "whole_screenshot_utc_overlaps": [
+              856
+            ],
+            "raw_capture_intersections": [
+              {
+                "journal_index": 856,
+                "entire_envelope_range_between_samples": true
+              }
+            ],
+            "wholly_within_declared_window": false,
+            "active_play_eligible": false
+          },
+          {
+            "from_raw": 12155814,
+            "to_raw": 12207349,
+            "uptime_ms": [
+              1202374,
+              1211161
+            ],
+            "possible_utc": [
+              "2026-10-07T15:36:11.367042+00:00",
+              "2026-10-07T15:36:25.558803+00:00"
+            ],
+            "delta": {
+              "frames": 140672,
+              "underrun": 32,
+              "rejected": 0,
+              "write_failures": 0,
+              "clipped": 0
+            },
+            "whole_screenshot_utc_overlaps": [
+              863
+            ],
+            "raw_capture_intersections": [
+              {
+                "journal_index": 863,
+                "entire_envelope_range_between_samples": false
+              }
+            ],
+            "wholly_within_declared_window": false,
+            "active_play_eligible": false
+          },
+          {
+            "from_raw": 12279078,
+            "to_raw": 12397502,
+            "uptime_ms": [
+              1246225,
+              1255181
+            ],
+            "possible_utc": [
+              "2026-10-07T15:36:51.038954+00:00",
+              "2026-10-07T15:37:10.586749+00:00"
+            ],
+            "delta": {
+              "frames": 143232,
+              "underrun": 224,
+              "rejected": 0,
+              "write_failures": 0,
+              "clipped": 0
+            },
+            "whole_screenshot_utc_overlaps": [
+              868
+            ],
+            "raw_capture_intersections": [
+              {
+                "journal_index": 868,
+                "entire_envelope_range_between_samples": true
+              }
+            ],
+            "wholly_within_declared_window": false,
+            "active_play_eligible": false
+          }
+        ],
+        "last_worker_to_stop": {
+          "from_raw": 12398730,
+          "to_raw": 12400558,
+          "uptime_ms": [
+            1263955,
+            1270787
+          ],
+          "possible_utc": [
+            "2026-10-07T15:37:10.452476+00:00",
+            "2026-10-07T15:37:20.457898+00:00"
+          ],
+          "delta": {
+            "frames": 109312,
+            "underrun": 0,
+            "rejected": 0
+          },
+          "whole_screenshot_utc_overlaps": [],
+          "raw_capture_intersections": [],
+          "wholly_within_declared_window": false,
+          "active_play_eligible": false
+        },
+        "final_underrun": 1296,
+        "worker_rejected_max": 0,
+        "worker_write_failures_max": 0,
+        "worker_clipped_max": 0,
+        "limit": "Counter growth is real recorded loss. Whole screenshot overlap and raw capture order do not prove the entire delta occurred during capture or was caused by capture. No human-heard evidence. STOP lacks clipped/write_failures counters; last periodic values are their final observations.",
+        "heard_music": "PENDING",
+        "heard_sfx": "PENDING"
+      },
+      "lifecycle_markers": [
+        {
+          "raw_start": 11313358,
+          "raw_end": 11313483,
+          "tag_uptime_ms": 892292,
+          "text": "I (892292) p4_console_os: P4_CONSOLE_OS MULTIPLAYER_LOBBY_SELECTION choice=join session=eccafd55 game=Blast Circuit found=1",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:31:01.153885+00:00",
+            "utc_upper": "2026-10-07T15:31:22.994834+00:00",
+            "prior_journal_index": 800,
+            "following_journal_index": 804,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 11431941,
+          "raw_end": 11432074,
+          "tag_uptime_ms": 914144,
+          "text": "I (914144) p4_console_os: P4_CONSOLE_OS MULTIPLAYER_LOBBY_JOIN_SELECTED session=eccafd55 lobby=[redacted] transport=wifi-local",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:31:23.009943+00:00",
+            "utc_upper": "2026-10-07T15:31:23.615820+00:00",
+            "prior_journal_index": 806,
+            "following_journal_index": 807,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 11434151,
+          "raw_end": 11434387,
+          "tag_uptime_ms": 918184,
+          "text": "I (918184) p4_console_os: P4_CONSOLE_OS MULTIPLAYER_LOBBY_READY game=org.p4console.blast-circuit mode=1 episode=1 map=1 skill=5 players=2 local_slot=1 role=client tick_hz=20 input_delay=0 transport=wifi-local route=[redacted]",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:31:27.219299+00:00",
+            "utc_upper": "2026-10-07T15:31:27.700491+00:00",
+            "prior_journal_index": 818,
+            "following_journal_index": 819,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 11556556,
+          "raw_end": 11556690,
+          "tag_uptime_ms": 1120423,
+          "text": "I (1120423) p4_console_os: P4_CONSOLE_OS SAVE_SEAL_READY app=org.p4console.blast-circuit format=P4SAVE2 legacy_migrated=0 sequence=0",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:34:49.002550+00:00",
+            "utc_upper": "2026-10-07T15:34:50.380672+00:00",
+            "prior_journal_index": 831,
+            "following_journal_index": 832,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 11557038,
+          "raw_end": 11557170,
+          "tag_uptime_ms": 1120492,
+          "text": "I (1120492) p4_console_os: P4_CONSOLE_OS VIDEO_MODE app=org.p4console.blast-circuit mode=synchronous reason=native-worker-disabled",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:34:49.002550+00:00",
+            "utc_upper": "2026-10-07T15:34:50.380672+00:00",
+            "prior_journal_index": 831,
+            "following_journal_index": 832,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 11557170,
+          "raw_end": 11557445,
+          "tag_uptime_ms": 1120493,
+          "text": "I (1120493) p4_console_os: P4_CONSOLE_OS CARTRIDGE_START app=org.p4console.blast-circuit file=BLAST_CIRCUIT.P4G api=1 source=microsd-games-directory runtime=psram-elf audio=ready signals=offline saves=ready multiplayer=connected surface=320x200 save_bytes=0 save_sequence=0",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:34:49.002550+00:00",
+            "utc_upper": "2026-10-07T15:34:50.380672+00:00",
+            "prior_journal_index": 831,
+            "following_journal_index": 832,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 11557837,
+          "raw_end": 11557934,
+          "tag_uptime_ms": 1121113,
+          "text": "I (1121113) game_loader: P4_CARTRIDGE_PACKAGE_READ app=org.p4console.blast-circuit bytes=462532",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:34:49.002550+00:00",
+            "utc_upper": "2026-10-07T15:34:50.380672+00:00",
+            "prior_journal_index": 831,
+            "following_journal_index": 832,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 11557934,
+          "raw_end": 11558043,
+          "tag_uptime_ms": 1121122,
+          "text": "I (1121122) game_loader: P4_CARTRIDGE_PACKAGE_VERIFIED app=org.p4console.blast-circuit payload_bytes=462276",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:34:49.002550+00:00",
+            "utc_upper": "2026-10-07T15:34:50.380672+00:00",
+            "prior_journal_index": 831,
+            "following_journal_index": 832,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 11558195,
+          "raw_end": 11558300,
+          "tag_uptime_ms": 1121144,
+          "text": "I (1121144) game_loader: P4_CARTRIDGE_ELF_READY app=org.p4console.blast-circuit runtime=psram-relocated",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:34:49.002550+00:00",
+            "utc_upper": "2026-10-07T15:34:50.380672+00:00",
+            "prior_journal_index": 831,
+            "following_journal_index": 832,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 11558300,
+          "raw_end": 11558383,
+          "tag_uptime_ms": 1121146,
+          "text": "I (1121146) game_loader: P4_CARTRIDGE_ENTRY_BEGIN app=org.p4console.blast-circuit",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:34:49.002550+00:00",
+            "utc_upper": "2026-10-07T15:34:50.380672+00:00",
+            "prior_journal_index": 831,
+            "following_journal_index": 832,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 12400343,
+          "raw_end": 12400441,
+          "tag_uptime_ms": 1270783,
+          "text": "I (1270783) game_loader: P4_CARTRIDGE_LOAD_DONE app=org.p4console.blast-circuit cartridge_exit=0",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:37:19.741069+00:00",
+            "utc_upper": "2026-10-07T15:37:20.457898+00:00",
+            "prior_journal_index": 874,
+            "following_journal_index": 875,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 12400441,
+          "raw_end": 12400558,
+          "tag_uptime_ms": 1270786,
+          "text": "I (1270786) p4_console_os: P4_CONSOLE_OS NATIVE_MULTIPLAYER_STOP game=org.p4console.blast-circuit state=2 dropped=0",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:37:19.741069+00:00",
+            "utc_upper": "2026-10-07T15:37:20.457898+00:00",
+            "prior_journal_index": 874,
+            "following_journal_index": 875,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 12400558,
+          "raw_end": 12400676,
+          "tag_uptime_ms": 1270787,
+          "text": "I (1270787) p4_console_os: P4_CONSOLE_OS AUDIO_WORKER_STOP core=1 frames=2404736 underrun=1296 rejected=0 stack=2056",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:37:19.741069+00:00",
+            "utc_upper": "2026-10-07T15:37:20.457898+00:00",
+            "prior_journal_index": 874,
+            "following_journal_index": 875,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 12400676,
+          "raw_end": 12400843,
+          "tag_uptime_ms": 1270798,
+          "text": "I (1270798) p4_console_os: P4_CONSOLE_OS SAVE_WORKER_STOP app=org.p4console.blast-circuit requests=0 callback_busy=0 low_water_bytes=7916 snapshot_bytes=0 sequence=0",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:37:19.741069+00:00",
+            "utc_upper": "2026-10-07T15:37:20.457898+00:00",
+            "prior_journal_index": 874,
+            "following_journal_index": 875,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 12400931,
+          "raw_end": 12401202,
+          "tag_uptime_ms": 1270985,
+          "text": "I (1270985) p4_console_os: P4_CONSOLE_OS CARTRIDGE_STOP app=org.p4console.blast-circuit result=ESP_OK frames=5033 deadline_misses=5032 max_frame_ms=100 max_late_ms=97 display_ack_misses=0 return=launcher audio_frames=2404864 audio_stream_underrun_frames=1296 amp_safe=1",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:37:19.741069+00:00",
+            "utc_upper": "2026-10-07T15:37:20.457898+00:00",
+            "prior_journal_index": 874,
+            "following_journal_index": 875,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        }
+      ],
+      "capture_payloads_verified": 15,
+      "current_epoch_parse_anomalies": [],
+      "errors_or_fatal_or_hardware_reset_after_current_launch": []
+    },
+    "B": {
+      "role": "host",
+      "device_binding_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+      "parser_launch_epoch": 6,
+      "cadence": {
+        "result": "UNQUALIFIED",
+        "active_play_eligible": false,
+        "eligible_interval_count": 0,
+        "informational_only": {
+          "frames": 600,
+          "wall_total_us": 17292000,
+          "fps": 34.698126301179734,
+          "min_pair_fps": 34.641780319611996,
+          "possible_utc": [
+            "2026-10-07T15:36:25.453737+00:00",
+            "2026-10-07T15:36:51.128380+00:00"
+          ],
+          "temporal_eligibility": false,
+          "phase_eligibility": false,
+          "scope": "Adjacent math only, starts before declared mark; spectator/cross-round, not PLAY or 30 FPS qualification"
+        }
+      },
+      "audio": {
+        "worker_count": 18,
+        "first_sample": {
+          "first_worker": {
+            "kind": "AUDIO_WORKER",
+            "app": "org.p4console.blast-circuit",
+            "epoch": 6,
+            "raw_start": 11725308,
+            "raw_end": 11725517,
+            "launch_app": "org.p4console.blast-circuit",
+            "launch_active": true,
+            "tag_uptime_ms": 699565,
+            "tag": "p4_console_os",
+            "text": "P4_CONSOLE_OS AUDIO_WORKER app=org.p4console.blast-circuit game_core=0 audio_core=1 running=1 queued=1216 rejected=0 underrun=640 clipped=0 frames=145664 write_failures=0 stack=2076",
+            "fields": {
+              "app": "org.p4console.blast-circuit",
+              "game_core": 0,
+              "audio_core": 1,
+              "running": 1,
+              "queued": 1216,
+              "rejected": 0,
+              "underrun": 640,
+              "clipped": 0,
+              "frames": 145664,
+              "write_failures": 0,
+              "stack": 2076
+            },
+            "utc": {
+              "status": "bounded",
+              "utc_lower": "2026-10-07T15:34:49.380210+00:00",
+              "utc_upper": "2026-10-07T15:35:05.719795+00:00",
+              "prior_journal_index": 832,
+              "following_journal_index": 835,
+              "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+            },
+            "parse_errors": [],
+            "interleaved_line": false
+          },
+          "pre_first_sample_underrun": 640,
+          "zero_baseline_observed": false,
+          "launch_to_first_sample_possible_utc": [
+            "2026-10-07T15:34:49.002550+00:00",
+            "2026-10-07T15:35:05.719795+00:00"
+          ],
+          "whole_screenshot_utc_overlaps": [
+            833
+          ],
+          "raw_capture_intersections": [
+            833
+          ],
+          "limit": "First counter already nonzero. No earlier AUDIO_WORKER zero observation; timing of these losses within the bracket is unresolved."
+        },
+        "loss_intervals": [
+          {
+            "from_raw": 11727034,
+            "to_raw": 11845444,
+            "uptime_ms": [
+              708011,
+              716963
+            ],
+            "possible_utc": [
+              "2026-10-07T15:35:06.303169+00:00",
+              "2026-10-07T15:35:28.782152+00:00"
+            ],
+            "delta": {
+              "frames": 143232,
+              "underrun": 144,
+              "rejected": 0,
+              "write_failures": 0,
+              "clipped": 0
+            },
+            "whole_screenshot_utc_overlaps": [
+              840,
+              841
+            ],
+            "raw_capture_intersections": [
+              {
+                "journal_index": 840,
+                "entire_envelope_range_between_samples": true
+              }
+            ],
+            "wholly_within_declared_window": false,
+            "active_play_eligible": false
+          },
+          {
+            "from_raw": 11845444,
+            "to_raw": 11963855,
+            "uptime_ms": [
+              716963,
+              725990
+            ],
+            "possible_utc": [
+              "2026-10-07T15:35:06.303169+00:00",
+              "2026-10-07T15:35:28.782152+00:00"
+            ],
+            "delta": {
+              "frames": 144384,
+              "underrun": 192,
+              "rejected": 0,
+              "write_failures": 0,
+              "clipped": 0
+            },
+            "whole_screenshot_utc_overlaps": [
+              840,
+              841
+            ],
+            "raw_capture_intersections": [
+              {
+                "journal_index": 841,
+                "entire_envelope_range_between_samples": true
+              }
+            ],
+            "wholly_within_declared_window": false,
+            "active_play_eligible": false
+          },
+          {
+            "from_raw": 11965714,
+            "to_raw": 12083933,
+            "uptime_ms": [
+              734847,
+              743853
+            ],
+            "possible_utc": [
+              "2026-10-07T15:35:30.791826+00:00",
+              "2026-10-07T15:35:48.131971+00:00"
+            ],
+            "delta": {
+              "frames": 144128,
+              "underrun": 224,
+              "rejected": 0,
+              "write_failures": 0,
+              "clipped": 0
+            },
+            "whole_screenshot_utc_overlaps": [
+              849
+            ],
+            "raw_capture_intersections": [
+              {
+                "journal_index": 849,
+                "entire_envelope_range_between_samples": true
+              }
+            ],
+            "wholly_within_declared_window": false,
+            "active_play_eligible": false
+          },
+          {
+            "from_raw": 12085921,
+            "to_raw": 12204337,
+            "uptime_ms": [
+              752622,
+              761456
+            ],
+            "possible_utc": [
+              "2026-10-07T15:35:49.802274+00:00",
+              "2026-10-07T15:36:10.610361+00:00"
+            ],
+            "delta": {
+              "frames": 141312,
+              "underrun": 80,
+              "rejected": 0,
+              "write_failures": 0,
+              "clipped": 0
+            },
+            "whole_screenshot_utc_overlaps": [
+              856
+            ],
+            "raw_capture_intersections": [
+              {
+                "journal_index": 856,
+                "entire_envelope_range_between_samples": true
+              }
+            ],
+            "wholly_within_declared_window": false,
+            "active_play_eligible": false
+          },
+          {
+            "from_raw": 12206911,
+            "to_raw": 12325456,
+            "uptime_ms": [
+              778783,
+              787570
+            ],
+            "possible_utc": [
+              "2026-10-07T15:36:12.322633+00:00",
+              "2026-10-07T15:36:51.128380+00:00"
+            ],
+            "delta": {
+              "frames": 140544,
+              "underrun": 112,
+              "rejected": 0,
+              "write_failures": 0,
+              "clipped": 0
+            },
+            "whole_screenshot_utc_overlaps": [
+              863
+            ],
+            "raw_capture_intersections": [
+              {
+                "journal_index": 863,
+                "entire_envelope_range_between_samples": true
+              }
+            ],
+            "wholly_within_declared_window": false,
+            "active_play_eligible": false
+          },
+          {
+            "from_raw": 12328671,
+            "to_raw": 12447089,
+            "uptime_ms": [
+              813827,
+              822745
+            ],
+            "possible_utc": [
+              "2026-10-07T15:36:51.038954+00:00",
+              "2026-10-07T15:37:10.586749+00:00"
+            ],
+            "delta": {
+              "frames": 142592,
+              "underrun": 16,
+              "rejected": 0,
+              "write_failures": 0,
+              "clipped": 0
+            },
+            "whole_screenshot_utc_overlaps": [
+              868
+            ],
+            "raw_capture_intersections": [
+              {
+                "journal_index": 868,
+                "entire_envelope_range_between_samples": true
+              }
+            ],
+            "wholly_within_declared_window": false,
+            "active_play_eligible": false
+          }
+        ],
+        "last_worker_to_stop": {
+          "from_raw": 12568207,
+          "to_raw": 12569703,
+          "uptime_ms": [
+            849630,
+            854546
+          ],
+          "possible_utc": [
+            "2026-10-07T15:37:20.458157+00:00",
+            "2026-10-07T15:37:34.216845+00:00"
+          ],
+          "delta": {
+            "frames": 78592,
+            "underrun": 0,
+            "rejected": 0
+          },
+          "whole_screenshot_utc_overlaps": [
+            877
+          ],
+          "raw_capture_intersections": [],
+          "wholly_within_declared_window": false,
+          "active_play_eligible": false
+        },
+        "final_underrun": 1408,
+        "worker_rejected_max": 0,
+        "worker_write_failures_max": 0,
+        "worker_clipped_max": 0,
+        "limit": "Counter growth is real recorded loss. Whole screenshot overlap and raw capture order do not prove the entire delta occurred during capture or was caused by capture. No human-heard evidence. STOP lacks clipped/write_failures counters; last periodic values are their final observations.",
+        "heard_music": "PENDING",
+        "heard_sfx": "PENDING"
+      },
+      "lifecycle_markers": [
+        {
+          "raw_start": 11245262,
+          "raw_end": 11245367,
+          "tag_uptime_ms": 439876,
+          "text": "I (439876) p4_console_os: P4_CONSOLE_OS MULTIPLAYER_LOBBY_CREATED session=eccafd55 transport=wifi-local",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:30:38.707819+00:00",
+            "utc_upper": "2026-10-07T15:31:01.142582+00:00",
+            "prior_journal_index": 786,
+            "following_journal_index": 798,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 11483097,
+          "raw_end": 11483331,
+          "tag_uptime_ms": 488166,
+          "text": "I (488166) p4_console_os: P4_CONSOLE_OS MULTIPLAYER_LOBBY_READY game=org.p4console.blast-circuit mode=1 episode=1 map=1 skill=5 players=2 local_slot=0 role=host tick_hz=20 input_delay=0 transport=wifi-local route=[redacted]",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:31:27.219299+00:00",
+            "utc_upper": "2026-10-07T15:31:27.700491+00:00",
+            "prior_journal_index": 818,
+            "following_journal_index": 819,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 11605849,
+          "raw_end": 11605982,
+          "tag_uptime_ms": 690392,
+          "text": "I (690392) p4_console_os: P4_CONSOLE_OS SAVE_SEAL_READY app=org.p4console.blast-circuit format=P4SAVE2 legacy_migrated=0 sequence=0",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:34:49.002550+00:00",
+            "utc_upper": "2026-10-07T15:34:50.380672+00:00",
+            "prior_journal_index": 831,
+            "following_journal_index": 832,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 11606326,
+          "raw_end": 11606457,
+          "tag_uptime_ms": 690461,
+          "text": "I (690461) p4_console_os: P4_CONSOLE_OS VIDEO_MODE app=org.p4console.blast-circuit mode=synchronous reason=native-worker-disabled",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:34:49.002550+00:00",
+            "utc_upper": "2026-10-07T15:34:50.380672+00:00",
+            "prior_journal_index": 831,
+            "following_journal_index": 832,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 11606457,
+          "raw_end": 11606731,
+          "tag_uptime_ms": 690462,
+          "text": "I (690462) p4_console_os: P4_CONSOLE_OS CARTRIDGE_START app=org.p4console.blast-circuit file=BLAST_CIRCUIT.P4G api=1 source=microsd-games-directory runtime=psram-elf audio=ready signals=offline saves=ready multiplayer=connected surface=320x200 save_bytes=0 save_sequence=0",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:34:49.002550+00:00",
+            "utc_upper": "2026-10-07T15:34:50.380672+00:00",
+            "prior_journal_index": 831,
+            "following_journal_index": 832,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 11607121,
+          "raw_end": 11607217,
+          "tag_uptime_ms": 690980,
+          "text": "I (690980) game_loader: P4_CARTRIDGE_PACKAGE_READ app=org.p4console.blast-circuit bytes=462532",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:34:49.002550+00:00",
+            "utc_upper": "2026-10-07T15:34:50.380672+00:00",
+            "prior_journal_index": 831,
+            "following_journal_index": 832,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 11607217,
+          "raw_end": 11607325,
+          "tag_uptime_ms": 690990,
+          "text": "I (690990) game_loader: P4_CARTRIDGE_PACKAGE_VERIFIED app=org.p4console.blast-circuit payload_bytes=462276",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:34:49.002550+00:00",
+            "utc_upper": "2026-10-07T15:34:50.380672+00:00",
+            "prior_journal_index": 831,
+            "following_journal_index": 832,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 11607474,
+          "raw_end": 11607578,
+          "tag_uptime_ms": 691012,
+          "text": "I (691012) game_loader: P4_CARTRIDGE_ELF_READY app=org.p4console.blast-circuit runtime=psram-relocated",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:34:49.002550+00:00",
+            "utc_upper": "2026-10-07T15:34:50.380672+00:00",
+            "prior_journal_index": 831,
+            "following_journal_index": 832,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 11607578,
+          "raw_end": 11607660,
+          "tag_uptime_ms": 691014,
+          "text": "I (691014) game_loader: P4_CARTRIDGE_ENTRY_BEGIN app=org.p4console.blast-circuit",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:34:49.002550+00:00",
+            "utc_upper": "2026-10-07T15:34:50.380672+00:00",
+            "prior_journal_index": 831,
+            "following_journal_index": 832,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 12569490,
+          "raw_end": 12569587,
+          "tag_uptime_ms": 854543,
+          "text": "I (854543) game_loader: P4_CARTRIDGE_LOAD_DONE app=org.p4console.blast-circuit cartridge_exit=0",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:37:33.461299+00:00",
+            "utc_upper": "2026-10-07T15:37:34.216845+00:00",
+            "prior_journal_index": 881,
+            "following_journal_index": 882,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 12569587,
+          "raw_end": 12569703,
+          "tag_uptime_ms": 854545,
+          "text": "I (854545) p4_console_os: P4_CONSOLE_OS NATIVE_MULTIPLAYER_STOP game=org.p4console.blast-circuit state=3 dropped=0",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:37:33.461299+00:00",
+            "utc_upper": "2026-10-07T15:37:34.216845+00:00",
+            "prior_journal_index": 881,
+            "following_journal_index": 882,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 12569703,
+          "raw_end": 12569820,
+          "tag_uptime_ms": 854546,
+          "text": "I (854546) p4_console_os: P4_CONSOLE_OS AUDIO_WORKER_STOP core=1 frames=2625280 underrun=1408 rejected=0 stack=2076",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:37:33.461299+00:00",
+            "utc_upper": "2026-10-07T15:37:34.216845+00:00",
+            "prior_journal_index": 881,
+            "following_journal_index": 882,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 12569820,
+          "raw_end": 12569986,
+          "tag_uptime_ms": 854559,
+          "text": "I (854559) p4_console_os: P4_CONSOLE_OS SAVE_WORKER_STOP app=org.p4console.blast-circuit requests=0 callback_busy=0 low_water_bytes=7916 snapshot_bytes=0 sequence=0",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:37:33.461299+00:00",
+            "utc_upper": "2026-10-07T15:37:34.216845+00:00",
+            "prior_journal_index": 881,
+            "following_journal_index": 882,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 12570073,
+          "raw_end": 12570343,
+          "tag_uptime_ms": 854744,
+          "text": "I (854744) p4_console_os: P4_CONSOLE_OS CARTRIDGE_STOP app=org.p4console.blast-circuit result=ESP_OK frames=5559 deadline_misses=5558 max_frame_ms=100 max_late_ms=98 display_ack_misses=0 return=launcher audio_frames=2625536 audio_stream_underrun_frames=1408 amp_safe=1",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:37:33.461299+00:00",
+            "utc_upper": "2026-10-07T15:37:34.216845+00:00",
+            "prior_journal_index": 881,
+            "following_journal_index": 882,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        }
+      ],
+      "capture_payloads_verified": 15,
+      "current_epoch_parse_anomalies": [],
+      "errors_or_fatal_or_hardware_reset_after_current_launch": []
+    }
+  },
+  "root_observations": [
+    {
+      "screenshot_journal_index": 833,
+      "started_at": "2026-10-07T15:34:50.380838+00:00",
+      "finished_at": "2026-10-07T15:34:53.854586+00:00",
+      "observation": "Single host Start admitted; B picker ORBITAL GREENHOUSE and A HOST PREPARING."
+    },
+    {
+      "screenshot_journal_index": 840,
+      "started_at": "2026-10-07T15:35:09.150846+00:00",
+      "finished_at": "2026-10-07T15:35:12.584948+00:00",
+      "observation": "Host Play admitted and paired countdown/play view captured."
+    },
+    {
+      "screenshot_journal_index": 841,
+      "started_at": "2026-10-07T15:35:19.092878+00:00",
+      "finished_at": "2026-10-07T15:35:22.516326+00:00",
+      "observation": "Countdown had cleared on both views."
+    },
+    {
+      "screenshot_journal_index": 849,
+      "started_at": "2026-10-07T15:35:36.819103+00:00",
+      "finished_at": "2026-10-07T15:35:40.289318+00:00",
+      "observation": "After B right450ms/A left450ms, root observed P1 at(3,1), P2 at(13,11)."
+    },
+    {
+      "screenshot_journal_index": 856,
+      "started_at": "2026-10-07T15:35:55.853420+00:00",
+      "finished_at": "2026-10-07T15:35:59.303111+00:00",
+      "observation": "After host left+A400ms then down400ms, host P1 was OUT. Escape attempt FAILED."
+    },
+    {
+      "screenshot_journal_index": 863,
+      "started_at": "2026-10-07T15:36:18.808867+00:00",
+      "finished_at": "2026-10-07T15:36:22.277111+00:00",
+      "observation": "After guest right+A400ms then up400ms, both human players were OUT; CPUs continued. Escape attempt FAILED."
+    },
+    {
+      "screenshot_journal_index": 868,
+      "started_at": "2026-10-07T15:36:55.502731+00:00",
+      "finished_at": "2026-10-07T15:36:58.975358+00:00",
+      "observation": "End of marked interval showed automatic round2, both humans alive again, timer1:55. No active-play cadence claim."
+    },
+    {
+      "screenshot_journal_index": 877,
+      "started_at": "2026-10-07T15:37:20.560988+00:00",
+      "finished_at": "2026-10-07T15:37:24.024485+00:00",
+      "observation": "Guest A Back returned Home; B showed LINK ENDED at round2 timer1:31."
+    },
+    {
+      "screenshot_journal_index": 884,
+      "started_at": "2026-10-07T15:37:34.301685+00:00",
+      "finished_at": "2026-10-07T15:37:37.725388+00:00",
+      "observation": "Host B Back returned Home; both Home."
+    }
+  ],
+  "screenshot_receipts": [
+    {
+      "journal_index": 755,
+      "name": "bc73home-blast-circuit-home-chooser",
+      "started_at": "2026-10-07T15:29:26.500287+00:00",
+      "finished_at": "2026-10-07T15:29:30.463040+00:00",
+      "scale": 4,
+      "parallel": true,
+      "units": {
+        "A": {
+          "capture_id": 1003014294,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "2f2099cf5aecbe38bda45d78811873420bd0c4296509ed5e2980975a2f2bab24"
+        },
+        "B": {
+          "capture_id": 985495673,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "5f7bcde0eb9a5a550b0154f6baa4f7b1954bec2fe7ff7442eb86ee056b927218"
+        }
+      }
+    },
+    {
+      "journal_index": 772,
+      "name": "bc73select-blast-circuit-b-select",
+      "started_at": "2026-10-07T15:29:53.106247+00:00",
+      "finished_at": "2026-10-07T15:29:57.254973+00:00",
+      "scale": 4,
+      "parallel": true,
+      "units": {
+        "A": {
+          "capture_id": 3856841788,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "7a26c531c0735698904e9059e63daca443f39b80a00864b2d94ce9819678115c"
+        },
+        "B": {
+          "capture_id": 3293793098,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "0af31ab5caf88bb5ef32ffb39f201243f4abf88261597aad14548aacd2123932"
+        }
+      }
+    },
+    {
+      "journal_index": 781,
+      "name": "bc73roles-blast-circuit-b-roles",
+      "started_at": "2026-10-07T15:30:10.912198+00:00",
+      "finished_at": "2026-10-07T15:30:14.697668+00:00",
+      "scale": 4,
+      "parallel": true,
+      "units": {
+        "A": {
+          "capture_id": 21997384,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "5411be590e580668b162c407adf2c00f7cb05ff49384518d5c2be2b5d766cbec"
+        },
+        "B": {
+          "capture_id": 720822188,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "95513222c074a6c1f8f169f351418937951b59b31fc5ac53ada9364dbe5f2180"
+        }
+      }
+    },
+    {
+      "journal_index": 795,
+      "name": "bc73create-blast-circuit-b-create",
+      "started_at": "2026-10-07T15:30:41.430028+00:00",
+      "finished_at": "2026-10-07T15:30:45.627065+00:00",
+      "scale": 4,
+      "parallel": true,
+      "units": {
+        "A": {
+          "capture_id": 1800390085,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "296700978d095c9803c3b2d432ace4eb6c4fd03a5e6698297442907da0f93f30"
+        },
+        "B": {
+          "capture_id": 2007271314,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "feea6d3a36dd1fa4b6748f19952dab64c2d07f6f49320516a8cdf7ab582ce30f"
+        }
+      }
+    },
+    {
+      "journal_index": 801,
+      "name": "bc73room-blast-circuit-b-select-room",
+      "started_at": "2026-10-07T15:31:01.625310+00:00",
+      "finished_at": "2026-10-07T15:31:05.821500+00:00",
+      "scale": 4,
+      "parallel": true,
+      "units": {
+        "A": {
+          "capture_id": 2268806561,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "19ffc9c5a676a694f3ac6e48f5d14e540489bb87f038c2059473b145cb1c182c"
+        },
+        "B": {
+          "capture_id": 3352458110,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "feea6d3a36dd1fa4b6748f19952dab64c2d07f6f49320516a8cdf7ab582ce30f"
+        }
+      }
+    },
+    {
+      "journal_index": 820,
+      "name": "bc73join-blast-circuit-b-join",
+      "started_at": "2026-10-07T15:31:27.700596+00:00",
+      "finished_at": "2026-10-07T15:31:32.259880+00:00",
+      "scale": 4,
+      "parallel": true,
+      "units": {
+        "A": {
+          "capture_id": 1875537742,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "81f93a701f39e01a788ff2fa74a14331e4e5d9579a66369c008a15518c0616d1"
+        },
+        "B": {
+          "capture_id": 1389613697,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "60d2647438ef7154b3d4718343210a3a302d710ad0c5ad255ccf4a662b65df43"
+        }
+      }
+    },
+    {
+      "journal_index": 833,
+      "name": "bc73start-blast-circuit-b-start",
+      "started_at": "2026-10-07T15:34:50.380838+00:00",
+      "finished_at": "2026-10-07T15:34:53.854586+00:00",
+      "scale": 4,
+      "parallel": true,
+      "units": {
+        "A": {
+          "capture_id": 2326440984,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "7b1428f6411db9deece2064a4a5d5906d5202283f791ba51b8ae1db922d1ff11"
+        },
+        "B": {
+          "capture_id": 3683334901,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "d30077345a059f7aa3ac316cd64d34ffd435304dfc97ae6e79ca447aed721c30"
+        }
+      }
+    },
+    {
+      "journal_index": 840,
+      "name": "bc73play-view",
+      "started_at": "2026-10-07T15:35:09.150846+00:00",
+      "finished_at": "2026-10-07T15:35:12.584948+00:00",
+      "scale": 4,
+      "parallel": true,
+      "units": {
+        "A": {
+          "capture_id": 2851626582,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "f053a9b9ce95866b5cde87c1aa28ba8a9195f4316a22c8724b3625eca36f3e7c"
+        },
+        "B": {
+          "capture_id": 3267467918,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "f980f1de841e057e0786a63d40593d74b96c9c9fad276e3f68769d154974eb81"
+        }
+      }
+    },
+    {
+      "journal_index": 841,
+      "name": "bc73-countdown-done",
+      "started_at": "2026-10-07T15:35:19.092878+00:00",
+      "finished_at": "2026-10-07T15:35:22.516326+00:00",
+      "scale": 4,
+      "parallel": true,
+      "units": {
+        "A": {
+          "capture_id": 398238450,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "187ee9469384a144af2833110a96d0de3342ded4be87b5b69f4a286168399c88"
+        },
+        "B": {
+          "capture_id": 352010547,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "1209b43237f66c3c1ea15deff0090ea0661835eadd9fa2667fabb7d6ce3cf087"
+        }
+      }
+    },
+    {
+      "journal_index": 849,
+      "name": "bc73-moved",
+      "started_at": "2026-10-07T15:35:36.819103+00:00",
+      "finished_at": "2026-10-07T15:35:40.289318+00:00",
+      "scale": 4,
+      "parallel": true,
+      "units": {
+        "A": {
+          "capture_id": 1151268,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "22933ce9c96fb8ba73ec83b99ea1d5a7da7687fbb0183e3550fd29b1165c6bc7"
+        },
+        "B": {
+          "capture_id": 1584270976,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "0f73b49498fd94438968bfc986f6c2a92fdeb4718fe6cbd99c37695d87df0238"
+        }
+      }
+    },
+    {
+      "journal_index": 856,
+      "name": "bc73-host-bomb-result",
+      "started_at": "2026-10-07T15:35:55.853420+00:00",
+      "finished_at": "2026-10-07T15:35:59.303111+00:00",
+      "scale": 4,
+      "parallel": true,
+      "units": {
+        "A": {
+          "capture_id": 439444495,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "b3f9500ca0f25827ce0bf328c4e651e8679d09aa98bcabafdfc3fa9cda0b1d37"
+        },
+        "B": {
+          "capture_id": 1881952386,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "972cc39a39bf825e1467d3548568d6aa666089d048b57c33ff34966063ba0b61"
+        }
+      }
+    },
+    {
+      "journal_index": 863,
+      "name": "bc73-guest-bomb-result",
+      "started_at": "2026-10-07T15:36:18.808867+00:00",
+      "finished_at": "2026-10-07T15:36:22.277111+00:00",
+      "scale": 4,
+      "parallel": true,
+      "units": {
+        "A": {
+          "capture_id": 1939608541,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "cfc280493224b3e471d5ed49cc469d23bde11fb509b63ccf756f733298bda88d"
+        },
+        "B": {
+          "capture_id": 3837963086,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "7427a97865985859511d9acdf0331af74fb54c80218813434851309d0156736a"
+        }
+      }
+    },
+    {
+      "journal_index": 868,
+      "name": "bc73-clean-end",
+      "started_at": "2026-10-07T15:36:55.502731+00:00",
+      "finished_at": "2026-10-07T15:36:58.975358+00:00",
+      "scale": 4,
+      "parallel": true,
+      "units": {
+        "A": {
+          "capture_id": 1977537414,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "c1ec384d425671a82dc65748b9436d7a285f2c03d0ecf1ea090fb68023139711"
+        },
+        "B": {
+          "capture_id": 956298132,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "9de171fa609d048ebc417551804ad4cae9dee1c9155504c20cbc524b6ed8d262"
+        }
+      }
+    },
+    {
+      "journal_index": 877,
+      "name": "bc73leave-blast-circuit-b-depart-guest",
+      "started_at": "2026-10-07T15:37:20.560988+00:00",
+      "finished_at": "2026-10-07T15:37:24.024485+00:00",
+      "scale": 4,
+      "parallel": true,
+      "units": {
+        "A": {
+          "capture_id": 4234761475,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "8a55b40b7351966055c1f1142c9ece5dce7ddf6904853a564aa4edd81b14b832"
+        },
+        "B": {
+          "capture_id": 408075293,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "c65033a831bdea4d3bc1388c16fd7d045531504a6d7b41b67d68b1a3d36d091e"
+        }
+      }
+    },
+    {
+      "journal_index": 884,
+      "name": "bc73finish-blast-circuit-b-finish-after-guest-left",
+      "started_at": "2026-10-07T15:37:34.301685+00:00",
+      "finished_at": "2026-10-07T15:37:37.725388+00:00",
+      "scale": 4,
+      "parallel": true,
+      "units": {
+        "A": {
+          "capture_id": 3255054562,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "8a55b40b7351966055c1f1142c9ece5dce7ddf6904853a564aa4edd81b14b832"
+        },
+        "B": {
+          "capture_id": 4122224478,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "4dd79eaf08f673609db99dabaf5b83b8044c6addaf077773b8d6b49894f4b79d"
+        }
+      }
+    }
+  ],
+  "observation_basis": "Visual findings were supplied by the root operator who inspected paired screenshots. Offline independent review verified saved P4T1 RGB565 payload hashes; these are not PNG-file hashes. No live captures were read for this record.",
+  "failed_escape_analysis": {
+    "status": "FAILED attempts; cause unresolved",
+    "guarded_command_evidence": {
+      "host": {
+        "journal_index": 855,
+        "raw_start": 639303,
+        "raw_end": 640251,
+        "record": {
+          "time": "2026-10-07T15:35:49.885814+00:00",
+          "event": "guarded-batch",
+          "request": {
+            "command": "guarded_batch",
+            "name": "bc73hbomb-host-bomb-escape",
+            "steps": [
+              {
+                "expect": {
+                  "A": {
+                    "mode": "native",
+                    "id": "org.p4console.blast-circuit"
+                  },
+                  "B": {
+                    "mode": "native",
+                    "id": "org.p4console.blast-circuit"
+                  }
+                },
+                "timeout_ms": 5000
+              },
+              {
+                "request": {
+                  "command": "pulse",
+                  "unit": "B",
+                  "buttons": "left+a",
+                  "hold_ms": 400
+                }
+              },
+              {
+                "expect": {
+                  "A": {
+                    "mode": "native",
+                    "id": "org.p4console.blast-circuit"
+                  },
+                  "B": {
+                    "mode": "native",
+                    "id": "org.p4console.blast-circuit"
+                  }
+                },
+                "timeout_ms": 5000
+              },
+              {
+                "request": {
+                  "command": "pulse",
+                  "unit": "B",
+                  "buttons": "down",
+                  "hold_ms": 400
+                }
+              },
+              {
+                "request": {
+                  "command": "release",
+                  "unit": "both"
+                }
+              }
+            ]
+          },
+          "outcome": {
+            "ok": true,
+            "name": "bc73hbomb-host-bomb-escape",
+            "completed_steps": 5,
+            "last_status": {
+              "A": {
+                "mode": "native",
+                "id": "org.p4console.blast-circuit"
+              },
+              "B": {
+                "mode": "native",
+                "id": "org.p4console.blast-circuit"
+              }
+            },
+            "elapsed_ms": 1857.249
+          }
+        }
+      },
+      "guest": {
+        "journal_index": 862,
+        "raw_start": 644856,
+        "raw_end": 645805,
+        "record": {
+          "time": "2026-10-07T15:36:12.440669+00:00",
+          "event": "guarded-batch",
+          "request": {
+            "command": "guarded_batch",
+            "name": "bc73gbomb-guest-bomb-escape",
+            "steps": [
+              {
+                "expect": {
+                  "A": {
+                    "mode": "native",
+                    "id": "org.p4console.blast-circuit"
+                  },
+                  "B": {
+                    "mode": "native",
+                    "id": "org.p4console.blast-circuit"
+                  }
+                },
+                "timeout_ms": 5000
+              },
+              {
+                "request": {
+                  "command": "pulse",
+                  "unit": "A",
+                  "buttons": "right+a",
+                  "hold_ms": 400
+                }
+              },
+              {
+                "expect": {
+                  "A": {
+                    "mode": "native",
+                    "id": "org.p4console.blast-circuit"
+                  },
+                  "B": {
+                    "mode": "native",
+                    "id": "org.p4console.blast-circuit"
+                  }
+                },
+                "timeout_ms": 5000
+              },
+              {
+                "request": {
+                  "command": "pulse",
+                  "unit": "A",
+                  "buttons": "up",
+                  "hold_ms": 400
+                }
+              },
+              {
+                "request": {
+                  "command": "release",
+                  "unit": "both"
+                }
+              }
+            ]
+          },
+          "outcome": {
+            "ok": true,
+            "name": "bc73gbomb-guest-bomb-escape",
+            "completed_steps": 5,
+            "last_status": {
+              "A": {
+                "mode": "native",
+                "id": "org.p4console.blast-circuit"
+              },
+              "B": {
+                "mode": "native",
+                "id": "org.p4console.blast-circuit"
+              }
+            },
+            "elapsed_ms": 1906.795
+          }
+        }
+      },
+      "note": "Journal successful guarded batch proves commands completed, not bomb escape. Host elapsed 1857.249 ms, guest 1906.795 ms, both less than 2500 ms and no screenshot inside the batches. Latency-only explanation is not established."
+    },
+    "source_facts": [
+      "Simulation tick is50ms; nominal bomb fuse is50ticks (2.5s), range initially2. Bomb placement happens before movement in the same tick.",
+      "Normal movement advances one walkable tile per3ticks (150ms); holding A does not repeatedly place bombs. Input ACK does not confirm a tile position.",
+      "From the reported host(3,1)/guest(13,11), intended safe routes turn at the outer corners(1,1)/(15,11). Turning early at x2/x14 hits the even/even pillar at y2/y10. This is a possible failed-route explanation, not an observed cause.",
+      "Full guarded host/guest batches took1.857249s/1.906795s, less than the nominal fuse, and contained no screenshot. Capture latency alone is not established as the cause.",
+      "Existing fire and CPU bombs may also kill a player; the snapshots do not identify the lethal event or intermediate path."
+    ],
+    "not_claimed": [
+      "Successful escape",
+      "Input mapper or protocol defect",
+      "Exact death location/cause",
+      "Game code regression proven by this smoke"
+    ]
+  },
+  "source_inspection": [
+    {
+      "path": "games/blast_circuit/game.json",
+      "bytes": 1154,
+      "sha256": "5f67e99139cadbf8930271b383c3f9ba20c2359da6b3ca1d8cf50a2e0834a3ae"
+    },
+    {
+      "path": "games/blast_circuit/README.md",
+      "bytes": 20539,
+      "sha256": "9d9e46023560c28b9fde38fa6f74cdc0b26c2ce17e18d26cbdea62deb62cd62d"
+    },
+    {
+      "path": "games/blast_circuit/src/blast_circuit.c",
+      "bytes": 7270,
+      "sha256": "86bf83450ab3f55640883194d0c5aed172cd9c5bfc9bcaaf6cda96a0de041c71"
+    },
+    {
+      "path": "games/blast_circuit/src/blast_circuit_logic.c",
+      "bytes": 10866,
+      "sha256": "30f4ff321432c61bb1bc1d76078d27680bfaffff7ba0e5ca059e49a2b6a1ec27"
+    },
+    {
+      "path": "games/blast_circuit/src/blast_circuit_internal.h",
+      "bytes": 6901,
+      "sha256": "93d3c114bab494660793fe57674ea94592fe9220c619a428d62a783b19d6816a"
+    },
+    {
+      "path": "games/blast_circuit/src/blast_circuit_levels.c",
+      "bytes": 16696,
+      "sha256": "52e1036c83fb58ea4ad51ad0e825a65465c6b22d56fc2d87e7740ee3f71702b7"
+    },
+    {
+      "path": "games/blast_circuit/src/blast_circuit_network.c",
+      "bytes": 14634,
+      "sha256": "fe4770ac9eddfcd6560359185fa640bc9d39177b54a4bc30bf48b4be8e48264d"
+    }
+  ],
+  "audio_assessment": "Recorded losses are real: A1296/B1408 underrun frames. Every positive adjacent loss interval overlaps a whole screenshot command, but this establishes correlation only; neither exact loss time nor cause is resolved. First counters were already nonzero. Counters and successful audio shutdown do not prove music/SFX were heard.",
+  "save_scope": "SAVE_WORKER_STOP requests=0, snapshot_bytes=0, sequence=0 on both. This run did not exercise persistent save/update/relaunch. Earlier Wacky save panics remain separate unresolved OS0.73 failures.",
+  "departure_contract": "Observed guest Back led to A Home/B LINK ENDED; host Back then returned B Home. Source explicitly allows A/Start from LINK ENDED to create a new solo battle, but that fallback was not exercised in this0.73 run.",
+  "counter_scope": "Stop frame deadlines/max-late values are lifetime counters including setup, snapshots, spectator and transition periods. No division of whole-launch frames by elapsed time is used to qualify active play. All complete snapshot commands exclude both units for eligible cadence.",
+  "history_scope": "Blast is parser launch epoch6 on each unit, not a hardware boot count. Earlier Air parse anomaly and Wacky panic/reset evidence are retained in the bound review, not attributed to Blast.",
+  "pending": [
+    "Successful observed bomb placement and escape for each player",
+    "Legitimate human-played round/match result",
+    "Eligible active-play native30FPS floor and60FPS target",
+    "Cause/remediation of recorded audio underruns",
+    "Heard music and triggered SFX on each speaker",
+    "Reverse host and rejoin",
+    "Save/update/relaunch where applicable"
+  ]
+}

@@ -370,6 +370,42 @@ void W_ReadLump(unsigned int lump, void *dest)
 
 
 //
+// Read a bounded portion of a lump through the same file backend as W_ReadLump.
+// In particular, do not bypass the platform's verified read path for headers.
+//
+void W_ReadLumpRange(unsigned int lump, size_t offset, void *dest, size_t bytes)
+{
+    lumpinfo_t *l;
+    size_t count;
+
+    if (lump >= numlumps)
+        I_Error("W_ReadLumpRange: %u >= numlumps", lump);
+
+    l = lumpinfo + lump;
+    if (l->wad_file == NULL || l->position < 0 || l->size < 0)
+        I_Error("W_ReadLumpRange: invalid lump %u", lump);
+
+    // Subtractions avoid overflow, including for untrusted range arguments.
+    if ((size_t) l->position > l->wad_file->length
+     || (size_t) l->size > l->wad_file->length - (size_t) l->position
+     || offset > (size_t) l->size
+     || bytes > (size_t) l->size - offset
+     || (bytes != 0 && dest == NULL))
+        I_Error("W_ReadLumpRange: invalid range on lump %u", lump);
+
+    if (bytes == 0)
+        return;
+
+    I_BeginRead();
+    count = W_Read(l->wad_file, (unsigned int) ((size_t) l->position + offset),
+                   dest, bytes);
+    if (count != bytes)
+        I_Error("W_ReadLumpRange: short read on lump %u", lump);
+    I_EndRead();
+}
+
+
+//
 // W_CacheLumpNum
 //
 // Load a lump into memory and return a pointer to a buffer containing

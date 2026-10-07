@@ -2,7 +2,7 @@
   "schema": 1,
   "format": "p4-native-elf-v1",
   "api_version": 1,
-  "version": "1.0.2",
+  "version": "1.0.3",
   "package_file": "INPUT.P4G",
   "component": "input_test",
   "entry_symbol": "p4_input_test_game",
@@ -14,7 +14,8 @@
   "accent_rgb565": "0x07ff",
   "required_capabilities": [
     "video",
-    "controls"
+    "controls",
+    "video-highres"
   ],
   "optional_capabilities": [],
   "license": "MIT",

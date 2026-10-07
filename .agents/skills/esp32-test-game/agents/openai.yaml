@@ -1,6 +1,6 @@
 interface:
   display_name: "ESP32 - Test Game"
-  short_description: "Play and check games on your computer"
+  short_description: "Play-test native games on your computer"
   default_prompt: "Use $esp32-test-game to play-test and tune a native P4 Console OS game before building firmware or flashing."
 policy:
   allow_implicit_invocation: true

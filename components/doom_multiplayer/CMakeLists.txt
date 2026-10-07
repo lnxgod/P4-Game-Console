@@ -2,7 +2,7 @@
 
 if(COMMAND idf_component_register)
     idf_component_register(
-        SRCS "src/doom_multiplayer.c" "src/doom_arena.c" "src/doom_lockstep.c"
+        SRCS "src/doom_multiplayer.c" "src/doom_arena.c" "src/doom_lockstep.c" "src/doom_resume.c" "src/doom_replay.c" "src/doom_checkpoint_transfer.c" "src/doom_checkpoint_service.c"
         INCLUDE_DIRS "include"
         REQUIRES p4_multiplayer
     )
@@ -20,7 +20,7 @@ else()
             "${CMAKE_CURRENT_BINARY_DIR}/p4_multiplayer"
         )
     endif()
-    add_library(doom_multiplayer STATIC src/doom_multiplayer.c src/doom_arena.c src/doom_lockstep.c)
+    add_library(doom_multiplayer STATIC src/doom_multiplayer.c src/doom_arena.c src/doom_lockstep.c src/doom_resume.c src/doom_replay.c src/doom_checkpoint_transfer.c src/doom_checkpoint_service.c)
     target_include_directories(doom_multiplayer PUBLIC include)
     target_link_libraries(doom_multiplayer PUBLIC p4_multiplayer)
     target_compile_features(doom_multiplayer PUBLIC c_std_11)

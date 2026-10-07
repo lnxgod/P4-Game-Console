@@ -190,12 +190,17 @@ static void test_overlay_copy_and_active_feedback(void)
     free(active);
 }
 
+#include "overlay_parity.c"
+
 int main(void)
 {
     test_multitouch_mapping_and_release();
     test_all_discrete_controls();
     test_fail_closed_frames_and_queue();
     test_overlay_copy_and_active_feedback();
+    test_overlay_exact_parity();
+    test_overlay_stride_variants();
+    test_overlay_invalid_ranges_are_atomic();
     if (failures != 0) {
         fprintf(stderr, "%d Doom touch input test(s) failed\n", failures);
         return 1;

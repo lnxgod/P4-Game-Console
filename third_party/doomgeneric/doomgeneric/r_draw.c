@@ -42,7 +42,7 @@
 #define MAXHEIGHT			832
 
 // status bar height at bottom of screen
-#define SBARHEIGHT		32
+#define SBARHEIGHT (SCREENHEIGHT - P4_DOOM_SCALE_Y(168))
 
 //
 // All drawing to the view buffer is accomplished in this file.
@@ -87,6 +87,7 @@ fixed_t			dc_iscale;
 fixed_t			dc_texturemid;
 
 // first pixel in a column (possibly virtual) 
+int dc_sourceheight = 128;
 byte*			dc_source;		
 
 // just for profiling 
@@ -128,6 +129,38 @@ void R_DrawColumn (void)
     //  which is the only mapping to be done.
     fracstep = dc_iscale; 
     frac = dc_texturemid + (dc_yl-centery)*fracstep; 
+    const byte *source = dc_source;
+    const lighttable_t *colormap = dc_colormap;
+
+    // Short composites are allocated at their declared height. Wrap within
+    // that column instead of reading the next column or the zone header.
+    // Keep the original 128-row loop below for raw posts and tall textures.
+    if (dc_sourceheight > 0 && dc_sourceheight < 128)
+    {
+        const int height = dc_sourceheight;
+        const int mask = height - 1;
+        if ((height & mask) == 0)
+        {
+            do
+            {
+                *dest = colormap[source[(frac >> FRACBITS) & mask]];
+                dest += SCREENWIDTH;
+                frac += fracstep;
+            } while (count--);
+        }
+        else
+        {
+            do
+            {
+                int row = (frac >> FRACBITS) % height;
+                if (row < 0) row += height;
+                *dest = colormap[source[row]];
+                dest += SCREENWIDTH;
+                frac += fracstep;
+            } while (count--);
+        }
+        return;
+    }
 
     // Inner loop that does the actual texture mapping,
     //  e.g. a DDA-lile scaling.
@@ -136,7 +169,7 @@ void R_DrawColumn (void)
     {
 	// Re-map color indices from wall texture column
 	//  using a lighting/special effects LUT.
-	*dest = dc_colormap[dc_source[(frac>>FRACBITS)&127]];
+	*dest = colormap[source[(frac>>FRACBITS)&127]];
 	
 	dest += SCREENWIDTH; 
 	frac += fracstep;
@@ -238,6 +271,35 @@ void R_DrawColumnLow (void)
     
     fracstep = dc_iscale; 
     frac = dc_texturemid + (dc_yl-centery)*fracstep;
+
+    if (dc_sourceheight > 0 && dc_sourceheight < 128)
+    {
+        const int height = dc_sourceheight;
+        const int mask = height - 1;
+        if ((height & mask) == 0)
+        {
+            do
+            {
+                *dest2 = *dest = dc_colormap[dc_source[(frac >> FRACBITS) & mask]];
+                dest += SCREENWIDTH;
+                dest2 += SCREENWIDTH;
+                frac += fracstep;
+            } while (count--);
+        }
+        else
+        {
+            do
+            {
+                int row = (frac >> FRACBITS) % height;
+                if (row < 0) row += height;
+                *dest2 = *dest = dc_colormap[dc_source[row]];
+                dest += SCREENWIDTH;
+                dest2 += SCREENWIDTH;
+                frac += fracstep;
+            } while (count--);
+        }
+        return;
+    }
     
     do 
     {
@@ -599,7 +661,7 @@ void R_DrawSpan (void)
     if (ds_x2 < ds_x1
 	|| ds_x1<0
 	|| ds_x2>=SCREENWIDTH
-	|| (unsigned)ds_y>SCREENHEIGHT)
+	|| (unsigned)ds_y>=SCREENHEIGHT)
     {
 	I_Error( "R_DrawSpan: %i to %i at %i",
 		 ds_x1,ds_x2,ds_y);
@@ -618,6 +680,9 @@ void R_DrawSpan (void)
          | ((ds_ystep >> 6)  & 0x0000ffff);
 
     dest = ylookup[ds_y] + columnofs[ds_x1];
+    const byte *source = ds_source;
+    const lighttable_t *colormap = ds_colormap;
+
 
     // We do not check for zero spans here?
     count = ds_x2 - ds_x1;
@@ -631,7 +696,7 @@ void R_DrawSpan (void)
 
 	// Lookup pixel from flat texture tile,
 	//  re-index using light/colormap.
-	*dest++ = ds_colormap[ds_source[spot]];
+	*dest++ = colormap[source[spot]];
 
         position += step;
 
@@ -728,7 +793,7 @@ void R_DrawSpanLow (void)
     if (ds_x2 < ds_x1
 	|| ds_x1<0
 	|| ds_x2>=SCREENWIDTH
-	|| (unsigned)ds_y>SCREENHEIGHT)
+	|| (unsigned)ds_y>=SCREENHEIGHT)
     {
 	I_Error( "R_DrawSpan: %i to %i at %i",
 		 ds_x1,ds_x2,ds_y);
@@ -872,39 +937,39 @@ void R_FillBackScreen (void)
      
     // Draw screen and bezel; this is done to a separate screen buffer.
 
-    V_UseBuffer(background_buffer);
+    V_UseBufferRegion(background_buffer, 0, SCREENHEIGHT - SBARHEIGHT);
 
     patch = W_CacheLumpName(DEH_String("brdr_t"),PU_CACHE);
 
-    for (x=0 ; x<scaledviewwidth ; x+=8)
-	V_DrawPatch(viewwindowx+x, viewwindowy-8, patch);
+    for (x=0 ; x<scaledviewwidth ; x+=P4_DOOM_SCALE_X(8))
+	V_DrawPatchNative(viewwindowx+x, viewwindowy-P4_DOOM_SCALE_Y(8), patch);
     patch = W_CacheLumpName(DEH_String("brdr_b"),PU_CACHE);
 
-    for (x=0 ; x<scaledviewwidth ; x+=8)
-	V_DrawPatch(viewwindowx+x, viewwindowy+viewheight, patch);
+    for (x=0 ; x<scaledviewwidth ; x+=P4_DOOM_SCALE_X(8))
+	V_DrawPatchNative(viewwindowx+x, viewwindowy+viewheight, patch);
     patch = W_CacheLumpName(DEH_String("brdr_l"),PU_CACHE);
 
-    for (y=0 ; y<viewheight ; y+=8)
-	V_DrawPatch(viewwindowx-8, viewwindowy+y, patch);
+    for (y=0 ; y<viewheight ; y+=P4_DOOM_SCALE_Y(8))
+	V_DrawPatchNative(viewwindowx-P4_DOOM_SCALE_X(8), viewwindowy+y, patch);
     patch = W_CacheLumpName(DEH_String("brdr_r"),PU_CACHE);
 
-    for (y=0 ; y<viewheight ; y+=8)
-	V_DrawPatch(viewwindowx+scaledviewwidth, viewwindowy+y, patch);
+    for (y=0 ; y<viewheight ; y+=P4_DOOM_SCALE_Y(8))
+	V_DrawPatchNative(viewwindowx+scaledviewwidth, viewwindowy+y, patch);
 
     // Draw beveled edge. 
-    V_DrawPatch(viewwindowx-8,
-                viewwindowy-8,
+    V_DrawPatchNative(viewwindowx-P4_DOOM_SCALE_X(8),
+                viewwindowy-P4_DOOM_SCALE_Y(8),
                 W_CacheLumpName(DEH_String("brdr_tl"),PU_CACHE));
     
-    V_DrawPatch(viewwindowx+scaledviewwidth,
-                viewwindowy-8,
+    V_DrawPatchNative(viewwindowx+scaledviewwidth,
+                viewwindowy-P4_DOOM_SCALE_Y(8),
                 W_CacheLumpName(DEH_String("brdr_tr"),PU_CACHE));
     
-    V_DrawPatch(viewwindowx-8,
+    V_DrawPatchNative(viewwindowx-P4_DOOM_SCALE_X(8),
                 viewwindowy+viewheight,
                 W_CacheLumpName(DEH_String("brdr_bl"),PU_CACHE));
     
-    V_DrawPatch(viewwindowx+scaledviewwidth,
+    V_DrawPatchNative(viewwindowx+scaledviewwidth,
                 viewwindowy+viewheight,
                 W_CacheLumpName(DEH_String("brdr_br"),PU_CACHE));
 
@@ -938,38 +1003,28 @@ R_VideoErase
 // Draws the border around the view
 //  for different size windows?
 //
-void R_DrawViewBorder (void) 
-{ 
-    int		top;
-    int		side;
-    int		ofs;
-    int		i; 
- 
-    if (scaledviewwidth == SCREENWIDTH) 
-	return; 
-  
-    top = ((SCREENHEIGHT-SBARHEIGHT)-viewheight)/2; 
-    side = (SCREENWIDTH-scaledviewwidth)/2; 
- 
-    // copy top and one line of left side 
-    R_VideoErase (0, top*SCREENWIDTH+side); 
- 
-    // copy one line of right side and bottom 
-    ofs = (viewheight+top)*SCREENWIDTH-side; 
-    R_VideoErase (ofs, top*SCREENWIDTH+side); 
- 
-    // copy sides using wraparound 
-    ofs = top*SCREENWIDTH + SCREENWIDTH-side; 
-    side <<= 1;
-    
-    for (i=1 ; i<viewheight ; i++) 
-    { 
-	R_VideoErase (ofs, side); 
-	ofs += SCREENWIDTH; 
-    } 
+void R_DrawViewBorder (void)
+{
+    int top, left, right, bottom, ofs, i;
 
-    // ? 
-    V_MarkRect (0,0,SCREENWIDTH, SCREENHEIGHT-SBARHEIGHT); 
-} 
- 
- 
+    if (scaledviewwidth == SCREENWIDTH)
+        return;
+
+    top = viewwindowy;
+    left = viewwindowx;
+    right = SCREENWIDTH - left - scaledviewwidth;
+    bottom = SCREENHEIGHT - SBARHEIGHT - top - viewheight;
+
+    // Native scaling can leave unequal margins (e.g. 38 and 39 pixels).
+    // Restore every border pixel without touching the freshly rendered view.
+    R_VideoErase(0, top * SCREENWIDTH + left);
+    ofs = top * SCREENWIDTH + left + scaledviewwidth;
+    for (i = 1; i < viewheight; ++i)
+    {
+        R_VideoErase(ofs, right + left);
+        ofs += SCREENWIDTH;
+    }
+    R_VideoErase(ofs, right + bottom * SCREENWIDTH);
+
+    V_MarkRect(0, 0, SCREENWIDTH, SCREENHEIGHT - SBARHEIGHT);
+}

@@ -101,6 +101,8 @@ static boolean mus_paused;
 // Music currently being played
 
 static musicinfo_t *mus_playing = NULL;
+static int p4_replay_music = -1;
+static int p4_replay_music_looping;
 
 // Number of channels to use
 
@@ -398,6 +400,12 @@ void S_StartSound(void *origin_p, int sfx_id)
     int cnum;
     int volume;
 
+    // Historical effects must not enter the live mixer, and an absent replay
+    // seat has no listener actor for positional sound calculations.
+    if (P4_DoomNetReplaying()
+     || (P4_DoomArenaActive() && players[consoleplayer].mo == NULL))
+        return;
+
     origin = (mobj_t *) origin_p;
     volume = snd_SfxVolume;
 
@@ -511,6 +519,16 @@ void S_UpdateSounds(mobj_t *listener)
     sfxinfo_t*        sfx;
     channel_t*        c;
 
+    if (P4_DoomNetReplaying()
+     || (P4_DoomArenaActive() && listener == NULL))
+        return;
+    if (p4_replay_music >= 0)
+    {
+        int music = p4_replay_music;
+        p4_replay_music = -1;
+        S_ChangeMusic(music, p4_replay_music_looping);
+    }
+
     I_UpdateSound();
 
     for (cnum=0; cnum<snd_channels; cnum++)
@@ -605,6 +623,13 @@ void S_ChangeMusic(int musicnum, int looping)
     char namebuf[9];
     void *handle;
 
+    if (P4_DoomNetReplaying())
+    {
+        p4_replay_music = musicnum;
+        p4_replay_music_looping = looping;
+        return;
+    }
+
     // The Doom IWAD file has two versions of the intro music: d_intro
     // and d_introa.  The latter is used for OPL playback.
 
@@ -669,4 +694,3 @@ void S_StopMusic(void)
         mus_playing = NULL;
     }
 }
-

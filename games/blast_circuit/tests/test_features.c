@@ -206,7 +206,7 @@ static bool save_status(void *ctx,p4_game_save_ticket_t ticket,p4_game_save_stat
 static void save_and_editor(void)
 {
     saves_t save={0};bc_state_t state;p4_game_instance_t game={0};
-    p4_game_services_t services={.available_capabilities=P4_GAME_CAP_VIDEO|P4_GAME_CAP_CONTROLS|P4_GAME_CAP_SAVE,
+    p4_game_services_t services={.available_capabilities=P4_GAME_CAP_VIDEO|P4_GAME_CAP_CONTROLS|P4_GAME_CAP_VIDEO_HIGH_RES|P4_GAME_CAP_SAVE,
         .save_context=&save,.queue_save=queue_save,.read_save_status=save_status,.save_sequence=9U};
     CHECK(p4_game_instance_start(&game,&p4_blast_circuit_game,&services,&state,sizeof(state)));
     CHECK(state.save_sequence==9U && state.dirty);

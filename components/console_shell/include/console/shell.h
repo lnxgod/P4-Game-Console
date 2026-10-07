@@ -179,6 +179,9 @@ typedef struct {
     const uint16_t *icon_palette;
     /** Built-in titles can supply a larger cover without enlarging .p4icon. */
     const console_shell_artwork_t *cover;
+    /** Optional catalog-owned reason for a disabled app, including its NUL
+     * within CONSOLE_SHELL_SUBTITLE_MAX_BYTES. NULL keeps the default label. */
+    const char *disabled_reason;
 } console_app_descriptor_t;
 
 typedef struct {
@@ -272,11 +275,23 @@ typedef enum {
     CONSOLE_MULTIPLAYER_VIEW_JOIN,
     /** Detailed host-only match controls reached from the simple Host page. */
     CONSOLE_MULTIPLAYER_VIEW_HOST_SETTINGS,
+    /** Tab5 setup starts with a game, then a compatible transport. */
+    CONSOLE_MULTIPLAYER_VIEW_GAME,
+    CONSOLE_MULTIPLAYER_VIEW_TRANSPORT,
 } console_multiplayer_view_t;
 
 enum {
     CONSOLE_MULTIPLAYER_LOBBY_LIST_MAX = 4,
+    CONSOLE_MULTIPLAYER_MAX_GAMES = 19,
+    CONSOLE_MULTIPLAYER_GAME_TITLE_MAX_BYTES = 64,
 };
+
+typedef struct {
+    char title[CONSOLE_MULTIPLAYER_GAME_TITLE_MAX_BYTES];
+    bool available;
+    /** Supported links: bit 0 wired, bit 1 Bluetooth, bit 2 local Wi-Fi. */
+    uint8_t transport_mask;
+} console_multiplayer_game_display_t;
 
 typedef struct {
     uint32_t session_id;
@@ -284,7 +299,7 @@ typedef struct {
     uint8_t players_present;
     uint8_t player_capacity;
     bool game_available;
-    char game_title[CONSOLE_SHELL_TITLE_MAX_BYTES];
+    char game_title[CONSOLE_MULTIPLAYER_GAME_TITLE_MAX_BYTES];
 } console_multiplayer_lobby_display_t;
 
 typedef struct {
@@ -363,7 +378,11 @@ typedef struct {
     bool multiplayer_dice_enabled;
     uint8_t multiplayer_game_selection;
     uint8_t multiplayer_game_count;
-    char multiplayer_game_title[CONSOLE_SHELL_TITLE_MAX_BYTES];
+    char multiplayer_game_title[CONSOLE_MULTIPLAYER_GAME_TITLE_MAX_BYTES];
+    console_multiplayer_game_display_t
+        multiplayer_games[CONSOLE_MULTIPLAYER_MAX_GAMES];
+    /** Persistent connection progress or actionable failure from the OS. */
+    char multiplayer_status[96];
     console_multiplayer_lobby_phase_t multiplayer_lobby_phase;
     /** Zero selects CREATE NEW; 1..count select discovered rooms. */
     uint8_t multiplayer_lobby_selection;
@@ -486,6 +505,8 @@ typedef enum {
     CONSOLE_ACTION_CONTROLLER_MAPPING_START,
     CONSOLE_ACTION_CONTROLLER_MAPPING_CANCEL,
     CONSOLE_ACTION_CONTROLLER_MAPPING_RESET,
+    CONSOLE_ACTION_MULTIPLAYER_GAME_SELECT,
+    CONSOLE_ACTION_MULTIPLAYER_TRANSPORT_SELECT,
 } console_action_type_t;
 
 typedef enum {
@@ -509,6 +530,10 @@ typedef struct {
     console_multiplayer_option_t multiplayer_option;
     int8_t multiplayer_delta;
     uint8_t multiplayer_lobby_selection;
+    /** Room identity observed by the user; the OS re-resolves it after scans. */
+    uint32_t multiplayer_lobby_session_id;
+    uint8_t multiplayer_game_selection;
+    uint8_t multiplayer_transport_kind;
 } console_shell_action_t;
 
 typedef enum {
@@ -523,6 +548,17 @@ typedef struct {
     uint16_t width;
     uint16_t height;
 } console_shell_native_update_t;
+
+/** Optional, caller-owned status used only while drawing a launch cover. */
+typedef struct {
+    char title[64];
+    char stage[48];
+    char detail[64];
+    uint32_t elapsed_seconds;
+    uint8_t progress_percent;
+    bool active;
+    bool progress_visible;
+} console_shell_loading_info_t;
 
 typedef struct {
     const console_app_descriptor_t *apps;
@@ -539,6 +575,7 @@ typedef struct {
     int32_t press_start_scroll_q16;
     console_page_t page;
     uint32_t active_app_id;
+    console_shell_loading_info_t loading;
     console_color_mode_t color_mode;
     p4_achievement_catalog_t achievements;
     p4_file_list_t desktop_files;

@@ -29,6 +29,15 @@ typedef struct
 } stdc_wad_file_t;
 
 extern wad_file_class_t stdc_wad_file;
+__attribute__((weak)) void P4_DoomSpriteHeaderHint(FILE *stream, int active)
+{
+    (void)stream; (void)active;
+}
+void W_SpriteHeaderHint(wad_file_t *wad, int active)
+{
+    if (wad && wad->file_class == &stdc_wad_file)
+        P4_DoomSpriteHeaderHint(((stdc_wad_file_t *)wad)->fstream, active);
+}
 
 static wad_file_t *W_StdC_OpenFile(char *path)
 {
@@ -59,6 +68,7 @@ static void W_StdC_CloseFile(wad_file_t *wad)
 
     stdc_wad = (stdc_wad_file_t *) wad;
 
+    P4_DoomSpriteHeaderHint(stdc_wad->fstream, 0);
     fclose(stdc_wad->fstream);
     Z_Free(stdc_wad);
 }

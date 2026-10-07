@@ -32,6 +32,10 @@ R_GetColumn
   int		col );
 
 
+// Opaque wall/sky lookup. Short composites return their allocation height;
+// raw patch columns and textures >= 128 retain legacy 128-row sampling.
+byte *R_GetColumnForOpaque(int tex, int col, int *wrapheight);
+
 // I/O, setting up the stuff.
 void R_InitData (void);
 void R_PrecacheLevel (void);

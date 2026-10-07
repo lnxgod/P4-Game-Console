@@ -51,10 +51,12 @@ Physical controller/keyboard shortcuts remain available:
 - Touch directly selects dice, score rows, and the on-screen Roll button.
 - Touch the persistent upper-left **EXIT** button to return directly to the
   launcher from any game screen.
-- **Back** returns to the mode menu, then to the launcher.
+- **Back** exits a linked game directly to the launcher, allowing Console OS
+  to close the multiplayer session. In local play it returns to the mode menu,
+  then to the launcher.
 - At the final-score screen, **A/Start** begins another match in the same local
-  or network session. Any network player may request the host-authoritative
-  rematch; **Back** is the explicit way to return to the mode menu.
+  or connected network session. Any network player may request the
+  host-authoritative rematch while that same session remains connected.
 
 Each roll requests a short four-voice square/triangle cluster from the
 host-owned tone mixer, producing an original dice-clatter effect without a
@@ -70,9 +72,41 @@ neutral, and the focused category gains a cyan border in either case. Committed
 rows retain a darker locked treatment with a gold edge and explicit `SET`
 marker, so scoring, zero-point, and used categories remain distinct.
 
+## Multiplayer lifecycle (1.4.2)
+
+A lost peer, failed status read, or changed connected session shows **SESSION
+LOST** and leaves **EXIT** available. The board stops accepting gameplay,
+queued packets, and late dice-accessory results; a later connected status
+cannot revive it. Return to the launcher and join a new room to play again.
+The cartridge binds the initial session generation, seed, role, local slot,
+and player count before accepting a snapshot. Connected rematches preserve
+that binding. Initial waiting and retrying the first host snapshot remain
+supported.
+
+The permanent paired-instance fixture covers 52 cases: departure in both
+roles and both render sizes; session identity changes before and after the
+first snapshot; animation/results loss; controller, touch, accessory and
+late-packet rejection; direct linked Back exit; and legitimate rematches,
+initial waiting, snapshot retry, and roster matching. These checks use the
+actual Game API lifecycle, renderer, and host-authoritative packet code.
+The existing offline Back and rematch tests remain part of the same suite.
+
+The 1.4.2 focused CMake/CTest run passed both targets under ASan/UBSan,
+including all 52 lifecycle cases. The SDL headless configure attempt could
+not find PkgConfig, so that smoke was not run. Session/radio teardown on two
+Tab5s, accessory hardware, interactive play, sound, and the device frame-time
+floor remain pending for this revision. Prior presentation and CPU timing evidence in
+`LOCAL_TESTING.json` remains historical evidence for its recorded sources.
+
 ## Local verification
 
 ```sh
+# Runs focused game tests and the SDL host checks, with ASan/UBSan.
+make p4-yahtzee-host
+# Or run the focused rules, lifecycle, and presentation tests separately:
+cmake -S games/p4_yahtzee -B build-host/p4_yahtzee-tests -G Ninja
+cmake --build build-host/p4_yahtzee-tests
+ctest --test-dir build-host/p4_yahtzee-tests --output-on-failure
 cmake -S tools/p4-game-host -B build-host/play-p4_yahtzee -G Ninja \
   -DP4_GAME=p4_yahtzee
 cmake --build build-host/play-p4_yahtzee
@@ -91,8 +125,9 @@ network results still come from the game host. Touch/Start remains available
 without an accessory. See `docs/DICE_ACCESSORY.md` for firmware, practice
 mode, pairing, and the hardware acceptance status.
 
-For a network match, choose **Multiplayer → Host → P4 YAHTZEE → Match Settings
-→ Dice → ON - SHARED CORE2** before opening the room. The single Core2 connects
+For a network match, select **Yahtzee** under Multiplayer **Game**, then
+choose **Host → Match Settings → Dice → ON - SHARED CORE2** before opening
+the room. The single Core2 connects
 to the host and is passed between players. Tap Connect after launching, then
 Ready and shake on each turn. Both consoles show the host-generated result.
 Off disables the accessory for that match; controller/touch rolls remain
@@ -106,11 +141,13 @@ The v2 dice service accepts confirmed Core2 hold/unhold selections for the curre
 
 ## Native high-resolution presentation
 
-Version 1.4.0 negotiates **768x480** through optional `video-highres`,
-with a complete **320x200** fallback. Touch coordinates remain canonical
-320x200 in both modes. Game geometry is rasterized directly into the supplied
-surface, with native 24/38px antialiased typography in high resolution and
-legible compact bitmap text in fallback; no small framebuffer is enlarged.
+Version 1.4.3 requires `video-highres` in both the manifest and C
+descriptor and renders directly at **768×480 RGB565** on maintained Tab5.
+Touch coordinates remain canonical 320×200 input units. Geometry and native
+24/38px antialiased typography are rasterized into the supplied surface;
+no completed low-resolution frame is enlarged. The compact 320×200 source
+path remains for explicitly requested legacy maintenance and labeled host
+diagnostics; it is not an admitted maintained-game surface.
 
 The original ImageGen atlas `assets/presentation_imagegen_v2.png` provides
 112px ivory dice and 96px felt, paper and walnut materials.
@@ -130,16 +167,18 @@ python3 tools/convert_presentation.py
 ```
 
 Focused tests cover padded framebuffer guards and full-surface rendering at
-both resolutions, canonical touch targets after rendering, and representative
-menus, play and result states. Set `P4_CAPTURE_DIR` to an existing absolute
+768×480 plus explicit legacy diagnostic copies, canonical touch targets after
+rendering, and representative menus, play and result states. Set `P4_CAPTURE_DIR` to an existing absolute
 directory to retain native PPM captures from the presentation test. The
-existing rules and mocked multiplayer suites remain unchanged. See
+existing rules and mocked multiplayer suites run alongside the lifecycle
+regressions above. See
 `LOCAL_TESTING.json` for exact automated evidence and pending interactive/
 physical-device acceptance; host tests are not hardware acceptance.
 
 ## Frame-time budget
 
-The minimum target is 30 presented frames per second (33.333ms per frame).
+The target is 60 FPS. Release acceptance requires at least 30 presented frames
+per second (33.333ms per frame) measured on the actual Tab5 at 768×480.
 The renderer copies mirrored material row spans and paints visible regions
 without repeatedly painting covered full-screen layers. State, touch targets,
 rule timing and multiplayer packet formats remain unchanged.
@@ -164,3 +203,17 @@ The cartridge owns its title and `assets/launcher.p4i` icon. Source artwork,
 conversion details and provenance live beside the packed icon. The game name
 stays visible beside player status during play. Existing touch actions and
 setup choices remain direct; no extra launch confirmation is added.
+
+## Native Tab5 validation (1.4.3)
+
+The released descriptor requires `video-highres`, so services without that
+capability cannot start it and the runtime rejects a 320×200 surface. Preserved
+legacy checks use explicit local descriptor copies. The focused ASan/UBSan
+suite and SDL smoke passed at 768×480 for this revision. Default previews render
+directly into the native surface.
+
+These are host checks. The target is 60 FPS, with a measured physical-device
+release floor of 30 FPS at 768×480. Panel readability, input, sound and device
+cadence remain subject to exact-package, OS and Tab5 acceptance; a host CPU
+timing or capture does not qualify that floor. Earlier test records retain
+the results for their recorded sources and artifacts.

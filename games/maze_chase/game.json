@@ -2,7 +2,7 @@
   "schema": 1,
   "format": "p4-native-elf-v1",
   "api_version": 1,
-  "version": "1.1.1",
+  "version": "1.1.2",
   "package_file": "MAZE.P4G",
   "component": "maze_chase",
   "entry_symbol": "p4_maze_chase_game",
@@ -14,12 +14,12 @@
   "accent_rgb565": "0xffe0",
   "required_capabilities": [
     "video",
-    "controls"
+    "controls",
+    "video-highres"
   ],
   "optional_capabilities": [
     "audio-tone",
-    "audio-stream",
-    "video-highres"
+    "audio-stream"
   ],
   "license": "MIT",
   "assets": "original-ImageGen-high-resolution-sprite-atlas-and-native-detail; Arimo-OFL-1.1-presentation-font",

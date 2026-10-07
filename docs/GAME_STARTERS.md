@@ -26,8 +26,10 @@ explicitly tested adapter; the current source/package tools support C.
 
 ## Presentation defaults
 
-New native scaffolds request 768x480 RGB565 automatically, with a tested
-320x200 fallback and canonical 320x200 touch input. Read [Game art](GAME_ART.md)
+New native scaffolds require direct 768x480 RGB565 automatically. Canonical
+320x200 touch coordinates remain input units; `--low-res` is reserved for
+explicitly requested legacy work. Retained fallback bounds tests are
+compatibility evidence only. Read [Game art](GAME_ART.md)
 for direct rendering, antialiased typography, card readability, ImageGen source
 textures, deterministic conversion and size budgets. Custom renderers use the
 same negotiated surface, resource limits and [performance contract](GAME_PERFORMANCE.md).

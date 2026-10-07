@@ -66,6 +66,14 @@ typedef struct {
     uint32_t pipeline_reuse_wait_max_us;
     uint32_t pipeline_transform_last_us;
     uint32_t pipeline_transform_max_us;
+    /* Tab5 game transform subphases; latest values reset at transform start
+     * and remain zero for UI transforms. Prescale is used only by the 320x200
+     * game input path. PPA includes its driver's blocking cache/DMA work.
+     * Both are inside transform timing; maxima retain historical samples. */
+    uint32_t pipeline_prescale_last_us;
+    uint32_t pipeline_prescale_max_us;
+    uint32_t pipeline_ppa_last_us;
+    uint32_t pipeline_ppa_max_us;
     uint32_t pipeline_handoff_last_us;
     uint32_t pipeline_handoff_max_us;
     uint32_t pipeline_reserved_refreshes;
@@ -114,6 +122,12 @@ esp_err_t platform_display_submit_shell_rgb565(
     uint32_t timeout_ms);
 
 #if CONFIG_P4_BOARD_M5STACK_TAB5
+/** Present a 320x200 game surface already expanded to 384x240 by the exact
+ * Tab5 6:5 nearest-neighbor prescale. PPA consumes the source before return;
+ * CPU fallback preserves the original 320x200 sampling, and scanout retains
+ * the same three buffers and two-refresh retirement fence. */
+esp_err_t platform_display_submit_prescaled_game_rgb565(
+    const uint16_t *source, size_t source_stride_pixels, uint32_t timeout_ms);
 /** Present the native 1280x720 Tab5 UI without scaling. */
 esp_err_t platform_display_submit_ui_rgb565(const uint16_t *source,
     size_t source_stride_pixels, uint32_t timeout_ms);
@@ -122,6 +136,12 @@ esp_err_t platform_display_submit_ui_rgb565(const uint16_t *source,
 esp_err_t platform_display_submit_ui_region_rgb565(const uint16_t *source,
     size_t source_stride_pixels, const platform_display_rgb565_region_t *region,
     uint32_t timeout_ms);
+/** Copy the published native 720x1280 RGB565 scanout after its refresh fence.
+ * Caller owns a buffer of at least native_width*native_height*2 bytes. The
+ * display mutex is held only for the bounded fence and copy, never transport.
+ * This captures submitted device pixels, not an optical view of the panel. */
+esp_err_t platform_display_copy_scanout_rgb565(uint16_t *destination,
+    size_t destination_bytes, uint32_t timeout_ms);
 #endif
 
 /** Present reviewed 768x480 legacy content where the board adapter supports it. */
@@ -167,6 +187,10 @@ esp_err_t platform_display_record_interactive_input_timestamp(
     int64_t timestamp_us);
 
 esp_err_t platform_display_get_stats(platform_display_stats_t *out_stats);
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+/** Zero-wait diagnostic snapshot; ESP_ERR_TIMEOUT leaves output unchanged. */
+esp_err_t platform_display_try_get_stats(platform_display_stats_t *out_stats);
+#endif
 esp_err_t platform_display_set_brightness(uint8_t percent);
 
 #ifdef __cplusplus

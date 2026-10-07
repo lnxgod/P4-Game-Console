@@ -9,6 +9,7 @@
 #include "p4_yahtzee_internal.h"
 
 extern const p4_game_descriptor_t p4_p4_yahtzee_game;
+#include "legacy_surface.h"
 
 enum {
     GUARD_WORDS = 23,
@@ -251,7 +252,7 @@ static void test_local_lifecycle_and_framebuffer(void)
     };
     p4_game_instance_t instance = {0};
     p4_yahtzee_state_t state;
-    CHECK(p4_game_instance_start(&instance, &p4_p4_yahtzee_game, &services,
+    CHECK(test_start_game(&instance, &p4_p4_yahtzee_game, &services,
                                  &state, sizeof(state)));
     CHECK(state.phase == P4_YAHTZEE_MENU);
     CHECK(update_button(&instance, P4_BUTTON_A));
@@ -317,7 +318,7 @@ static void test_local_four_player_rotation(void)
     };
     p4_game_instance_t instance = {0};
     p4_yahtzee_state_t state;
-    CHECK(p4_game_instance_start(&instance, &p4_p4_yahtzee_game, &services,
+    CHECK(test_start_game(&instance, &p4_p4_yahtzee_game, &services,
                                  &state, sizeof(state)));
     CHECK(state.player_count == 2U);
     CHECK(update_button(&instance, P4_BUTTON_RIGHT));
@@ -378,7 +379,7 @@ static void test_scorecard_selection_highlights(void)
     };
     p4_game_instance_t instance = {0};
     p4_yahtzee_state_t state;
-    CHECK(p4_game_instance_start(&instance, &p4_p4_yahtzee_game, &services,
+    CHECK(test_start_game(&instance, &p4_p4_yahtzee_game, &services,
                                  &state, sizeof(state)));
     CHECK(update_button(&instance, P4_BUTTON_A));
 
@@ -438,7 +439,7 @@ static void test_play_again_preserves_local_mode(void)
     };
     p4_game_instance_t instance = {0};
     p4_yahtzee_state_t state;
-    CHECK(p4_game_instance_start(&instance, &p4_p4_yahtzee_game, &services,
+    CHECK(test_start_game(&instance, &p4_p4_yahtzee_game, &services,
                                  &state, sizeof(state)));
     CHECK(update_button(&instance, P4_BUTTON_A));
 
@@ -472,9 +473,9 @@ static void test_network_host_authority(void)
     p4_game_instance_t client = {0};
     p4_yahtzee_state_t host_state;
     p4_yahtzee_state_t client_state;
-    CHECK(p4_game_instance_start(&host, &p4_p4_yahtzee_game, &host_services,
+    CHECK(test_start_game(&host, &p4_p4_yahtzee_game, &host_services,
                                  &host_state, sizeof(host_state)));
-    CHECK(p4_game_instance_start(&client, &p4_p4_yahtzee_game,
+    CHECK(test_start_game(&client, &p4_p4_yahtzee_game,
                                  &client_services,
                                  &client_state, sizeof(client_state)));
     CHECK(host_state.phase == P4_YAHTZEE_NETWORK_WAIT);
@@ -552,7 +553,7 @@ static void test_four_player_network_snapshot(void)
 
     for (uint8_t player = 0U; player < 4U; ++player) {
         services[player] = network_services(&link.endpoints[player]);
-        CHECK(p4_game_instance_start(
+        CHECK(test_start_game(
             &instances[player], &p4_p4_yahtzee_game, &services[player],
             &states[player], sizeof(states[player])));
         CHECK(states[player].player_count == 4U);
@@ -613,7 +614,7 @@ static void test_touch_regions(void)
     };
     p4_game_instance_t instance = {0};
     p4_yahtzee_state_t state;
-    CHECK(p4_game_instance_start(&instance, &p4_p4_yahtzee_game, &services,
+    CHECK(test_start_game(&instance, &p4_p4_yahtzee_game, &services,
                                  &state, sizeof(state)));
     tap(&instance, 245U, 117U); /* Local player-count increase. */
     CHECK(state.player_count == 3U);
@@ -686,8 +687,8 @@ static void test_network_dice_accessory(void)
     client_services.dice_context=&fixture;client_services.dice_exchange=dice_exchange;
     p4_game_instance_t host={0},client={0};
     p4_yahtzee_state_t hs,cs;
-    CHECK(p4_game_instance_start(&host,&p4_p4_yahtzee_game,&host_services,&hs,sizeof(hs)));
-    CHECK(p4_game_instance_start(&client,&p4_p4_yahtzee_game,&client_services,&cs,sizeof(cs)));
+    CHECK(test_start_game(&host,&p4_p4_yahtzee_game,&host_services,&hs,sizeof(hs)));
+    CHECK(test_start_game(&client,&p4_p4_yahtzee_game,&client_services,&cs,sizeof(cs)));
     CHECK(update_empty(&host,16));CHECK(update_empty(&client,16));
     CHECK(!fixture.request.enabled);
     CHECK(update_button(&host,P4_BUTTON_START));CHECK(update_empty(&client,16));
@@ -712,8 +713,8 @@ static void test_shared_host_dice(void)
     host_services.available_capabilities|=P4_GAME_CAP_DICE_ACCESSORY;
     host_services.dice_context=&fixture;host_services.dice_exchange=dice_exchange;
     p4_game_instance_t host={0},client={0}; p4_yahtzee_state_t hs,cs;
-    CHECK(p4_game_instance_start(&host,&p4_p4_yahtzee_game,&host_services,&hs,sizeof(hs)));
-    CHECK(p4_game_instance_start(&client,&p4_p4_yahtzee_game,&client_services,&cs,sizeof(cs)));
+    CHECK(test_start_game(&host,&p4_p4_yahtzee_game,&host_services,&hs,sizeof(hs)));
+    CHECK(test_start_game(&client,&p4_p4_yahtzee_game,&client_services,&cs,sizeof(cs)));
     CHECK(update_empty(&host,16));CHECK(update_empty(&client,16));
     CHECK(hs.shared_accessory && cs.shared_accessory && fixture.request.enabled);
     CHECK(!strcmp(fixture.request.player_name,"PLAYER 1"));
@@ -843,7 +844,7 @@ static void test_touch_owns_gesture(void)
         .available_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS,
     };
     p4_game_instance_t instance = {0}; p4_yahtzee_state_t state;
-    CHECK(p4_game_instance_start(&instance, &p4_p4_yahtzee_game, &services,
+    CHECK(test_start_game(&instance, &p4_p4_yahtzee_game, &services,
                                  &state, sizeof(state)));
     touch_with_buttons(&instance, true, 245U, 117U);
     touch_with_buttons(&instance, false, 0U, 0U);
@@ -878,6 +879,9 @@ static void test_touch_owns_gesture(void)
     p4_game_instance_stop(&instance);
 }
 
+/* Share the paired transport fixture with the lifecycle regression cases. */
+#include "test_network_lifecycle.h"
+
 int main(void)
 {
     test_touch_owns_gesture();
@@ -896,6 +900,7 @@ int main(void)
     test_network_host_authority();
     test_four_player_network_snapshot();
     test_touch_regions();
+    test_network_lifecycle();
     if (s_failures != 0) {
         fprintf(stderr, "%d P4 Yahtzee test failure(s)\n", s_failures);
         return EXIT_FAILURE;

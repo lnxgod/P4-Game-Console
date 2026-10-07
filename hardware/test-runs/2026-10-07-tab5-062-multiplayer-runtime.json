@@ -1,0 +1,2519 @@
+{
+  "schema": 1,
+  "recorded_at": "2026-10-07T04:38:31.611315+00:00",
+  "board": "m5stack-tab5",
+  "version": "0.62",
+  "result": "menu-and-lobby-pass-two-player-engine-barrier-observed-sustained-gameplay-failed",
+  "capture_state": "closed",
+  "scope": "Two physical Tab5 units tested through the revised menu, Local Wi-Fi lobby, and Arena start. Menu commands used bounded synthetic USB input; the operator reported the user physically pressed Start during lobby framebuffer capture. Both engines reached the initial barrier, then the client disconnected and rebooted.",
+  "install_record": {
+    "file": "hardware/test-runs/2026-10-07-tab5-062-multiplayer-debug-install.json",
+    "bytes": 16057,
+    "sha256": "6b356d541f85bde0ee32b39296517c8b3167856cad8b2a0c4d33535cde07ee14"
+  },
+  "application": {
+    "file": "apps/console_os/build-tab5/p4_console_os.bin",
+    "bytes": 4335776,
+    "sha256": "e222e687d77346a011718cc548496afe24d46322b15b6b5eb82d2c237c7e187b",
+    "version": "0.62",
+    "write_offset": "0x20000"
+  },
+  "raw_commands": {
+    "file": "build-host/tab5-multiplayer-hardware/remote-062/commands.jsonl",
+    "bytes": 36186,
+    "sha256": "80ec4b6916f13c38445123714d0683458cc39629251d1c2e02822820ac870a90"
+  },
+  "start_time_utc": "2026-10-07T04:22:44.547644+00:00",
+  "last_command_time_utc": "2026-10-07T04:34:48.061350+00:00",
+  "sessions": [
+    {
+      "session": "12b4f80e",
+      "units": {
+        "A": {
+          "boot_index": 0,
+          "entry": "host-created",
+          "lobby_ready": {
+            "uptime_ms": 436162,
+            "game": "org.p4console.gamechangersai",
+            "mode": 2,
+            "episode": 1,
+            "map": 1,
+            "skill": 5,
+            "players": 2,
+            "local_slot": 0,
+            "role": "host",
+            "tick_hz": 35,
+            "input_delay": 2,
+            "transport": "wifi-local",
+            "route": "<redacted-route>"
+          },
+          "engine_ready": {
+            "uptime_ms": 631695,
+            "players": 2,
+            "slot": 0
+          },
+          "startup_wait": {
+            "uptime_ms": 547052,
+            "slot": 0,
+            "silence_ms": 30000,
+            "limit_ms": 300000
+          },
+          "startup_wait_to_engine_ready_ms": 84643,
+          "validation_to_snapshot_ms": 39093,
+          "validation_to_engine_ready_ms": 162007,
+          "fatal_receipts": [],
+          "engine_error_receipts": [],
+          "ended_by_reboot": true,
+          "runtime_stats_count": 5
+        },
+        "B": {
+          "boot_index": 0,
+          "entry": "guest-join-selected",
+          "lobby_ready": {
+            "uptime_ms": 436237,
+            "game": "org.p4console.gamechangersai",
+            "mode": 2,
+            "episode": 1,
+            "map": 1,
+            "skill": 5,
+            "players": 2,
+            "local_slot": 1,
+            "role": "client",
+            "tick_hz": 35,
+            "input_delay": 2,
+            "transport": "wifi-local",
+            "route": "<redacted-route>"
+          },
+          "engine_ready": {
+            "uptime_ms": 633377,
+            "players": 2,
+            "slot": 1
+          },
+          "startup_wait": {
+            "uptime_ms": 631690,
+            "slot": 1,
+            "silence_ms": 30000,
+            "limit_ms": 300000
+          },
+          "startup_wait_to_engine_ready_ms": 1687,
+          "validation_to_snapshot_ms": 26765,
+          "validation_to_engine_ready_ms": 163564,
+          "fatal_receipts": [
+            "abort() was called at PC 0x40006ff1 on core 0"
+          ],
+          "engine_error_receipts": [
+            "P4 multiplayer peer disconnected"
+          ],
+          "ended_by_reboot": true,
+          "runtime_stats_count": 0
+        }
+      },
+      "host_unit": "A",
+      "two_player_lobby_correlated": true,
+      "two_player_engine_barrier_correlated": true
+    }
+  ],
+  "units": {
+    "A": {
+      "identity_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+      "raw_capture": {
+        "file": "build-host/tab5-multiplayer-hardware/remote-062/a.rx",
+        "bytes": 6344682,
+        "sha256": "08831bf0aace80d8ea12826026ea284e09e03d28cd3a48059d861b9b7f0f21b6",
+        "git_ignored": true
+      },
+      "boot_versions": [
+        "0.62",
+        "0.62"
+      ],
+      "shell_ready_receipts": [
+        "I (11214) p4_console_os: P4_CONSOLE_OS READY board=m5stack-tab5 display=mipi-dsi audio=es8388 storage=microsd removal=power-off-first hardware_acceptance=pending",
+        "I (10133) p4_console_os: P4_CONSOLE_OS READY board=m5stack-tab5 display=mipi-dsi audio=es8388 storage=microsd removal=power-off-first hardware_acceptance=pending"
+      ],
+      "debug_response_count": 67,
+      "debug_response_bad_frames": 0,
+      "debug_buffered_bytes_at_capture_end": 0,
+      "snapshot_transport_receipts": [
+        {
+          "capture_id": 236163142,
+          "begin_seen": true,
+          "end_seen": true,
+          "read_frame_count": 900,
+          "protocol_errors": [],
+          "metadata": {
+            "bytes": 1843200,
+            "native_width": 720,
+            "native_height": 1280,
+            "format": "rgb565-le",
+            "rotation": 1
+          },
+          "contiguous_payload_complete": true,
+          "raw_rgb565_sha256": "7e47b47421bb598af15a7adbc2e1eb976f49ae9da2f40880387a17c6e0a19873"
+        },
+        {
+          "capture_id": 3056428152,
+          "begin_seen": true,
+          "end_seen": true,
+          "read_frame_count": 900,
+          "protocol_errors": [],
+          "metadata": {
+            "bytes": 1843200,
+            "native_width": 720,
+            "native_height": 1280,
+            "format": "rgb565-le",
+            "rotation": 1
+          },
+          "contiguous_payload_complete": true,
+          "raw_rgb565_sha256": "1bdbf450465208626af10e737129a5a5b4c83b87b85786ae52bc3ce206e2d6ce"
+        },
+        {
+          "capture_id": 3659594997,
+          "begin_seen": true,
+          "end_seen": true,
+          "read_frame_count": 900,
+          "protocol_errors": [],
+          "metadata": {
+            "bytes": 1843200,
+            "native_width": 720,
+            "native_height": 1280,
+            "format": "rgb565-le",
+            "rotation": 1
+          },
+          "contiguous_payload_complete": true,
+          "raw_rgb565_sha256": "1fcd6f89b67c865b2d70f197a0f5fbb8c1cac0ae306dbe891952bee2cd58be49"
+        },
+        {
+          "capture_id": 3507264330,
+          "begin_seen": true,
+          "end_seen": false,
+          "read_frame_count": 304,
+          "protocol_errors": [
+            {
+              "command_id": 2,
+              "result": "unavailable"
+            },
+            {
+              "command_id": 3,
+              "result": "unavailable"
+            }
+          ],
+          "metadata": {
+            "bytes": 1843200,
+            "native_width": 720,
+            "native_height": 1280,
+            "format": "rgb565-le",
+            "rotation": 1
+          },
+          "contiguous_payload_complete": false,
+          "raw_rgb565_sha256": null
+        }
+      ],
+      "last_debug_state": "mode=shell page=0 app=0 view=4 row=11 game=0 link=0 rooms=0 ready=0",
+      "setup_receipts": [
+        "I (396323) p4_console_os: P4_CONSOLE_OS MULTIPLAYER_SETUP game=2 mode=2 episode=1 map=2 skill=5 monsters=0 fast=0 respawn=0 limit=0",
+        "I (397099) p4_console_os: P4_CONSOLE_OS MULTIPLAYER_SETUP game=2 mode=2 episode=1 map=1 skill=5 monsters=0 fast=0 respawn=0 limit=0"
+      ],
+      "menu": {
+        "native_multiplayer_registry": [
+          {
+            "id": "org.p4console.blast-circuit",
+            "title": "Blast Circuit",
+            "launcher": 119,
+            "style": 2,
+            "protocol": 3,
+            "source": "validated-p4g-manifest"
+          },
+          {
+            "id": "org.p4console.checkers",
+            "title": "Checkers",
+            "launcher": 116,
+            "style": 1,
+            "protocol": 1,
+            "source": "validated-p4g-manifest"
+          },
+          {
+            "id": "org.p4console.color-clash",
+            "title": "Color Clash",
+            "launcher": 114,
+            "style": 1,
+            "protocol": 5,
+            "source": "validated-p4g-manifest"
+          },
+          {
+            "id": "org.p4console.p4-air-hockey",
+            "title": "Air Hockey",
+            "launcher": 115,
+            "style": 2,
+            "protocol": 4,
+            "source": "validated-p4g-manifest"
+          },
+          {
+            "id": "org.p4console.p4-rummy",
+            "title": "Rummy 500",
+            "launcher": 118,
+            "style": 1,
+            "protocol": 4,
+            "source": "validated-p4g-manifest"
+          },
+          {
+            "id": "org.p4console.p4-yahtzee",
+            "title": "Yahtzee",
+            "launcher": 113,
+            "style": 1,
+            "protocol": 4,
+            "source": "validated-p4g-manifest"
+          },
+          {
+            "id": "org.p4console.texas-holdem",
+            "title": "Texas Hold'em",
+            "launcher": 117,
+            "style": 1,
+            "protocol": 2,
+            "source": "validated-p4g-manifest"
+          },
+          {
+            "id": "org.p4console.tide-maze",
+            "title": "Tide Maze",
+            "launcher": 120,
+            "style": 2,
+            "protocol": 1,
+            "source": "validated-p4g-manifest"
+          },
+          {
+            "id": "org.p4console.wacky-probe",
+            "title": "Wacky Wheels",
+            "launcher": 9001,
+            "style": 2,
+            "protocol": 2,
+            "source": "validated-p4g-manifest"
+          }
+        ],
+        "registry_receipts": [
+          "I (10662) p4_console_os: P4_CONSOLE_OS MULTIPLAYER_REGISTRY_READY games=9 runtime_players=4 owner=console-os",
+          "I (9552) p4_console_os: P4_CONSOLE_OS MULTIPLAYER_REGISTRY_READY games=9 runtime_players=4 owner=console-os"
+        ],
+        "selected_game_receipts": [
+          "I (182765) p4_console_os: P4_CONSOLE_OS MULTIPLAYER_GAME selected=org.p4console.blast-circuit index=3 count=12 mode=1",
+          "I (201828) p4_console_os: P4_CONSOLE_OS MULTIPLAYER_GAME selected=org.p4console.gamechangersai index=2 count=12 mode=2"
+        ],
+        "wifi_mode_receipts": [
+          "I (265593) p4_wifi_mp: WIFI_LOCAL mode=0 result=ESP_OK",
+          "I (268053) p4_wifi_mp: WIFI_LOCAL mode=1 result=ESP_OK",
+          "I (323663) p4_wifi_mp: WIFI_LOCAL mode=1 result=ESP_OK",
+          "I (326707) p4_wifi_mp: WIFI_LOCAL mode=1 result=ESP_OK",
+          "I (396501) p4_wifi_mp: WIFI_LOCAL mode=1 result=ESP_OK",
+          "I (398408) p4_wifi_mp: WIFI_LOCAL mode=1 result=ESP_OK",
+          "I (415301) p4_wifi_mp: WIFI_LOCAL mode=2 result=ESP_OK"
+        ],
+        "cold_wifi_mode_0_to_1_ms": 2460,
+        "wifi_timing_scope": "Firmware uptime interval between logged modes, not physical tap or complete request latency.",
+        "submit_timeout_or_frame_ack_markers": []
+      },
+      "memory_samples": [
+        {
+          "boot_index": 0,
+          "uptime_ms": 11215,
+          "stage": "core-ready",
+          "main_stack_low_water_bytes": 11168,
+          "internal_free": 249411,
+          "internal_min": 243691,
+          "internal_largest": 131072,
+          "dma_free": 209831,
+          "dma_largest": 131072,
+          "psram_free": 25135264,
+          "psram_min": 24610452,
+          "psram_largest": 24641536
+        },
+        {
+          "boot_index": 0,
+          "uptime_ms": 469691,
+          "phase": "loading",
+          "dma_free": 141275,
+          "dma_largest": 73728,
+          "internal_free": 180855,
+          "internal_largest": 73728
+        },
+        {
+          "boot_index": 0,
+          "uptime_ms": 479691,
+          "phase": "loading",
+          "dma_free": 141187,
+          "dma_largest": 73728,
+          "internal_free": 180767,
+          "internal_largest": 73728
+        },
+        {
+          "boot_index": 0,
+          "uptime_ms": 489694,
+          "phase": "loading",
+          "dma_free": 141187,
+          "dma_largest": 73728,
+          "internal_free": 180767,
+          "internal_largest": 73728
+        },
+        {
+          "boot_index": 0,
+          "uptime_ms": 499693,
+          "phase": "loading",
+          "dma_free": 141187,
+          "dma_largest": 73728,
+          "internal_free": 180767,
+          "internal_largest": 73728
+        },
+        {
+          "boot_index": 0,
+          "uptime_ms": 510562,
+          "phase": "loading",
+          "dma_free": 144791,
+          "dma_largest": 73728,
+          "internal_free": 184371,
+          "internal_largest": 73728
+        },
+        {
+          "boot_index": 0,
+          "uptime_ms": 510650,
+          "stage": "engine-start",
+          "internal_free": 179731,
+          "internal_largest": 73728,
+          "dma_free": 140151,
+          "dma_largest": 73728,
+          "psram_free": 26285972
+        },
+        {
+          "boot_index": 0,
+          "uptime_ms": 520562,
+          "phase": "loading",
+          "dma_free": 132179,
+          "dma_largest": 65536,
+          "internal_free": 171759,
+          "internal_largest": 65536
+        },
+        {
+          "boot_index": 0,
+          "uptime_ms": 530565,
+          "phase": "loading",
+          "dma_free": 132179,
+          "dma_largest": 65536,
+          "internal_free": 171759,
+          "internal_largest": 65536
+        },
+        {
+          "boot_index": 0,
+          "uptime_ms": 540568,
+          "phase": "loading",
+          "dma_free": 132179,
+          "dma_largest": 65536,
+          "internal_free": 171759,
+          "internal_largest": 65536
+        },
+        {
+          "boot_index": 0,
+          "uptime_ms": 550573,
+          "phase": "configure",
+          "dma_free": 132163,
+          "dma_largest": 65536,
+          "internal_free": 171743,
+          "internal_largest": 65536
+        },
+        {
+          "boot_index": 0,
+          "uptime_ms": 560575,
+          "phase": "configure",
+          "dma_free": 132163,
+          "dma_largest": 65536,
+          "internal_free": 171743,
+          "internal_largest": 65536
+        },
+        {
+          "boot_index": 0,
+          "uptime_ms": 570577,
+          "phase": "configure",
+          "dma_free": 132163,
+          "dma_largest": 65536,
+          "internal_free": 171743,
+          "internal_largest": 65536
+        },
+        {
+          "boot_index": 0,
+          "uptime_ms": 580579,
+          "phase": "configure",
+          "dma_free": 132163,
+          "dma_largest": 65536,
+          "internal_free": 171743,
+          "internal_largest": 65536
+        },
+        {
+          "boot_index": 0,
+          "uptime_ms": 590581,
+          "phase": "configure",
+          "dma_free": 132163,
+          "dma_largest": 65536,
+          "internal_free": 171743,
+          "internal_largest": 65536
+        },
+        {
+          "boot_index": 0,
+          "uptime_ms": 600583,
+          "phase": "configure",
+          "dma_free": 132163,
+          "dma_largest": 65536,
+          "internal_free": 171743,
+          "internal_largest": 65536
+        },
+        {
+          "boot_index": 0,
+          "uptime_ms": 610585,
+          "phase": "configure",
+          "dma_free": 132163,
+          "dma_largest": 65536,
+          "internal_free": 171743,
+          "internal_largest": 65536
+        },
+        {
+          "boot_index": 0,
+          "uptime_ms": 620587,
+          "phase": "configure",
+          "dma_free": 132163,
+          "dma_largest": 65536,
+          "internal_free": 171743,
+          "internal_largest": 65536
+        },
+        {
+          "boot_index": 0,
+          "uptime_ms": 630589,
+          "phase": "configure",
+          "dma_free": 132163,
+          "dma_largest": 65536,
+          "internal_free": 171743,
+          "internal_largest": 65536
+        },
+        {
+          "boot_index": 1,
+          "uptime_ms": 10134,
+          "stage": "core-ready",
+          "main_stack_low_water_bytes": 11168,
+          "internal_free": 249411,
+          "internal_min": 243691,
+          "internal_largest": 131072,
+          "dma_free": 209831,
+          "dma_largest": 131072,
+          "psram_free": 25135264,
+          "psram_min": 24610452,
+          "psram_largest": 24641536
+        }
+      ],
+      "memory_receipts": [
+        "I (11215) p4_console_os: P4_CONSOLE_OS MEMORY stage=core-ready main_stack_low_water_bytes=11168 internal_free=249411 internal_min=243691 internal_largest=131072 dma_free=209831 dma_largest=131072 psram_free=25135264 psram_min=24610452 psram_largest=24641536",
+        "I (469691) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=loading dma_free=141275 dma_largest=73728 internal_free=180855 internal_largest=73728",
+        "I (479691) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=loading dma_free=141187 dma_largest=73728 internal_free=180767 internal_largest=73728",
+        "I (489694) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=loading dma_free=141187 dma_largest=73728 internal_free=180767 internal_largest=73728",
+        "I (499693) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=loading dma_free=141187 dma_largest=73728 internal_free=180767 internal_largest=73728",
+        "I (510562) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=loading dma_free=144791 dma_largest=73728 internal_free=184371 internal_largest=73728",
+        "I (510650) p4_doom_touch_audio: P4_DOOM MEMORY stage=engine-start internal_free=179731 internal_largest=73728 dma_free=140151 dma_largest=73728 psram_free=26285972",
+        "I (520562) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=loading dma_free=132179 dma_largest=65536 internal_free=171759 internal_largest=65536",
+        "I (530565) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=loading dma_free=132179 dma_largest=65536 internal_free=171759 internal_largest=65536",
+        "I (540568) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=loading dma_free=132179 dma_largest=65536 internal_free=171759 internal_largest=65536",
+        "I (550573) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=configure dma_free=132163 dma_largest=65536 internal_free=171743 internal_largest=65536",
+        "I (560575) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=configure dma_free=132163 dma_largest=65536 internal_free=171743 internal_largest=65536",
+        "I (570577) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=configure dma_free=132163 dma_largest=65536 internal_free=171743 internal_largest=65536",
+        "I (580579) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=configure dma_free=132163 dma_largest=65536 internal_free=171743 internal_largest=65536",
+        "I (590581) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=configure dma_free=132163 dma_largest=65536 internal_free=171743 internal_largest=65536",
+        "I (600583) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=configure dma_free=132163 dma_largest=65536 internal_free=171743 internal_largest=65536",
+        "I (610585) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=configure dma_free=132163 dma_largest=65536 internal_free=171743 internal_largest=65536",
+        "I (620587) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=configure dma_free=132163 dma_largest=65536 internal_free=171743 internal_largest=65536",
+        "I (630589) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=configure dma_free=132163 dma_largest=65536 internal_free=171743 internal_largest=65536",
+        "I (10134) p4_console_os: P4_CONSOLE_OS MEMORY stage=core-ready main_stack_low_water_bytes=11168 internal_free=249411 internal_min=243691 internal_largest=131072 dma_free=209831 dma_largest=131072 psram_free=25135264 psram_min=24610452 psram_largest=24641536"
+      ],
+      "attempts": [
+        {
+          "session": "12b4f80e",
+          "boot_index": 0,
+          "entry": "host-created",
+          "entry_uptime_ms": 414640,
+          "markers": [
+            "I (414640) p4_console_os: P4_CONSOLE_OS MULTIPLAYER_LOBBY_CREATED session=12b4f80e transport=wifi-local",
+            "I (414642) p4_console_os: P4_CONSOLE_OS MULTIPLAYER_LOBBY_ACTION role=host result=ESP_OK",
+            "I (415301) p4_wifi_mp: WIFI_LOCAL mode=2 result=ESP_OK",
+            "I (435953) p4_console_os: P4_CONSOLE_OS MULTIPLAYER_PEER_SEEN transport=wifi-local route=<redacted-route>",
+            "I (436162) p4_console_os: P4_CONSOLE_OS MULTIPLAYER_LOBBY_READY game=org.p4console.gamechangersai mode=2 episode=1 map=1 skill=5 players=2 local_slot=0 role=host tick_hz=35 input_delay=2 transport=wifi-local route=<redacted-route>",
+            "I (469688) p4_console_os: P4_CONSOLE_OS WAD_VALIDATION_ON_DEMAND title=doom trigger=launch full_sha256=1 boot_scan=0",
+            "I (469691) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=loading dma_free=141275 dma_largest=73728 internal_free=180855 internal_largest=73728",
+            "I (479691) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=loading dma_free=141187 dma_largest=73728 internal_free=180767 internal_largest=73728",
+            "I (489694) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=loading dma_free=141187 dma_largest=73728 internal_free=180767 internal_largest=73728",
+            "I (499693) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=loading dma_free=141187 dma_largest=73728 internal_free=180767 internal_largest=73728",
+            "I (508781) game_storage: P4_GAME_STORAGE LOCKED_SNAPSHOT_READY title=game-changers-ai wad_bytes=28787748 deh_bytes=0 source=single-pass-exact-sha256 target=verified-sd-blocks elapsed_ms=39086",
+            "I (508786) p4_console_os: P4_CONSOLE_OS HANDOFF_BEGIN app=doom mode=exclusive-one-way audio_owner=doom storage=game-locked input_owner=platform multiplayer=1",
+            "I (508789) p4_console_os: P4_CONSOLE_OS HANDOFF_COMPLETE app=doom shell_services=released",
+            "I (510537) p4_doom_touch_audio: P4_DOOM_E6 CLEANUP_REGISTERED order=audio-touch-bus-dark-video-display-blob",
+            "I (510562) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=loading dma_free=144791 dma_largest=73728 internal_free=184371 internal_largest=73728",
+            "I (510565) p4_doom_touch_audio: P4_DOOM_ARENA CONTENT pure-hades=0.6 dwango5=24 default=01,02,03,04,05 vote=majority midi=embedded",
+            "I (510650) p4_doom_touch_audio: P4_DOOM MEMORY stage=engine-start internal_free=179731 internal_largest=73728 dma_free=140151 dma_largest=73728 psram_free=26285972",
+            "Z_Init: Init zone memory allocation daemon. ",
+            "V_Init: allocate screens.",
+            "W_Init: Init WADfiles.",
+            "I_Init: Setting up machine state.",
+            "M_Init: Init miscellaneous info.",
+            "R_Init: Init DOOM refresh daemon - ................",
+            "I (520562) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=loading dma_free=132179 dma_largest=65536 internal_free=171759 internal_largest=65536",
+            "I (530565) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=loading dma_free=132179 dma_largest=65536 internal_free=171759 internal_largest=65536",
+            "I (540568) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=loading dma_free=132179 dma_largest=65536 internal_free=171759 internal_largest=65536",
+            "P_Init: Init Playloop state.",
+            "S_Init: Setting up sound.",
+            "D_CheckNetGame: Checking network game status.",
+            "I (547052) doom_gc: GAME_CHANGERS_AI STARTUP_WAIT slot=0 silence_ms=30000 limit_ms=300000",
+            "I (550573) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=configure dma_free=132163 dma_largest=65536 internal_free=171743 internal_largest=65536",
+            "I (560575) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=configure dma_free=132163 dma_largest=65536 internal_free=171743 internal_largest=65536",
+            "I (570577) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=configure dma_free=132163 dma_largest=65536 internal_free=171743 internal_largest=65536",
+            "I (580579) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=configure dma_free=132163 dma_largest=65536 internal_free=171743 internal_largest=65536",
+            "I (590581) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=configure dma_free=132163 dma_largest=65536 internal_free=171743 internal_largest=65536",
+            "I (600583) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=configure dma_free=132163 dma_largest=65536 internal_free=171743 internal_largest=65536",
+            "I (610585) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=configure dma_free=132163 dma_largest=65536 internal_free=171743 internal_largest=65536",
+            "I (620587) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=configure dma_free=132163 dma_largest=65536 internal_free=171743 internal_largest=65536",
+            "I (630589) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=configure dma_free=132163 dma_largest=65536 internal_free=171743 internal_largest=65536",
+            "I (631695) doom_gc: GAME_CHANGERS_AI READY players=2 slot=0",
+            "I (636379) doom_gc: GAME_CHANGERS_AI PLAYER_LEFT slot=1",
+            "I (642949) p4_doom_touch_audio: P4_DOOM_E6 STATS frames=150 submits=1033 completions=150 video_timeouts=0 video_failures=0 video_accelerated=1033 video_accelerator_failures=0 touch_polls=149 touch_failures=0 touch_retries=1 composite_gate=1 touch_gate=1 audio_gate=1 audio_mutating_calls=16641 audio_telemetry_snapshot_valid=1 audio_start_proof=not-proven audio_write_calls=16634 audio_frames_forwarded=2129152 audio_nonzero_frames=15274 audio_nonzero_samples=0 audio_peak=1918 backend_telemetry_valid=1 backend_snapshot_sequence=16641 backend_gpio30_high_attempts=0 backend_gpio30_high_successes=0 backend_gpio30_high_readbacks=0 backend_state=1 backend_running=1 pdm_created=0 pdm_enabled=0 pdm_create_successes=0 pdm_enable_successes=0 tx_created=1 tx_enabled=1 tx_create_successes=0 tx_enable_successes=0 zero_preload_frames=0 gpio30_low_attempts=0 gpio30_low_successes=0 gpio30_low_initial_readbacks=0 measured_settle_us=0 gpio30_low_second_readbacks=0 backend_write_successes=16634 backend_write_failures=0 backend_frames_written=2129152 backend_samples_written=0 backend_nonzero_frames=15274 backend_nonzero_samples=0 backend_max_abs=1918 backend_rollback_attempts=0 backend_rollback_successes=0 backend_rollback_high_proofs=0 backend_resources_retained=0 backend_resources_owned=6 audio_frames=2113152 audio_write_failures=0 audio_worker_stack_hwm=4100 music_playing=0 music_paused=0 music_songs=0 music_events=0 music_notes=0 music_loops=0 music_frames=0 music_parse_failures=0 music_peak=0",
+            "I (648380) doom_gc: GAME_CHANGERS_AI PLAYER_LEFT slot=1",
+            "I (652303) p4_doom_touch_audio: P4_DOOM_E6 STATS frames=300 submits=1183 completions=300 video_timeouts=0 video_failures=0 video_accelerated=1183 video_accelerator_failures=0 touch_polls=299 touch_failures=0 touch_retries=1 composite_gate=1 touch_gate=1 audio_gate=1 audio_mutating_calls=17811 audio_telemetry_snapshot_valid=1 audio_start_proof=not-proven audio_write_calls=17804 audio_frames_forwarded=2278912 audio_nonzero_frames=15274 audio_nonzero_samples=0 audio_peak=1918 backend_telemetry_valid=1 backend_snapshot_sequence=17811 backend_gpio30_high_attempts=0 backend_gpio30_high_successes=0 backend_gpio30_high_readbacks=0 backend_state=1 backend_running=1 pdm_created=0 pdm_enabled=0 pdm_create_successes=0 pdm_enable_successes=0 tx_created=1 tx_enabled=1 tx_create_successes=0 tx_enable_successes=0 zero_preload_frames=0 gpio30_low_attempts=0 gpio30_low_successes=0 gpio30_low_initial_readbacks=0 measured_settle_us=0 gpio30_low_second_readbacks=0 backend_write_successes=17804 backend_write_failures=0 backend_frames_written=2278912 backend_samples_written=0 backend_nonzero_frames=15274 backend_nonzero_samples=0 backend_max_abs=1918 backend_rollback_attempts=0 backend_rollback_successes=0 backend_rollback_high_proofs=0 backend_resources_retained=0 backend_resources_owned=6 audio_frames=2262912 audio_write_failures=0 audio_worker_stack_hwm=4100 music_playing=0 music_paused=0 music_songs=0 music_events=0 music_notes=0 music_loops=0 music_frames=0 music_parse_failures=0 music_peak=0",
+            "I (661533) p4_doom_touch_audio: P4_DOOM_E6 STATS frames=450 submits=1333 completions=450 video_timeouts=0 video_failures=0 video_accelerated=1333 video_accelerator_failures=0 touch_polls=449 touch_failures=0 touch_retries=1 composite_gate=1 touch_gate=1 audio_gate=1 audio_mutating_calls=18964 audio_telemetry_snapshot_valid=1 audio_start_proof=not-proven audio_write_calls=18957 audio_frames_forwarded=2426496 audio_nonzero_frames=15274 audio_nonzero_samples=0 audio_peak=1918 backend_telemetry_valid=1 backend_snapshot_sequence=18964 backend_gpio30_high_attempts=0 backend_gpio30_high_successes=0 backend_gpio30_high_readbacks=0 backend_state=1 backend_running=1 pdm_created=0 pdm_enabled=0 pdm_create_successes=0 pdm_enable_successes=0 tx_created=1 tx_enabled=1 tx_create_successes=0 tx_enable_successes=0 zero_preload_frames=0 gpio30_low_attempts=0 gpio30_low_successes=0 gpio30_low_initial_readbacks=0 measured_settle_us=0 gpio30_low_second_readbacks=0 backend_write_successes=18957 backend_write_failures=0 backend_frames_written=2426496 backend_samples_written=0 backend_nonzero_frames=15274 backend_nonzero_samples=0 backend_max_abs=1918 backend_rollback_attempts=0 backend_rollback_successes=0 backend_rollback_high_proofs=0 backend_resources_retained=0 backend_resources_owned=6 audio_frames=2410496 audio_write_failures=0 audio_worker_stack_hwm=4100 music_playing=0 music_paused=0 music_songs=0 music_events=0 music_notes=0 music_loops=0 music_frames=0 music_parse_failures=0 music_peak=0",
+            "I (670759) p4_doom_touch_audio: P4_DOOM_E6 STATS frames=600 submits=1483 completions=600 video_timeouts=0 video_failures=0 video_accelerated=1483 video_accelerator_failures=0 touch_polls=599 touch_failures=0 touch_retries=1 composite_gate=1 touch_gate=1 audio_gate=1 audio_mutating_calls=20118 audio_telemetry_snapshot_valid=1 audio_start_proof=not-proven audio_write_calls=20111 audio_frames_forwarded=2574208 audio_nonzero_frames=15274 audio_nonzero_samples=0 audio_peak=1918 backend_telemetry_valid=1 backend_snapshot_sequence=20118 backend_gpio30_high_attempts=0 backend_gpio30_high_successes=0 backend_gpio30_high_readbacks=0 backend_state=1 backend_running=1 pdm_created=0 pdm_enabled=0 pdm_create_successes=0 pdm_enable_successes=0 tx_created=1 tx_enabled=1 tx_create_successes=0 tx_enable_successes=0 zero_preload_frames=0 gpio30_low_attempts=0 gpio30_low_successes=0 gpio30_low_initial_readbacks=0 measured_settle_us=0 gpio30_low_second_readbacks=0 backend_write_successes=20111 backend_write_failures=0 backend_frames_written=2574208 backend_samples_written=0 backend_nonzero_frames=15274 backend_nonzero_samples=0 backend_max_abs=1918 backend_rollback_attempts=0 backend_rollback_successes=0 backend_rollback_high_proofs=0 backend_resources_retained=0 backend_resources_owned=6 audio_frames=2558208 audio_write_failures=0 audio_worker_stack_hwm=4100 music_playing=0 music_paused=0 music_songs=0 music_events=0 music_notes=0 music_loops=0 music_frames=0 music_parse_failures=0 music_peak=0",
+            "I (679994) p4_doom_touch_audio: P4_DOOM_E6 STATS frames=750 submits=1633 completions=750 video_timeouts=0 video_failures=0 video_accelerated=1633 video_accelerator_failures=0 touch_polls=749 touch_failures=0 touch_retries=1 composite_gate=1 touch_gate=1 audio_gate=1 audio_mutating_calls=21272 audio_telemetry_snapshot_valid=1 audio_start_proof=not-proven audio_write_calls=21265 audio_frames_forwarded=2721920 audio_nonzero_frames=15274 audio_nonzero_samples=0 audio_peak=1918 backend_telemetry_valid=1 backend_snapshot_sequence=21272 backend_gpio30_high_attempts=0 backend_gpio30_high_successes=0 backend_gpio30_high_readbacks=0 backend_state=1 backend_running=1 pdm_created=0 pdm_enabled=0 pdm_create_successes=0 pdm_enable_successes=0 tx_created=1 tx_enabled=1 tx_create_successes=0 tx_enable_successes=0 zero_preload_frames=0 gpio30_low_attempts=0 gpio30_low_successes=0 gpio30_low_initial_readbacks=0 measured_settle_us=0 gpio30_low_second_readbacks=0 backend_write_successes=21265 backend_write_failures=0 backend_frames_written=2721920 backend_samples_written=0 backend_nonzero_frames=15274 backend_nonzero_samples=0 backend_max_abs=1918 backend_rollback_attempts=0 backend_rollback_successes=0 backend_rollback_high_proofs=0 backend_resources_retained=0 backend_resources_owned=6 audio_frames=2705920 audio_write_failures=0 audio_worker_stack_hwm=4100 music_playing=0 music_paused=0 music_songs=0 music_events=0 music_notes=0 music_loops=0 music_frames=0 music_parse_failures=0 music_peak=0",
+            "I (688481) p4_doom_touch_audio: P4_DOOM_E6 CLEANUP audio_released=1 touch_released=1 bus=ESP_OK dark=ESP_OK video=ESP_OK display=ESP_OK blob=ESP_OK complete=1 retained=0",
+            "I (688484) p4_doom_touch_audio: P4_DOOM_E6 EXIT status=confirmed action=restart-to-home cleanup_complete=1"
+          ],
+          "runtime_stats": [
+            {
+              "uptime_ms": 642949,
+              "frames": 150,
+              "submits": 1033,
+              "completions": 150,
+              "video_timeouts": 0,
+              "video_failures": 0,
+              "video_accelerated": 1033,
+              "video_accelerator_failures": 0,
+              "touch_polls": 149,
+              "touch_failures": 0,
+              "touch_retries": 1,
+              "composite_gate": 1,
+              "touch_gate": 1,
+              "audio_gate": 1,
+              "audio_mutating_calls": 16641,
+              "audio_telemetry_snapshot_valid": 1,
+              "audio_start_proof": "not-proven",
+              "audio_write_calls": 16634,
+              "audio_frames_forwarded": 2129152,
+              "audio_nonzero_frames": 15274,
+              "audio_nonzero_samples": 0,
+              "audio_peak": 1918,
+              "backend_telemetry_valid": 1,
+              "backend_snapshot_sequence": 16641,
+              "backend_state": 1,
+              "backend_running": 1,
+              "pdm_created": 0,
+              "pdm_enabled": 0,
+              "pdm_create_successes": 0,
+              "pdm_enable_successes": 0,
+              "tx_created": 1,
+              "tx_enabled": 1,
+              "tx_create_successes": 0,
+              "tx_enable_successes": 0,
+              "zero_preload_frames": 0,
+              "measured_settle_us": 0,
+              "backend_write_successes": 16634,
+              "backend_write_failures": 0,
+              "backend_frames_written": 2129152,
+              "backend_samples_written": 0,
+              "backend_nonzero_frames": 15274,
+              "backend_nonzero_samples": 0,
+              "backend_max_abs": 1918,
+              "backend_rollback_attempts": 0,
+              "backend_rollback_successes": 0,
+              "backend_rollback_high_proofs": 0,
+              "backend_resources_retained": 0,
+              "backend_resources_owned": 6,
+              "audio_frames": 2113152,
+              "audio_write_failures": 0,
+              "audio_worker_stack_hwm": 4100,
+              "music_playing": 0,
+              "music_paused": 0,
+              "music_songs": 0,
+              "music_events": 0,
+              "music_notes": 0,
+              "music_loops": 0,
+              "music_frames": 0,
+              "music_parse_failures": 0,
+              "music_peak": 0
+            },
+            {
+              "uptime_ms": 652303,
+              "frames": 300,
+              "submits": 1183,
+              "completions": 300,
+              "video_timeouts": 0,
+              "video_failures": 0,
+              "video_accelerated": 1183,
+              "video_accelerator_failures": 0,
+              "touch_polls": 299,
+              "touch_failures": 0,
+              "touch_retries": 1,
+              "composite_gate": 1,
+              "touch_gate": 1,
+              "audio_gate": 1,
+              "audio_mutating_calls": 17811,
+              "audio_telemetry_snapshot_valid": 1,
+              "audio_start_proof": "not-proven",
+              "audio_write_calls": 17804,
+              "audio_frames_forwarded": 2278912,
+              "audio_nonzero_frames": 15274,
+              "audio_nonzero_samples": 0,
+              "audio_peak": 1918,
+              "backend_telemetry_valid": 1,
+              "backend_snapshot_sequence": 17811,
+              "backend_state": 1,
+              "backend_running": 1,
+              "pdm_created": 0,
+              "pdm_enabled": 0,
+              "pdm_create_successes": 0,
+              "pdm_enable_successes": 0,
+              "tx_created": 1,
+              "tx_enabled": 1,
+              "tx_create_successes": 0,
+              "tx_enable_successes": 0,
+              "zero_preload_frames": 0,
+              "measured_settle_us": 0,
+              "backend_write_successes": 17804,
+              "backend_write_failures": 0,
+              "backend_frames_written": 2278912,
+              "backend_samples_written": 0,
+              "backend_nonzero_frames": 15274,
+              "backend_nonzero_samples": 0,
+              "backend_max_abs": 1918,
+              "backend_rollback_attempts": 0,
+              "backend_rollback_successes": 0,
+              "backend_rollback_high_proofs": 0,
+              "backend_resources_retained": 0,
+              "backend_resources_owned": 6,
+              "audio_frames": 2262912,
+              "audio_write_failures": 0,
+              "audio_worker_stack_hwm": 4100,
+              "music_playing": 0,
+              "music_paused": 0,
+              "music_songs": 0,
+              "music_events": 0,
+              "music_notes": 0,
+              "music_loops": 0,
+              "music_frames": 0,
+              "music_parse_failures": 0,
+              "music_peak": 0
+            },
+            {
+              "uptime_ms": 661533,
+              "frames": 450,
+              "submits": 1333,
+              "completions": 450,
+              "video_timeouts": 0,
+              "video_failures": 0,
+              "video_accelerated": 1333,
+              "video_accelerator_failures": 0,
+              "touch_polls": 449,
+              "touch_failures": 0,
+              "touch_retries": 1,
+              "composite_gate": 1,
+              "touch_gate": 1,
+              "audio_gate": 1,
+              "audio_mutating_calls": 18964,
+              "audio_telemetry_snapshot_valid": 1,
+              "audio_start_proof": "not-proven",
+              "audio_write_calls": 18957,
+              "audio_frames_forwarded": 2426496,
+              "audio_nonzero_frames": 15274,
+              "audio_nonzero_samples": 0,
+              "audio_peak": 1918,
+              "backend_telemetry_valid": 1,
+              "backend_snapshot_sequence": 18964,
+              "backend_state": 1,
+              "backend_running": 1,
+              "pdm_created": 0,
+              "pdm_enabled": 0,
+              "pdm_create_successes": 0,
+              "pdm_enable_successes": 0,
+              "tx_created": 1,
+              "tx_enabled": 1,
+              "tx_create_successes": 0,
+              "tx_enable_successes": 0,
+              "zero_preload_frames": 0,
+              "measured_settle_us": 0,
+              "backend_write_successes": 18957,
+              "backend_write_failures": 0,
+              "backend_frames_written": 2426496,
+              "backend_samples_written": 0,
+              "backend_nonzero_frames": 15274,
+              "backend_nonzero_samples": 0,
+              "backend_max_abs": 1918,
+              "backend_rollback_attempts": 0,
+              "backend_rollback_successes": 0,
+              "backend_rollback_high_proofs": 0,
+              "backend_resources_retained": 0,
+              "backend_resources_owned": 6,
+              "audio_frames": 2410496,
+              "audio_write_failures": 0,
+              "audio_worker_stack_hwm": 4100,
+              "music_playing": 0,
+              "music_paused": 0,
+              "music_songs": 0,
+              "music_events": 0,
+              "music_notes": 0,
+              "music_loops": 0,
+              "music_frames": 0,
+              "music_parse_failures": 0,
+              "music_peak": 0
+            },
+            {
+              "uptime_ms": 670759,
+              "frames": 600,
+              "submits": 1483,
+              "completions": 600,
+              "video_timeouts": 0,
+              "video_failures": 0,
+              "video_accelerated": 1483,
+              "video_accelerator_failures": 0,
+              "touch_polls": 599,
+              "touch_failures": 0,
+              "touch_retries": 1,
+              "composite_gate": 1,
+              "touch_gate": 1,
+              "audio_gate": 1,
+              "audio_mutating_calls": 20118,
+              "audio_telemetry_snapshot_valid": 1,
+              "audio_start_proof": "not-proven",
+              "audio_write_calls": 20111,
+              "audio_frames_forwarded": 2574208,
+              "audio_nonzero_frames": 15274,
+              "audio_nonzero_samples": 0,
+              "audio_peak": 1918,
+              "backend_telemetry_valid": 1,
+              "backend_snapshot_sequence": 20118,
+              "backend_state": 1,
+              "backend_running": 1,
+              "pdm_created": 0,
+              "pdm_enabled": 0,
+              "pdm_create_successes": 0,
+              "pdm_enable_successes": 0,
+              "tx_created": 1,
+              "tx_enabled": 1,
+              "tx_create_successes": 0,
+              "tx_enable_successes": 0,
+              "zero_preload_frames": 0,
+              "measured_settle_us": 0,
+              "backend_write_successes": 20111,
+              "backend_write_failures": 0,
+              "backend_frames_written": 2574208,
+              "backend_samples_written": 0,
+              "backend_nonzero_frames": 15274,
+              "backend_nonzero_samples": 0,
+              "backend_max_abs": 1918,
+              "backend_rollback_attempts": 0,
+              "backend_rollback_successes": 0,
+              "backend_rollback_high_proofs": 0,
+              "backend_resources_retained": 0,
+              "backend_resources_owned": 6,
+              "audio_frames": 2558208,
+              "audio_write_failures": 0,
+              "audio_worker_stack_hwm": 4100,
+              "music_playing": 0,
+              "music_paused": 0,
+              "music_songs": 0,
+              "music_events": 0,
+              "music_notes": 0,
+              "music_loops": 0,
+              "music_frames": 0,
+              "music_parse_failures": 0,
+              "music_peak": 0
+            },
+            {
+              "uptime_ms": 679994,
+              "frames": 750,
+              "submits": 1633,
+              "completions": 750,
+              "video_timeouts": 0,
+              "video_failures": 0,
+              "video_accelerated": 1633,
+              "video_accelerator_failures": 0,
+              "touch_polls": 749,
+              "touch_failures": 0,
+              "touch_retries": 1,
+              "composite_gate": 1,
+              "touch_gate": 1,
+              "audio_gate": 1,
+              "audio_mutating_calls": 21272,
+              "audio_telemetry_snapshot_valid": 1,
+              "audio_start_proof": "not-proven",
+              "audio_write_calls": 21265,
+              "audio_frames_forwarded": 2721920,
+              "audio_nonzero_frames": 15274,
+              "audio_nonzero_samples": 0,
+              "audio_peak": 1918,
+              "backend_telemetry_valid": 1,
+              "backend_snapshot_sequence": 21272,
+              "backend_state": 1,
+              "backend_running": 1,
+              "pdm_created": 0,
+              "pdm_enabled": 0,
+              "pdm_create_successes": 0,
+              "pdm_enable_successes": 0,
+              "tx_created": 1,
+              "tx_enabled": 1,
+              "tx_create_successes": 0,
+              "tx_enable_successes": 0,
+              "zero_preload_frames": 0,
+              "measured_settle_us": 0,
+              "backend_write_successes": 21265,
+              "backend_write_failures": 0,
+              "backend_frames_written": 2721920,
+              "backend_samples_written": 0,
+              "backend_nonzero_frames": 15274,
+              "backend_nonzero_samples": 0,
+              "backend_max_abs": 1918,
+              "backend_rollback_attempts": 0,
+              "backend_rollback_successes": 0,
+              "backend_rollback_high_proofs": 0,
+              "backend_resources_retained": 0,
+              "backend_resources_owned": 6,
+              "audio_frames": 2705920,
+              "audio_write_failures": 0,
+              "audio_worker_stack_hwm": 4100,
+              "music_playing": 0,
+              "music_paused": 0,
+              "music_songs": 0,
+              "music_events": 0,
+              "music_notes": 0,
+              "music_loops": 0,
+              "music_frames": 0,
+              "music_parse_failures": 0,
+              "music_peak": 0
+            }
+          ],
+          "last_serial_uptime_ms": 688484,
+          "lobby_ready": {
+            "uptime_ms": 436162,
+            "game": "org.p4console.gamechangersai",
+            "mode": 2,
+            "episode": 1,
+            "map": 1,
+            "skill": 5,
+            "players": 2,
+            "local_slot": 0,
+            "role": "host",
+            "tick_hz": 35,
+            "input_delay": 2,
+            "transport": "wifi-local",
+            "route": "<redacted-route>"
+          },
+          "validation_start_uptime_ms": 469688,
+          "locked_snapshot": {
+            "uptime_ms": 508781,
+            "title": "game-changers-ai",
+            "wad_bytes": 28787748,
+            "deh_bytes": 0,
+            "source": "single-pass-exact-sha256",
+            "target": "verified-sd-blocks",
+            "elapsed_ms": 39086
+          },
+          "handoff_begin_uptime_ms": 508786,
+          "handoff_complete_uptime_ms": 508789,
+          "startup_wait": {
+            "uptime_ms": 547052,
+            "slot": 0,
+            "silence_ms": 30000,
+            "limit_ms": 300000
+          },
+          "engine_ready": {
+            "uptime_ms": 631695,
+            "players": 2,
+            "slot": 0
+          },
+          "ended_by_reboot": true,
+          "following_bootloader_receipt": "I (20) boot: ESP-IDF v5.5.3 2nd stage bootloader",
+          "fatal_receipts": [],
+          "engine_error_receipts": [],
+          "startup_wait_to_engine_ready_ms": 84643,
+          "validation_to_snapshot_ms": 39093,
+          "validation_to_engine_ready_ms": 162007,
+          "runtime_stats_interval": {
+            "elapsed_ms": 37045,
+            "deltas": {
+              "frames": 600,
+              "submits": 600,
+              "completions": 600,
+              "video_timeouts": 0,
+              "video_failures": 0
+            },
+            "reported_frames_per_second": 16.197,
+            "scope": "Serial counter interval only; not human gameplay or release cadence acceptance."
+          }
+        }
+      ],
+      "player_left_receipts": [
+        "I (636379) doom_gc: GAME_CHANGERS_AI PLAYER_LEFT slot=1",
+        "I (648380) doom_gc: GAME_CHANGERS_AI PLAYER_LEFT slot=1"
+      ],
+      "cleanup_exit_receipts": [
+        "I (688481) p4_doom_touch_audio: P4_DOOM_E6 CLEANUP audio_released=1 touch_released=1 bus=ESP_OK dark=ESP_OK video=ESP_OK display=ESP_OK blob=ESP_OK complete=1 retained=0",
+        "I (688484) p4_doom_touch_audio: P4_DOOM_E6 EXIT status=confirmed action=restart-to-home cleanup_complete=1"
+      ],
+      "engine_error_receipts": [],
+      "error_and_warning_receipts": [
+        "W (3707) ldo: The voltage value 0 is out of the recommended range [500, 2700]",
+        "W (267928) rpc_rsp: Hosted RPC_Resp [0x21f], uid [3], resp code [12290]",
+        "W (633381) p4_doom_touch_audio: P4_DOOM_E6 GAMEPAD_POLL_FAIL count=1 error=ESP_ERR_INVALID_RESPONSE state=neutral",
+        "W (643539) p4_doom_touch_audio: P4_DOOM_E6 GAMEPAD_POLL_FAIL count=300 error=ESP_ERR_INVALID_RESPONSE state=neutral",
+        "W (652118) p4_doom_touch_audio: P4_DOOM_E6 GAMEPAD_POLL_FAIL count=600 error=ESP_ERR_INVALID_RESPONSE state=neutral",
+        "W (660672) p4_doom_touch_audio: P4_DOOM_E6 GAMEPAD_POLL_FAIL count=900 error=ESP_ERR_INVALID_RESPONSE state=neutral",
+        "W (669284) p4_doom_touch_audio: P4_DOOM_E6 GAMEPAD_POLL_FAIL count=1200 error=ESP_ERR_INVALID_RESPONSE state=neutral",
+        "W (677843) p4_doom_touch_audio: P4_DOOM_E6 GAMEPAD_POLL_FAIL count=1500 error=ESP_ERR_INVALID_RESPONSE state=neutral",
+        "W (686339) p4_doom_touch_audio: P4_DOOM_E6 GAMEPAD_POLL_FAIL count=1800 error=ESP_ERR_INVALID_RESPONSE state=neutral",
+        "W (3716) ldo: The voltage value 0 is out of the recommended range [500, 2700]"
+      ],
+      "fatal_pattern_matches": [],
+      "sanitized_markers": {
+        "file": "hardware/test-runs/2026-10-07-tab5-062-multiplayer-runtime/a.sanitized.log",
+        "bytes": 20717,
+        "sha256": "ce5e06656998da300ca2a07b85e2e7e468a128f8b81d5890d2a0efa02b589477"
+      }
+    },
+    "B": {
+      "identity_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+      "raw_capture": {
+        "file": "build-host/tab5-multiplayer-hardware/remote-062/b.rx",
+        "bytes": 3828044,
+        "sha256": "11f0b7d9e1f3d772beef7522f64b1cdd77e163d6462df695bfecb8e95b49d2dc",
+        "git_ignored": true
+      },
+      "boot_versions": [
+        "0.62",
+        "0.62"
+      ],
+      "shell_ready_receipts": [
+        "I (8057) p4_console_os: P4_CONSOLE_OS READY board=m5stack-tab5 display=mipi-dsi audio=es8388 storage=microsd removal=power-off-first hardware_acceptance=pending",
+        "I (8073) p4_console_os: P4_CONSOLE_OS READY board=m5stack-tab5 display=mipi-dsi audio=es8388 storage=microsd removal=power-off-first hardware_acceptance=pending"
+      ],
+      "debug_response_count": 50,
+      "debug_response_bad_frames": 0,
+      "debug_buffered_bytes_at_capture_end": 0,
+      "snapshot_transport_receipts": [
+        {
+          "capture_id": 3503541673,
+          "begin_seen": true,
+          "end_seen": true,
+          "read_frame_count": 900,
+          "protocol_errors": [],
+          "metadata": {
+            "bytes": 1843200,
+            "native_width": 720,
+            "native_height": 1280,
+            "format": "rgb565-le",
+            "rotation": 1
+          },
+          "contiguous_payload_complete": true,
+          "raw_rgb565_sha256": "80df7bf8a2ec8716340bbe8ef1eda58bef38874ca9d6eec5429e643d8e2abfe4"
+        },
+        {
+          "capture_id": 2534622799,
+          "begin_seen": true,
+          "end_seen": true,
+          "read_frame_count": 900,
+          "protocol_errors": [],
+          "metadata": {
+            "bytes": 1843200,
+            "native_width": 720,
+            "native_height": 1280,
+            "format": "rgb565-le",
+            "rotation": 1
+          },
+          "contiguous_payload_complete": true,
+          "raw_rgb565_sha256": "b7a7a92b1c6bc1f2963e74820e4e6048fe89b800683bed701720a08addff26be"
+        },
+        {
+          "capture_id": 4028408121,
+          "begin_seen": false,
+          "end_seen": false,
+          "read_frame_count": 0,
+          "protocol_errors": [
+            {
+              "command_id": 1,
+              "result": "unavailable"
+            },
+            {
+              "command_id": 3,
+              "result": "unavailable"
+            }
+          ],
+          "contiguous_payload_complete": false,
+          "raw_rgb565_sha256": null
+        }
+      ],
+      "last_debug_state": "mode=shell page=0 app=0 view=4 row=11 game=0 link=0 rooms=0 ready=0",
+      "setup_receipts": [],
+      "menu": {
+        "native_multiplayer_registry": [
+          {
+            "id": "org.p4console.blast-circuit",
+            "title": "Blast Circuit",
+            "launcher": 119,
+            "style": 2,
+            "protocol": 3,
+            "source": "validated-p4g-manifest"
+          },
+          {
+            "id": "org.p4console.checkers",
+            "title": "Checkers",
+            "launcher": 116,
+            "style": 1,
+            "protocol": 1,
+            "source": "validated-p4g-manifest"
+          },
+          {
+            "id": "org.p4console.color-clash",
+            "title": "Color Clash",
+            "launcher": 114,
+            "style": 1,
+            "protocol": 5,
+            "source": "validated-p4g-manifest"
+          },
+          {
+            "id": "org.p4console.p4-air-hockey",
+            "title": "Air Hockey",
+            "launcher": 115,
+            "style": 2,
+            "protocol": 4,
+            "source": "validated-p4g-manifest"
+          },
+          {
+            "id": "org.p4console.p4-rummy",
+            "title": "Rummy 500",
+            "launcher": 118,
+            "style": 1,
+            "protocol": 4,
+            "source": "validated-p4g-manifest"
+          },
+          {
+            "id": "org.p4console.p4-yahtzee",
+            "title": "Yahtzee",
+            "launcher": 113,
+            "style": 1,
+            "protocol": 4,
+            "source": "validated-p4g-manifest"
+          },
+          {
+            "id": "org.p4console.texas-holdem",
+            "title": "Texas Hold'em",
+            "launcher": 117,
+            "style": 1,
+            "protocol": 2,
+            "source": "validated-p4g-manifest"
+          },
+          {
+            "id": "org.p4console.tide-maze",
+            "title": "Tide Maze",
+            "launcher": 120,
+            "style": 2,
+            "protocol": 1,
+            "source": "validated-p4g-manifest"
+          },
+          {
+            "id": "org.p4console.wacky-probe",
+            "title": "Wacky Wheels",
+            "launcher": 9001,
+            "style": 2,
+            "protocol": 2,
+            "source": "validated-p4g-manifest"
+          }
+        ],
+        "registry_receipts": [
+          "I (7644) p4_console_os: P4_CONSOLE_OS MULTIPLAYER_REGISTRY_READY games=9 runtime_players=4 owner=console-os",
+          "I (7659) p4_console_os: P4_CONSOLE_OS MULTIPLAYER_REGISTRY_READY games=9 runtime_players=4 owner=console-os"
+        ],
+        "selected_game_receipts": [
+          "I (183491) p4_console_os: P4_CONSOLE_OS MULTIPLAYER_GAME selected=org.p4console.blast-circuit index=3 count=12 mode=1",
+          "I (202544) p4_console_os: P4_CONSOLE_OS MULTIPLAYER_GAME selected=org.p4console.gamechangersai index=2 count=12 mode=2"
+        ],
+        "wifi_mode_receipts": [
+          "I (265040) p4_wifi_mp: WIFI_LOCAL mode=0 result=ESP_OK",
+          "I (267500) p4_wifi_mp: WIFI_LOCAL mode=1 result=ESP_OK",
+          "I (325512) p4_wifi_mp: WIFI_LOCAL mode=1 result=ESP_OK",
+          "I (327496) p4_wifi_mp: WIFI_LOCAL mode=1 result=ESP_OK",
+          "I (432231) p4_wifi_mp: WIFI_LOCAL mode=3 result=ESP_OK"
+        ],
+        "cold_wifi_mode_0_to_1_ms": 2460,
+        "wifi_timing_scope": "Firmware uptime interval between logged modes, not physical tap or complete request latency.",
+        "submit_timeout_or_frame_ack_markers": []
+      },
+      "memory_samples": [
+        {
+          "boot_index": 0,
+          "uptime_ms": 8058,
+          "stage": "core-ready",
+          "main_stack_low_water_bytes": 11168,
+          "internal_free": 249411,
+          "internal_min": 243691,
+          "internal_largest": 131072,
+          "dma_free": 209831,
+          "dma_largest": 131072,
+          "psram_free": 25135264,
+          "psram_min": 24610452,
+          "psram_largest": 24641536
+        },
+        {
+          "boot_index": 0,
+          "uptime_ms": 469815,
+          "phase": "loading",
+          "dma_free": 140643,
+          "dma_largest": 73728,
+          "internal_free": 180223,
+          "internal_largest": 73728
+        },
+        {
+          "boot_index": 0,
+          "uptime_ms": 479817,
+          "phase": "loading",
+          "dma_free": 140555,
+          "dma_largest": 73728,
+          "internal_free": 180135,
+          "internal_largest": 73728
+        },
+        {
+          "boot_index": 0,
+          "uptime_ms": 489817,
+          "phase": "loading",
+          "dma_free": 140555,
+          "dma_largest": 73728,
+          "internal_free": 180135,
+          "internal_largest": 73728
+        },
+        {
+          "boot_index": 0,
+          "uptime_ms": 497705,
+          "stage": "engine-start",
+          "internal_free": 179107,
+          "internal_largest": 73728,
+          "dma_free": 139527,
+          "dma_largest": 73728,
+          "psram_free": 26286232
+        },
+        {
+          "boot_index": 0,
+          "uptime_ms": 499842,
+          "phase": "loading",
+          "dma_free": 131567,
+          "dma_largest": 65536,
+          "internal_free": 171147,
+          "internal_largest": 65536
+        },
+        {
+          "boot_index": 0,
+          "uptime_ms": 509859,
+          "phase": "loading",
+          "dma_free": 131567,
+          "dma_largest": 65536,
+          "internal_free": 171147,
+          "internal_largest": 65536
+        },
+        {
+          "boot_index": 0,
+          "uptime_ms": 519944,
+          "phase": "loading",
+          "dma_free": 131567,
+          "dma_largest": 65536,
+          "internal_free": 171147,
+          "internal_largest": 65536
+        },
+        {
+          "boot_index": 0,
+          "uptime_ms": 529945,
+          "phase": "loading",
+          "dma_free": 131567,
+          "dma_largest": 65536,
+          "internal_free": 171147,
+          "internal_largest": 65536
+        },
+        {
+          "boot_index": 0,
+          "uptime_ms": 539999,
+          "phase": "loading",
+          "dma_free": 131567,
+          "dma_largest": 65536,
+          "internal_free": 171147,
+          "internal_largest": 65536
+        },
+        {
+          "boot_index": 0,
+          "uptime_ms": 550029,
+          "phase": "loading",
+          "dma_free": 131567,
+          "dma_largest": 65536,
+          "internal_free": 171147,
+          "internal_largest": 65536
+        },
+        {
+          "boot_index": 0,
+          "uptime_ms": 560124,
+          "phase": "loading",
+          "dma_free": 131587,
+          "dma_largest": 65536,
+          "internal_free": 171167,
+          "internal_largest": 65536
+        },
+        {
+          "boot_index": 0,
+          "uptime_ms": 570157,
+          "phase": "loading",
+          "dma_free": 131587,
+          "dma_largest": 65536,
+          "internal_free": 171167,
+          "internal_largest": 65536
+        },
+        {
+          "boot_index": 0,
+          "uptime_ms": 580216,
+          "phase": "loading",
+          "dma_free": 131587,
+          "dma_largest": 65536,
+          "internal_free": 171167,
+          "internal_largest": 65536
+        },
+        {
+          "boot_index": 0,
+          "uptime_ms": 590285,
+          "phase": "loading",
+          "dma_free": 131587,
+          "dma_largest": 65536,
+          "internal_free": 171167,
+          "internal_largest": 65536
+        },
+        {
+          "boot_index": 0,
+          "uptime_ms": 600284,
+          "phase": "loading",
+          "dma_free": 131587,
+          "dma_largest": 65536,
+          "internal_free": 171167,
+          "internal_largest": 65536
+        },
+        {
+          "boot_index": 0,
+          "uptime_ms": 610410,
+          "phase": "loading",
+          "dma_free": 131587,
+          "dma_largest": 65536,
+          "internal_free": 171167,
+          "internal_largest": 65536
+        },
+        {
+          "boot_index": 0,
+          "uptime_ms": 620493,
+          "phase": "loading",
+          "dma_free": 131587,
+          "dma_largest": 65536,
+          "internal_free": 171167,
+          "internal_largest": 65536
+        },
+        {
+          "boot_index": 0,
+          "uptime_ms": 630493,
+          "phase": "loading",
+          "dma_free": 131587,
+          "dma_largest": 65536,
+          "internal_free": 171167,
+          "internal_largest": 65536
+        },
+        {
+          "boot_index": 1,
+          "uptime_ms": 8074,
+          "stage": "core-ready",
+          "main_stack_low_water_bytes": 11168,
+          "internal_free": 249411,
+          "internal_min": 243691,
+          "internal_largest": 131072,
+          "dma_free": 209831,
+          "dma_largest": 131072,
+          "psram_free": 25135264,
+          "psram_min": 24610452,
+          "psram_largest": 24641536
+        }
+      ],
+      "memory_receipts": [
+        "I (8058) p4_console_os: P4_CONSOLE_OS MEMORY stage=core-ready main_stack_low_water_bytes=11168 internal_free=249411 internal_min=243691 internal_largest=131072 dma_free=209831 dma_largest=131072 psram_free=25135264 psram_min=24610452 psram_largest=24641536",
+        "I (469815) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=loading dma_free=140643 dma_largest=73728 internal_free=180223 internal_largest=73728",
+        "I (479817) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=loading dma_free=140555 dma_largest=73728 internal_free=180135 internal_largest=73728",
+        "I (489817) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=loading dma_free=140555 dma_largest=73728 internal_free=180135 internal_largest=73728",
+        "I (497705) p4_doom_touch_audio: P4_DOOM MEMORY stage=engine-start internal_free=179107 internal_largest=73728 dma_free=139527 dma_largest=73728 psram_free=26286232",
+        "I (499842) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=loading dma_free=131567 dma_largest=65536 internal_free=171147 internal_largest=65536",
+        "I (509859) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=loading dma_free=131567 dma_largest=65536 internal_free=171147 internal_largest=65536",
+        "I (519944) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=loading dma_free=131567 dma_largest=65536 internal_free=171147 internal_largest=65536",
+        "I (529945) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=loading dma_free=131567 dma_largest=65536 internal_free=171147 internal_largest=65536",
+        "I (539999) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=loading dma_free=131567 dma_largest=65536 internal_free=171147 internal_largest=65536",
+        "I (550029) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=loading dma_free=131567 dma_largest=65536 internal_free=171147 internal_largest=65536",
+        "I (560124) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=loading dma_free=131587 dma_largest=65536 internal_free=171167 internal_largest=65536",
+        "I (570157) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=loading dma_free=131587 dma_largest=65536 internal_free=171167 internal_largest=65536",
+        "I (580216) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=loading dma_free=131587 dma_largest=65536 internal_free=171167 internal_largest=65536",
+        "I (590285) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=loading dma_free=131587 dma_largest=65536 internal_free=171167 internal_largest=65536",
+        "I (600284) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=loading dma_free=131587 dma_largest=65536 internal_free=171167 internal_largest=65536",
+        "I (610410) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=loading dma_free=131587 dma_largest=65536 internal_free=171167 internal_largest=65536",
+        "I (620493) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=loading dma_free=131587 dma_largest=65536 internal_free=171167 internal_largest=65536",
+        "I (630493) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=loading dma_free=131587 dma_largest=65536 internal_free=171167 internal_largest=65536",
+        "I (8074) p4_console_os: P4_CONSOLE_OS MEMORY stage=core-ready main_stack_low_water_bytes=11168 internal_free=249411 internal_min=243691 internal_largest=131072 dma_free=209831 dma_largest=131072 psram_free=25135264 psram_min=24610452 psram_largest=24641536"
+      ],
+      "attempts": [
+        {
+          "session": "12b4f80e",
+          "boot_index": 0,
+          "entry": "guest-join-selected",
+          "entry_uptime_ms": 432013,
+          "markers": [
+            "I (432013) p4_console_os: P4_CONSOLE_OS MULTIPLAYER_LOBBY_JOIN_SELECTED session=12b4f80e lobby=<redacted-lobby> transport=wifi-local",
+            "I (432016) p4_console_os: P4_CONSOLE_OS MULTIPLAYER_LOBBY_ACTION role=join result=ESP_OK",
+            "I (432231) p4_wifi_mp: WIFI_LOCAL mode=3 result=ESP_OK",
+            "I (436035) p4_console_os: P4_CONSOLE_OS MULTIPLAYER_PEER_SEEN transport=wifi-local route=<redacted-route>",
+            "I (436237) p4_console_os: P4_CONSOLE_OS MULTIPLAYER_LOBBY_READY game=org.p4console.gamechangersai mode=2 episode=1 map=1 skill=5 players=2 local_slot=1 role=client tick_hz=35 input_delay=2 transport=wifi-local route=<redacted-route>",
+            "I (469813) p4_console_os: P4_CONSOLE_OS WAD_VALIDATION_ON_DEMAND title=doom trigger=launch full_sha256=1 boot_scan=0",
+            "I (469815) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=loading dma_free=140643 dma_largest=73728 internal_free=180223 internal_largest=73728",
+            "I (479817) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=loading dma_free=140555 dma_largest=73728 internal_free=180135 internal_largest=73728",
+            "I (489817) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=loading dma_free=140555 dma_largest=73728 internal_free=180135 internal_largest=73728",
+            "I (496578) game_storage: P4_GAME_STORAGE LOCKED_SNAPSHOT_READY title=game-changers-ai wad_bytes=28787748 deh_bytes=0 source=single-pass-exact-sha256 target=verified-sd-blocks elapsed_ms=26759",
+            "I (496583) p4_console_os: P4_CONSOLE_OS HANDOFF_BEGIN app=doom mode=exclusive-one-way audio_owner=doom storage=game-locked input_owner=platform multiplayer=1",
+            "I (496587) p4_console_os: P4_CONSOLE_OS HANDOFF_COMPLETE app=doom shell_services=released",
+            "I (497610) p4_doom_touch_audio: P4_DOOM_E6 CLEANUP_REGISTERED order=audio-touch-bus-dark-video-display-blob",
+            "I (497633) p4_doom_touch_audio: P4_DOOM_ARENA CONTENT pure-hades=0.6 dwango5=24 default=01,02,03,04,05 vote=majority midi=embedded",
+            "I (497705) p4_doom_touch_audio: P4_DOOM MEMORY stage=engine-start internal_free=179107 internal_largest=73728 dma_free=139527 dma_largest=73728 psram_free=26286232",
+            "Z_Init: Init zone memory allocation daemon. ",
+            "V_Init: allocate screens.",
+            "W_Init: Init WADfiles.",
+            "I_Init: Setting up machine state.",
+            "M_Init: Init miscellaneous info.",
+            "R_Init: Init DOOM refresh daemon - ................",
+            "I (499842) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=loading dma_free=131567 dma_largest=65536 internal_free=171147 internal_largest=65536",
+            "I (509859) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=loading dma_free=131567 dma_largest=65536 internal_free=171147 internal_largest=65536",
+            "I (519944) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=loading dma_free=131567 dma_largest=65536 internal_free=171147 internal_largest=65536",
+            "I (529945) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=loading dma_free=131567 dma_largest=65536 internal_free=171147 internal_largest=65536",
+            "I (539999) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=loading dma_free=131567 dma_largest=65536 internal_free=171147 internal_largest=65536",
+            "I (550029) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=loading dma_free=131567 dma_largest=65536 internal_free=171147 internal_largest=65536",
+            "I (560124) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=loading dma_free=131587 dma_largest=65536 internal_free=171167 internal_largest=65536",
+            "I (570157) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=loading dma_free=131587 dma_largest=65536 internal_free=171167 internal_largest=65536",
+            "I (580216) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=loading dma_free=131587 dma_largest=65536 internal_free=171167 internal_largest=65536",
+            "I (590285) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=loading dma_free=131587 dma_largest=65536 internal_free=171167 internal_largest=65536",
+            "I (600284) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=loading dma_free=131587 dma_largest=65536 internal_free=171167 internal_largest=65536",
+            "I (610410) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=loading dma_free=131587 dma_largest=65536 internal_free=171167 internal_largest=65536",
+            "I (620493) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=loading dma_free=131587 dma_largest=65536 internal_free=171167 internal_largest=65536",
+            "P_Init: Init Playloop state.",
+            "S_Init: Setting up sound.",
+            "I (630493) doom_gc: GAME_CHANGERS_AI STARTUP_MEMORY phase=loading dma_free=131587 dma_largest=65536 internal_free=171167 internal_largest=65536",
+            "D_CheckNetGame: Checking network game status.",
+            "I (631690) doom_gc: GAME_CHANGERS_AI STARTUP_WAIT slot=1 silence_ms=30000 limit_ms=300000",
+            "I (633377) doom_gc: GAME_CHANGERS_AI READY players=2 slot=1",
+            "P4 multiplayer peer disconnected",
+            "abort() was called at PC 0x40006ff1 on core 0",
+            "ELF file SHA256: 665a666ad",
+            "Rebooting..."
+          ],
+          "runtime_stats": [],
+          "last_serial_uptime_ms": 643643,
+          "lobby_ready": {
+            "uptime_ms": 436237,
+            "game": "org.p4console.gamechangersai",
+            "mode": 2,
+            "episode": 1,
+            "map": 1,
+            "skill": 5,
+            "players": 2,
+            "local_slot": 1,
+            "role": "client",
+            "tick_hz": 35,
+            "input_delay": 2,
+            "transport": "wifi-local",
+            "route": "<redacted-route>"
+          },
+          "validation_start_uptime_ms": 469813,
+          "locked_snapshot": {
+            "uptime_ms": 496578,
+            "title": "game-changers-ai",
+            "wad_bytes": 28787748,
+            "deh_bytes": 0,
+            "source": "single-pass-exact-sha256",
+            "target": "verified-sd-blocks",
+            "elapsed_ms": 26759
+          },
+          "handoff_begin_uptime_ms": 496583,
+          "handoff_complete_uptime_ms": 496587,
+          "startup_wait": {
+            "uptime_ms": 631690,
+            "slot": 1,
+            "silence_ms": 30000,
+            "limit_ms": 300000
+          },
+          "engine_ready": {
+            "uptime_ms": 633377,
+            "players": 2,
+            "slot": 1
+          },
+          "ended_by_reboot": true,
+          "fatal_receipts": [
+            "abort() was called at PC 0x40006ff1 on core 0"
+          ],
+          "engine_error_receipts": [
+            "P4 multiplayer peer disconnected"
+          ],
+          "startup_wait_to_engine_ready_ms": 1687,
+          "validation_to_snapshot_ms": 26765,
+          "validation_to_engine_ready_ms": 163564
+        }
+      ],
+      "player_left_receipts": [],
+      "cleanup_exit_receipts": [],
+      "engine_error_receipts": [
+        "P4 multiplayer peer disconnected"
+      ],
+      "error_and_warning_receipts": [
+        "W (2587) st7123: The 36h command has been used and will be overwritten by external initialization sequence",
+        "W (2979) ldo: The voltage value 0 is out of the recommended range [500, 2700]",
+        "W (267374) rpc_rsp: Hosted RPC_Resp [0x21f], uid [3], resp code [12290]",
+        "W (470014) vfs_fat: vfs_fat_open: fast-seek not activated reason code: 17",
+        "W (497414) st7123: The 36h command has been used and will be overwritten by external initialization sequence",
+        "W (642295) p4_doom_touch_audio: P4_DOOM_E6 GAMEPAD_POLL_FAIL count=1 error=ESP_ERR_INVALID_RESPONSE state=neutral",
+        "W (2597) st7123: The 36h command has been used and will be overwritten by external initialization sequence",
+        "W (2989) ldo: The voltage value 0 is out of the recommended range [500, 2700]"
+      ],
+      "fatal_pattern_matches": [
+        "abort() was called at PC 0x40006ff1 on core 0"
+      ],
+      "sanitized_markers": {
+        "file": "hardware/test-runs/2026-10-07-tab5-062-multiplayer-runtime/b.sanitized.log",
+        "bytes": 12544,
+        "sha256": "d9293935b95ec536712a442d8760f2c2c0b2876664619dc46441114698d77198"
+      }
+    }
+  },
+  "command_errors": [
+    {
+      "time_utc": "2026-10-07T04:30:34.646990+00:00",
+      "request": {
+        "unit": "both",
+        "command": "screenshot",
+        "name": "05-arena-lobby-ready"
+      },
+      "unit": "A",
+      "error": "snapshot: unavailable",
+      "response": {},
+      "classification": "expected-shell-capture-cancelled-by-reported-physical-start"
+    },
+    {
+      "time_utc": "2026-10-07T04:30:34.646990+00:00",
+      "request": {
+        "unit": "both",
+        "command": "screenshot",
+        "name": "05-arena-lobby-ready"
+      },
+      "unit": "B",
+      "error": "snapshot: unavailable",
+      "response": {},
+      "classification": "expected-shell-capture-cancelled-by-reported-physical-start"
+    },
+    {
+      "time_utc": "2026-10-07T04:33:23.919757+00:00",
+      "request": {
+        "unit": "both",
+        "command": "status"
+      },
+      "unit": "B",
+      "error": "no status response after 3 identical requests",
+      "response": {},
+      "classification": "unclassified-command-error"
+    },
+    {
+      "time_utc": "2026-10-07T04:34:19.326688+00:00",
+      "request": {
+        "unit": "A",
+        "command": "pulse",
+        "buttons": "a",
+        "hold_ms": 300
+      },
+      "unit": "A",
+      "error": "no release response after 3 identical requests",
+      "response": {},
+      "classification": "release-response-missing-across-confirmed-clean-quit-and-reboot"
+    },
+    {
+      "time_utc": "2026-10-07T04:34:48.059326+00:00",
+      "request": {
+        "unit": "both",
+        "command": "close"
+      },
+      "unit": "A",
+      "error": "close: session (mode=shell page=0 app=0 view=4 row=11 game=0 link=0 rooms=0 ready=0)",
+      "response": {
+        "command": "close",
+        "command_id": 5,
+        "result": "session",
+        "result_id": 3,
+        "session": 1086610033,
+        "sequence": 3081,
+        "active": false,
+        "touch": false,
+        "buttons": 0,
+        "x": 0,
+        "y": 0,
+        "session_remaining_ms": 0,
+        "input_remaining_ms": 0,
+        "text": "mode=shell page=0 app=0 view=4 row=11 game=0 link=0 rooms=0 ready=0"
+      },
+      "classification": "stale-debug-session-after-reboot-input-neutral"
+    },
+    {
+      "time_utc": "2026-10-07T04:34:48.059326+00:00",
+      "request": {
+        "unit": "both",
+        "command": "close"
+      },
+      "unit": "B",
+      "error": "close: session (mode=shell page=0 app=0 view=4 row=11 game=0 link=0 rooms=0 ready=0)",
+      "response": {
+        "command": "close",
+        "command_id": 5,
+        "result": "session",
+        "result_id": 3,
+        "session": 921517195,
+        "sequence": 1854,
+        "active": false,
+        "touch": false,
+        "buttons": 0,
+        "x": 0,
+        "y": 0,
+        "session_remaining_ms": 0,
+        "input_remaining_ms": 0,
+        "text": "mode=shell page=0 app=0 view=4 row=11 game=0 link=0 rooms=0 ready=0"
+      },
+      "classification": "stale-debug-session-after-reboot-input-neutral"
+    }
+  ],
+  "screenshot_receipts": [
+    {
+      "unit": "A",
+      "time_utc": "2026-10-07T04:25:08.830578+00:00",
+      "started_at": "2026-10-07T04:23:12.919267+00:00",
+      "duration_ms": 57615.147,
+      "client_receipt": {
+        "capture_id": 236163142,
+        "native_width": 720,
+        "native_height": 1280,
+        "width": 1280,
+        "height": 720,
+        "format": "rgb565-le",
+        "rotation": 1,
+        "bytes": 1843200,
+        "sha256": "7e47b47421bb598af15a7adbc2e1eb976f49ae9da2f40880387a17c6e0a19873",
+        "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-062/images/01-game-grid-a.png"
+      },
+      "visual_review": {
+        "status": "reviewed-captured-frame",
+        "observation": "Reviewed both 1280x720 captured frames: all 12 title choices are visible on one page, including the full Doom Arena by Game Changers title.",
+        "scope": "Agent inspection of saved device framebuffer pixels; not a claim that a person observed those exact pixels on the physical panel."
+      },
+      "png_file": {
+        "file": "build-host/tab5-multiplayer-hardware/remote-062/images/01-game-grid-a.png",
+        "bytes": 44873,
+        "sha256": "139fb479db6253ead6a9c0a0a51b08a6dd4d9d2c0f99339b173d430fe131f534"
+      },
+      "raw_payload_hash_correlated": true,
+      "png_reencoded_from_raw_exact_match": true
+    },
+    {
+      "unit": "B",
+      "time_utc": "2026-10-07T04:25:08.830578+00:00",
+      "started_at": "2026-10-07T04:23:12.919267+00:00",
+      "duration_ms": 58295.799,
+      "client_receipt": {
+        "capture_id": 3503541673,
+        "native_width": 720,
+        "native_height": 1280,
+        "width": 1280,
+        "height": 720,
+        "format": "rgb565-le",
+        "rotation": 1,
+        "bytes": 1843200,
+        "sha256": "80df7bf8a2ec8716340bbe8ef1eda58bef38874ca9d6eec5429e643d8e2abfe4",
+        "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-062/images/01-game-grid-b.png"
+      },
+      "visual_review": {
+        "status": "reviewed-captured-frame",
+        "observation": "Reviewed both 1280x720 captured frames: all 12 title choices are visible on one page, including the full Doom Arena by Game Changers title.",
+        "scope": "Agent inspection of saved device framebuffer pixels; not a claim that a person observed those exact pixels on the physical panel."
+      },
+      "png_file": {
+        "file": "build-host/tab5-multiplayer-hardware/remote-062/images/01-game-grid-b.png",
+        "bytes": 44710,
+        "sha256": "e646e898c30b2fca7ea6ad3b08414042b530ea9c38de794ba0b3e24aef9501cf"
+      },
+      "raw_payload_hash_correlated": true,
+      "png_reencoded_from_raw_exact_match": true
+    },
+    {
+      "unit": "A",
+      "time_utc": "2026-10-07T04:27:09.163434+00:00",
+      "started_at": "2026-10-07T04:26:07.610100+00:00",
+      "duration_ms": 61553.137,
+      "client_receipt": {
+        "capture_id": 3056428152,
+        "native_width": 720,
+        "native_height": 1280,
+        "width": 1280,
+        "height": 720,
+        "format": "rgb565-le",
+        "rotation": 1,
+        "bytes": 1843200,
+        "sha256": "1bdbf450465208626af10e737129a5a5b4c83b87b85786ae52bc3ce206e2d6ce",
+        "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-062/images/02-arena-connection-a.png"
+      },
+      "visual_review": {
+        "status": "reviewed-captured-frame",
+        "observation": "Reviewed A frame: Step 2 of 3 Connection, full Arena title, Local Wi-Fi selectable, USB/wired relay and Bluetooth visually disabled.",
+        "scope": "Agent inspection of saved device framebuffer pixels; not a claim that a person observed those exact pixels on the physical panel."
+      },
+      "png_file": {
+        "file": "build-host/tab5-multiplayer-hardware/remote-062/images/02-arena-connection-a.png",
+        "bytes": 34968,
+        "sha256": "0a741abbe1a32e3d2d9cdaf4afb3714de6054c0dd91616baeb9c55e3c8009b01"
+      },
+      "raw_payload_hash_correlated": true,
+      "png_reencoded_from_raw_exact_match": true
+    },
+    {
+      "unit": "A",
+      "time_utc": "2026-10-07T04:28:05.961647+00:00",
+      "started_at": "2026-10-07T04:27:10.497973+00:00",
+      "duration_ms": 55463.492,
+      "client_receipt": {
+        "capture_id": 3659594997,
+        "native_width": 720,
+        "native_height": 1280,
+        "width": 1280,
+        "height": 720,
+        "format": "rgb565-le",
+        "rotation": 1,
+        "bytes": 1843200,
+        "sha256": "1fcd6f89b67c865b2d70f197a0f5fbb8c1cac0ae306dbe891952bee2cd58be49",
+        "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-062/images/03-cold-wifi-starting-a.png"
+      },
+      "visual_review": {
+        "status": "reviewed-captured-frame",
+        "observation": "Reviewed A frame: Step 3 Host or join, full Arena title, disabled Host/Join buttons and visible Starting Local Wi-Fi. Back remains available feedback.",
+        "scope": "Agent inspection of saved device framebuffer pixels; not a claim that a person observed those exact pixels on the physical panel."
+      },
+      "png_file": {
+        "file": "build-host/tab5-multiplayer-hardware/remote-062/images/03-cold-wifi-starting-a.png",
+        "bytes": 35896,
+        "sha256": "89f6c07536f3140c65b6ee119b93d00b4f0f45b12741396d5b0a6f0ba76eef41"
+      },
+      "raw_payload_hash_correlated": true,
+      "png_reencoded_from_raw_exact_match": true
+    },
+    {
+      "unit": "B",
+      "time_utc": "2026-10-07T04:29:04.429281+00:00",
+      "started_at": "2026-10-07T04:28:12.381421+00:00",
+      "duration_ms": 52047.694,
+      "client_receipt": {
+        "capture_id": 2534622799,
+        "native_width": 720,
+        "native_height": 1280,
+        "width": 1280,
+        "height": 720,
+        "format": "rgb565-le",
+        "rotation": 1,
+        "bytes": 1843200,
+        "sha256": "b7a7a92b1c6bc1f2963e74820e4e6048fe89b800683bed701720a08addff26be",
+        "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-062/images/04-wifi-ready-after-reselect-b.png"
+      },
+      "visual_review": {
+        "status": "reviewed-captured-frame",
+        "observation": "Reviewed B frame: full Arena title, Local Wi-Fi, enabled Host game and Join game controls after Back/reselection.",
+        "scope": "Agent inspection of saved device framebuffer pixels; not a claim that a person observed those exact pixels on the physical panel."
+      },
+      "png_file": {
+        "file": "build-host/tab5-multiplayer-hardware/remote-062/images/04-wifi-ready-after-reselect-b.png",
+        "bytes": 34706,
+        "sha256": "a736463c8a47ef778280524ef6d186486306aa5ea57d4dc89e69820121221aa2"
+      },
+      "raw_payload_hash_correlated": true,
+      "png_reencoded_from_raw_exact_match": true
+    }
+  ],
+  "request_timings": [
+    {
+      "request": {
+        "unit": "both",
+        "command": "status"
+      },
+      "started_at": "2026-10-07T04:22:56.684851+00:00",
+      "completed_at": "2026-10-07T04:22:56.771705+00:00",
+      "duration_ms": 86.836,
+      "unit_duration_ms": {
+        "A": 62.655,
+        "B": 24.16
+      }
+    },
+    {
+      "request": {
+        "unit": "both",
+        "command": "tap",
+        "x": 100,
+        "y": 350,
+        "hold_ms": 300
+      },
+      "started_at": "2026-10-07T04:23:11.499722+00:00",
+      "completed_at": "2026-10-07T04:23:12.799817+00:00",
+      "duration_ms": 1300.077,
+      "unit_duration_ms": {
+        "A": 663.518,
+        "B": 636.545
+      }
+    },
+    {
+      "request": {
+        "unit": "both",
+        "command": "status"
+      },
+      "started_at": "2026-10-07T04:23:12.799957+00:00",
+      "completed_at": "2026-10-07T04:23:12.919183+00:00",
+      "duration_ms": 119.218,
+      "unit_duration_ms": {
+        "A": 23.276,
+        "B": 95.932
+      }
+    },
+    {
+      "request": {
+        "unit": "both",
+        "command": "screenshot",
+        "name": "01-game-grid"
+      },
+      "started_at": "2026-10-07T04:23:12.919267+00:00",
+      "completed_at": "2026-10-07T04:25:08.830578+00:00",
+      "duration_ms": 115910.956,
+      "unit_duration_ms": {
+        "A": 57615.147,
+        "B": 58295.799
+      }
+    },
+    {
+      "request": {
+        "unit": "both",
+        "command": "tap",
+        "x": 1012,
+        "y": 310,
+        "hold_ms": 300
+      },
+      "started_at": "2026-10-07T04:25:46.974075+00:00",
+      "completed_at": "2026-10-07T04:25:48.416226+00:00",
+      "duration_ms": 1442.135,
+      "unit_duration_ms": {
+        "A": 699.179,
+        "B": 742.935
+      }
+    },
+    {
+      "request": {
+        "unit": "both",
+        "command": "status"
+      },
+      "started_at": "2026-10-07T04:25:48.416339+00:00",
+      "completed_at": "2026-10-07T04:25:48.591702+00:00",
+      "duration_ms": 175.358,
+      "unit_duration_ms": {
+        "A": 66.924,
+        "B": 108.425
+      }
+    },
+    {
+      "request": {
+        "unit": "both",
+        "command": "pulse",
+        "buttons": "b",
+        "hold_ms": 300
+      },
+      "started_at": "2026-10-07T04:26:04.550595+00:00",
+      "completed_at": "2026-10-07T04:26:05.983211+00:00",
+      "duration_ms": 1432.596,
+      "unit_duration_ms": {
+        "A": 712.72,
+        "B": 719.861
+      }
+    },
+    {
+      "request": {
+        "unit": "both",
+        "command": "status"
+      },
+      "started_at": "2026-10-07T04:26:05.983365+00:00",
+      "completed_at": "2026-10-07T04:26:06.054937+00:00",
+      "duration_ms": 71.565,
+      "unit_duration_ms": {
+        "A": 54.353,
+        "B": 17.201
+      }
+    },
+    {
+      "request": {
+        "unit": "both",
+        "command": "tap",
+        "x": 506,
+        "y": 310,
+        "hold_ms": 300
+      },
+      "started_at": "2026-10-07T04:26:06.055031+00:00",
+      "completed_at": "2026-10-07T04:26:07.477374+00:00",
+      "duration_ms": 1422.328,
+      "unit_duration_ms": {
+        "A": 703.159,
+        "B": 719.155
+      }
+    },
+    {
+      "request": {
+        "unit": "both",
+        "command": "status"
+      },
+      "started_at": "2026-10-07T04:26:07.477516+00:00",
+      "completed_at": "2026-10-07T04:26:07.609999+00:00",
+      "duration_ms": 132.479,
+      "unit_duration_ms": {
+        "A": 33.84,
+        "B": 98.63
+      }
+    },
+    {
+      "request": {
+        "unit": "A",
+        "command": "screenshot",
+        "name": "02-arena-connection"
+      },
+      "started_at": "2026-10-07T04:26:07.610100+00:00",
+      "completed_at": "2026-10-07T04:27:09.163434+00:00",
+      "duration_ms": 61553.142,
+      "unit_duration_ms": {
+        "A": 61553.137
+      }
+    },
+    {
+      "request": {
+        "unit": "B",
+        "command": "tap",
+        "x": 750,
+        "y": 524,
+        "hold_ms": 300
+      },
+      "started_at": "2026-10-07T04:27:09.163544+00:00",
+      "completed_at": "2026-10-07T04:27:09.791148+00:00",
+      "duration_ms": 627.591,
+      "unit_duration_ms": {
+        "B": 627.575
+      }
+    },
+    {
+      "request": {
+        "unit": "A",
+        "command": "tap",
+        "x": 750,
+        "y": 524,
+        "hold_ms": 300
+      },
+      "started_at": "2026-10-07T04:27:09.791460+00:00",
+      "completed_at": "2026-10-07T04:27:10.497531+00:00",
+      "duration_ms": 706.054,
+      "unit_duration_ms": {
+        "A": 706.033
+      }
+    },
+    {
+      "request": {
+        "unit": "A",
+        "command": "screenshot",
+        "name": "03-cold-wifi-starting"
+      },
+      "started_at": "2026-10-07T04:27:10.497973+00:00",
+      "completed_at": "2026-10-07T04:28:05.961647+00:00",
+      "duration_ms": 55463.499,
+      "unit_duration_ms": {
+        "A": 55463.492
+      }
+    },
+    {
+      "request": {
+        "unit": "both",
+        "command": "status"
+      },
+      "started_at": "2026-10-07T04:28:05.961723+00:00",
+      "completed_at": "2026-10-07T04:28:06.073306+00:00",
+      "duration_ms": 111.578,
+      "unit_duration_ms": {
+        "A": 57.878,
+        "B": 53.69
+      }
+    },
+    {
+      "request": {
+        "unit": "both",
+        "command": "pulse",
+        "buttons": "b",
+        "hold_ms": 300
+      },
+      "started_at": "2026-10-07T04:28:06.073405+00:00",
+      "completed_at": "2026-10-07T04:28:07.672492+00:00",
+      "duration_ms": 1599.076,
+      "unit_duration_ms": {
+        "A": 796.794,
+        "B": 802.261
+      }
+    },
+    {
+      "request": {
+        "unit": "both",
+        "command": "status"
+      },
+      "started_at": "2026-10-07T04:28:07.672674+00:00",
+      "completed_at": "2026-10-07T04:28:07.728225+00:00",
+      "duration_ms": 55.542,
+      "unit_duration_ms": {
+        "A": 50.672,
+        "B": 4.856
+      }
+    },
+    {
+      "request": {
+        "unit": "both",
+        "command": "tap",
+        "x": 750,
+        "y": 524,
+        "hold_ms": 300
+      },
+      "started_at": "2026-10-07T04:28:07.728479+00:00",
+      "completed_at": "2026-10-07T04:28:09.157964+00:00",
+      "duration_ms": 1429.468,
+      "unit_duration_ms": {
+        "A": 665.933,
+        "B": 763.519
+      }
+    },
+    {
+      "request": {
+        "unit": "both",
+        "command": "status"
+      },
+      "started_at": "2026-10-07T04:28:09.158082+00:00",
+      "completed_at": "2026-10-07T04:28:09.269259+00:00",
+      "duration_ms": 111.172,
+      "unit_duration_ms": {
+        "A": 48.372,
+        "B": 62.79
+      }
+    },
+    {
+      "request": {
+        "unit": "both",
+        "command": "pulse",
+        "buttons": "b",
+        "hold_ms": 300
+      },
+      "started_at": "2026-10-07T04:28:09.269356+00:00",
+      "completed_at": "2026-10-07T04:28:10.763581+00:00",
+      "duration_ms": 1494.213,
+      "unit_duration_ms": {
+        "A": 733.384,
+        "B": 760.812
+      }
+    },
+    {
+      "request": {
+        "unit": "both",
+        "command": "tap",
+        "x": 750,
+        "y": 524,
+        "hold_ms": 300
+      },
+      "started_at": "2026-10-07T04:28:10.763991+00:00",
+      "completed_at": "2026-10-07T04:28:12.262098+00:00",
+      "duration_ms": 1498.091,
+      "unit_duration_ms": {
+        "A": 692.282,
+        "B": 805.793
+      }
+    },
+    {
+      "request": {
+        "unit": "both",
+        "command": "status"
+      },
+      "started_at": "2026-10-07T04:28:12.262216+00:00",
+      "completed_at": "2026-10-07T04:28:12.381336+00:00",
+      "duration_ms": 119.116,
+      "unit_duration_ms": {
+        "A": 7.483,
+        "B": 111.623
+      }
+    },
+    {
+      "request": {
+        "unit": "B",
+        "command": "screenshot",
+        "name": "04-wifi-ready-after-reselect"
+      },
+      "started_at": "2026-10-07T04:28:12.381421+00:00",
+      "completed_at": "2026-10-07T04:29:04.429281+00:00",
+      "duration_ms": 52047.698,
+      "unit_duration_ms": {
+        "B": 52047.694
+      }
+    },
+    {
+      "request": {
+        "unit": "A",
+        "command": "tap",
+        "x": 506,
+        "y": 402,
+        "hold_ms": 300
+      },
+      "started_at": "2026-10-07T04:29:04.429360+00:00",
+      "completed_at": "2026-10-07T04:29:05.217576+00:00",
+      "duration_ms": 788.207,
+      "unit_duration_ms": {
+        "A": 788.2
+      }
+    },
+    {
+      "request": {
+        "unit": "B",
+        "command": "tap",
+        "x": 1010,
+        "y": 402,
+        "hold_ms": 300
+      },
+      "started_at": "2026-10-07T04:29:05.217712+00:00",
+      "completed_at": "2026-10-07T04:29:05.909703+00:00",
+      "duration_ms": 691.983,
+      "unit_duration_ms": {
+        "B": 691.977
+      }
+    },
+    {
+      "request": {
+        "unit": "both",
+        "command": "status"
+      },
+      "started_at": "2026-10-07T04:29:05.909942+00:00",
+      "completed_at": "2026-10-07T04:29:05.984576+00:00",
+      "duration_ms": 74.627,
+      "unit_duration_ms": {
+        "A": 14.062,
+        "B": 60.556
+      }
+    },
+    {
+      "request": {
+        "unit": "A",
+        "command": "tap",
+        "x": 758,
+        "y": 526,
+        "hold_ms": 300
+      },
+      "started_at": "2026-10-07T04:29:19.884150+00:00",
+      "completed_at": "2026-10-07T04:29:20.530948+00:00",
+      "duration_ms": 646.782,
+      "unit_duration_ms": {
+        "A": 646.775
+      }
+    },
+    {
+      "request": {
+        "unit": "A",
+        "command": "status"
+      },
+      "started_at": "2026-10-07T04:29:20.531057+00:00",
+      "completed_at": "2026-10-07T04:29:20.540231+00:00",
+      "duration_ms": 9.169,
+      "unit_duration_ms": {
+        "A": 9.165
+      }
+    },
+    {
+      "request": {
+        "unit": "A",
+        "command": "tap",
+        "x": 1204,
+        "y": 346,
+        "hold_ms": 300
+      },
+      "started_at": "2026-10-07T04:29:20.540346+00:00",
+      "completed_at": "2026-10-07T04:29:21.214047+00:00",
+      "duration_ms": 673.686,
+      "unit_duration_ms": {
+        "A": 673.68
+      }
+    },
+    {
+      "request": {
+        "unit": "A",
+        "command": "tap",
+        "x": 1080,
+        "y": 346,
+        "hold_ms": 300
+      },
+      "started_at": "2026-10-07T04:29:21.214158+00:00",
+      "completed_at": "2026-10-07T04:29:22.015015+00:00",
+      "duration_ms": 800.847,
+      "unit_duration_ms": {
+        "A": 800.837
+      }
+    },
+    {
+      "request": {
+        "unit": "A",
+        "command": "tap",
+        "x": 1100,
+        "y": 638,
+        "hold_ms": 300
+      },
+      "started_at": "2026-10-07T04:29:22.015259+00:00",
+      "completed_at": "2026-10-07T04:29:22.711241+00:00",
+      "duration_ms": 695.965,
+      "unit_duration_ms": {
+        "A": 695.955
+      }
+    },
+    {
+      "request": {
+        "unit": "A",
+        "command": "status"
+      },
+      "started_at": "2026-10-07T04:29:22.711436+00:00",
+      "completed_at": "2026-10-07T04:29:22.771223+00:00",
+      "duration_ms": 59.78,
+      "unit_duration_ms": {
+        "A": 59.776
+      }
+    },
+    {
+      "request": {
+        "unit": "A",
+        "command": "tap",
+        "x": 758,
+        "y": 638,
+        "hold_ms": 300
+      },
+      "started_at": "2026-10-07T04:29:38.851457+00:00",
+      "completed_at": "2026-10-07T04:29:39.531606+00:00",
+      "duration_ms": 680.134,
+      "unit_duration_ms": {
+        "A": 680.127
+      }
+    },
+    {
+      "request": {
+        "unit": "both",
+        "command": "status"
+      },
+      "started_at": "2026-10-07T04:29:39.531753+00:00",
+      "completed_at": "2026-10-07T04:29:39.648717+00:00",
+      "duration_ms": 116.957,
+      "unit_duration_ms": {
+        "A": 68.217,
+        "B": 48.731
+      }
+    },
+    {
+      "request": {
+        "unit": "both",
+        "command": "status"
+      },
+      "started_at": "2026-10-07T04:29:46.921649+00:00",
+      "completed_at": "2026-10-07T04:29:47.013346+00:00",
+      "duration_ms": 91.685,
+      "unit_duration_ms": {
+        "A": 44.783,
+        "B": 46.89
+      }
+    },
+    {
+      "request": {
+        "unit": "B",
+        "command": "tap",
+        "x": 758,
+        "y": 345,
+        "hold_ms": 300
+      },
+      "started_at": "2026-10-07T04:29:55.388867+00:00",
+      "completed_at": "2026-10-07T04:29:56.137799+00:00",
+      "duration_ms": 748.911,
+      "unit_duration_ms": {
+        "B": 748.901
+      }
+    },
+    {
+      "request": {
+        "unit": "B",
+        "command": "tap",
+        "x": 758,
+        "y": 638,
+        "hold_ms": 300
+      },
+      "started_at": "2026-10-07T04:29:56.138001+00:00",
+      "completed_at": "2026-10-07T04:29:56.937179+00:00",
+      "duration_ms": 799.169,
+      "unit_duration_ms": {
+        "B": 799.162
+      }
+    },
+    {
+      "request": {
+        "unit": "both",
+        "command": "status"
+      },
+      "started_at": "2026-10-07T04:29:56.937289+00:00",
+      "completed_at": "2026-10-07T04:29:57.055002+00:00",
+      "duration_ms": 117.708,
+      "unit_duration_ms": {
+        "A": 55.755,
+        "B": 61.943
+      }
+    },
+    {
+      "request": {
+        "unit": "both",
+        "command": "status"
+      },
+      "started_at": "2026-10-07T04:30:03.312983+00:00",
+      "completed_at": "2026-10-07T04:30:03.469847+00:00",
+      "duration_ms": 156.851,
+      "unit_duration_ms": {
+        "A": 81.68,
+        "B": 75.162
+      }
+    },
+    {
+      "request": {
+        "unit": "both",
+        "command": "screenshot",
+        "name": "05-arena-lobby-ready"
+      },
+      "started_at": "2026-10-07T04:30:11.117888+00:00",
+      "completed_at": "2026-10-07T04:30:34.646990+00:00",
+      "duration_ms": 23529.003,
+      "unit_duration_ms": {
+        "A": 23414.216,
+        "B": 114.766
+      }
+    },
+    {
+      "request": {
+        "unit": "both",
+        "command": "status"
+      },
+      "started_at": "2026-10-07T04:32:29.525603+00:00",
+      "completed_at": "2026-10-07T04:32:29.659145+00:00",
+      "duration_ms": 133.528,
+      "unit_duration_ms": {
+        "A": 2.354,
+        "B": 131.163
+      }
+    },
+    {
+      "request": {
+        "unit": "both",
+        "command": "status"
+      },
+      "started_at": "2026-10-07T04:33:17.170484+00:00",
+      "completed_at": "2026-10-07T04:33:23.919757+00:00",
+      "duration_ms": 6749.23,
+      "unit_duration_ms": {
+        "A": 743.651,
+        "B": 6005.562
+      }
+    },
+    {
+      "request": {
+        "unit": "A",
+        "command": "pulse",
+        "buttons": "back",
+        "hold_ms": 300
+      },
+      "started_at": "2026-10-07T04:34:09.417309+00:00",
+      "completed_at": "2026-10-07T04:34:10.169953+00:00",
+      "duration_ms": 752.621,
+      "unit_duration_ms": {
+        "A": 752.602
+      }
+    },
+    {
+      "request": {
+        "unit": "A",
+        "command": "pulse",
+        "buttons": "up",
+        "hold_ms": 300
+      },
+      "started_at": "2026-10-07T04:34:10.170228+00:00",
+      "completed_at": "2026-10-07T04:34:10.871754+00:00",
+      "duration_ms": 701.516,
+      "unit_duration_ms": {
+        "A": 701.507
+      }
+    },
+    {
+      "request": {
+        "unit": "A",
+        "command": "pulse",
+        "buttons": "a",
+        "hold_ms": 300
+      },
+      "started_at": "2026-10-07T04:34:10.871877+00:00",
+      "completed_at": "2026-10-07T04:34:11.570339+00:00",
+      "duration_ms": 698.45,
+      "unit_duration_ms": {
+        "A": 698.435
+      }
+    },
+    {
+      "request": {
+        "unit": "A",
+        "command": "pulse",
+        "buttons": "up",
+        "hold_ms": 300
+      },
+      "started_at": "2026-10-07T04:34:11.570617+00:00",
+      "completed_at": "2026-10-07T04:34:12.268504+00:00",
+      "duration_ms": 697.877,
+      "unit_duration_ms": {
+        "A": 697.868
+      }
+    },
+    {
+      "request": {
+        "unit": "A",
+        "command": "pulse",
+        "buttons": "a",
+        "hold_ms": 300
+      },
+      "started_at": "2026-10-07T04:34:12.268671+00:00",
+      "completed_at": "2026-10-07T04:34:12.906219+00:00",
+      "duration_ms": 637.539,
+      "unit_duration_ms": {
+        "A": 637.532
+      }
+    },
+    {
+      "request": {
+        "unit": "A",
+        "command": "pulse",
+        "buttons": "a",
+        "hold_ms": 300
+      },
+      "started_at": "2026-10-07T04:34:12.906320+00:00",
+      "completed_at": "2026-10-07T04:34:19.326688+00:00",
+      "duration_ms": 6420.336,
+      "unit_duration_ms": {
+        "A": 6420.323
+      }
+    },
+    {
+      "request": {
+        "unit": "both",
+        "command": "status"
+      },
+      "started_at": "2026-10-07T04:34:47.912302+00:00",
+      "completed_at": "2026-10-07T04:34:48.005109+00:00",
+      "duration_ms": 92.793,
+      "unit_duration_ms": {
+        "A": 47.767,
+        "B": 45.014
+      }
+    },
+    {
+      "request": {
+        "unit": "both",
+        "command": "close"
+      },
+      "started_at": "2026-10-07T04:34:48.005265+00:00",
+      "completed_at": "2026-10-07T04:34:48.059326+00:00",
+      "duration_ms": 54.05,
+      "unit_duration_ms": {
+        "A": 9.837,
+        "B": 44.2
+      }
+    }
+  ],
+  "acceptance": {
+    "engine_barrier_hosts_observed": [
+      "A"
+    ],
+    "actual_host_directions_exercised": [
+      "A"
+    ],
+    "arena_engine_entry": "initial-two-player-barrier-observed-A-host-B-client",
+    "sustained_two_player_gameplay": "failed-client-peer-disconnect-abort-and-reboot",
+    "active_game_movement_firing_quit_peer_departure": "sustained-movement-and-firing-not-accepted; A-observed-peer-departure; A-clean-remote-quit-confirmed",
+    "gameplay_cadence": "not-qualified; A-serial-counters-after-peer-departure-only",
+    "human_visual_audio_touch_acceptance": "physical-Start-operator-reported; broader-gameplay-visual-audio-and-touch-acceptance-pending",
+    "menu_hierarchy_and_captured_presentation": "passed-tested-interactions-and-reviewed-frames",
+    "wifi_selection_responsiveness": "passed-tested-cold-and-warm-selections-persistent-hang-not-reproduced"
+  },
+  "limits": [
+    "Each engine READY proves its two initial synchronized tics and peer barrier, not a person seeing, hearing or physically controlling the game.",
+    "Runtime counter intervals are reported when available; release cadence and human gameplay acceptance remain separate.",
+    "Memory lines are informational snapshots, not allocation-failure proof. STARTUP_FAILED is a failure receipt even when firmware logs it at INFO severity.",
+    "Screenshot transport receipts bind raw RGB565 bytes separately from the PNG file hash. Captured frames require image inspection before visual acceptance; capture alone does not prove a person saw the panel.",
+    "Request duration includes client work, holds and waits; a screenshot also includes transfer and encoding. Both-unit commands run sequentially, so the total is not per-unit UI latency.",
+    "Peer departure is claimed only where a PLAYER_LEFT receipt is present; quit commands alone are not graceful-exit proof.",
+    "The last debug response is the last received reply, which may predate a later engine load, error or reboot; shell-ready serial receipts and boot versions are recorded separately.",
+    "Prior incomplete 0.60 and failed 0.61 runs remain preserved as separate historical records.",
+    "Raw captures remain ignored local files. Published excerpts strip binary debug/discovery traffic, MAC addresses, numeric route/lobby fields and serial port paths; correlated session/capture IDs and local image paths are retained."
+  ],
+  "capture_owner_receipt": {
+    "harness_session": 77444,
+    "ports_closed": true,
+    "closed_at_utc": "2026-10-07T04:34:48.061350+00:00",
+    "source": "Saved ports-closed journal event and parent operator confirmation that the harness exited."
+  },
+  "operator_observations": {
+    "physical_start": "Parent operator reported that the user physically pressed Start while the 05-arena-lobby-ready screenshot request was in progress. This was not a synthetic Start command.",
+    "observation_source": "Parent operator message; the serial evidence independently records the resulting engine transition."
+  },
+  "observations": {
+    "menu": "Both displayed the complete 12-choice game grid. Both selected Blast Circuit, returned to Game selection, selected Arena, and followed Connection to Host/Join. Back and Local Wi-Fi reselection worked on both in two subsequent cycles.",
+    "wifi": "Cold logged mode 0 to mode 1 took 2460 ms on each unit. A captured the Starting Local Wi-Fi feedback; B captured ready Host/Join after reselection. A persistent menu hang was not reproduced in these tested interactions.",
+    "screenshots": "Five captures each reconstructed all 900 RGB565 chunks, matched their raw SHA-256 receipts, and reproduced the saved PNG bytes exactly. The two requested lobby screenshots were unavailable during the reported physical Start transition: A stopped after 304 chunks; B could not begin. Neither produced a claimed lobby image.",
+    "engine": "Session 12b4f80e matched A host slot 0 and B client slot 1, two players, Arena map 1. A engine READY at 631695 ms and B at 633377 ms prove the initial synchronized barrier. They do not establish sustained gameplay.",
+    "failure": "A first reported PLAYER_LEFT slot 1 at 636379 ms, 4684 ms after its own READY; another PLAYER_LEFT was logged at 648380 ms. B reported P4 multiplayer peer disconnected, aborted at PC 0x40006ff1, and rebooted. B emitted no runtime STATS.",
+    "remaining_host": "A emitted five STATS receipts beginning at 642949 ms, after its first PLAYER_LEFT; those frames describe the remaining host alone, not two-player gameplay.",
+    "quit_and_recovery": "After remote quit navigation, A logged CLEANUP complete=1 retained=0 at 688481 ms and EXIT status=confirmed cleanup_complete=1 at 688484 ms, then rebooted to Home. B recovered to Home after its abort. Final status on both was mode=shell page=0 with neutral input.",
+    "command_errors": "The screenshot cancellations, missing final release reply across A quit/reboot, and stale close sessions are preserved. Final status and close replies show active=false, touch=false, buttons=0 and zero input/session leases.",
+    "untested": "B hosting, sustained two-player movement/firing, sound, and release cadence were not accepted in this failed run."
+  },
+  "preserved_historical_records": [
+    {
+      "file": "hardware/test-runs/2026-10-07-tab5-060-multiplayer-runtime.json",
+      "bytes": 6841,
+      "sha256": "6175c5d85e5e74b2220fd94c3658edbf8abb1da914459423e28ebad95a43d6a6"
+    },
+    {
+      "file": "hardware/test-runs/2026-10-07-tab5-061-multiplayer-runtime.json",
+      "bytes": 17483,
+      "sha256": "f03e26184df8ace0461e278ba411a070c991dc40a3a1adf15703b4bfac37a0bf"
+    },
+    {
+      "file": "hardware/test-runs/2026-10-07-tab5-061-menu-investigation.json",
+      "bytes": 32669,
+      "sha256": "624c8230b0c91f6c730a1b515ff8da9c23a53d6acb2cd3b1dd1b1545cd67691b"
+    }
+  ],
+  "sanitized_commands": {
+    "file": "hardware/test-runs/2026-10-07-tab5-062-multiplayer-runtime/commands.sanitized.jsonl",
+    "bytes": 36169,
+    "sha256": "47ad1e138a946ed434fabbca1a88b02cf3dd60faaec8a6e356c879b1d118eecc"
+  }
+}

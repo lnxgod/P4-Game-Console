@@ -70,7 +70,7 @@ Keep these rules true for every change:
 6. Treat USB and BLE HID descriptors/reports as untrusted input. Bound all lengths/counts, require encrypted identity-bound BLE pairing, and neutralize controller state immediately on disconnect.
 7. Keep copyrighted commercial Doom WADs out of the repository. Use Freedoom or a user-supplied legally owned WAD outside Git.
 8. A build is not hardware verification. Record the serial evidence and exact hardware used for every on-device acceptance result.
-9. For game work, follow [the ESP32-P4 performance contract](docs/GAME_PERFORMANCE.md): native 768×480 with 320×200 fallback, a 60 FPS target and actual-device 30 FPS release floor. Prefer bounded shared rendering and retain fractional motion. Host CPU results do not qualify device cadence; preserve exact package/OS/unit evidence and leave unmeasured acceptance pending.
+9. For game work, follow [the ESP32-P4 performance contract](docs/GAME_PERFORMANCE.md): every game on maintained Tab5 must render directly at native 768×480 RGB565, with a 60 FPS target and actual-device 30 FPS release floor. Never lower the game framebuffer to 320×200, upscale a completed low-resolution frame, or enable a per-title low-resolution override to fix performance or readability. Require `video-highres` in both the native manifest and C descriptor, and verify the actual runtime surface; a capability or large screenshot alone is insufficient. Canonical 320×200 touch coordinates are input units, not render resolution. Preserve legacy board/ABI source contracts only for explicitly requested legacy maintenance. Prefer bounded shared rendering and retain fractional motion. Host CPU results do not qualify device cadence; preserve exact package/OS/unit evidence and leave unmeasured acceptance pending.
 
 10. Every released game needs recognizable launcher artwork and a coherent opening/ready view, legible game identity during play, and appropriate pause/results screens. Follow [the complete presentation contract](docs/GAME_ART.md#complete-game-presentation); native games carry their own validated launcher icon. Preserve direct-touch card/board play and multiplayer start barriers.
 
@@ -132,10 +132,11 @@ artifact/evidence update. For SD-backed firmware use `DOOM1.WAD`,
 `docs/DOOM.md`. Never push WADs, generated WAD assembly, WAD-bearing firmware
 binaries, or local recovery images to GitHub.
 
-Standard installs exclude disabled games and `GAMES/WIP`. Byte Buddy, Red Dragon
-and Skyline Leap are development-only; use `make install-dev GAME=<slug>
-PORT=<port>` only on explicit opt-in. Keep Tide Maze available per the owner’s
-request and preserve its open acceptance notes. See
+Standard installs exclude disabled games and `GAMES/WIP`. Byte Buddy, Red Dragon,
+Skyline Leap and Tide Maze are development-only; use `make install-dev GAME=<slug>
+PORT=<port>` only on explicit opt-in. Tide Maze was removed from the product
+library at the owner’s request; preserve its source, save identity and failed
+acceptance notes. See
 [developer installs](games/README.md#developer-installs).
 
 Routine authorized Tab5 app flashes use device checksum verification; do not

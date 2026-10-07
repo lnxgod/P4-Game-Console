@@ -37,6 +37,7 @@
 #include "deh_main.h"
 
 #include "d_loop.h"
+#include "p4_doom_net.h"
 
 ticcmd_t *netcmds;
 
@@ -80,6 +81,12 @@ static void RunTic(ticcmd_t *cmds, boolean *ingame)
         if (!demoplayback && playeringame[i] && !ingame[i])
         {
             PlayerQuitGame(&players[i]);
+        }
+        else if (!demoplayback && !playeringame[i] && ingame[i]
+                 && P4_DoomArenaActive())
+        {
+            playeringame[i] = true;
+            P4_DoomArenaRejoin((int)i);
         }
     }
 
@@ -127,9 +134,12 @@ static void LoadGameSettings(net_gamesettings_t *settings)
                "because there is a client recording a Vanilla demo.\n");
     }
 
+    unsigned int initial_mask = 0;
+    if (P4_DoomNetActive()) initial_mask = P4_DoomNetInitialPlayerMask();
     for (i = 0; i < MAXPLAYERS; ++i)
     {
-        playeringame[i] = i < settings->num_players;
+        playeringame[i] = initial_mask ? (initial_mask & (1U << i)) != 0
+                                     : i < settings->num_players;
     }
 }
 
@@ -278,4 +288,3 @@ void D_CheckNetGame (void)
         }
     }
 }
-

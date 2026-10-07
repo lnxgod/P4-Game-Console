@@ -71,6 +71,104 @@ static void vote_tests(void)
     for(unsigned i=1;i<4;++i) assert(!memcmp(&peers[0],&peers[i],sizeof(peers[0])));
     assert(!p4_doom_arena_begin_selected(&peers[0],4,30));
 }
+
+static void rejoin_tests(void)
+{
+    p4_doom_arena_t peers[4];
+    const p4_doom_arena_activity_t moving[4] = {
+        {.moving=true}, {.moving=true}, {.moving=true}, {.moving=true}
+    };
+    for (unsigned i=0; i<4; ++i) {
+        p4_doom_arena_t *a=&peers[i];
+        assert(p4_doom_arena_begin_selected(a,4,7));
+        assert(p4_doom_arena_kill(a,0,2));
+        assert(p4_doom_arena_kill(a,1,2));
+        assert(p4_doom_arena_kill(a,3,2));
+        (void)p4_doom_arena_tick(a,7,moving);
+        assert(a->players[3].visit==1 && !a->players[3].active);
+        assert(a->players[3].kills==0 && a->connected_mask==7);
+        assert(!command(a,0,0x88,a->vote_generation));
+        const uint16_t vote_tics=a->vote_tics;
+        const uint8_t vote_generation=a->vote_generation;
+        const uint8_t map_index=a->map_index;
+        assert(p4_doom_arena_rejoin(a,3));
+        assert(a->players[3].visit==2 && a->players[3].active);
+        assert(a->players[3].kills==0 && !a->players[3].idle_tics);
+        assert(a->connected_mask==15 && a->players[0].kills==1);
+        assert(a->players[1].kills==1 && a->players[0].visit==1);
+        assert(a->vote_map==8 && a->vote_yes==1 && !a->vote_no);
+        assert(a->vote_tics==vote_tics && a->vote_generation==vote_generation);
+        assert(a->map_index==map_index && a->maps[map_index]==7);
+        assert(!p4_doom_arena_rejoin(a,3));
+        assert(!p4_doom_arena_rejoin(a,0));
+        assert(!p4_doom_arena_rejoin(a,4));
+        assert(!command(a,3,0xf0,a->vote_generation));
+        assert(command(a,1,0xf0,a->vote_generation)==8);
+        assert(p4_doom_arena_select(a,8));
+        assert(a->players[0].kills==1 && a->players[1].kills==1);
+        (void)p4_doom_arena_tick(a,7,moving);
+        assert(p4_doom_arena_rejoin(a,3));
+        assert(a->players[3].visit==3 && a->players[3].kills==0);
+        a->players[3].visit=UINT32_MAX;
+        (void)p4_doom_arena_tick(a,7,moving);
+        assert(!p4_doom_arena_rejoin(a,3));
+    }
+    for (unsigned i=1; i<4; ++i)
+        assert(!memcmp(&peers[0],&peers[i],sizeof(peers[0])));
+    assert(!p4_doom_arena_rejoin(NULL,1));
+    assert(p4_doom_arena_begin_selected(&peers[0],2,1));
+    assert(!p4_doom_arena_rejoin(&peers[0],2)); /* Never an original seat. */
+}
+
+static void late_join_tests(void)
+{
+    p4_doom_arena_t a;
+    assert(!p4_doom_arena_begin_selected_mask(&a, 1, 1, 1));
+    assert(!p4_doom_arena_begin_selected_mask(&a, 5, 1, 1));
+    assert(!p4_doom_arena_begin_selected_mask(&a, 4, 0, 1));
+    assert(!p4_doom_arena_begin_selected_mask(&a, 4, 2, 1));
+    assert(!p4_doom_arena_begin_selected_mask(&a, 3, 9, 1));
+    assert(!p4_doom_arena_begin_selected_mask(&a, 4, 1, 30));
+    assert(p4_doom_arena_begin_selected_mask(&a, 4, 1, 7));
+    assert(a.capacity == 4 && a.connected_mask == 1);
+    assert(p4_doom_arena_active_mask(&a) == 1 && a.players[0].visit == 1);
+    for (unsigned i = 1; i < 4; ++i) {
+        assert(!a.players[i].visit && !a.players[i].active);
+        assert(!a.players[i].kills && !a.players[i].idle_tics);
+        assert(!p4_doom_arena_rejoin(&a, (uint8_t)i));
+    }
+    const p4_doom_arena_activity_t moving[4] = {
+        {.moving=true}, {.moving=true, .firing=true, .use=true},
+        {.moving=true, .firing=true, .use=true}, {.moving=true}
+    };
+    for (unsigned tic = 0; tic < 2000; ++tic) (void)p4_doom_arena_tick(&a, 1, moving);
+    assert(a.connected_mask == 1 && a.players[0].visit == 1);
+    for (unsigned i = 1; i < 4; ++i)
+        assert(!a.players[i].visit && !a.players[i].active && !a.players[i].idle_tics);
+    /* A first admission preserves current match/host and current vote. */
+    a.players[0].kills = 17;
+    a.vote_map = 9; a.vote_tics = 314; a.vote_yes = 1;
+    const uint8_t generation = a.vote_generation, map_index = a.map_index;
+    assert(!p4_doom_arena_activate(&a, 0));
+    assert(!p4_doom_arena_activate(&a, 4));
+    assert(p4_doom_arena_activate(&a, 3));
+    assert(a.players[3].visit == 1 && a.players[3].active);
+    assert(a.connected_mask == 9 && a.players[0].kills == 17);
+    assert(a.vote_map == 9 && a.vote_tics == 314 && a.vote_yes == 1);
+    assert(a.vote_generation == generation && a.map_index == map_index);
+    assert(!p4_doom_arena_activate(&a, 3));
+    (void)p4_doom_arena_tick(&a, 1, moving);
+    assert(p4_doom_arena_rejoin(&a, 3));
+    assert(a.players[3].visit == 2 && a.connected_mask == 9);
+    assert(p4_doom_arena_activate(&a, 1));
+    assert(a.players[1].visit == 1 && a.connected_mask == 11);
+    assert(a.players[0].kills == 17 && !a.players[2].visit);
+    a.players[2].visit = UINT32_MAX;
+    assert(!p4_doom_arena_activate(&a, 2));
+    assert(p4_doom_arena_begin_selected_mask(&a, 3, 1, 7));
+    assert(!p4_doom_arena_activate(&a, 3));
+}
+
 int main(void)
 {
     /* An orphan generation token or invalid opcode must not swallow a new vote. */
@@ -84,6 +182,8 @@ int main(void)
         assert(!command(&a,1,0xf0,gen)); assert(command(&a,2,0xf0,gen)==29);
     }
     vote_tests();
+    rejoin_tests();
+    late_join_tests();
     p4_doom_arena_t peers[4];
     const uint8_t maps[] = {1, 7, 32};
     for (unsigned i = 0; i < 4; ++i) assert(p4_doom_arena_begin(&peers[i], 4, maps, 3));

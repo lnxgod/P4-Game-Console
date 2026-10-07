@@ -1,0 +1,389 @@
+{
+  "schema": 1,
+  "recorded_at": "2026-10-07T19:55:51.916477+00:00",
+  "board": "m5stack-tab5",
+  "version": "0.77",
+  "result": "pass",
+  "scope": "Guarded app-only installation, flash device-checksum verification, and serial boot-health evidence for units A and B. Multiplayer runtime and gameplay acceptance are separate and remain pending in this record.",
+  "selected_scope": "{\n  \"build_correction\": {\n    \"receipt_path\": \"build-host/diag-enum-correction-077/receipt.json\",\n    \"receipt_sha256\": \"c2f751a2c2153d546f7788f3feda4d1387201708dec34cbb5d804d49dfb5052c\",\n    \"scope\": \"Explicit unsigned casts preserve compile-time size enforcement while satisfying the pinned compiler enum-compare warning. The failed first build and original source snapshot remain historical evidence.\"\n  },\n  \"checker_correction\": {\n    \"receipt_path\": \"build-host/compiled-gate-repair-077/receipt.json\",\n    \"receipt_sha256\": \"7ecaaf687aaec3a2203d621270080ce5e9402ae5ea1d50b5885e06aed2a9c3e1\",\n    \"review_path\": \"build-host/compiled-gate-repair-077-prepare-review/receipt.json\",\n    \"review_sha256\": \"0ae9cecf0418c8ebef6fd9ecec2532b24908bc18a6204cb1548d76d3d325f526\",\n    \"scope\": \"Checker-only corrections for line-bounded empty macros, native stdout/stderr expansion, and actual touch factory/object legacy rejection. Production and source map remain unchanged; prior build and checker failures remain history.\"\n  },\n  \"composition\": {\n    \"patch_path\": \"build-host/composed-077-stage/final-v3/combined.patch\",\n    \"patch_sha256\": \"3180c6f9d634da8d7d2973547d662b951cbd180fd3a3dee9e6d9734bd7486506\",\n    \"path\": \"build-host/composed-077-stage/final-v3/composition.json\",\n    \"production_bindings_sha256\": \"3e2a3cf3deb7bb44fcc7bb1c6da5225ac3d782227e72c3a48f9beb9b28a6eabf\"\n  },\n  \"functional_promotion_targets\": 37,\n  \"hardware_acceptance\": false,\n  \"helpers\": [\n    \"build-host/rollout-final-077-v3/assemble.py\",\n    \"build-host/rollout-final-077-v3/prepare-0.77-authorization.py\",\n    \"build-host/rollout-final-077-v3/verify-build-077.py\",\n    \"build-host/rollout-final-077-v3/record-0.77-install.py\",\n    \"build-host/rollout-final-077-v3/verify_compiled_successor.py\",\n    \"build-host/rollout-final-077-v3/verify_compiled_touch.py\",\n    \"build-host/rollout-final-077-v3/compiled_diagnostic_common.py\",\n    \"build-host/rollout-final-077-v3/verify_compiled_transport.py\",\n    \"build-host/rollout-final-077-v3/verify_compiled_telemetry.py\"\n  ],\n  \"new_source_files\": 19,\n  \"ownership\": \"Root owns production integration, firmware builds, device authorization, serial ports, flashing and physical acceptance. Agents provide isolated reviewed proposals and offline checks.\",\n  \"physical_checks\": [\n    \"Verify the compiled source and target artifacts, then guarded app-only device-checksum flash the two exact backed-up units from their verified 0.76 predecessors.\",\n    \"Notify the user when both flashes finish and allow the requested live control test while capturing logs.\",\n    \"Measure both host directions, guest leave/rejoin without another host Start, touch responsiveness, overlay cleanup and sound. Exclude screenshot transfer intervals from FPS measurements.\",\n    \"Measure input backlog, touch sample age/faults, network packet pressure and submitted FPS over valid matched intervals; require at least 30 FPS per unit for release acceptance.\",\n    \"Back up each physically identified SD card completely before full-capacity MBR/FAT32 formatting with 32 KiB clusters, restore and hash-verify the content, then compare on the same original unit.\"\n  ],\n  \"purpose\": \"Remove blocking touch reads from Doom presentation and shorten queued multiplayer input delivery while retaining the authoritative simulation and join/rejoin protocol.\",\n  \"retained_acceptance_gaps\": [\n    \"Both exact Tab5 units run verified 0.76. Its live human test has not yet produced an Arena session in the captured logs.\",\n    \"The 0.75 guest returned twice to a running B host without another Start, but startup took about 90 seconds and host submitted frame rate averaged 29.639 FPS, below the repository 30 FPS floor.\",\n    \"Input-pipeline host models and touch tests establish code behavior, not measured device latency or physical display cadence.\",\n    \"Music and sound telemetry exists; audible output on both units remains unconfirmed.\",\n    \"Both microSD cards report 512-byte clusters in a 256 MiB FAT32 volume despite physical capacities of 16 and 32 GB. Reformatting is authorized but awaits physical connection to the Mac reader; no media failure is established.\",\n    \"The legacy E4 source-contract digest mismatch is unchanged from production and remains recorded separately. Other multiplayer games still require device testing.\"\n  ],\n  \"schema\": 1,\n  \"scope\": [\n    \"Sample Tab5 touch in a bounded 60 Hz worker and consume queued input in the frame loop; neutralize stale or failed input and preserve lifecycle ownership and timeout behavior.\",\n    \"Send the oldest multiplayer input plus up to two already queued followers during ordinary live play; preserve acknowledgements, history validation, start/resume barriers, simulation rate, packet budget and checkpoint replay fairness.\",\n    \"Publish separate touch diagnostics from copied snapshots and make diagnostic USB writes nonblocking while coordinating with ordinary stdout/stderr output.\",\n    \"Add focused sampler, transport and pipeline tests and repair two existing desktop mocks for the APIs already used by production.\",\n    \"Advance the displayed version to 0.77 with the reviewed version-only golden changes.\"\n  ],\n  \"source_files\": 293,\n  \"source_map_sha256\": \"1aa403778a6be66a27cda57db8c1cd43647b7f672c9be79d8f0520b02009d346\",\n  \"status\": \"Root-selected successor for controlled build and device testing; hardware acceptance remains open.\",\n  \"version\": \"0.77\",\n  \"version_golden_files\": 4\n}",
+  "final_scope_file": {
+    "file": "build-host/tab5-multiplayer-hardware/077-final-scope-v3.txt",
+    "bytes": 5463,
+    "sha256": "370547785dad406ce5b6f09f3e3facc122ddd3a6066e283ce49961adf1269db0"
+  },
+  "prebuild_source_snapshot": {
+    "file": "build-host/tab5-multiplayer-hardware/077-prebuild-source-v3.json",
+    "bytes": 99418,
+    "sha256": "ccec416ba895a014b51abc56365ad0022afde017df9ed6243e5211b77902d961"
+  },
+  "authorization": {
+    "file": "hardware/evidence/tab5-0.77-multiplayer-debug-authorization.json",
+    "bytes": 115454,
+    "sha256": "cc72f7da001ad8a7c39db2ebdc7750e02eaf4c7d8d85dfcf54dba68b441c4941"
+  },
+  "operator_request": "Go ahead and flash it to the Tab5s and test hosting and joining a Doom Arena game.",
+  "additional_operator_request": "add remote controls for debugging; fix the multiplayer game list and Local Wi-Fi selection responsiveness; display Doom Arena by Game Changers; show measured loading progress and fix slow or stuck Arena guest joining",
+  "source_commit": "51aefe10080498c3e95e9b78a8b0ecd553e00b5f",
+  "source_branch": "codex/tab5-multiplayer-debug",
+  "source_binding": "Exact changed-source hashes, pinned dependencies, installer hash, and comparison-input provenance are recorded in the authorization referenced by SHA-256 above.",
+  "toolchain": {
+    "schema": 1,
+    "esp_idf": {
+      "version": "5.5.3",
+      "git_tag": "v5.5.3",
+      "git_commit": "2c211b236707889e8400c4dc5644dd5c4ee071e0",
+      "repository": "https://github.com/espressif/esp-idf.git"
+    },
+    "target": {
+      "chip": "esp32p4",
+      "silicon_family": "revision_1_x",
+      "min_revision_full": 100,
+      "max_revision_full": 199
+    },
+    "managed_components": {
+      "espressif/esp_codec_dev": "1.5.4",
+      "espressif/esp_hosted": "1.4.7",
+      "espressif/esp_lcd_lt8912b": "0.2.0",
+      "espressif/esp_tinyusb": "2.0.1",
+      "espressif/esp_wifi_remote": "0.14.5",
+      "espressif/usb": "1.5.0",
+      "espressif/usb_host_hid": "1.2.0"
+    },
+    "policy": {
+      "commit_dependencies_lock": true,
+      "upgrade_only_with_hardware_regression": true
+    }
+  },
+  "build_log": {
+    "file": "build-host/tab5-multiplayer-debug-077-build-v3.log",
+    "bytes": 40831,
+    "sha256": "c5ff8c8c13938d27aa2eccdf7047703399ddfd1f2b4ef5e793e4a1c2e9267b9c"
+  },
+  "installer_sha256": "3c9544c4cc4ef3e004f4e7cbba86c7ed64bb2b7c04abe657336ab1b721c5ba01",
+  "operation": "app-only",
+  "firmware_only": true,
+  "application": {
+    "file": "apps/console_os/build-tab5/p4_console_os.bin",
+    "bytes": 4481408,
+    "sha256": "59de8d8306f07624f579afe11aea82e171925e9ab7eebf649535b6a66e96e9b4",
+    "version": "0.77",
+    "write_offset": "0x20000"
+  },
+  "update_package": {
+    "file": "apps/console_os/build-tab5/P4UPDATE.P4U",
+    "bytes": 4481664,
+    "sha256": "16392b7617327f8c195d078248a65cc08748afc0a787dfbe174c2ced42b52d17",
+    "written_by_this_install": false
+  },
+  "unchanged_comparison_inputs": {
+    "0x2000": {
+      "file": "apps/console_os/build-tab5/bootloader/bootloader.bin",
+      "bytes": 23136,
+      "sha256": "058cf4c0434733d72800c383e1bddb54aa33cf667b21254c8bd9d2f4f7f43443",
+      "written_by_this_install": false
+    },
+    "0x8000": {
+      "file": "apps/console_os/build-tab5/partition_table/partition-table.bin",
+      "bytes": 3072,
+      "sha256": "606f2ba90d4e68e36eb704e2dff8e2b509ce2adf1a398297d1fe0fc626590871",
+      "written_by_this_install": false
+    },
+    "0x10000": {
+      "file": "apps/console_os/build-tab5/ota_data_initial.bin",
+      "bytes": 8192,
+      "sha256": "7d2c7ac4888bfd75cd5f56e8d61f69595121183afc81556c876732fd3782c62f",
+      "written_by_this_install": false
+    }
+  },
+  "write_review": {
+    "offset": "0x20000",
+    "erase_all": false,
+    "force_revision": false,
+    "verification": "device-checksum",
+    "preserve": "bootloader, partition table, OTA selector, NVS, settings, microSD games and saves",
+    "full_readback": "Available only when explicitly selected for recovery/diagnostics; this authorization uses the installer default device checksum."
+  },
+  "peripheral_selection": {
+    "usb_host_enabled": true,
+    "charger_control_enabled": true,
+    "ble_multiplayer_enabled": true,
+    "wifi_multiplayer_enabled": true
+  },
+  "previous_install_evidence": {
+    "file": "hardware/test-runs/2026-10-07-tab5-076-multiplayer-debug-install.json",
+    "bytes": 21215,
+    "sha256": "0dee3d5a775ec036f71664be83a5c0b3b77cd82bdb6e43a853e4fe881f684a8b"
+  },
+  "units": {
+    "A": {
+      "identity_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+      "port_at_install": "/dev/cu.usbmodem1101",
+      "live": {
+        "identity_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+        "revision": "v1.3",
+        "flash_bytes": 16777216
+      },
+      "started_at": "2026-10-07T19:53:32.831183+00:00",
+      "receipt": {
+        "file": "hardware/backups/tab5-a-install-__b33dw9/receipt.json",
+        "bytes": 1628,
+        "sha256": "d3fe90ef934ff17b2a21e92428dd1a4d77184c272bcc733e874672dcf5ad553c"
+      },
+      "recovery": {
+        "receipt": {
+          "file": "hardware/backups/tab5-a-multiplayer-preinstall-20261007/receipt.json",
+          "bytes": 1985,
+          "sha256": "8a1fd149431f6f8c7ea1fc22ebc8383699914b2f83838d1a9efb2de17fc43d6d"
+        },
+        "complete_recovery_flash": {
+          "file": "hardware/backups/tab5-a-multiplayer-preinstall-20261007/complete-flash.bin",
+          "bytes": 16777216,
+          "sha256": "849ea1fd532207c96557daab6433cf2986919b80234ed541cba36b5e63d582df",
+          "git_ignored": true,
+          "mode": "0600",
+          "source": "Complete live pre-update Console OS 0.59 recovery snapshot; not factory firmware. Historical pre-project backup record retained separately."
+        },
+        "complete_recovery_flash_version": "0.59",
+        "capture_verification": "Complete flash read in one connection with live identity/security validation before and after read.",
+        "authorized_predecessor": {
+          "file": "build-host/rollout-helpers-076/preserved-076/app.bin",
+          "bytes": 4474688,
+          "sha256": "133e78dde7c217d19805731f76a255e3bca43188cc33f8be9f57ca417de57d92"
+        },
+        "predecessor_version": "0.76",
+        "predecessor_install_receipt": {
+          "file": "hardware/backups/tab5-a-install-ike6jqrg/receipt.json",
+          "bytes": 1628,
+          "sha256": "320608090f12f986055fe811988f41b1e3fd1f786bf6cf72326ba162707ff05e"
+        },
+        "predecessor_binding": "Exact preserved 0.76 build artifact, bound to this unit by its successful checksum-verified 0.76 install receipt. The guard rechecks the live predecessor checksum on the same connection before any 0.77 write.",
+        "active_ota_slot_before_write": 0,
+        "active_ota_slot_evidence": "Guard validated the live OTA selector on the same installation connection before writing."
+      },
+      "write_offsets": [
+        "0x20000"
+      ],
+      "verification_method": "device-checksum",
+      "checksum_verified": true,
+      "full_application_readback_verified": false,
+      "esptool_checksum_marker": "Hash of data verified.",
+      "raw_log_hashes": {
+        "runtime": {
+          "file": "hardware/backups/tab5-a-install-__b33dw9/runtime.log",
+          "bytes": 15773,
+          "sha256": "b30f9d38eda6b8870e3ee55ea48f355afda05510c8083f0459dda79c4147595d"
+        },
+        "esptool": {
+          "file": "hardware/backups/tab5-a-install-__b33dw9/esptool.log",
+          "bytes": 9351,
+          "sha256": "d404cbd42a6339562c2d945a61ead2eb0448cf8b07f6bf588d79a0cebc359004"
+        },
+        "installer_console": {
+          "file": "build-host/tab5-multiplayer-hardware/flash-a-077.log",
+          "bytes": 16149,
+          "sha256": "24483865bd27cbf150ba86136c67a14094c60cf515ff4aa9be42275b9f9ba1a6"
+        }
+      },
+      "boot_ready": true,
+      "health_ready": true,
+      "boot_markers": {
+        "application_version": {
+          "line": 58,
+          "text": "I (1906) app_init: App version:      0.77"
+        },
+        "display_ready": {
+          "line": 88,
+          "text": "I (3708) tab5_display: P4_DISPLAY READY board=m5stack-tab5 panel=st7121 native=720x1280 logical=1280x720 os=1280x720 game_viewport=1152x720+64+0 format=rgb565"
+        },
+        "sd_ready": {
+          "line": 97,
+          "text": "I (3956) game_storage: P4_GAME_STORAGE SD_READY frequency_khz=20000 fallback=0"
+        },
+        "usb_host_ready": {
+          "line": 115,
+          "text": "I (5127) p4_console_os: P4_CONSOLE_OS USB_INPUT_READY classes=gamepad transport=usb topology=tab5-usb-a firmware_vbus_source=1"
+        },
+        "interface": {
+          "line": 153,
+          "text": "I (10249) p4_console_os: P4_CONSOLE_OS INTERFACE version=0.77 renderer=nextgen native=1280x720 legacy_theme=0"
+        },
+        "os_ready": {
+          "line": 154,
+          "text": "I (10249) p4_console_os: P4_CONSOLE_OS READY board=m5stack-tab5 display=mipi-dsi audio=es8388 storage=microsd removal=power-off-first hardware_acceptance=pending"
+        },
+        "stable_health": {
+          "line": 166,
+          "text": "I (20275) p4_console_os: P4_CONSOLE_OS OTA_BOOT_VALID result=ESP_OK was_pending=0 stable_ms=10000 services=initialized"
+        }
+      },
+      "boot_diagnostics": [
+        {
+          "line": 81,
+          "text": "E (1921) pi4ioe5v6408: reset(252): Chip reset failed"
+        },
+        {
+          "line": 82,
+          "text": "E (1921) pi4ioe5v6408: esp_io_expander_new_i2c_pi4ioe5v6408(111): Reset failed"
+        },
+        {
+          "line": 83,
+          "text": "W (1921) tab5: I2C_INIT_RETRY attempt=2 error=ESP_ERR_INVALID_STATE bus_reset=ESP_OK"
+        },
+        {
+          "line": 95,
+          "text": "W (3910) ldo: The voltage value 0 is out of the recommended range [500, 2700]"
+        }
+      ],
+      "runtime_fatal_pattern_scan": {
+        "patterns": [
+          "Guru Meditation",
+          "panic_abort",
+          "abort() was called",
+          "P4_CONSOLE_OS HALT",
+          "P4_CONSOLE_OS FATAL_HOLD",
+          "Brownout detector was triggered",
+          "Task watchdog got triggered",
+          "assert failed"
+        ],
+        "matches": []
+      },
+      "physical_acceptance": "pending"
+    },
+    "B": {
+      "identity_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+      "port_at_install": "/dev/cu.usbmodem101",
+      "live": {
+        "identity_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+        "revision": "v1.3",
+        "flash_bytes": 16777216
+      },
+      "started_at": "2026-10-07T19:54:35.490323+00:00",
+      "receipt": {
+        "file": "hardware/backups/tab5-b-install-h8xnp9ze/receipt.json",
+        "bytes": 1627,
+        "sha256": "110aa770703eefe47c336ac979aa869bdda43f20726d92344cee35f0ace3a608"
+      },
+      "recovery": {
+        "receipt": {
+          "file": "hardware/backups/tab5-b-multiplayer-preinstall-20261007/receipt.json",
+          "bytes": 2044,
+          "sha256": "99a51ce406d438ca98797bb54d991773536b2a1232ff6b8e8ad1f410800bd272"
+        },
+        "complete_recovery_flash": {
+          "file": "hardware/backups/tab5-b-multiplayer-preinstall-20261007/complete-flash.bin",
+          "bytes": 16777216,
+          "sha256": "1005bc51f3c0877c5722695e2a2fb058dcef024658953a16372c16137c7fb842",
+          "git_ignored": true,
+          "mode": "0600",
+          "source": "Complete live pre-update Console OS 0.59 recovery snapshot; not factory firmware. Historical pre-project backup record retained separately."
+        },
+        "complete_recovery_flash_version": "0.59",
+        "capture_verification": "Saved full snapshot validated before/after read by backup-current.py; recovery completion revalidates exact app and partition table against same live identity.",
+        "authorized_predecessor": {
+          "file": "build-host/rollout-helpers-076/preserved-076/app.bin",
+          "bytes": 4474688,
+          "sha256": "133e78dde7c217d19805731f76a255e3bca43188cc33f8be9f57ca417de57d92"
+        },
+        "predecessor_version": "0.76",
+        "predecessor_install_receipt": {
+          "file": "hardware/backups/tab5-b-install-hzfklw_9/receipt.json",
+          "bytes": 1627,
+          "sha256": "6f56169e675e44886fe43fce26af9f10336622c03a869933aaa3797016bed835"
+        },
+        "predecessor_binding": "Exact preserved 0.76 build artifact, bound to this unit by its successful checksum-verified 0.76 install receipt. The guard rechecks the live predecessor checksum on the same connection before any 0.77 write.",
+        "active_ota_slot_before_write": 0,
+        "active_ota_slot_evidence": "Guard validated the live OTA selector on the same installation connection before writing."
+      },
+      "write_offsets": [
+        "0x20000"
+      ],
+      "verification_method": "device-checksum",
+      "checksum_verified": true,
+      "full_application_readback_verified": false,
+      "esptool_checksum_marker": "Hash of data verified.",
+      "raw_log_hashes": {
+        "runtime": {
+          "file": "hardware/backups/tab5-b-install-h8xnp9ze/runtime.log",
+          "bytes": 16058,
+          "sha256": "34d82b9296aeccd808cce0cfd90c363af9aceb822ec3f2da7207e716bb0a102e"
+        },
+        "esptool": {
+          "file": "hardware/backups/tab5-b-install-h8xnp9ze/esptool.log",
+          "bytes": 9354,
+          "sha256": "fa16c0a01b9bbf51f366ed9895b5590862e0e1027ca8ebde47b2bef881f03b01"
+        },
+        "installer_console": {
+          "file": "build-host/tab5-multiplayer-hardware/flash-b-077.log",
+          "bytes": 16434,
+          "sha256": "2ea7d95d7081e4325df8e51a26af673f11673dee6c30c415a2582c2c00a5054b"
+        }
+      },
+      "boot_ready": true,
+      "health_ready": true,
+      "boot_markers": {
+        "application_version": {
+          "line": 58,
+          "text": "I (1909) app_init: App version:      0.77"
+        },
+        "display_ready": {
+          "line": 86,
+          "text": "I (2936) tab5_display: P4_DISPLAY READY board=m5stack-tab5 panel=st7123 native=720x1280 logical=1280x720 os=1280x720 game_viewport=1152x720+64+0 format=rgb565"
+        },
+        "sd_ready": {
+          "line": 95,
+          "text": "I (3181) game_storage: P4_GAME_STORAGE SD_READY frequency_khz=20000 fallback=0"
+        },
+        "usb_host_ready": {
+          "line": 113,
+          "text": "I (4374) p4_console_os: P4_CONSOLE_OS USB_INPUT_READY classes=gamepad transport=usb topology=tab5-usb-a firmware_vbus_source=1"
+        },
+        "interface": {
+          "line": 153,
+          "text": "I (8502) p4_console_os: P4_CONSOLE_OS INTERFACE version=0.77 renderer=nextgen native=1280x720 legacy_theme=0"
+        },
+        "os_ready": {
+          "line": 154,
+          "text": "I (8502) p4_console_os: P4_CONSOLE_OS READY board=m5stack-tab5 display=mipi-dsi audio=es8388 storage=microsd removal=power-off-first hardware_acceptance=pending"
+        },
+        "stable_health": {
+          "line": 166,
+          "text": "I (18527) p4_console_os: P4_CONSOLE_OS OTA_BOOT_VALID result=ESP_OK was_pending=0 stable_ms=10000 services=initialized"
+        }
+      },
+      "boot_diagnostics": [
+        {
+          "line": 83,
+          "text": "W (2745) st7123: The 36h command has been used and will be overwritten by external initialization sequence"
+        },
+        {
+          "line": 93,
+          "text": "W (3136) ldo: The voltage value 0 is out of the recommended range [500, 2700]"
+        },
+        {
+          "line": 120,
+          "text": "W (5295) hid-host: No HID device at USB port 1"
+        }
+      ],
+      "runtime_fatal_pattern_scan": {
+        "patterns": [
+          "Guru Meditation",
+          "panic_abort",
+          "abort() was called",
+          "P4_CONSOLE_OS HALT",
+          "P4_CONSOLE_OS FATAL_HOLD",
+          "Brownout detector was triggered",
+          "Task watchdog got triggered",
+          "assert failed"
+        ],
+        "matches": []
+      },
+      "physical_acceptance": "pending"
+    }
+  },
+  "limits": [
+    "The application was validated using the flash device checksum; full application readback was not selected or performed.",
+    "Both logs reached Console OS READY and the 10000 ms stable OTA_BOOT_VALID marker. All recorded boot warnings/errors are preserved above.",
+    "This evidence does not qualify Doom Arena host/join, USB debugging controls, physical input, sound, gameplay, or game cadence. Runtime validation is recorded separately.",
+    "Complete recovery snapshots and original installer receipts/logs remain local ignored files. Hashes refer to their exact raw bytes; boot marker excerpts are sanitized."
+  ]
+}

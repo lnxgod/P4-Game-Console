@@ -7,8 +7,11 @@ and release preparation. They supplement [game art](GAME_ART.md),
 
 ## Preserve the game while improving its presentation
 
-Native C cartridges are the supported path. Render genuine detail at 768×480,
-with a tested 320×200 fallback. Keep fractional motion and bounded rendering;
+Native C cartridges are the supported path. Every maintained Tab5 game renders
+directly at 768×480; require native video in its manifest and C descriptor and
+verify the actual runtime surface. Preserve 320×200 fallback code and bounds
+tests only for explicit legacy compatibility. Never lower resolution or upscale
+a completed frame to fix readability or performance. Keep fractional motion and bounded rendering;
 target 60 presented FPS and require the measured 30 FPS floor on the P4.
 Language choice, multicore configuration and a simulator counter do not prove
 device responsiveness. A reported laggy candidate has failed gameplay
@@ -25,8 +28,9 @@ glyphs, readable spacing, richer palettes, deliberate borders, panels and
 restrained animation. Separate semantic text/cell state from pixel rendering;
 do not enlarge a completed low-resolution framebuffer and call it high-res.
 Keep command keys, selections and readable information in their existing flow.
-Compare representative town, combat, inventory and status screens, plus narrow
-fallback layouts, without altering the underlying rules to fit the artwork.
+Compare representative native town, combat, inventory and status screens
+without altering the underlying rules to fit the artwork. Retained narrow
+fallback layouts provide legacy compatibility evidence only.
 
 ## Ship an honest, curated library
 

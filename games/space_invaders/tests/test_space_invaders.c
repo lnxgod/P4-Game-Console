@@ -20,6 +20,21 @@ static int s_failures;
         } \
     } while (0)
 
+/* Explicit legacy renderer fixture; retained storage outlives every instance.
+ * Maintained native admission continues to use p4_space_invaders_game unchanged. */
+static const p4_game_descriptor_t *legacy_descriptor(void)
+{
+    static p4_game_descriptor_t descriptor;
+    static bool initialized;
+    if (!initialized) {
+        descriptor = p4_space_invaders_game;
+        descriptor.required_capabilities &= ~(uint32_t)P4_GAME_CAP_VIDEO_HIGH_RES;
+        descriptor.optional_capabilities |= P4_GAME_CAP_VIDEO_HIGH_RES;
+        initialized = true;
+    }
+    return &descriptor;
+}
+
 static uint32_t next_random(uint32_t *state)
 {
     *state = *state * UINT32_C(1664525) + UINT32_C(1013904223);
@@ -43,8 +58,14 @@ static bool start_title_mode(p4_game_instance_t *instance,
         .stop_audio = p4_audio_mixer_service_stop,
     };
     *instance = (p4_game_instance_t){0};
+    CHECK((p4_space_invaders_game.required_capabilities & P4_GAME_CAP_VIDEO_HIGH_RES) != 0U);
+    CHECK((p4_space_invaders_game.optional_capabilities & P4_GAME_CAP_VIDEO_HIGH_RES) == 0U);
+    if (!high_res) {
+        CHECK(!p4_game_instance_start(instance, &p4_space_invaders_game, &services,
+                                     state, sizeof(*state)));
+    }
     return p4_game_instance_start(
-        instance, &p4_space_invaders_game, &services,
+        instance, high_res ? &p4_space_invaders_game : legacy_descriptor(), &services,
         state, sizeof(*state));
 }
 

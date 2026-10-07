@@ -38,7 +38,7 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
     uint16_t *const pixels = calloc(
-        (size_t)P4_GAME_SURFACE_WIDTH * P4_GAME_SURFACE_HEIGHT,
+        (size_t)P4_GAME_SURFACE_HIGH_RES_WIDTH * P4_GAME_SURFACE_HIGH_RES_HEIGHT,
         sizeof(*pixels));
     p4_yahtzee_state_t *const state = calloc(1U, sizeof(*state));
     if (pixels == NULL || state == NULL) {
@@ -47,14 +47,15 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
     const p4_game_services_t services = {
-        .available_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS,
+        .available_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS |
+            P4_GAME_CAP_VIDEO_HIGH_RES,
     };
     p4_game_instance_t instance = {0};
     p4_game_surface_t surface = {
         .pixels = pixels,
-        .stride_pixels = P4_GAME_SURFACE_WIDTH,
-        .width = P4_GAME_SURFACE_WIDTH,
-        .height = P4_GAME_SURFACE_HEIGHT,
+        .stride_pixels = P4_GAME_SURFACE_HIGH_RES_WIDTH,
+        .width = P4_GAME_SURFACE_HIGH_RES_WIDTH,
+        .height = P4_GAME_SURFACE_HIGH_RES_HEIGHT,
     };
     if (!p4_game_instance_start(
             &instance, &p4_p4_yahtzee_game, &services,
@@ -97,9 +98,9 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
     fprintf(output, "P6\n%d %d\n255\n",
-            P4_GAME_SURFACE_WIDTH, P4_GAME_SURFACE_HEIGHT);
+            P4_GAME_SURFACE_HIGH_RES_WIDTH, P4_GAME_SURFACE_HIGH_RES_HEIGHT);
     for (size_t index = 0U; index <
-         (size_t)P4_GAME_SURFACE_WIDTH * P4_GAME_SURFACE_HEIGHT; ++index) {
+         (size_t)P4_GAME_SURFACE_HIGH_RES_WIDTH * P4_GAME_SURFACE_HIGH_RES_HEIGHT; ++index) {
         const uint16_t pixel = pixels[index];
         fputc((int)expand5((pixel >> 11U) & 31U), output);
         fputc((int)expand6((pixel >> 5U) & 63U), output);

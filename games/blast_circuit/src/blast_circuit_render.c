@@ -15,8 +15,10 @@
 enum { INK = 0x0864, PAPER = 0xffb7, MINT = 0x5f79, MUTED = 0x6c73,
        GOLD = 0xfe88, KEY = 0xf81f, BOARD_X = 146, BOARD_Y = 64, TILE = 28 };
 static const uint16_t colors[4] = {MINT, 0xfbb3, 0x5d9f, GOLD};
-static int sx(const p4_game_surface_t *f, int x) { return x * (int)f->width / 768; }
-static int sy(const p4_game_surface_t *f, int y) { return y * (int)f->height / 480; }
+static int sx(const p4_game_surface_t *f, int x)
+{ return f->width == 768U ? x : x * (int)f->width / 768; }
+static int sy(const p4_game_surface_t *f, int y)
+{ return f->height == 480U ? y : y * (int)f->height / 480; }
 static void box(p4_game_surface_t *f, int x, int y, int w, int h, uint16_t c)
 { p4_draw_fill_rect(f, sx(f,x), sy(f,y), sx(f,x+w)-sx(f,x), sy(f,y+h)-sy(f,y), c); }
 static void circle(p4_game_surface_t *f, int x, int y, int r, uint16_t c)
@@ -30,10 +32,11 @@ static void centered(p4_game_surface_t *f, int x, int y, const char *t, uint16_t
     const int width = (int)(length(t) * 6U * z);
     p4_draw_text(f, sx(f,x)-width/2, sy(f,y), t,c,z,40U);
 }
-static void sprite(p4_game_surface_t *f, const uint16_t *data, int source_size,
-                    int x, int y, int size)
+static void sprite_blit(p4_game_surface_t *f, const uint16_t *data, int source_size,
+                       int x, int y, int size, int dx, int dy, bool silhouette)
 {
-    const int left=sx(f,x),top=sy(f,y),w=sx(f,x+size)-left,h=sy(f,y+size)-top;
+    const int w=sx(f,x+size)-sx(f,x),h=sy(f,y+size)-sy(f,y);
+    const int left=sx(f,x)+dx,top=sy(f,y)+dy;
     if (w<=0 || h<=0) return;
     const int x0=left<0?-left:0,y0=top<0?-top:0;
     const int x1=left+w>(int)f->width?(int)f->width-left:w;
@@ -42,22 +45,41 @@ static void sprite(p4_game_surface_t *f, const uint16_t *data, int source_size,
     // Exact nearest-neighbor stepping without a division for every pixel.
     const int step=source_size/w,remainder=source_size%w;
     const int first=x0*source_size/w,initial_error=x0*source_size%w;
+    const int y_step=source_size/h,y_remainder=source_size%h;
+    int source_y=y0*source_size/h,y_error=y0*source_size%h;
     for(int yy=y0;yy<y1;++yy) {
-        const uint16_t *row=data+(yy*source_size/h)*source_size;
+        const uint16_t *row=data+source_y*source_size;
         uint16_t *out=f->pixels+(size_t)(top+yy)*f->stride_pixels+(size_t)(left+x0);
         int source_x=first,error=initial_error;
         for(int xx=x0;xx<x1;++xx) {
             const uint16_t c=row[source_x];
-            if(c!=KEY) *out=c;
+            if(c!=KEY) *out=silhouette?INK:c;
             ++out;source_x+=step;error+=remainder;
             if(error>=w) {++source_x;error-=w;}
         }
+        source_y+=y_step;y_error+=y_remainder;
+        if(y_error>=h) {++source_y;y_error-=h;}
     }
 }
+static void sprite(p4_game_surface_t *f,const uint16_t *data,int source_size,
+                   int x,int y,int size)
+{ sprite_blit(f,data,source_size,x,y,size,0,0,false); }
+static void outlined_sprite(p4_game_surface_t *f,const uint16_t *data,int source_size,
+                            int x,int y,int size)
+{
+    // Separate moving foreground sprites from nearby materials at native size.
+    const int border=f->width>320U?2:1;
+    sprite_blit(f,data,source_size,x,y,size,-border,0,true);
+    sprite_blit(f,data,source_size,x,y,size,border,0,true);
+    sprite_blit(f,data,source_size,x,y,size,0,-border,true);
+    sprite_blit(f,data,source_size,x,y,size,0,border,true);
+    sprite(f,data,source_size,x,y,size);
+}
+static const uint16_t *character_art(unsigned player,unsigned frame)
+{ return player==1U?bc_ember[frame]:player==2U?bc_volt[frame]:player==3U?bc_gilt[frame]:bc_runner[frame]; }
 static void character(p4_game_surface_t *f,unsigned player,unsigned frame,int x,int y,int size)
 {
-    const uint16_t *pixels=player==1U?bc_ember[frame]:player==2U?bc_volt[frame]:player==3U?bc_gilt[frame]:bc_runner[frame];
-    sprite(f,pixels,player?32:48,x,y,size);
+    sprite(f,character_art(player,frame),player?32:48,x,y,size);
 }
 static const char *theme_name(unsigned theme)
 { return theme==1U?"COPPER FOUNDRY":theme==2U?"PRISM VAULT":"ORBITAL GREENHOUSE"; }
@@ -75,10 +97,13 @@ static uint16_t fade(uint16_t c)
 { return (uint16_t)((c & 0xe79cU) >> 2U); }
 static void dim(p4_game_surface_t *f)
 {
-    for(unsigned y=0;y<f->height;++y)
-        for(unsigned x=0;x<f->width;++x) {
-            uint16_t *p=&f->pixels[(size_t)y*f->stride_pixels+x]; *p=fade(*p);
-        }
+    uint16_t *row=f->pixels;
+    for(unsigned y=0;y<f->height;++y) {
+        uint16_t *p=row;
+        uint16_t *const end=row+f->width;
+        while(p!=end) {*p=fade(*p);++p;}
+        row+=f->stride_pixels;
+    }
 }
 static void particle(bc_state_t *s, int x, int y, unsigned count, uint16_t color, uint32_t seed)
 {
@@ -159,8 +184,18 @@ void bc_visual_step(bc_state_t *s, uint32_t elapsed)
         p->vy+=80*(int32_t)elapsed;
     }
 }
+static void floor_swatch(p4_game_surface_t *f,int x,int y,int size,unsigned theme)
+{
+    // Walkable space stays quiet; only obstacles and hazards carry busy artwork.
+    static const uint16_t floor[3]={0x1168,0x18e6,0x18e9};
+    // Partition the same top/left grid edge and colored interior so every
+    // pixel is written once. Logical edges preserve legacy scaling exactly.
+    box(f,x,y,size,1,INK);
+    box(f,x,y+1,1,size-1,INK);
+    box(f,x+1,y+1,size-1,size-1,floor[theme<BC_THEMES?theme:0U]);
+}
 static void floor_tile(p4_game_surface_t *f,int x,int y,unsigned variation,unsigned theme)
-{ sprite(f,tile_art(theme,BC_FLOOR,variation),32,x,y,TILE); }
+{ (void)variation;floor_swatch(f,x,y,TILE,theme); }
 static void flame(p4_game_surface_t *f,const bc_state_t *s,int x,int y,unsigned life,unsigned hash)
 {
     const bc_world_t *w=&s->world;
@@ -178,6 +213,70 @@ static void flame(p4_game_surface_t *f,const bc_state_t *s,int x,int y,unsigned 
     if(vertical) box(f,x+12,y,4,TILE,life>2U?GOLD:0xcac4);
     sprite(f,bc_effect_atlas[row*4U+frame],32,x,y,TILE);
 }
+static void frame_band(p4_game_surface_t *f,int x,int y,int w,int h,
+                       int inset,uint16_t color)
+{
+    // Interior pixels are completely covered by the next band or floor.
+    // Disjoint rectangles preserve scaled edges and the original draw order.
+    box(f,x,y,w,inset,color);
+    box(f,x,y+h-inset,w,inset,color);
+    box(f,x,y+inset,inset,h-2*inset,color);
+    box(f,x+w-inset,y+inset,inset,h-2*inset,color);
+}
+static void background_sides(p4_game_surface_t *f,int left,int right,
+                             int y,int height,bool panels)
+{
+    if(panels) {
+        p4_draw_fill_rect(f,0,y,16,height,INK);
+        p4_draw_fill_rect(f,120,y,left-120,height,INK);
+        p4_draw_fill_rect(f,right,y,648-right,height,INK);
+        p4_draw_fill_rect(f,752,y,16,height,INK);
+    } else {
+        p4_draw_fill_rect(f,0,y,left,height,INK);
+        p4_draw_fill_rect(f,right,y,768-right,height,INK);
+    }
+}
+static void background(p4_game_surface_t *f,const bc_state_t *s)
+{
+    if(f->width!=768U || f->height!=480U) {
+        p4_draw_clear(f,INK);
+        for(int y=0;y<480;y+=8) box(f,0,y,768,1,0x08a5);
+        return;
+    }
+    int left=BOARD_X-8,top=BOARD_Y-8;
+    if(s->shake_ms && s->world.phase!=BC_PAUSED) {
+        left+=(int)((s->visual_ms/16U)%3U)-1;
+        top+=(int)((s->visual_ms/23U)%3U)-1;
+    }
+    const int right=left+BC_W*TILE+16,bottom=top+BC_H*TILE+16;
+    // The disjoint frame bands and every floor cell overwrite this entire
+    // native board rectangle before any overlay reads the surface.
+    p4_draw_fill_rect(f,0,0,768,top,INK);
+    p4_draw_fill_rect(f,0,bottom,768,480-bottom,INK);
+    const uint8_t phase=s->world.phase;
+    const bool panels=phase!=BC_TITLE && phase!=BC_SELECT && phase!=BC_EDITOR &&
+                      phase!=BC_EDITOR_MENU && phase!=BC_COPY;
+    if(panels) {
+        // These four opaque HUD panels also overwrite their entire rectangle.
+        background_sides(f,left,right,top,86-top,false);
+        background_sides(f,left,right,86,112,true);
+        background_sides(f,left,right,198,22,false);
+        background_sides(f,left,right,220,112,true);
+        background_sides(f,left,right,332,bottom-332,false);
+    } else background_sides(f,left,right,top,bottom-top,false);
+    for(int y=0;y<480;y+=8) {
+        if(y<top || y>=bottom) p4_draw_fill_rect(f,0,y,768,1,0x08a5);
+        else if(panels && ((y>=86 && y<198) || (y>=220 && y<332))) {
+            p4_draw_fill_rect(f,0,y,16,1,0x08a5);
+            p4_draw_fill_rect(f,120,y,left-120,1,0x08a5);
+            p4_draw_fill_rect(f,right,y,648-right,1,0x08a5);
+            p4_draw_fill_rect(f,752,y,16,1,0x08a5);
+        } else {
+            p4_draw_fill_rect(f,0,y,left,1,0x08a5);
+            p4_draw_fill_rect(f,right,y,768-right,1,0x08a5);
+        }
+    }
+}
 static void arena(p4_game_surface_t *f,const bc_state_t *s)
 {
     const bc_world_t *w=&s->world;
@@ -186,9 +285,9 @@ static void arena(p4_game_surface_t *f,const bc_state_t *s)
         ox+=(int)((s->visual_ms/16U)%3U)-1;
         oy+=(int)((s->visual_ms/23U)%3U)-1;
     }
-    box(f,ox-8,oy-8,BC_W*TILE+16,BC_H*TILE+16,0x0148);
-    box(f,ox-4,oy-4,BC_W*TILE+8,BC_H*TILE+8,0x3b92);
-    box(f,ox-2,oy-2,BC_W*TILE+4,BC_H*TILE+4,0x0927);
+    frame_band(f,ox-8,oy-8,BC_W*TILE+16,BC_H*TILE+16,4,0x0148);
+    frame_band(f,ox-4,oy-4,BC_W*TILE+8,BC_H*TILE+8,2,0x3b92);
+    frame_band(f,ox-2,oy-2,BC_W*TILE+4,BC_H*TILE+4,2,0x0927);
     for(int y=0;y<BC_H;++y) for(int x=0;x<BC_W;++x) {
         const int c=y*BC_W+x,px=ox+x*TILE,py=oy+y*TILE;
         floor_tile(f,px,py,(unsigned)(x*3+y*7),w->theme);
@@ -208,7 +307,7 @@ static void arena(p4_game_surface_t *f,const bc_state_t *s)
         } else if(bc_pickup(w->tile[c]) && !w->fire[c]) {
             const int bob=(int)((s->visual_ms/180U+(unsigned)c)%4U);
             circle(f,px+TILE/2,py+TILE-6,9,0x126b);
-            sprite(f,bc_greenhouse[12U+w->tile[c]-BC_RANGE],32,px+2,py-2+(bob<2?bob:3-bob),TILE-4);
+            outlined_sprite(f,bc_greenhouse[12U+w->tile[c]-BC_RANGE],32,px+2,py-2+(bob<2?bob:3-bob),TILE-4);
         }
     }
     for(unsigned i=0;i<BC_BOMBS;++i) {
@@ -216,7 +315,7 @@ static void arena(p4_game_surface_t *f,const bc_state_t *s)
         const int x=ox+b->x*TILE,y=oy+b->y*TILE;
         const unsigned frame=(BC_FUSE-b->fuse)/(b->fuse<14U?2U:5U)%4U;
         circle(f,x+TILE/2,y+TILE-6,10,0x0926);
-        sprite(f,bc_greenhouse[8U+frame],32,x-3,y-7,TILE+6);
+        outlined_sprite(f,bc_greenhouse[8U+frame],32,x-3,y-7,TILE+6);
         box(f,x+8,y+TILE-3,12,2,colors[b->owner]);
     }
     for(unsigned i=0;i<BC_CELLS;++i)
@@ -245,7 +344,7 @@ static void arena(p4_game_surface_t *f,const bc_state_t *s)
         circle(f,x+TILE/2,y+TILE-6,10,0x0926);
         box(f,x+7,y+TILE-5,14,3,colors[i]);
         const unsigned frame=p->cooldown?(s->visual_ms/70U)%4U:1U;
-        character(f,i,s->face[i]*4U+frame,x-8,y-18,TILE+16);
+        outlined_sprite(f,character_art(i,s->face[i]*4U+frame),i?32:48,x-8,y-18,TILE+16);
         if(i==s->local_slot && p->alive) {
             box(f,x+11,y-17,6,2,PAPER); box(f,x+13,y-15,2,2,PAPER);
         }
@@ -413,7 +512,8 @@ static void authoring(p4_game_surface_t *f,const bc_state_t *s)
     } else {
         static const char *names[10]={"FLOOR","WALL","WOOD","RANGE","BOMB","SPEED","ARMOR","CRACKED","GLASS","EMBER"};
         centered(f,72,83,"BRUSH",MUTED,1U);
-        sprite(f,tile_art(s->level.theme,s->brush,0U),32,36,113,72);
+        if(s->brush==BC_FLOOR) floor_swatch(f,36,113,72,s->level.theme);
+        else sprite(f,tile_art(s->level.theme,s->brush,0U),32,36,113,72);
         centered(f,72,212,names[s->brush],PAPER,1U);
         if(bc_destructible(s->brush) || s->brush==BC_WALL)
             centered(f,72,229,s->brush==BC_WALL?"PERMANENT":
@@ -460,8 +560,7 @@ bool bc_render(p4_game_context_t *context,p4_game_surface_t *f)
 {
     if(!p4_surface_valid(f)) return false;
     const bc_state_t *s=context->state;
-    p4_draw_clear(f,INK);
-    for(int y=0;y<480;y+=8) box(f,0,y,768,1,0x08a5);
+    background(f,s);
     arena(f,s);
     if(s->world.phase==BC_TITLE) title(f,s);
     else if(s->world.phase==BC_SELECT || s->world.phase==BC_EDITOR || s->world.phase==BC_EDITOR_MENU || s->world.phase==BC_COPY) authoring(f,s);

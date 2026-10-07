@@ -10,8 +10,8 @@ to every game. Do not put USB Host calls, NimBLE/GATT calls, pairing state,
 descriptor parsing, device quirks, or pin configuration inside a game.
 
 If a game only maps the existing normalized P4 buttons to game actions, use
-`$esp32-make-game` and that
-game's focused host tests. New games should consume the existing controls by
+`$esp32-make-game` and `$esp32-test-game` for authoring and that game's
+focused tests. New games should consume the existing controls by
 default; no per-game USB support layer is needed. For linked-console game logic,
 add `$esp32-multiplayer` without changing controller ownership. Use this skill when the
 canonical input contract, parser, profile, lifecycle, transport, or physical
@@ -20,10 +20,21 @@ transport, and `references/acceptance.md` before a named hardware claim.
 
 ## Pass the hardware gate first
 
-Read `hardware/board-profile.json`, `docs/HARDWARE.md`, and `references/architecture.md`.
+Resolve the exact requested target before touching USB code; Tab5 is the
+default. Read `docs/HARDWARE.md`, `references/architecture.md` and the selected
+board document/profile. Tab5 uses `docs/boards/M5STACK_TAB5.md`; read
+`hardware/board-profile.json` only for explicitly requested legacy Elecrow
+work. Elecrow, Olimex and Waveshare are legacy targets; use those entries
+only for explicitly requested maintenance:
 
-Resolve the exact target before touching USB code:
-
+- `m5stack-tab5` uses its dedicated USB-A connector and the native HS PHY.
+  The default candidate enables the shared USB/HID path and controls USB5V_EN
+  through the board service on expander 0x44/P3. USB-C remains Serial/JTAG.
+  Read `docs/boards/M5STACK_TAB5.md`; this path is build-tested, with exact-unit
+  controller acceptance pending. The wired XUSB client also recognizes
+  alternate-zero `ff/5d/01` interfaces and has host/build tests. Read
+  `components/platform_gamepad_xusb/README.md`. Do not claim named-pad
+  acceptance, GIP, wireless receivers, hubs or multiple simultaneous pads.
 - `elecrow-crowpanel-advanced-10` is the Elecrow CrowPanel Advanced 10.1-inch.
   Its J16 connector is sink-wired and requires the reviewed powered,
   current-limited, backfeed-safe host fixture for controller testing. Console
@@ -38,14 +49,6 @@ Resolve the exact target before touching USB code:
   hub; firmware does not source VBUS. H1 CH343 remains programming, serial, and
   content transfer only. The USB Drive app is the explicit role switch from H2
   Host to H2 device/MSC and must unmount FAT before exposing it.
-- `m5stack-tab5` uses its dedicated USB-A connector and the native HS PHY.
-  The default candidate enables the shared USB/HID path and controls USB5V_EN
-  through the board service on expander 0x44/P3. USB-C remains Serial/JTAG.
-  Read `docs/boards/M5STACK_TAB5.md`; this path is build-tested, with exact-unit
-  controller acceptance pending. The wired XUSB client also recognizes
-  alternate-zero `ff/5d/01` interfaces and has host/build tests. Read
-  `components/platform_gamepad_xusb/README.md`. Do not claim named-pad
-  acceptance, GIP, wireless receivers, hubs or multiple simultaneous pads.
 - Another target must have its own source-pinned board-port profile and USB
   adapter plan. Never inherit either identity from a connector name.
 
@@ -68,7 +71,7 @@ USB Host or BLE HOGP lifecycle
   -> bounded transport adapter
   -> bounded HID descriptor parser + known-device profiles
   -> complete transport snapshot
-  -> platform_gamepad broker (wired USB priority, BLE fallback)
+  -> platform_gamepad broker (USB HID, then wired XUSB, then BLE)
   -> per-game action adapter
 ```
 
@@ -156,21 +159,22 @@ firmware build or hardware run. A controller is supported only after its
 descriptor capture, input mapping, hotplug, disconnect neutralization,
 malformed-report behavior, and named hardware run have passed.
 
-For Console OS integration, the exact firmware builds are
+For Tab5 Console OS integration, run `make tab5-usb-host` and
+`make gamepad-host`, then `make console-os-tab5-idf`. The guarded build verifier
+checks the linked host, board power and Doom adapters. Use the exact-unit/artifact
+install route in the Tab5 board document before any hardware test.
+
+For explicitly requested legacy maintenance, the firmware targets are
 `make console-os-elecrow-idf` for Elecrow and `make console-os-olimex-idf` for the
-Olimex Rev.B development board. The standard BLE-controller Waveshare build is
-`./scripts/build-waveshare-console-os.sh`, followed by
-`python3 scripts/verify-console-os-waveshare.py`. The proven wired
-controller-first build is
-`./scripts/build.sh console_os waveshare-esp32-p4-wifi6-touch-lcd-4.3-usb-host`,
-followed by `python3 scripts/verify-console-os-waveshare.py
-apps/console_os/build-waveshare-usb-host`. A generic SNES-style USB HID pad has
-named direct/hub evidence on that route, including D-pad/button mapping and
-disconnect recovery; do not generalize that result to other descriptors.
-For Tab5, run `make tab5-usb-host` and `make gamepad-host`, then
-`make console-os-tab5-idf`. The guarded build verifier checks the linked host,
-board power and Doom adapters. Use the exact-unit/artifact install route in the
-Tab5 board document before any hardware test.
+Olimex Rev.B board. The BLE-controller Waveshare local build is
+`./scripts/build-waveshare-console-os.sh`; the controller-first build is
+`./scripts/build.sh console_os waveshare-esp32-p4-wifi6-touch-lcd-4.3-usb-host`.
+Use `$esp32-waveshare` for scoped candidate checks: the preserved
+`verify-console-os-waveshare.py` enforces its historical `0.42` contract and
+cannot qualify newer source unchanged. A generic SNES-style USB HID pad has
+named direct/hub evidence on the recorded controller-first route, including
+D-pad/button mapping and disconnect recovery; do not generalize that result to
+other descriptors or artifacts.
 Build only the physically selected target unless shared input or board
 selection code changed.
 

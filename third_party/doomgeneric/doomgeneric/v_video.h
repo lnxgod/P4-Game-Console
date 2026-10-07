@@ -54,7 +54,11 @@ void V_CopyRect(int srcx, int srcy, byte *source,
                 int width, int height,
                 int destx, int desty);
 
+// Patch, text and filled UI primitives take canonical 320x200 coordinates.
+// World framebuffer copies/blocks and dirty rectangles take native pixels.
 void V_DrawPatch(int x, int y, patch_t *patch);
+void V_DrawPatchNative(int x, int y, patch_t *patch);
+void V_DrawPatchColumn(int x, int y, patch_t *patch, int col);
 void V_DrawPatchFlipped(int x, int y, patch_t *patch);
 void V_DrawTLPatch(int x, int y, patch_t *patch);
 void V_DrawAltTLPatch(int x, int y, patch_t * patch);
@@ -80,6 +84,8 @@ void V_DrawRawScreen(byte *raw);
 // Temporarily switch to using a different buffer to draw graphics, etc.
 
 void V_UseBuffer(byte *buffer);
+// A short buffer with SCREENWIDTH stride, anchored at a native screen row.
+void V_UseBufferRegion(byte *buffer, int origin_y, int height);
 
 // Return to using the normal screen buffer to draw graphics.
 

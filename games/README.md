@@ -8,6 +8,19 @@ resources. The manifest is the source of truth for identity, version, category,
 capabilities and inclusion. An enabled manifest outside `GAMES/WIP` makes a package eligible for
 the bundle, not automatically release-qualified.
 
+The maintained catalog contains **11 games and 3 utilities**. All 14 require
+`video-highres` in both `game.json` and their C descriptor, and render directly
+into **768×480 RGB565** on Tab5. The maintained registry check rejects an
+enabled release title that makes this capability optional. Canonical 320×200
+touch coordinates are input units; they do not select a smaller framebuffer.
+Legacy rendering source and labeled host diagnostics remain available for
+explicitly requested legacy maintenance.
+
+The [performance contract](../docs/GAME_PERFORMANCE.md) targets 60 FPS and
+requires a measured actual-device release floor of 30 FPS at 768×480. Native
+capabilities, host timings and large captures do not establish that floor;
+verify the runtime surface and preserve exact package, OS and Tab5 evidence.
+
 ## Games
 
 | Game | Category | What you do | Players / mode | Availability |
@@ -22,7 +35,6 @@ the bundle, not automatically release-qualified.
 | [Solitaire](solitaire/README.md) | Cards | Klondike with direct-touch cards and drag-and-drop. | Solo | Included |
 | [Space Invaders](space_invaders/README.md) | Arcade | Defend destructible shields against alien waves. | Solo | Included |
 | [Texas Hold'em](texas_holdem/README.md) | Cards | Poker with betting, all-ins and side pots. | 2–4 local human/CPU seats; 2–4 linked | Included |
-| [Tide Maze](tide_maze/README.md) | Arcade | Tilt a flooded marble maze and collect pearls. | Solo; 2 linked co-op | Included candidate; device lag acceptance open |
 | [Yahtzee](p4_yahtzee/README.md) | Tabletop | Roll, hold dice and fill the scorecard. | 2–4 pass-and-play or linked | Included |
 
 Held-back games are available only through an explicit developer install:
@@ -32,6 +44,7 @@ Held-back games are available only through an explicit developer install:
 | [Byte Buddy](byte_buddy/README.md) | WIP | Raise a dragon, explore Signal City and play activities. | Solo | Developer install only; requires resource sidecar |
 | [Red Dragon](lord/README.md) | WIP | A text-and-ANSI fantasy adventure with saved progression. | Solo; 2-player linked profile / realm features | Developer install only; protected OS pairing |
 | [Skyline Leap](skyline_leap/README.md) | WIP | A rooftop platformer retained for further development. | Solo | Developer install only; unfinished |
+| [Tide Maze](tide_maze/README.md) | Arcade | Tilt a flooded marble maze and collect pearls. | Solo; 2 linked co-op | Removed from product library; development only; lag acceptance failed |
 
 ## Utilities
 
@@ -39,10 +52,18 @@ Held-back games are available only through an explicit developer install:
 - [Input Monitor](input_test/README.md): Inspect normalized buttons and touch input.
 - [Sound & Motion](av_test/README.md): Check screen patterns, animation and tones.
 
-Doom, Chex Quest and the Game Changers AI arena use the OS-integrated engine.
+Doom, Chex Quest and Doom Arena by Game Changers use the OS-integrated engine.
 Wacky Wheels and Quake use separate port workflows. Find their own READMEs in
 the [root inventory](../README.md#engine-games-and-ports). Pure Hades is a map
 pack, not a native cartridge.
+
+Those engine workflows are outside this 14-title native catalog. Current
+[Wacky Wheels](../scripts/wacky/README.md) source requires a 320×200 render
+surface, the [Doom engine](../docs/DOOM.md) is compiled at 320×200, and
+[Quake](../ports/quake/README.md) renders at 512×300 before scaling into a
+768×450 view. Their displayed output does not qualify direct 768×480 rendering.
+These source contracts remain unchanged; native engine rendering and device
+performance need separate work and acceptance.
 
 ## Build and play
 
@@ -79,9 +100,15 @@ as Red Dragon need their exact paired OS lineage; follow the SDK's
 A compatible game-only update normally needs no OS reflash. First-time OS
 installation belongs to [ESP32 - Set Up](../.agents/skills/esp32-setup/SKILL.md).
 
+The updated required-native cartridges make the existing OS 0.77 select
+768×480 even when its older per-title experiment settings are present.
+Installing a cartridge leaves the installed OS at 0.77; a new OS build takes
+effect only after its separate guarded firmware flash. Source/build removal
+of those downgrade settings is not evidence that a device has that firmware.
+
 ## Developer installs
 
-Byte Buddy, Red Dragon and Skyline Leap are hidden from standard installs.
+Byte Buddy, Red Dragon, Skyline Leap and Tide Maze are hidden from standard installs.
 Their sources, game IDs and save namespaces remain intact. Local previews still
 work with `make play-game GAME=<slug>`. To explicitly install Byte Buddy on a
 Tab5 that is at the launcher:
@@ -90,7 +117,9 @@ Tab5 that is at the launcher:
 make install-dev GAME=byte_buddy PORT=/dev/cu.usbmodem...
 ```
 
-Use `GAME=skyline_leap` for that draft. `make dev-games` builds all development
+Use `GAME=skyline_leap` or `GAME=tide_maze` for those disabled drafts. Tide Maze
+was removed from the product library at the owner’s request on 2026-10-07; its
+source, save identity and failed device acceptance remain preserved. `make dev-games` builds all development
 cartridges into `apps/console_os/build-tab5/dev-games/GAMES`, separate from the
 normal `sd-card/GAMES` bundle. The installer copies only the selected game and
 its required resources. Standard `push-bundle` rejects WIP cartridges unless
@@ -108,6 +137,13 @@ Holding back a game never deletes its saves or retires its IDs.
 Per-title READMEs and their linked records separate host tests, interactive
 play, installation and physical acceptance. A linked player count is a game
 protocol capability, not proof that those many tablets have been tested.
+The 2026-10-07 native-library update passed sanitized 768×480 SDL smokes for
+the 13 titles updated alongside Blast Circuit and Tide Maze, 21 focused
+game tests and two utility tests. These host checks preserve explicit legacy
+fixtures; they do not qualify device readability, input or the 30 FPS floor.
+Blast Circuit retains its own exact-artifact device status. Tide Maze was
+subsequently disabled and removed from the product library; its earlier failed
+acceptance is retained in its README and records.
 Tab5 Local Wi-Fi permits up to four where the game profile supports it;
 Bluetooth and USB serial permit two. Games use OS Host/Join and the shared
 start barrier; same-device play is a separate mode.

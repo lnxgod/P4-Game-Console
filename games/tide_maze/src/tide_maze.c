@@ -22,9 +22,21 @@ static p4_game_result_t update(p4_game_context_t *ctx,const p4_game_input_t *in,
  if(s->phase==TM_TITLE && (in->pressed&P4_BUTTON_RIGHT)){tm_reset(s,(s->level+1U)%TM_LEVELS);s->phase=TM_TITLE;}
  if((s->phase==TM_TITLE||s->phase==TM_PAUSE)&&cal){s->orientation=(uint8_t)((s->orientation+1U)%4U);s->calibrated=false;}
  tm_controls(ctx,s,in,ms,cal);
+ const bool had_snapshot=s->snapshot_seen;
+ const unsigned old_pearls=s->pearls,old_level=s->level;
+ const tm_phase old_phase=s->phase;
+ const uint32_t old_time=s->time_ms,old_revision=s->received_revision;
  if(s->linked&&!tm_network_poll(ctx,s,ms)){
   s->linked=false;s->phase=TM_LINK_LOST;memset(s->intent,0,sizeof(s->intent));
   for(int p=0;p<2;++p)s->ball[p].vx=s->ball[p].vy=0;
+ }
+ /* Sound only new accepted state in the same maze attempt. The initial
+  * snapshot and resets establish a baseline, not historical audio events. */
+ if(s->linked&&!s->host&&had_snapshot&&s->received_revision!=old_revision&&
+    s->level==old_level&&s->time_ms<=old_time){
+  if((s->pearls&~old_pearls)!=0U)(void)p4_game_play_tone(ctx,880,75,3,P4_WAVE_TRIANGLE);
+  if((old_phase==TM_PLAY||old_phase==TM_PAUSE)&&(s->phase==TM_CLEAR||s->phase==TM_WON))
+   (void)p4_game_play_tone(ctx,1320,180,3,P4_WAVE_TRIANGLE);
  }
  if(s->phase==TM_LINK_LOST){if(action){s->slot=0;tm_reset(s,0);}return P4_GAME_CONTINUE;}
  if(!s->linked||s->host){
@@ -50,7 +62,7 @@ static void stop(p4_game_context_t *ctx){p4_game_stop_audio(ctx);}
 const p4_game_descriptor_t p4_tide_maze_game={
  .api_version=P4_GAME_API_VERSION,.launcher_id=120,.id="org.p4console.tide-maze",
  .title="Tide Maze",.subtitle="Tilt, slosh and escape together",
- .accent_rgb565=0x2e5b,.required_capabilities=P4_GAME_CAP_VIDEO|P4_GAME_CAP_CONTROLS,
- .optional_capabilities=P4_GAME_CAP_AUDIO_TONE|P4_GAME_CAP_VIDEO_HIGH_RES|P4_GAME_CAP_MOTION|P4_GAME_CAP_MULTIPLAYER_SESSION,
+ .accent_rgb565=0x2e5b,.required_capabilities=P4_GAME_CAP_VIDEO|P4_GAME_CAP_CONTROLS|P4_GAME_CAP_VIDEO_HIGH_RES,
+ .optional_capabilities=P4_GAME_CAP_AUDIO_TONE|P4_GAME_CAP_MOTION|P4_GAME_CAP_MULTIPLAYER_SESSION,
  .state_bytes=sizeof(tm_state),.start=start,.update=update,.render=tm_render,.stop=stop
 };
