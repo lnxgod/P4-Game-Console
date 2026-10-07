@@ -104,15 +104,15 @@ overwrite a shared working tree to manufacture a clean base.
 For OS interface, scrolling, versioning and firmware-only successors, read
 [core successor contracts](references/core-successors.md).
 
-For CPU or audio stutter, follow `docs/GAME_PERFORMANCE.md`'s multicore contract.
-Use both P4 application cores for independent work through shared OS services:
-game callbacks run on core 0 and native audio output on the core-1
-`p4_game_platform` audio worker. The C6 is the radio processor. Preserve single
-ownership, bounded copied commands, nonblocking callbacks and joined teardown
-before freeing resources. Test concurrency and failure paths, and record actual
-core IDs, queue/underrun/clipping counters, stack reserve and game cadence before
-claiming a device improvement. SMP configuration and host tests do not prove
-measured device core use.
+Always apply the [app/game performance contract](../../../docs/GAME_PERFORMANCE.md)
+to shared OS work: all scrollable surfaces must follow contact promptly and
+remain smooth at panel rate, near 60 FPS. Always plan and use relevant rendering,
+cache/DMA and pacing resources plus both P4 application cores for independent
+input, logic/render and audio through owned, joined services. Preserve native
+game resolution, immutable-source/dirty proof and conservative buffer retirement;
+never move hardware ownership into apps or cartridges. The shared contract
+defines the required input/render/submission/pacing, glide/cold-cache and actual
+core/accelerator measurements. Host tests or enabled SMP cannot qualify them.
 
 ## Guarded Tab5 installation and evidence
 

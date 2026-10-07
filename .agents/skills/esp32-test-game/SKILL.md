@@ -98,6 +98,21 @@ changed-frame checks and exact artifact bindings. Review real motion, timers
 and audio in the SDL runner; its FPS title and Mac CPU results cannot establish
 the actual-device 30 FPS release floor. Report limited or idle trace coverage.
 
+## Always check smooth scrolling and resource use
+
+Apply the shared [smooth scrolling and P4 resource contract](../../../docs/GAME_PERFORMANCE.md)
+to every scrollable menu/playfield. Exercise first contact, fast/slow drag,
+release/glide, reversal, endpoints and touch-to-stop while preserving tap/actions
+and layout. Use deterministic cadence and pixel/guard tests for the changed
+boundary, plus interactive motion review. A static surface needs no added scroll.
+
+Check the implementation's plan for relevant resources and useful work on both
+P4 application cores through joined OS services. For device qualification,
+record actual core/accelerator use and separate input, render, submission/pacing,
+glide and cold-cache metrics as defined in that contract. Near-60 panel-rate
+scrolling is required independently of the game's 30 FPS floor. Host threads,
+SDL FPS and an upload cannot prove it; leave unmeasured device checks pending.
+
 ## Hand off the local result
 
 Before handing a changed game to the firmware workflow, report:

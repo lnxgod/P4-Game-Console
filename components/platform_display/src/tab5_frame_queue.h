@@ -6,6 +6,38 @@
 #include <stddef.h>
 #include "platform/display_region.h"
 enum { TAB5_FRAME_COUNT = 3, TAB5_RETIRE_REFRESHES = 2 };
+typedef struct { uint16_t y,height; bool cpu_dirty; } tab5_frame_publication_t;
+/* Driver-owned framebuffer publication flushes these physical rows and
+ * selects the buffer without copying. CPU fallback/margins need full rows. */
+static inline bool tab5_frame_publication_rows(
+    const platform_display_rgb565_region_t *mapped,bool cpu_full_write,
+    bool cpu_margins,tab5_frame_publication_t *out)
+{
+    if(!mapped||!out||!mapped->width||!mapped->height||mapped->x>=720U||
+       mapped->y>=1280U||mapped->width>720U-mapped->x||
+       mapped->height>1280U-mapped->y)return false;
+    *out=cpu_full_write||cpu_margins?
+        (tab5_frame_publication_t){0U,1280U,true}:
+        (tab5_frame_publication_t){mapped->y,mapped->height,false};
+    return true;
+}
+typedef struct {
+    int64_t input_us,handoff_us;
+    uint32_t published_refresh,reuse_wait_us,transform_us;
+    uint8_t kind,replay_regions;
+    bool pending;
+} tab5_interactive_handoff_t;
+static inline __attribute__((always_inline)) bool tab5_interactive_refresh_ready(
+    const tab5_interactive_handoff_t *handoff,uint32_t refresh)
+{ return handoff->pending&&(uint32_t)(refresh-handoff->published_refresh)>=TAB5_RETIRE_REFRESHES; }
+static inline __attribute__((always_inline)) uint32_t tab5_saturating_add(uint32_t a,uint32_t b)
+{ return b>UINT32_MAX-a?UINT32_MAX:a+b; }
+static inline __attribute__((always_inline)) uint32_t tab5_elapsed_us(int64_t now,int64_t start)
+{
+    if(start<=0||now<=start)return 0U;
+    const uint64_t elapsed=(uint64_t)(now-start);
+    return elapsed>UINT32_MAX?UINT32_MAX:(uint32_t)elapsed;
+}
 /* Pinned IDF publishes cur_fb_index before DMA samples it. Keep each replaced
  * buffer immutable for two refresh callbacks AFTER publishing its successor. */
 typedef struct {

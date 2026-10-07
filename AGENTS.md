@@ -76,6 +76,8 @@ Keep these rules true for every change:
 
 11. Apply [launch and remix quality](docs/LAUNCH_QUALITY.md) when preparing Game Changers AI OS releases: preserve gameplay/save identities during visual remixes, exclude incomplete prototypes from default bundles, use artwork matching the actual title, and retain failed device acceptance until retested.
 
+12. Always apply [smooth scrolling and P4 resource use](docs/GAME_PERFORMANCE.md) to all apps/games: every scrollable surface follows contact promptly and scrolls at panel rate near 60 FPS with smooth velocity-aware stopping and intact taps/actions/layout. Always plan use of relevant available resources and both application cores through reusable, owned/joined OS services. Preserve cache/dirty proof and buffer retirement; record actual core/accelerator use and separate input, render, submission/pacing, glide and cold-cache evidence. Static surfaces need no artificial work; hardware scope and native game resolution remain unchanged.
+
 ## Set up Doom game data on a fresh clone
 
 WAD files are local inputs, except the owner-authorized Pure Hades v0.6

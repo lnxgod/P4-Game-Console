@@ -10,6 +10,7 @@
 #include "esp_err.h"
 #include "platform/board.h"
 #include "platform/display_region.h"
+#include "platform/display_scroll.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -83,14 +84,45 @@ typedef struct {
     uint32_t pipeline_refresh_interval_min_us;
     uint32_t pipeline_refresh_interval_max_us;
     uint32_t pipeline_refresh_events;
+    /* Prepared logical-cache DMA2D copy phases. Destination cache preparation
+     * includes boundary C2M and ROI invalidation; enqueue includes private
+     * descriptor setup; wait joins successful completion. Zero for a prepared
+     * call that takes public PPA fallback before the corresponding phase. */
+    uint32_t prepared_copy_prepare_last_us;
+    uint32_t prepared_copy_prepare_max_us;
+    uint32_t prepared_copy_enqueue_last_us;
+    uint32_t prepared_copy_enqueue_max_us;
+    uint32_t prepared_copy_wait_last_us;
+    uint32_t prepared_copy_wait_max_us;
+    /* Physical scroll warm-up copies stationary pixels from the selected
+     * immutable frame when the retired slot has a different context. Counts
+     * only successfully published repaired frames; time joins all complement
+     * DMA rectangles, excluding the subsequent interior copy and strip PPA. */
+    uint32_t ui_scroll_repaired_frames;
+    uint32_t ui_scroll_repair_last_us;
+    uint32_t ui_scroll_repair_max_us;
+    /* Successful presentations that skipped stationary repair because the
+     * retired DMA-clean slot exactly matched previous_context and an explicit
+     * patch covered all stationary changes. Already-new-context slots do not
+     * contribute to this boot-cumulative saturating counter. */
+    uint32_t ui_scroll_previous_context_reused_frames;
+    /* Ordinary authoritative REGION updates may clone the selected physical
+     * frame before rotating only current damage when retired history would
+     * require a large reconstruction. Count successful clone+region publishes;
+     * clone timing joins the full physical DMA, excluding subsequent PPA. */
+    uint32_t ui_region_cloned_frames;
+    uint32_t ui_region_clone_last_us;
+    uint32_t ui_region_clone_max_us;
     bool underrun_count_available;
     /* Waveshare native-content dirty-region presentation telemetry. */
     uint32_t partial_content_submits;
     uint32_t partial_content_source_pixels;
     uint32_t partial_content_full_fallbacks;
     /* Input-correlated native shell handoffs. Timings are in microseconds;
-     * count/total fields saturate at UINT32_MAX. These remain zero on display
-     * adapters that do not use the Waveshare DSI handoff pipeline. */
+     * count/total fields saturate at UINT32_MAX. Tab5 attributes each sample
+     * conservatively at two refresh callbacks after publication: the pinned
+     * callback carries no framebuffer identity and cannot prove its exact
+     * visible scanout time. Other unsupported adapters leave these zero. */
     uint32_t interactive_latency_samples;
     uint32_t interactive_partial_presentations;
     uint32_t interactive_full_presentations;
@@ -132,16 +164,96 @@ esp_err_t platform_display_submit_prescaled_game_rgb565(
 esp_err_t platform_display_submit_ui_rgb565(const uint16_t *source,
     size_t source_stride_pixels, uint32_t timeout_ms);
 /** Complete authoritative UI source plus all damage since its last submission.
- * Replays prior damage into the back buffer; retains the scanout reuse fence. */
+ * Replays small retired-buffer damage. With missing/large history and proven
+ * DMA-clean physical slots, clones the immutable selected frame and rotates
+ * only current damage, publishing the entire owned buffer afterwards. Every
+ * copy/rotation joins before return or full authoritative-source fallback;
+ * retains the scanout reuse fence. */
 esp_err_t platform_display_submit_ui_region_rgb565(const uint16_t *source,
     size_t source_stride_pixels, const platform_display_rgb565_region_t *region,
     uint32_t timeout_ms);
 /** Copy the published native 720x1280 RGB565 scanout after its refresh fence.
  * Caller owns a buffer of at least native_width*native_height*2 bytes. The
  * display mutex is held only for the bounded fence and copy, never transport.
- * This captures submitted device pixels, not an optical view of the panel. */
+ * This captures submitted device pixels, not an optical view of the panel.
+ * Its CPU read revokes this slot's DMA-only cache proof; later reuse may need
+ * an authoritative reconstruction before physical scroll composition. */
 esp_err_t platform_display_copy_scanout_rgb565(uint16_t *destination,
     size_t destination_bytes, uint32_t timeout_ms);
+/** Ordinary authoritative UI presentation with optional scroll state. A NULL
+ * damage presents the whole source; NULL state invalidates scroll eligibility.
+ * State tags the exact source/stride and stationary context of the resulting
+ * owned framebuffer, without changing the three-buffer retirement fence. */
+esp_err_t platform_display_submit_ui_tagged_rgb565(const uint16_t *source,
+    size_t source_stride_pixels,const platform_display_rgb565_region_t *damage,
+    const platform_display_ui_scroll_t *state,uint32_t timeout_ms);
+/** Compose a pure scroll from the immutable selected physical framebuffer
+ * into a distinct retired framebuffer. Source contains the newly exposed
+ * logical strip, complete scrollbar and any explicit stationary_damage patch;
+ * other logical pixels may be stale. The selected slot must match
+ * previous_context/source/stride/geometry and its offset
+ * must equal previous_offset. A retired DMA-clean slot with a stale context
+ * is repaired from the selected frame's stationary complement before shifting
+ * content. An exact previous-context target also skips repair when a valid
+ * explicit patch will replace every stationary difference; the patch is still
+ * written. Repair requires a contiguous right-adjacent scrollbar sharing the
+ * viewport's y/height. ESP_ERR_NOT_SUPPORTED rejects
+ * eligibility before any pixel mutation, preserving unchanged slot tags for
+ * warm-up. The caller may then reconstruct and submit an authoritative source.
+ * Other errors never authorize fallback with an incomplete logical source.
+ * A changed context requires a nonempty bounded patch disjoint from viewport
+ * and scrollbar, containing every stationary difference between the old/new
+ * contexts. No patch requires previous_context==context. The patch always
+ * rotates after moving content; only complete publication tags the new context.
+ * Joined DMA/rotation retains all surfaces through completion. A completion
+ * timeout warns once then waits while retaining ownership; it cannot release
+ * an accepted transaction to CPU reuse. Only nonencrypted driver-owned RGB565
+ * buffers are used by the physical DMA2D path. */
+esp_err_t platform_display_submit_ui_scroll_rgb565(const uint16_t *source,
+    size_t source_stride_pixels,const platform_display_ui_scroll_t *state,
+    uint32_t timeout_ms);
+/** Synchronous non-overlapping logical RGB565 rectangle copy using PPA.
+ * Source/destination backing ranges must be disjoint. The destination base
+ * and complete stride*height*2 allocation must be 64-byte aligned. Dimensions
+ * are bounded to 4095. Keep source immutable and destination exclusively owned
+ * until return; CPU drawing may resume after the joined DMA/cache fence.
+ * Neighbouring CPU-dirty pixels in touched rows are preserved. This is not a
+ * scanout publication API and cannot write driver-owned panel buffers.
+ * timeout_ms bounds mutex acquisition; pinned blocking PPA joins without an
+ * abort timeout. The driver conservatively flushes the source on every copy. */
+esp_err_t platform_display_copy_rgb565_rectangle(const uint16_t *source,
+    size_t source_stride,size_t source_height,
+    const platform_display_rgb565_region_t *source_region,
+    uint16_t *destination,size_t destination_stride,size_t destination_height,
+    uint16_t destination_x,uint16_t destination_y,uint32_t timeout_ms);
+/** Publish CPU-prepared source rows to memory during idle preparation.
+ * The source base and stride*2 must be 64-byte aligned; dimensions are bounded
+ * to 4095 and the nonempty row range must fit the backing allocation. Keep the
+ * source exclusively owned until this synchronous C2M publication returns.
+ * The caller tracks which preparation epoch/rows were published and revokes
+ * cleanliness before any subsequent CPU write. Operations use <=32 KiB chunks.
+ * timeout_ms bounds mutex acquisition, not an abort of cache maintenance. */
+esp_err_t platform_display_prepare_rgb565_rows(const uint16_t *source,
+    size_t source_stride,size_t source_height,size_t first_row,size_t row_count,
+    uint32_t timeout_ms);
+/** Joined rectangle copy from a previously published immutable source.
+ * Same backing-range/exclusive-destination rules as the ordinary copy above.
+ * All source rows read by this operation must have completed publication in
+ * their current preparation epoch. This promise is caller-owned, not inferred
+ * from a const pointer or content signature. CPU access may resume on return.
+ * Supported DMA2D geometries invalidate only the aligned copied span in each
+ * destination row, preserving dirty partial boundary cache lines first. No CPU
+ * access to either surface is permitted while DMA owns it. Unsupported DMA
+ * geometry, unavailable helper, or an enqueue rejection safely uses public PPA.
+ * timeout_ms bounds mutex acquisition and the first completion wait. After an
+ * accepted DMA transaction times out, this function warns once and retains both
+ * surfaces/mutex while waiting for completion: it never returns an unfenced
+ * timeout to a CPU fallback or permits freeing/reusing an in-flight surface. */
+esp_err_t platform_display_copy_prepared_rgb565_rectangle(const uint16_t *source,
+    size_t source_stride,size_t source_height,
+    const platform_display_rgb565_region_t *source_region,
+    uint16_t *destination,size_t destination_stride,size_t destination_height,
+    uint16_t destination_x,uint16_t destination_y,uint32_t timeout_ms);
 #endif
 
 /** Present reviewed 768x480 legacy content where the board adapter supports it. */
@@ -181,7 +293,9 @@ esp_err_t platform_display_submit_game_content_rgb565(
  * Associate an optional touch/input sample with subsequent native shell
  * submissions. `timestamp_us` is the monotonic microsecond timestamp from
  * the input backend; pass zero to clear it. This changes no present timing or
- * ownership and is ignored by adapters without the DSI shell pipeline.
+ * ownership and is ignored by adapters without the DSI shell pipeline. Tab5
+ * records a conservative two-callback publication bound, not a per-buffer
+ * visible-frame acknowledgment.
  */
 esp_err_t platform_display_record_interactive_input_timestamp(
     int64_t timestamp_us);

@@ -422,6 +422,90 @@
       ],
       "current_backup_evidence": "hardware/backups/tab5-b-multiplayer-preinstall-20261007/receipt.json",
       "current_backup_verified_at": "2026-10-07T03:26:13.076516+00:00"
+    },
+    {
+      "captured_at": "2026-10-07T18:22:11.398816+00:00",
+      "board_claim": "M5Stack Tab5; owner confirmed 2026-10-07",
+      "physical_confirmation": {
+        "source": "owner_conversation_2026-10-07",
+        "label": "owner-tab5",
+        "model": "M5Stack Tab5",
+        "model_confirmed": true,
+        "pcb_revision": null,
+        "panel_label": null,
+        "compatible_battery_confirmed": true
+      },
+      "port": "/dev/cu.usbmodem101",
+      "device": {
+        "chip": "ESP32-P4",
+        "revision": "v1.3",
+        "flash_bytes": 16777216,
+        "identity": {
+          "source": "base_mac",
+          "normalization": "lowercase hexadecimal without separators",
+          "sha256": "874fda1216cb831ec52a01b468ef00582273a6a4448bbc661bd0ed05dbc48b43",
+          "raw_value_stored": false
+        }
+      },
+      "backup": {
+        "file": "hardware/backups/tab5-owner-before-project-20261007.bin",
+        "bytes": 16777216,
+        "sha256": "a260eda93e4e5ddc1d3abddd361b1eb326c07d4248b67d1b493feba057fde231",
+        "git_ignored": true,
+        "mode": "0600",
+        "source": "Complete live flash before first project write in this session; original firmware metadata recorded below"
+      },
+      "saved_partition_table": [
+        {
+          "name": "nvs",
+          "type": 1,
+          "subtype": 2,
+          "offset": "0x9000",
+          "size": 24576
+        },
+        {
+          "name": "phy_init",
+          "type": 1,
+          "subtype": 1,
+          "offset": "0xf000",
+          "size": 4096
+        },
+        {
+          "name": "factory",
+          "type": 0,
+          "subtype": 0,
+          "offset": "0x10000",
+          "size": 10485760,
+          "app": {
+            "version": "639d9cc",
+            "project": "m5stack_tab5",
+            "time": "11:51:30",
+            "date": "Mar 25 2026",
+            "idf": "v5.4.2"
+          }
+        },
+        {
+          "name": "human_face_det",
+          "type": 1,
+          "subtype": 130,
+          "offset": "0xa10000",
+          "size": 409600
+        },
+        {
+          "name": "storage",
+          "type": 1,
+          "subtype": 130,
+          "offset": "0xa74000",
+          "size": 2097152
+        }
+      ],
+      "security_probe": {
+        "captured_at": "2026-10-07T18:20:07.797608+00:00",
+        "secure_boot": false,
+        "flash_encryption": false,
+        "esptool": "4.12.0"
+      },
+      "write_status": "complete-recovery-captured; no-project-write-performed"
     }
   ],
   "accessory_backups": [

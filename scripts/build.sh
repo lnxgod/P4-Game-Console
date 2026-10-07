@@ -197,8 +197,8 @@ if [ "$P4_APP" = console_os ] &&
 fi
 
 # sdkconfig defaults do not override an existing generated configuration.
-# Regenerate when switching Tab5 peripheral selections or adopting bounded
-# FAT seek maps and UDP mailboxes, so incremental builds keep board defaults.
+# Regenerate for current Tab5 peripheral, storage, network and bounded
+# cache-writeback selections so incremental builds retain the board defaults.
 if [ "$P4_APP" = console_os ] &&
    [ "$P4_BOARD_PROFILE" = m5stack-tab5 ] &&
    [ -f "$P4_BUILD_DIR/sdkconfig" ] &&
@@ -207,8 +207,10 @@ if [ "$P4_APP" = console_os ] &&
      ! grep -Fqx 'CONFIG_FATFS_USE_FASTSEEK=y' "$P4_BUILD_DIR/sdkconfig" ||
      ! grep -Fqx 'CONFIG_FATFS_ALLOC_PREFER_EXTRAM=y' "$P4_BUILD_DIR/sdkconfig" ||
      ! grep -Fqx 'CONFIG_FATFS_FAST_SEEK_BUFFER_SIZE=112456' "$P4_BUILD_DIR/sdkconfig" ||
-     ! grep -Fqx 'CONFIG_LWIP_UDP_RECVMBOX_SIZE=32' "$P4_BUILD_DIR/sdkconfig"; }; then
-    printf 'Regenerating Tab5 Console OS sdkconfig for board defaults (USB-A host=%s).\n' "$P4_TAB5_USB_HOST"
+     ! grep -Fqx 'CONFIG_LWIP_UDP_RECVMBOX_SIZE=32' "$P4_BUILD_DIR/sdkconfig" ||
+     ! grep -Fqx 'CONFIG_ESP_MM_CACHE_MSYNC_C2M_CHUNKED_OPS=y' "$P4_BUILD_DIR/sdkconfig" ||
+     ! grep -Fqx 'CONFIG_ESP_MM_CACHE_MSYNC_C2M_CHUNKED_OPS_MAX_LEN=0x8000' "$P4_BUILD_DIR/sdkconfig"; }; then
+    printf 'Regenerating Tab5 Console OS sdkconfig for board defaults and cache-writeback policy (USB-A host=%s).\n' "$P4_TAB5_USB_HOST"
     cmake -E remove "$P4_BUILD_DIR/sdkconfig"
     p4_idf_action reconfigure
 fi

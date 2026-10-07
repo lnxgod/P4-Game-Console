@@ -260,10 +260,8 @@ bool platform_display_layout_tab5_damage(
         *source=(platform_display_rgb565_region_t){(uint16_t)x,(uint16_t)y,
             (uint16_t)((cr>pr?cr:pr)-x),(uint16_t)((cb>pb?cb:pb)-y)};
     }
-    /* IDF 5.5.3 PPA pre-invalidates input-height output rows even after
-     * rotation. Widen narrow left-edge damage so that range stays in the FB. */
-    if((unsigned)source->x+source->width<source->height)
-        source->width=(uint16_t)(source->height-source->x);
+    /* Pinned IDF 5.5.3 PPA invalidates the rotated output height, new_block_h;
+     * narrow left-edge damage therefore needs no artificial enlargement. */
     *destination=(platform_display_rgb565_region_t){source->y,
         (uint16_t)(1280U-source->x-source->width),source->height,source->width};
     return true;

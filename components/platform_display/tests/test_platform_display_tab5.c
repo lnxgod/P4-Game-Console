@@ -48,7 +48,7 @@ static void check_damage_replay(void)
         for(unsigned y=current.y;y<(unsigned)current.y+current.height;++y)for(unsigned x=current.x;x<(unsigned)current.x+current.width;++x)
             source[(size_t)y*1280+x]=(uint16_t)(frame*100U+x+y);
         assert(platform_display_layout_tab5_damage(&current,frame?&previous:NULL,&r,&mapped));
-        assert((unsigned)mapped.y+r.height<=1280U); /* pinned PPA cache window */
+        assert((unsigned)mapped.y+mapped.height<=1280U); /* pinned rotated PPA cache window */
         for(unsigned y=mapped.y;y<(unsigned)mapped.y+mapped.height;++y)for(unsigned x=mapped.x;x<(unsigned)mapped.x+mapped.width;++x)
             frames[frame%2U][(size_t)y*720U+x]=source[(size_t)x*1280U+1279U-y];
         for(unsigned y=0;y<1280;++y)for(unsigned x=0;x<720;++x)
@@ -58,8 +58,28 @@ static void check_damage_replay(void)
     free(source);free(frames[0]);free(frames[1]);
     puts("TAB5 DAMAGE PASS alternating_buffers=2 complete_frame_equivalence=1 invalid_bounds_rejected=1");
 }
+static void check_exact_edge_damage(void)
+{
+    const platform_display_rgb565_region_t edges[]={
+        {0,0,1,720},{1279,0,1,720},{0,0,1280,1},{0,719,1280,1},
+        {0,719,1,1},{1279,719,1,1},
+    };
+    for(size_t i=0;i<sizeof(edges)/sizeof(edges[0]);++i){
+        platform_display_rgb565_region_t source,mapped;
+        assert(platform_display_layout_tab5_damage(&edges[i],&edges[i],&source,&mapped));
+        assert(memcmp(&source,&edges[i],sizeof(source))==0);
+        assert(mapped.width==source.height&&mapped.height==source.width);
+        assert((unsigned)mapped.x+mapped.width<=720U);
+        assert((unsigned)mapped.y+mapped.height<=1280U);
+        /* IDF invalidates new_block_h == rotated source width, not height. */
+        const size_t cache_start=(size_t)mapped.y*720U*sizeof(uint16_t);
+        const size_t cache_end=cache_start+(size_t)mapped.height*720U*sizeof(uint16_t);
+        assert(((cache_end+63U)&~(size_t)63U)<=720U*1280U*sizeof(uint16_t));
+    }
+}
 int main(void)
 {
+    check_exact_edge_damage();
     check_damage_replay();
     assert(PLATFORM_BOARD_DISPLAY_ROTATION_CW_DEGREES==90);
     check_surface(320,200,platform_display_layout_rgb565_320x200);

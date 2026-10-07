@@ -15,6 +15,19 @@ cached scrolling, native damage replay and bounded momentum; do not route every
 scroll frame through a full scene redraw. Compare cached frames to the full
 renderer and preserve the display buffer reuse fence when optimizing.
 
+Always carry smooth scrolling forward across every scrollable app/game surface;
+apply the shared [scrolling and P4 resource contract](../../../../docs/GAME_PERFORMANCE.md).
+Retain the 0.67 owner's bounded per-page raster windows/publication epochs,
+physical scroll-delta composition, explicit Files endpoint/footer patch,
+deferred content focus and fractional velocity-aware glide. A successor must
+preserve exact stationary/source/geometry/offset proof, authoritative logical
+reconstruction on ordinary fallback, joined DMA ownership and conservative
+retirement. Reuse these services for new surfaces rather than creating a second
+driver or full-scene drag loop. Keep independent input responsive while render,
+submission and audio use both P4 application cores through OS owners; record
+actual core/accelerator use and separate first-drag/cold, warm drag, glide,
+input, render and submission/pacing evidence for the exact successor.
+
 Ordinary-file Open must never lead to deletion. Removal belongs in the small
 actions menu followed by a named confirmation with Cancel selected. Preserve
 uncommitted interface/game work; do not rebase or overwrite a shared working

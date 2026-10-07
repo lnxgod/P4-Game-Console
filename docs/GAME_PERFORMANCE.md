@@ -1,8 +1,9 @@
-# ESP32-P4 game performance
+# ESP32-P4 app and game performance
 
-Use this contract when creating, upgrading or qualifying games. It complements
+Always apply this contract when creating, changing or qualifying Console OS,
+apps, native games and integrated engines. It complements
 [Game Art](GAME_ART.md) and the [Game SDK](GAME_SDK.md); it does not expand a
-game task into hardware work or authorize an install. Local changes can be
+local task into hardware work or authorize an install. Local changes can be
 complete with device qualification explicitly pending.
 
 ## Design for the actual runtime
@@ -36,6 +37,43 @@ stack, atlas and resource-cache totals within the existing SDK/manifest limits.
 A full-screen RGB565 buffer alone is 737,280 bytes at 768×480: do not add an
 unbudgeted cache or raise limits to conceal a rendering cost. Convert art
 offline and use the existing bounded resource service where needed.
+
+## Always preserve smooth scrolling
+
+Every scrollable app/game surface must always provide smooth scrolling at the
+panel's presentation rate, near 60 presented FPS on the maintained Tab5.
+This includes launcher/catalog and file lists, menus, settings, in-game lists
+and scrolling playfields. The 30 FPS game release floor does not qualify a
+choppy scrolling surface. Static surfaces need no artificial scrolling or
+continuous redraws; preserve each game's intended movement and camera rules.
+
+Content must promptly follow contact from the first real drag through release.
+Keep fractional displacement, use actual elapsed time and fresh samples for
+velocity-aware momentum, and decelerate smoothly to a bounded stop. A slow drag
+must not become a large coast. Touching moving content must stop it promptly
+without launching the touched item; a drag must not become a tap on release.
+Preserve hit regions, layout, tap/actions, focus/selection, file safeguards,
+reduced-motion behavior, invalid/stale input cancellation and multiplayer rules.
+
+Reuse bounded OS rendering, raster caches, damage tracking and DMA services
+where they fit. Avoid whole-scene or whole-viewport reconstruction for an
+otherwise provable scroll delta; retain an authoritative full-render fallback.
+Caches have explicit capacity, revision and preparation epochs, and are
+prepared/published in bounded idle slices rather than during a drag or glide.
+An immutable source is DMA-clean only after its current written rows were
+published; unchanged pointers or content signatures do not prove cleanliness.
+Partial logical pixels may never enter an ordinary full submission without
+reconstruction. Preserve exact stationary context, geometry, source/offset
+bindings, dirty-region proof and conservative physical-buffer retirement.
+Release caches and join owners before game handoff or freeing their storage.
+
+For rendering optimizations, compare composed/cached pixels with the
+authoritative renderer. Cover odd/even shifts, padded strides and guards,
+endpoint/footer changes, focus/press/status updates, cold caches, invalidation,
+recenter, publication failure/retry and handoff. Test fast/slow releases at
+different sample/frame cadences, reversals, stop-fling touches, stale input and
+no accidental activation. Use the cases relevant to the changed surface;
+shared OS improvements must remain reusable across apps and games.
 
 ## Require fluid action play
 
@@ -79,23 +117,37 @@ that any installed unit has it or meets the frame budget.
 
 ## Measure active play before adding more work
 
-### Use the P4's two cores through shared OS services
+### Always use relevant resources and both P4 application cores
 
-Keep native game simulation, rendering and cartridge callbacks on the Console
-OS foreground core (core 0 on the Tab5 configuration). The Tab5 0.54 candidate
-uses `components/p4_game_platform/src/audio_worker.c` to mix and feed I2S from
-a bounded core-1 task. PCM/tone callbacks copy commands without waiting;
-the worker owns its mixer and board audio session until joined shutdown.
-The C6 radio is a separate communications processor, not another game-rendering
-core. Do not add FreeRTOS tasks, I2S handles or board-specific affinity inside
-cartridges. Other independent work belongs in an appropriate shared service.
+Always plan and use all relevant available P4 resources for responsive work:
+both application cores, shared input/logic/render/audio workers, PPA and DMA,
+bounded SRAM/PSRAM caches and buffers, queues and panel pacing. Identify the
+available services and measured bottleneck before choosing the work split;
+record why a resource is inapplicable or unsafe rather than ignoring it.
+This requirement does not mean occupying idle cores, allocating unused caches
+or enabling unrelated peripherals. Respect the selected hardware scope.
 
-SMP being enabled does not prove useful parallel execution. Record actual
-`AUDIO_WORKER game_core=0 audio_core=1` evidence, queue rejections, underruns,
-clipping, write failures and stack reserve alongside frame timings. Keep each
-mutable resource single-owned, copy bounded messages across cores, and join
-workers before closing peripherals, unloading cartridge code or freeing data.
-Never hold a queue/telemetry lock during I2S, display, SD or radio waits.
+Use both cores for useful independent work through OS-owned, joined services.
+The Tab5 shell keeps input sampling on core 0 independent of its core-1 joined
+render/display owner. Native cartridge logic/render callbacks remain on the
+foreground core 0, while shared video submission and audio mixing/output can
+run on core 1; preserve the currently implemented service contracts and verify
+their actual affinity. PCM/tone callbacks copy bounded commands without waiting.
+The C6 is a separate communications processor, not another P4 application core.
+Games use stable APIs and must not create FreeRTOS tasks, raw display/DMA/I2S
+handles, board-specific affinity or a private presentation loop. Add reusable
+parallel work at the owning platform service boundary when needed.
+
+SMP configuration and a proposed split do not prove useful execution. Record
+actual input, logic/render, video and audio core IDs and accelerator paths,
+with phase timings, queue rejections, underruns, clipping, write failures and
+stack reserve. For example, retain `UI_WORKER_READY`, `VIDEO_WORKER_START` and
+`AUDIO_WORKER` evidence where those services apply. Keep every mutable resource
+single-owned, copy bounded messages across cores, and join workers before
+closing peripherals, unloading cartridge code or freeing data. Do not hold a
+queue/telemetry lock during I2S, display, SD or radio waits. Preserve immutable
+source publication, cache synchronization, DMA joins and retirement fences;
+parallelism must not weaken ownership or lifetime proof.
 
 Budget PCM buffering against measured producer jitter: 512 frames at 16 kHz
 hold only 32 ms and necessarily overflow when a frame submits 39 ms of audio.
@@ -134,6 +186,18 @@ timings and presented-frame intervals: p95/p99, worst gap and missed 33.333 ms
 budgets. Separate loading/first-frame latency from steady gameplay without
 hiding either. Averages or capped timing counters cannot prove a minimum;
 retain stalls and gaps rather than relabelling an update rate as presented FPS.
+
+For scrolling, always measure separate input report age/contact-to-visible
+latency, update/logic and render time, display copy/rotation/submission and
+panel pacing/presented intervals. Report missed panel periods (about 16.7 ms
+at 60 Hz), p95/p99 and worst gap; distinguish active drag from release/glide,
+first-drag/cold-cache preparation from warm motion, and endpoint/reversal
+transitions. Record actual core and accelerator use, cache readiness/epoch,
+fallback counts and buffer reuse waits for the exact image. Include quick
+flicks, slow drags and touch-to-stop; an idle FPS counter cannot close this
+gate. Preserve owner reports of hopping, delayed jumps or choppy motion as
+failed acceptance until the same surface is retested. If device timing or
+physical feedback is unavailable, leave smooth-scroll qualification pending.
 
 Exercise sustained active play and demanding states on the selected unit;
 linked games also need both roles and their declared player/session load.

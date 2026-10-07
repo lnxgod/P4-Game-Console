@@ -1,0 +1,130 @@
+{
+  "schema": 1,
+  "board": "m5stack-tab5",
+  "version": "0.67",
+  "recorded_at": "2026-10-07T20:54:57.529927+00:00",
+  "unit": {
+    "label": "owner-tab5 (fresh identity; not the historical A unit)",
+    "identity_sha256": "874fda1216cb831ec52a01b468ef00582273a6a4448bbc661bd0ed05dbc48b43",
+    "chip_revision": "v1.3",
+    "panel": "ST7121",
+    "port": "/dev/cu.usbmodem101"
+  },
+  "status": "device-checksum-and-boot-health-passed-no-scroll-captured-owner-feedback-pending",
+  "image": {
+    "bytes": 4355824,
+    "sha256": "98ddc75d115a17b036dce483c04cbdd40a55f839644b1e206022da2d037e3f3c",
+    "installed_copy": "hardware/backups/tab5-a-install-m2c8y02x/0x20000.bin"
+  },
+  "authorization": {
+    "file": "hardware/backups/owner-tab5-renderer-0.67-authorization-20261007.json",
+    "sha256": "41f665055e91c65115618cbd5c8bbc9395eeb6a1e6cbde69e3f121dc145c5207"
+  },
+  "source_snapshot": {
+    "file": "hardware/backups/owner-tab5-renderer-0.67-source-20261007.zip",
+    "sha256": "dc8212baa30178c0d3b60d8755ddfeb81ba5c131d30e1e7d4c41037af56d1fe6"
+  },
+  "install": {
+    "receipt": "hardware/backups/tab5-a-install-m2c8y02x/receipt.json",
+    "write_offsets": [
+      "0x20000"
+    ],
+    "verification_method": "device-checksum",
+    "checksum_verified": true,
+    "readback_verified": false,
+    "boot_ready": true,
+    "health_ready": true
+  },
+  "validation": {
+    "firmware_verifier": {
+      "ble_multiplayer_enabled": true,
+      "board": "m5stack-tab5",
+      "charger_control_enabled": true,
+      "content_bundle_verified": false,
+      "flash_authorized": false,
+      "hardware_verified": false,
+      "image_bytes": 4355824,
+      "image_sha256": "98ddc75d115a17b036dce483c04cbdd40a55f839644b1e206022da2d037e3f3c",
+      "native_cartridges": null,
+      "result": "tab5-build-candidate-verified",
+      "usb_host_enabled": true,
+      "version": "0.67",
+      "wifi_multiplayer_enabled": true
+    },
+    "host_checks": {
+      "platform_display": "All 6 ASan/UBSan suites passed (8.50 s); final focused scroll suite passed (7.43 s). Pixel/ownership tests exercise old/new/third contexts, stale target offsets, exact source/stride/geometry, dirty-target rejection, mandatory footer patch, immutable other slots, and failure/publication fences.",
+      "shell_version": "Affected generic and Waveshare targets passed (2/2, 1.18 s), plus BBS (0.84 s); version label and six frame fixtures updated. Shell renderer/input algorithm unchanged from 0.66. Its separate endpoint pixel tests remain historical evidence.",
+      "pinned_compiler": "Exact ESP-IDF 5.5.3 shell/display/main compiler syntax checks passed; final firmware build and artifact verifier passed.",
+      "whitespace": "git diff --check passed before build."
+    }
+  },
+  "runtime": {
+    "file": "hardware/backups/tab5-a-install-m2c8y02x/runtime.log",
+    "sha256": "95ebc0060340267d32820a8015a554f5c1575e04ee2a6b18c268d79ab6b1adfa",
+    "bursts": [],
+    "errors": {
+      "Guru Meditation": 0,
+      "FATAL_HOLD": 0,
+      "SUBMIT_TIMEOUT": 0,
+      "PPA_FAILED": 0,
+      "UI_WORKER_JOIN_TIMEOUT": 0,
+      "panic_abort": 0,
+      "abort() was called": 0,
+      "P4_CONSOLE_OS HALT": 0,
+      "FRAME_ACK_MISSED": 0,
+      "PREPARED_COPY_WAIT": 0
+    },
+    "files_events": []
+  },
+  "measurements": {
+    "burst_count": 0,
+    "physical_delta_frames": 0,
+    "unsupported_scroll_fallback_frames": 0,
+    "stationary_repair_frames": 0,
+    "previous_context_reuse_frames": 0,
+    "glide_frames": 0,
+    "release_hints": 0,
+    "replayed_releases": 0,
+    "down_highlight_deferrals": 0,
+    "ui_region_cloned_frames_total_last": null,
+    "ui_region_clone_max_us": 0,
+    "first_consumed_motion_to_submission_start_us_range": null,
+    "consecutive_optimized_pair_interval_avg_us_range": null,
+    "first_frame_snapshots": [],
+    "complete_first_frame_snapshot_bursts": 0,
+    "files_burst_indices": [],
+    "interpretation": "Successful changed-offset submission cadence is not optical/scanout FPS. Pair intervals include intentional holds and glide frames without integer movement. Onset ends at submission START. First-frame cache snapshots are retained across subsequent idle preparation; valid/epoch-clean flags do not independently prove viewport coverage. Display clone/panel counters are cumulative, not summed across bursts.",
+    "recording_note": "Finalized bounded 0.67 recording contains startup and health markers but no Files events or SCROLL bursts. No 0.67 repair-skip count, onset or animation timing is established."
+  },
+  "physical_acceptance": {
+    "owner_feedback": null,
+    "scroll_target_met": null,
+    "status": "pending-owner-0.67-Files-endpoint-onset-flick-and-game-return-feedback",
+    "game_return": null
+  },
+  "limitations": [
+    "No scrolling occurred in the bounded 0.67 recording; actual shortcut use and current-image smoothness remain unmeasured.",
+    "Cold page/listing changes can still require ordinary authoritative rendering.",
+    "Only captured successful changed-scroll frames contribute to burst timing; press-only/final stationary frames are excluded.",
+    "Exact optical visible timing is unavailable from the pinned callback without frame identity."
+  ],
+  "prior_files_measurement": {
+    "evidence": "hardware/evidence/owner-tab5-0.66-renderer-testing-20261007.json",
+    "version": "0.66",
+    "files_moving_frames": 10,
+    "physical_delta_frames": 10,
+    "render_avg_us_range": [
+      4627,
+      5369
+    ],
+    "submit_avg_us_range": [
+      12065,
+      15553
+    ],
+    "consecutive_optimized_pair_interval_avg_us_range": [
+      22272,
+      25538
+    ],
+    "interpretation": "Prior exact-image observed Files bursts establish the endpoint patch is active. They do not measure the additional 0.67 previous-context shortcut."
+  }
+}

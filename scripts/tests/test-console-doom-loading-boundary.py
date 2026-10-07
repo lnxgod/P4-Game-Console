@@ -100,6 +100,10 @@ static unsigned file_calls, content_calls, simulated_opens, clock_calls;
 static unsigned usb_polls, network_polls, prepare_calls, cleanup_calls;
 static unsigned loading_views, storage_calls, home_calls, handler_restores;
 static unsigned engine_calls, replies, loading_status_replies, tick_waits;
+static unsigned handoff_step, cache_releases, ui_stops, framebuffer_frees;
+static bool fixture_ui_idle, fixture_ui_running, fixture_cache_owned, expect_halt;
+static esp_err_t ui_stop_result, halted_result;
+static const char *halted_where;
 static bool check_boundary, inject_request, inject_input, partial_request, inject_snapshot;
 static bool service_usb, cleanup_terminal;
 static unsigned request_kind;
@@ -119,6 +123,7 @@ static uint8_t *snapshot_allocation;
 static uint8_t snapshot_reply[P4_DEBUG_SNAPSHOT_MAX_RESPONSE];
 static size_t snapshot_reply_size;
 static jmp_buf engine_jump;
+static void halt_dark(const char *where,esp_err_t result);
 static p4_doom_mp_launch_config_t launch;
 static const p4_doom_mp_launch_config_t base_launch = {
     .enabled=true, .role=P4_MP_ROLE_HOST, .session_id=1, .self_peer_id=2,
@@ -315,20 +320,65 @@ void console_shell_show_home(console_shell_t *shell) { ++home_calls; }
 static console_shell_runtime_info_t runtime_info(void) { return (console_shell_runtime_info_t){0}; }
 void console_shell_set_runtime_info(console_shell_t *shell,const console_shell_runtime_info_t *info) {}
 static esp_err_t platform_display_set_brightness(unsigned value) { return ESP_OK; }
-static esp_err_t destroy_touch_for_handoff(void) { return ESP_OK; }
-static esp_err_t destroy_bus_for_handoff(void) { return ESP_OK; }
+/* Model the ownership boundary, then require the unchanged production handoff
+ * to join it before destroying touch/bus/display or releasing its framebuffer. */
+static void release_ui_cache(console_shell_t *shell) {
+    REQUIRE(shell==&s_shell && fixture_ui_running && handoff_step==0);
+    if (!fixture_ui_idle) halt_dark("ui-cache-ownership",ESP_ERR_INVALID_STATE);
+    REQUIRE(fixture_cache_owned);
+    fixture_cache_owned=false; ++cache_releases; handoff_step=1;
+}
+static esp_err_t stop_ui_worker(void) {
+    REQUIRE(fixture_ui_idle && !fixture_cache_owned && handoff_step==1);
+    ++ui_stops;
+    if (ui_stop_result!=ESP_OK) return ui_stop_result;
+    fixture_ui_running=false; handoff_step=2; return ESP_OK;
+}
+static esp_err_t destroy_touch_for_handoff(void) {
+#ifdef P4_HAS_JOINED_UI_HANDOFF
+    REQUIRE(!fixture_ui_running && !fixture_cache_owned && handoff_step==2);
+    handoff_step=3;
+#endif
+    return ESP_OK;
+}
+static esp_err_t destroy_bus_for_handoff(void) {
+#ifdef P4_HAS_JOINED_UI_HANDOFF
+    REQUIRE(handoff_step==3); handoff_step=4;
+#endif
+    return ESP_OK;
+}
 static esp_err_t platform_display_deinit(void) {
     REQUIRE(snapshot_allocation==NULL && s_debug_snapshot.data==NULL);
+#ifdef P4_HAS_JOINED_UI_HANDOFF
+    REQUIRE(!fixture_ui_running && handoff_step==4); handoff_step=5;
+#endif
     return ESP_OK;
 }
 static void heap_caps_free(void *allocation) {
     REQUIRE(allocation==NULL || allocation==&fixture_framebuffer);
     REQUIRE(snapshot_allocation==NULL && s_debug_snapshot.data==NULL);
+#ifdef P4_HAS_JOINED_UI_HANDOFF
+    REQUIRE(!fixture_ui_running && handoff_step==5); handoff_step=6;
+#endif
+    ++framebuffer_frees;
 }
-static void halt_dark(const char *where,esp_err_t result) { REQUIRE(false); }
+static void halt_dark(const char *where,esp_err_t result) {
+    REQUIRE(expect_halt); halted_where=where; halted_result=result;
+    longjmp(engine_jump,2);
+}
 static void console_os_launch_doom(unsigned volume,platform_game_storage_doom_title_t title,
-    const p4_doom_mp_launch_config_t *config) { ++engine_calls; longjmp(engine_jump,1); }
+    const p4_doom_mp_launch_config_t *config) {
+#ifdef P4_HAS_JOINED_UI_HANDOFF
+    REQUIRE(!fixture_ui_running && !fixture_cache_owned && handoff_step==6);
+#endif
+    ++engine_calls; longjmp(engine_jump,1);
+}
+#ifdef P4_HAS_TICK_SHELL_ARG
+static void wait_for_console_tick(int *scheduler,int *last_wake,const console_shell_t *shell) {
+    REQUIRE(shell==NULL);
+#else
 static void wait_for_console_tick(int *scheduler,int *last_wake) {
+#endif
     REQUIRE(s_multiplayer_launch_due); ++tick_waits;
 }
 '''
@@ -350,6 +400,9 @@ static void reset_fixture(void) {
     usb_polls=network_polls=prepare_calls=cleanup_calls=0;
     loading_views=storage_calls=home_calls=handler_restores=engine_calls=0;
     replies=loading_status_replies=tick_waits=s_doom_handoff_count=0;
+    handoff_step=cache_releases=ui_stops=framebuffer_frees=0;
+    fixture_ui_idle=fixture_ui_running=fixture_cache_owned=true;
+    expect_halt=false; halted_where=NULL; halted_result=ESP_OK; ui_stop_result=ESP_OK;
     s_debug_runtime="shell"; s_debug_game_id[0]=0; s_debug_touch_was_down=true;
     s_display_initialized=false; s_pixels=NULL; inject_snapshot=false;
     s_game_storage_status=(platform_game_storage_status_t){.state=PLATFORM_GAME_STORAGE_APP_READY};
@@ -370,7 +423,8 @@ static void reset_fixture(void) {
     REQUIRE(p4_debug_control_sample(&s_debug_control,debug_now_ms()).buttons==0x81);
 }
 static bool run_launch(void) {
-    if (setjmp(engine_jump)) return true;
+    const int jump=setjmp(engine_jump);
+    if (jump) return jump==1;
     launch_doom_exclusive(&s_shell,PLATFORM_GAME_STORAGE_DOOM_TITLE_GAME_CHANGERS_AI,&launch);
     return false;
 }
@@ -383,8 +437,25 @@ static void verify_success(void) {
     REQUIRE(prepare_calls==1 && storage_calls==1 && cleanup_calls==0);
     REQUIRE(network_polls==5 && usb_polls==6 && loading_status_replies==6);
     REQUIRE(!s_display_initialized && s_pixels==NULL);
+#ifdef P4_HAS_JOINED_UI_HANDOFF
+    REQUIRE(cache_releases==1 && ui_stops==1 && framebuffer_frees==1 && handoff_step==6);
+#endif
     require_neutral();
 }
+#ifdef P4_HAS_JOINED_UI_HANDOFF
+static void test_ui_handoff_failure(bool busy) {
+    reset_fixture(); s_display_initialized=true; s_pixels=&fixture_framebuffer;
+    fixture_ui_idle=!busy; ui_stop_result=ESP_ERR_TIMEOUT; expect_halt=true;
+    REQUIRE(!run_launch());
+    REQUIRE(halted_where!=NULL && !strcmp(halted_where,
+        busy?"ui-cache-ownership":"handoff-ui-worker"));
+    REQUIRE(halted_result==(busy?ESP_ERR_INVALID_STATE:ESP_ERR_TIMEOUT));
+    REQUIRE(engine_calls==0 && framebuffer_frees==0 && fixture_ui_running);
+    REQUIRE(s_display_initialized && s_pixels==&fixture_framebuffer);
+    REQUIRE(cache_releases==(busy?0U:1U) && ui_stops==(busy?0U:1U));
+    REQUIRE(fixture_cache_owned==busy && handoff_step==(busy?0U:1U));
+}
+#endif
 static void test_request(unsigned kind,bool partial) {
     reset_fixture(); request_kind=kind; partial_request=partial;
     /* Let an old launch reach the injected request, so its red failure proves
@@ -782,6 +853,10 @@ static void test_snapshot_idle_poll(void) {
 int main(int argc,char **argv) {
     REQUIRE(argc==2);
     if (!strcmp(argv[1],"fresh-file")) test_request(0,false);
+#ifdef P4_HAS_JOINED_UI_HANDOFF
+    else if (!strcmp(argv[1],"ui-busy")) test_ui_handoff_failure(true);
+    else if (!strcmp(argv[1],"ui-stop-timeout")) test_ui_handoff_failure(false);
+#endif
 #ifdef P4_HAS_DOOM_LOADING_PROGRESS
     else if (!strcmp(argv[1],"loading-progress")) test_loading_progress();
 #endif
@@ -836,6 +911,12 @@ class DoomLoadingBoundaryTests(unittest.TestCase):
             if "uint64_t paint_us, render_us, submit_us;" in context_type:
                 context_type += "\n#define P4_HAS_DOOM_LOADING_REGION_COST 1\n"
         units = [function(source, name) for name in names]
+        cls.has_joined_ui_handoff = "release_ui_cache(shell);" in function(
+            source, "launch_doom_exclusive")
+        if cls.has_joined_ui_handoff:
+            context_type += "\n#define P4_HAS_JOINED_UI_HANDOFF 1\n"
+        if "const console_shell_t *shell" in function(source, "wait_for_console_tick"):
+            context_type += "\n#define P4_HAS_TICK_SHELL_ARG 1\n"
         try:
             units.append(function(source, "debug_native_begin"))
         except ValueError:
@@ -874,7 +955,7 @@ static bool run_launcher_gate(unsigned iterations) {
             PRELUDE + context_type + declarations + FIXTURES + "\n".join(units) + gate + CASES)
         (directory / "esp_err.h").write_text(
             "#pragma once\ntypedef int esp_err_t;\n#define ESP_OK 0\n#define ESP_FAIL -1\n"
-            "#define ESP_ERR_INVALID_STATE 1\n#define ESP_ERR_INVALID_ARG 2\n")
+            "#define ESP_ERR_INVALID_STATE 1\n#define ESP_ERR_INVALID_ARG 2\n#define ESP_ERR_TIMEOUT 3\n")
         includes = ["console_shell", "p4_game_api", "p4_desktop", "p4_multiplayer",
                     "doom_multiplayer", "p4_usb_content_transfer", "platform_game_storage"]
         cls.executable = directory / "loading"
@@ -929,6 +1010,25 @@ static bool run_launcher_gate(unsigned iterations) {
 
     def test_solo_host_reaches_actual_doom_handoff(self):
         self.run_case("solo")
+
+    def test_busy_ui_retains_cache_and_framebuffer_before_handoff(self):
+        if not self.has_joined_ui_handoff:
+            self.skipTest("Saved source predates joined launcher UI worker")
+        self.run_case("ui-busy")
+
+    def test_ui_stop_timeout_retains_framebuffer_and_blocks_engine_entry(self):
+        if not self.has_joined_ui_handoff:
+            self.skipTest("Saved source predates joined launcher UI worker")
+        self.run_case("ui-stop-timeout")
+
+    def test_actual_cache_release_requires_idle_worker_before_detach_or_free(self):
+        if not self.has_joined_ui_handoff:
+            self.skipTest("Saved source predates joined launcher UI worker")
+        release = function(SOURCE.read_text(), "release_ui_cache")
+        guard = release.index('halt_dark("ui-cache-ownership", ESP_ERR_INVALID_STATE);')
+        self.assertLess(release.index("if (!ui_worker_idle())"), guard)
+        self.assertLess(guard, release.index("console_shell_detach_native_cache(shell);"))
+        self.assertLess(guard, release.index("heap_caps_free(s_ui_cache_arena);"))
 
     def test_solo_handoff_rejects_invalid_roles_identity_transport_or_roster(self):
         self.run_case("solo-gates")

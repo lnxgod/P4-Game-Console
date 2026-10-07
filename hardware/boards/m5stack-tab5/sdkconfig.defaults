@@ -37,3 +37,8 @@ CONFIG_FATFS_FAST_SEEK_BUFFER_SIZE=112456
 
 # Explicitly authorized battery charger repair, 2026-10-05.
 CONFIG_P4_TAB5_CHARGER_500MA=y
+
+# Keep independent touch/refresh interrupts serviceable during large PSRAM
+# writebacks. Buffers stay exclusively owned throughout each complete sync.
+CONFIG_ESP_MM_CACHE_MSYNC_C2M_CHUNKED_OPS=y
+CONFIG_ESP_MM_CACHE_MSYNC_C2M_CHUNKED_OPS_MAX_LEN=0x8000
