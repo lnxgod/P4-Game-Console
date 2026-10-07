@@ -124,3 +124,9 @@ artifact/evidence update. For SD-backed firmware use `DOOM1.WAD`,
 `FREEDOOM1.WAD`, or `FREEDOOM2.WAD` at the SD root as documented in
 `docs/DOOM.md`. Never push WADs, generated WAD assembly, WAD-bearing firmware
 binaries, or local recovery images to GitHub.
+
+Routine authorized Tab5 app flashes use device checksum verification; do not
+transfer a full app readback on every flash. Use `--verification full-readback`
+only for recovery, diagnostics, or an explicit request. Preserve exact-unit,
+backup, security, predecessor, partition and artifact checks. Record which
+verification method ran; a checksum result is not full readback evidence.

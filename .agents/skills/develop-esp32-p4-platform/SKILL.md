@@ -198,7 +198,7 @@ flash sequentially. Never run simultaneous CH343 writes: a parallel two-board
 attempt dropped a port and is not an accepted install method. Require esptool's
 post-write hash verification before resetting each unit.
 
-The flash script must verify the application readback before a run can be recorded as a PASS. Never erase the whole flash merely to solve a build or connection problem. Preserve the factory backup and record the exact app, toolchain, board identity hash, result, and observed serial markers after a hardware test. Do not store or print the raw base identity.
+For routine authorized Tab5 successors, verify the device checksum; full application readback is optional with `--verification full-readback` for recovery or diagnostics. Record the actual method, and never label checksum-only verification as full readback. Other boards retain their exact installer contracts. Never erase the whole flash merely to solve a build or connection problem. Preserve the factory backup and record the exact app, toolchain, board identity hash, result, and observed serial markers after a hardware test. Do not store or print the raw base identity.
 
 Before qualifying an OS update, check [protected game payloads](../../../docs/GAME_SDK.md#protected-game-payloads). Even a firmware-only build regenerates the Red Dragon allowlist from its paired cartridge. Confirm installed protected content matches that exact OS lineage, or complete the authorized paired content update; preserve the guard and save identity.
 
