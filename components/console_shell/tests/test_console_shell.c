@@ -1500,6 +1500,57 @@ static void test_multiplayer_start_lockout(void)
     }
 }
 
+static void test_multiplayer_long_title_labels(void)
+{
+    console_shell_t shell;
+    CHECK(console_shell_init(&shell, s_apps, TEST_APP_COUNT));
+    shell.page = CONSOLE_PAGE_MULTIPLAYER;
+    shell.active_app_id = APP_DOOM;
+    shell.runtime = (console_shell_runtime_info_t){
+        .game_storage_state = CONSOLE_STORAGE_READY,
+        .multiplayer_game_ready = true,
+        .multiplayer_can_start = true,
+        .multiplayer_settings_editable = true,
+        .multiplayer_game_selection = UINT8_MAX - 2U,
+        .multiplayer_game_count = UINT8_MAX,
+        .multiplayer_game_title =
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJK",
+    };
+    const console_shell_runtime_info_t long_title = shell.runtime;
+    const size_t frame_bytes = (size_t)CONSOLE_SHELL_WIDTH *
+        CONSOLE_SHELL_HEIGHT * sizeof(uint16_t);
+    uint16_t *const frame = malloc(frame_bytes);
+    uint16_t *const reference = malloc(frame_bytes);
+    CHECK(frame != NULL && reference != NULL);
+    if (frame != NULL && reference != NULL) {
+        /* The full start hint must match its fitting-title rendering. */
+        shell.multiplayer_view = CONSOLE_MULTIPLAYER_VIEW_HOST;
+        CHECK(console_shell_render_rgb565(
+            &shell, frame, CONSOLE_SHELL_WIDTH));
+        shell.runtime.multiplayer_game_title[18] = '\0';
+        CHECK(console_shell_render_rgb565(
+            &shell, reference, CONSOLE_SHELL_WIDTH));
+        CHECK(memcmp(frame, reference, frame_bytes) == 0);
+
+        /* Leave room for the complete three-digit game index and count. */
+        shell.runtime = long_title;
+        shell.multiplayer_view = CONSOLE_MULTIPLAYER_VIEW_HOST_SETTINGS;
+        CHECK(console_shell_render_rgb565(
+            &shell, frame, CONSOLE_SHELL_WIDTH));
+        shell.runtime.multiplayer_game_title[22] = '\0';
+        CHECK(console_shell_render_rgb565(
+            &shell, reference, CONSOLE_SHELL_WIDTH));
+        CHECK(memcmp(frame, reference, frame_bytes) == 0);
+        shell.runtime = long_title;
+        --shell.runtime.multiplayer_game_count;
+        CHECK(console_shell_render_rgb565(
+            &shell, reference, CONSOLE_SHELL_WIDTH));
+        CHECK(memcmp(frame, reference, frame_bytes) != 0);
+    }
+    free(reference);
+    free(frame);
+}
+
 static void test_desktop_pages(void)
 {
     console_shell_t shell;
@@ -2470,6 +2521,7 @@ int main(void)
     test_storage_diagnostics_and_repair_confirmation();
     test_controller_setup_actions();
     test_multiplayer_start_lockout();
+    test_multiplayer_long_title_labels();
     test_desktop_pages();
     test_navigation_and_launch();
     test_system_cartridge_folders();

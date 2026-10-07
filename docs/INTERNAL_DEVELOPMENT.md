@@ -14,10 +14,10 @@ existing owner-authorized Pure Hades pack retains its original notices.
 
 ## Clone and install
 
-OpenAI colleagues have Read access through the `all-openai.com` GitHub team.
+OpenAI colleagues have Write access through the `all-openai.com` GitHub team.
 The repository remains private and requires sign-in with an OpenAI GitHub
-account. Company-wide read access also covers its CI releases and download
-assets.
+account. Team members can push contribution branches and open pull requests;
+this access also covers its CI releases and download assets.
 
 Sign in to GitHub CLI with an account that can read this private repository,
 then follow [prebuilt installation](INSTALL_PREBUILT.md). The lightweight clone
