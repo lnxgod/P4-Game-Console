@@ -87,7 +87,7 @@ standalone files. Startup exact-hashes every required file, including notices.
 DWANGO 5 comes from the [Doom2.net archive](https://www.doom2.net/doom2/wads/DWANGO5.ZIP).
 Its archive digest, original credits and local paths are pinned in
 `third_party/game-data.json`. Freedoom and DWANGO remain ignored local inputs.
-Pure Hades is no longer selectable or provisioned. An old inactive `PUREHELL.WAD`
+Pure Hell is no longer selectable or provisioned. An old inactive `PUREHELL.WAD`
 on an existing SD card is not loaded by this firmware.
 No WAD is embedded in firmware. This integration does not grant redistribution
 rights to DWANGO or its music.
@@ -142,7 +142,7 @@ python3 scripts/p4-usb-content.py game-changers-ai \
 ```
 
 Use the guarded Tab5 installation workflow for firmware; this command installs
-content only and requires the matching 0.56 firmware.
+content only and requires the matching 0.58 firmware.
 
 ## Synchronization and validation
 
@@ -206,11 +206,30 @@ The old Pure Hell bundle is incompatible with protocol 5. The earlier 0.53 recei
 [implementation receipt](../test-runs/2026-10-05-game-changers-ai-doom-implementation.json)
 is historical and predates the supplied PWAD/voting work.
 
-## Tab5 0.57 Pure Hades successor
+## Tab5 0.58 without per-file restarts
+
+The [0.58 installation record](../test-runs/2026-10-06-tab5-no-reboot-content.json)
+binds the corrected receiver/uploader, focused regression tests and both units.
+The content receiver returns to idle after success or failure, and the uploader
+keeps one connection for the complete batch. Storage caches refresh in place.
+Opening native USB can cause one initial restart; files do not request reboots.
+
+Both units passed device-checksum app verification, launcher startup and the
+10-second service health gate. No full application readback was performed.
+All 16 content files passed exact hashes on each unit using one USB connection
+per final batch. Each observed one initial startup and zero mid-batch boots.
+B had one earlier ACK timeout; its subsequent complete batch passed. The uploader
+now allows one file retry only after the receiver explicitly returns to idle.
+Physical multiplayer gameplay, controls, sound and sustained cadence remain
+operator testing. The 0.57 per-file restart behavior below is superseded.
+
+## Historical Tab5 0.57 Pure Hades installation
 
 The [0.57 receipt](../test-runs/2026-10-06-pure-hades-integration.json) binds
 firmware, Pure Hades source, host tests and the two separately backed-up Tab5s.
 A/ST7121 and B/ST7123 passed app verification and launcher/health startup.
+The operator stopped its content batch because the old service rebooted after
+each file; 0.58 supersedes it with a continuous connection and no per-file reset.
 Firmware SHA-256 is
 `a535203480cfee9b2f54d2c40b038870f6389e0035bcc7e8058f19bacf535671`
 (4,319,568 bytes). A completed full readback; B used device checksums after the

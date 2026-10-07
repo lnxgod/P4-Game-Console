@@ -3,19 +3,21 @@
 M5Stack Tab5 is the permanent primary target. `make console-os-idf` aliases
 `make console-os-tab5-idf`; Elecrow now requires `make console-os-elecrow-idf`.
 
-The current arena successor is **0.57**, based on the native 0.55 launch and
-merged multiplayer reliability fixes. Both A/ST7121 and B/ST7123 have passed
-application verification and launcher/health checks in
-[the Pure Hades installation record](../../test-runs/2026-10-06-pure-hades-integration.json).
-The [Game Changers AI mode](../GAME_CHANGERS_AI_DOOM.md) now uses the five-map
-Pure Hades v0.6 replacement plus optional DWANGO 5. All consoles require the
-new protocol-5 firmware and 16-file content bundle together. The existing 0.55
-Red Dragon payload is unchanged. Physical multiplayer gameplay and device
-cadence remain operator acceptance work.
+The current arena successor is **0.58**, based on the native 0.55 launch and
+merged multiplayer reliability fixes. A/ST7121 and B/ST7123 passed device-checksum
+application verification, launcher startup and the 10-second health gate in
+[the 0.58 installation record](../../test-runs/2026-10-06-tab5-no-reboot-content.json).
+The [Game Changers AI mode](../GAME_CHANGERS_AI_DOOM.md) uses the five-map
+Pure Hades v0.6 replacement plus optional DWANGO 5. All consoles need protocol-5
+firmware and the 16-file content bundle. The existing Red Dragon payload is
+unchanged; physical multiplayer gameplay and device cadence remain to be tested.
 
-Routine app installs now use device checksum verification. A's installation was
-already running when the preference changed and completed full readback; B used
-device checksums. Full app readback is optional for recovery/diagnostics.
+USB content batches keep one connection open and return to idle between files
+without rebooting. Both units completed all 16 files on one connection each,
+with no mid-batch restart. Routine app installs use device checksums; full app
+readback
+is optional for recovery/diagnostics. The prior 0.57 content batch was stopped
+when the operator reported its per-file restarts; 0.58 corrects that behavior.
 
 The earlier Tab5 presentation release was **0.52**. Both A/ST7121 and B/ST7123
 have exact 4,508,176-byte application readback, launcher boot, post-service

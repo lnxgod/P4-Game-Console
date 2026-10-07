@@ -49,7 +49,7 @@ and the [engine integration](../../../apps/doom_audio_probe/components/doom_engi
 Host/content tooling is under [`scripts/doom`](../../../scripts/doom/).
 
 Rules, voting, storage and four-instance lossy-network tests are recorded in
-the detailed guide. The 0.57 firmware passed application verification and startup health on
-the two recorded Tab5 units; content installation is recorded separately. **Physical multiplayer play, controls/audio and
+the detailed guide. The [0.58 installation record](../../../test-runs/2026-10-06-tab5-no-reboot-content.json)
+binds firmware, content and startup checks for the two recorded Tab5 units. **Physical multiplayer play, controls/audio and
 sustained device cadence remain pending**; four real consoles have not been
 qualified. Keep this distinction when describing the game publicly.

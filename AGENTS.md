@@ -51,7 +51,7 @@ IDs and previous-name mapping. Automatic invocation is enabled for all skills.
 
 The root README describes **P4 Game Console**, the whole monorepo. Console OS
 is the shared platform; the Game Changers AI Doom arena is one integrated game
-mode, and Pure Hell is a map pack. Keep their documentation distinct.
+mode, and Pure Hades is a map pack. Keep their documentation distinct.
 Every game has its own README with controls, player modes, source/data needs,
 build/play/install guidance and current verification limits. Keep the root
 inventory and `games/README.md` linked to the owning README when adding a title.

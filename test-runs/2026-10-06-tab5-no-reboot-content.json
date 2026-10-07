@@ -1,0 +1,172 @@
+{
+  "schema": 1,
+  "title": "Tab5 0.58 USB content batches without per-file reboot",
+  "created_at_utc": "2026-10-07T02:02:02.401633+00:00",
+  "status": "PASS: both Tab5s installed with checksums, boot/health passed, all sixteen content files verified on one connection per final batch with no per-file restarts",
+  "source_commit": "d753d319fe6a12e37e2ac553bd70bcb0efbdb700",
+  "host_tools_commit": "3cec2125deb390fe664c6ee077dbc7aaeb324de6",
+  "app": {
+    "file": "apps/console_os/build-tab5/p4_console_os.bin",
+    "bytes": 4320096,
+    "sha256": "aadbf3d76e84bfce3bd29589511c6df318c725c90919004c57b42dd4092bc08a"
+  },
+  "update": {
+    "path": "apps/console_os/build-tab5/sd-card/UPDATE/P4UPDATE.P4U",
+    "bytes": 4320352,
+    "sha256": "27d994f05a4ca3e27267dcc96e8dc8d3c4d056e006436091e64dff1be24b2de1"
+  },
+  "authorization": {
+    "path": "hardware/evidence/tab5-0.58-content-batch-authorization.json",
+    "bytes": 12224,
+    "sha256": "c1e77bb4eb89ecc77311c9781470b9fb0878305d208363e212cc2b6429997c04"
+  },
+  "build_verifier": {
+    "ble_multiplayer_enabled": true,
+    "board": "m5stack-tab5",
+    "charger_control_enabled": true,
+    "content_bundle_verified": true,
+    "flash_authorized": false,
+    "hardware_verified": false,
+    "image_bytes": 4320096,
+    "image_sha256": "aadbf3d76e84bfce3bd29589511c6df318c725c90919004c57b42dd4092bc08a",
+    "native_cartridges": 17,
+    "result": "tab5-build-candidate-verified",
+    "usb_host_enabled": true,
+    "version": "0.58",
+    "wifi_multiplayer_enabled": true
+  },
+  "content_identity_sha256": "363c69fd5b0ae3faa5360d96624414e6dabd2d4c9c86d1eab518899d8095358b",
+  "required_content_files": 16,
+  "changes": [
+    "Remove unconditional esp_restart after content success/failure; restore idle transport and parser on the same connection.",
+    "Keep USB open throughout the complete host-side batch.",
+    "Invalidate storage content metadata after each successful activation without restarting Console OS.",
+    "Routine guarded app writes use device checksums; full readback remains optional."
+  ],
+  "focused_tests": {
+    "content_ctest": 6,
+    "content_python": 7,
+    "native_bundle_python": 4,
+    "wire_and_batch_python": 12,
+    "cases": "Actual firmware byte parser: consecutive verified files, existing-file admission, corrupt chunk then retry, timeout then retry, failed idle-baud restoration stays exclusive; uploader uses one connection for all sixteen files and preflights before opening USB."
+  },
+  "inherited_arena_tests": "test-runs/2026-10-06-pure-hades-integration.json",
+  "logs": {
+    "no-reboot-content-tests.log": {
+      "path": "build-host/pure-hades-integration/no-reboot-content-tests.log",
+      "bytes": 2373,
+      "sha256": "3a96c5357040a716b7fb221349828d670b8d89cad7aa6d8363cdac27ed54d261"
+    },
+    "no-reboot-usb-wire.log": {
+      "path": "build-host/pure-hades-integration/no-reboot-usb-wire.log",
+      "bytes": 213,
+      "sha256": "31ac6e86bffc707a4e0baa8b915824c3bb04c50c42a174c21250ffaeb983e03f"
+    },
+    "tab5-0.58-build.log": {
+      "path": "build-host/pure-hades-integration/tab5-0.58-build.log",
+      "bytes": 37010,
+      "sha256": "d0e1392c4d89678b723042b3975d70e57535b86bb495e5c8a1d457d1ab596da2"
+    },
+    "tab5-0.58-verifier.json": {
+      "path": "build-host/pure-hades-integration/tab5-0.58-verifier.json",
+      "bytes": 435,
+      "sha256": "d5ec5308d33cd56e11f8064b568c1c95427d27d1527e3d6ee80980f314a78162"
+    },
+    "no-reboot-usb-wire-retry.log": {
+      "path": "build-host/pure-hades-integration/no-reboot-usb-wire-retry.log",
+      "bytes": 573,
+      "sha256": "0124db1a772afc979df9f351d4d26d0202f2602f617cd0f20a2f61d614213134"
+    }
+  },
+  "units": {
+    "A": {
+      "panel": "ST7121",
+      "port": "/dev/cu.usbmodem2101",
+      "identity_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+      "flash_bytes": 16777216,
+      "silicon": "v1.3",
+      "write_offsets": [
+        "0x20000"
+      ],
+      "verification_method": "device-checksum",
+      "checksum_verified": true,
+      "full_app_readback": false,
+      "launcher_ready": true,
+      "ten_second_health_gate": true,
+      "install_receipt": {
+        "path": "hardware/backups/tab5-a-install-57qf_zoe/receipt.json",
+        "bytes": 1628,
+        "sha256": "0e46cdecb0ff814ab82f35f6411332e632155069161ef5d210ad4b86b45443cc"
+      },
+      "install_runtime_log": {
+        "path": "hardware/backups/tab5-a-install-57qf_zoe/runtime.log",
+        "bytes": 15597,
+        "sha256": "15a2a38beb250127562090052e8cf7bb171e59d074c66b6abb33e5c1b2dafbfd"
+      },
+      "content_status": "complete",
+      "content_files_hash_verified": 16,
+      "usb_connections": 1,
+      "initial_boot_ready_events": 1,
+      "in_place_resume_events": 6,
+      "mid_batch_boots": 0,
+      "content_transfer": {
+        "path": "build-host/pure-hades-integration/content-0.58-A.log",
+        "bytes": 5734,
+        "sha256": "3bfb4ff7a9e8f2fb2163a4a8059fba431ddd6f6600b97de54ba636e344b2f07e"
+      }
+    },
+    "B": {
+      "panel": "ST7123",
+      "port": "/dev/cu.usbmodem101",
+      "identity_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+      "flash_bytes": 16777216,
+      "silicon": "v1.3",
+      "write_offsets": [
+        "0x20000"
+      ],
+      "verification_method": "device-checksum",
+      "checksum_verified": true,
+      "full_app_readback": false,
+      "launcher_ready": true,
+      "ten_second_health_gate": true,
+      "install_receipt": {
+        "path": "hardware/backups/tab5-b-install-awhg6a3g/receipt.json",
+        "bytes": 1627,
+        "sha256": "b7f266d8b5915a85d23d729799b50114960e61f3b5474d9af85976af6232c18e"
+      },
+      "install_runtime_log": {
+        "path": "hardware/backups/tab5-b-install-awhg6a3g/runtime.log",
+        "bytes": 15655,
+        "sha256": "49e2d3a779233bb2fc5d0f99488fa3585ba8697ea24f5c83a73ec5bca0a39bbd"
+      },
+      "content_status": "complete",
+      "content_files_hash_verified": 16,
+      "usb_connections": 1,
+      "initial_boot_ready_events": 1,
+      "in_place_resume_events": 2,
+      "mid_batch_boots": 0,
+      "content_transfer": {
+        "path": "build-host/pure-hades-integration/content-0.58-B-retry.log",
+        "bytes": 4759,
+        "sha256": "71de07a0f96efb5bdca89cff5a4e2dcaef470fef28e6799dd7a378dac8f1ee27"
+      },
+      "initial_content_attempt": {
+        "result": "ACK timeout during arena-midi-notice; later complete batch succeeded",
+        "root_cause": "not established",
+        "log": {
+          "path": "build-host/pure-hades-integration/content-0.58-B.log",
+          "bytes": 5346,
+          "sha256": "59b82973633fec78e516b7adbf430dc527c7e8a08c1dd3594e908ad88d3085ba"
+        }
+      }
+    }
+  },
+  "limits": [
+    "Startup and content-transfer behavior are verified on both physical Tab5 units; linked multiplayer gameplay, controls/audio and sustained device cadence remain operator acceptance.",
+    "Opening native USB can still cause one initial restart; the batch does not reopen the port or request a per-file reboot.",
+    "Old inactive Pure Hell files on existing SD cards are not selected or loaded; Pure Hades is the replacement bundle."
+  ],
+  "final_uploader_commit": "79ed243b1d8cc2c03885f3f06561afa9ace810a6",
+  "final_uploader_sha256": "1b0040228e9f62b65404c1da1162f492a8942aa198fe6d743dfea1d519e47341",
+  "timeout_recovery": "Uploader now permits one exact-file retry after an explicit receiver-ready marker on the existing connection; tested with mocks and the actual receiver timeout test. The final B batch needed no automatic retry."
+}

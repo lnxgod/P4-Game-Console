@@ -4,7 +4,7 @@
   "created_at_utc": "2026-10-07T01:48:52.040278+00:00",
   "source_commit": "ddc32bf29dd0096bedc8d2fbdd4a7cf7f7a93b7f",
   "base_main": "426a4d51efcbbb5fc86f3cb40d42b6ac085685cf",
-  "status": "both units installed and boot/health verified; content transfer in progress",
+  "status": "0.57 installed and boot verified; content batch interrupted at operator request; superseded by 0.58 without per-file resets",
   "upstream": {
     "repository": "https://github.com/lnxgod/pure-hades",
     "commit": "142c6ff56ff8fb9eee40e6b2ea7875a0424337e8",
@@ -209,7 +209,7 @@
       ],
       "verification_method": "full-readback",
       "app_readback_verified": true,
-      "app_checksum_verified": false,
+      "app_checksum_verified": null,
       "launcher_ready": true,
       "ten_second_health_gate": true,
       "install_receipt": {
@@ -222,7 +222,12 @@
         "bytes": 15599,
         "sha256": "31417b808e381668fa672cc724d0bb415e383f46fedb3244b3f25ee6b4c30f25"
       },
-      "content_status": "transfer in progress"
+      "content_status": "interrupted after operator reported per-file restarts",
+      "completed_content_files_before_stop": 7,
+      "interrupted_content_log": {
+        "path": "build-host/pure-hades-integration/content-A.log",
+        "sha256": "09e6f4222d9f00308d756b8f086962f0dd73033281314f65ac470df9a54fdbc3"
+      }
     },
     "B": {
       "panel": "ST7123",
@@ -248,7 +253,12 @@
         "bytes": 15656,
         "sha256": "b5c4f9e69f288ba63f63be78bd313b29d184187400be1cc092df1435e7e920c0"
       },
-      "content_status": "transfer in progress"
+      "content_status": "interrupted after operator reported per-file restarts",
+      "completed_content_files_before_stop": 5,
+      "interrupted_content_log": {
+        "path": "build-host/pure-hades-integration/content-B.log",
+        "sha256": "67a6f6368faa1fb37257d9f9088803217c48204ce0b32a04f18f9dd6c0baac67"
+      }
     }
   },
   "limits": [
@@ -262,5 +272,6 @@
     "bytes": 11758,
     "sha256": "68f9d682bec9c8a8e9219b55bded9f4801388518846f9eb40419ed6a1700d647"
   },
-  "verification_preference": "Routine Tab5 flashes use device checksums. A was already being installed when preference arrived and completed full readback; B used device-checksum with no full app readback. Full readback remains an explicit optional diagnostic."
+  "verification_preference": "Routine Tab5 flashes use device checksums. A was already being installed when preference arrived and completed full readback; B used device-checksum with no full app readback. Full readback remains an explicit optional diagnostic.",
+  "successor_evidence": "test-runs/2026-10-06-tab5-no-reboot-content.json"
 }
