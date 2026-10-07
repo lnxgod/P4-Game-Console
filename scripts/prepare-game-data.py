@@ -178,13 +178,59 @@ def real_directory(path: Path) -> None:
         directory.mkdir(mode=0o700)
 
 
+def require_source_archive_stamp() -> None:
+    stamp = ROOT / ".p4-source.json"
+    try:
+        if not stat.S_ISREG(stamp.lstat().st_mode):
+            raise PreparationError("source archive stamp must be a regular file")
+        with stamp.open("rb") as stream:
+            raw = stream.read(1025)
+        if len(raw) > 1024:
+            raise PreparationError("source archive stamp exceeds its size bound")
+
+        def unique_pairs(items):
+            result = {}
+            for key, value in items:
+                if key in result:
+                    raise PreparationError("source archive stamp contains duplicate JSON keys")
+                result[key] = value
+            return result
+
+        value = json.loads(raw, object_pairs_hook=unique_pairs)
+    except (OSError, UnicodeError, json.JSONDecodeError) as error:
+        raise PreparationError("no root Git metadata or valid source archive stamp") from error
+    if (not isinstance(value, dict) or set(value) != {"schema", "source_commit"} or
+            type(value["schema"]) is not int or value["schema"] != 1 or
+            not isinstance(value["source_commit"], str) or
+            re.fullmatch(r"[0-9a-f]{40}", value["source_commit"]) is None):
+        raise PreparationError("invalid source archive stamp")
+
+
 def require_ignored(path: Path) -> None:
     try:
         relative = path.relative_to(ROOT)
     except ValueError as error:
         raise PreparationError("--output-root must be inside this checkout at an ignored location") from error
-    checked = subprocess.run(["git", "check-ignore", "-q", "--", str(relative)], cwd=ROOT,
-                             stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+    metadata = ROOT / ".git"
+    if metadata.exists() or metadata.is_symlink():
+        checked = subprocess.run(["git", "check-ignore", "-q", "--", str(relative)], cwd=ROOT,
+                                 stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+    else:
+        require_source_archive_stamp()
+        # Evaluate the archive's own ignore rules without discovering a parent
+        # checkout, using user/global exclusions, or creating metadata in ROOT.
+        env = {key: value for key, value in os.environ.items() if not key.startswith("GIT_")}
+        env.update(GIT_CONFIG_NOSYSTEM="1", GIT_CONFIG_GLOBAL=os.devnull)
+        with tempfile.TemporaryDirectory(prefix="p4-source-ignore-") as temporary:
+            initialized = subprocess.run(["git", "init", "--quiet", "--bare", "--template=", temporary],
+                                         cwd=ROOT, env=env, stdout=subprocess.DEVNULL,
+                                         stderr=subprocess.PIPE, text=True)
+            if initialized.returncode != 0:
+                raise PreparationError("cannot evaluate source archive ignore rules")
+            checked = subprocess.run(
+                ["git", "-c", f"core.excludesFile={os.devnull}", "--git-dir", temporary,
+                 "--work-tree", str(ROOT), "check-ignore", "--no-index", "-q", "--", str(relative)],
+                cwd=ROOT, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
     if checked.returncode != 0:
         raise PreparationError(f"destination is not Git-ignored: {relative}")
 

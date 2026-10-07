@@ -36,11 +36,74 @@ p4_find_idf_path() {
     return 1
 }
 
+p4_configure_idf_tools_path() {
+    # Honor even an explicitly empty override; otherwise reuse local tools
+    # without changing Espressif's default for a checkout with no cache.
+    if [ "${IDF_TOOLS_PATH+x}" != x ] && \
+       [ -d "$P4_PROJECT_ROOT/.tools/espressif" ]; then
+        IDF_TOOLS_PATH="$P4_PROJECT_ROOT/.tools/espressif"
+        export IDF_TOOLS_PATH
+    fi
+}
+
+p4_verify_idf_checkout() {
+    P4_CHECKED_IDF_PATH=$1
+    if [ -e "$P4_CHECKED_IDF_PATH/.git" ]; then
+        P4_ACTIVE_IDF_TAG=$(git -C "$P4_CHECKED_IDF_PATH" describe --tags --exact-match 2>/dev/null || true)
+        if [ "$P4_ACTIVE_IDF_TAG" != "$P4_PINNED_IDF_TAG" ]; then
+            printf 'ESP-IDF tag mismatch: expected %s, found %s at %s\n' \
+                "$P4_PINNED_IDF_TAG" "${P4_ACTIVE_IDF_TAG:-untagged}" "$P4_CHECKED_IDF_PATH" >&2
+            return 1
+        fi
+
+        P4_IDF_TRACKED_CHANGES=$(git -C "$P4_CHECKED_IDF_PATH" status \
+            --short --untracked-files=no --ignore-submodules=none) || return 1
+        if [ -n "$P4_IDF_TRACKED_CHANGES" ]; then
+            printf 'ESP-IDF checkout has tracked changes at %s; refusing an unlocked SDK.\n' \
+                "$P4_CHECKED_IDF_PATH" >&2
+            return 1
+        fi
+
+        case "$P4_PINNED_IDF_COMMIT" in
+            ''|pending-*) ;;
+            *)
+                P4_ACTIVE_IDF_COMMIT=$(git -C "$P4_CHECKED_IDF_PATH" rev-parse HEAD) || return 1
+                if [ "$P4_ACTIVE_IDF_COMMIT" != "$P4_PINNED_IDF_COMMIT" ]; then
+                    printf 'ESP-IDF commit mismatch: expected %s, found %s at %s\n' \
+                        "$P4_PINNED_IDF_COMMIT" "$P4_ACTIVE_IDF_COMMIT" "$P4_CHECKED_IDF_PATH" >&2
+                    return 1
+                fi
+                ;;
+        esac
+        P4_IDF_SUBMODULE_STATUS=$(git -C "$P4_CHECKED_IDF_PATH" submodule status --recursive) || return 1
+        P4_IDF_SUBMODULE_MISMATCH_PATTERN='^[+-U]'
+        if [ "${2:-}" = --allow-missing-submodules ]; then
+            P4_IDF_SUBMODULE_MISMATCH_PATTERN='^[+U]'
+        fi
+        if printf '%s\n' "$P4_IDF_SUBMODULE_STATUS" | grep -E "$P4_IDF_SUBMODULE_MISMATCH_PATTERN" >/dev/null; then
+            printf 'ESP-IDF submodules are missing or do not match %s at %s.\n' \
+                "$P4_PINNED_IDF_TAG" "$P4_CHECKED_IDF_PATH" >&2
+            return 1
+        fi
+    elif [ -n "$P4_PINNED_IDF_COMMIT" ]; then
+        case "$P4_PINNED_IDF_COMMIT" in
+            pending-*) ;;
+            *)
+                printf 'ESP-IDF checkout at %s has no Git metadata; cannot verify locked commit.\n' \
+                    "$P4_CHECKED_IDF_PATH" >&2
+                return 1
+                ;;
+        esac
+    fi
+}
+
 p4_activate_idf() {
     P4_RESOLVED_IDF_PATH=$(p4_find_idf_path) || {
         printf 'ESP-IDF %s was not found. Run make setup or set P4_IDF_PATH.\n' "$P4_PINNED_IDF_VERSION" >&2
         return 1
     }
+    p4_verify_idf_checkout "$P4_RESOLVED_IDF_PATH" || return
+    p4_configure_idf_tools_path
 
     # Espressif's export script intentionally sets the SDK environment.
     # shellcheck disable=SC1090
@@ -52,51 +115,6 @@ p4_activate_idf() {
         printf 'ESP-IDF mismatch: expected %s, found %s at %s\n' \
             "$P4_PINNED_IDF_VERSION" "$P4_ACTIVE_IDF_VERSION" "$P4_RESOLVED_IDF_PATH" >&2
         return 1
-    fi
-
-    if [ -e "$P4_RESOLVED_IDF_PATH/.git" ]; then
-        P4_ACTIVE_IDF_TAG=$(git -C "$P4_RESOLVED_IDF_PATH" describe --tags --exact-match 2>/dev/null || true)
-        if [ "$P4_ACTIVE_IDF_TAG" != "$P4_PINNED_IDF_TAG" ]; then
-            printf 'ESP-IDF tag mismatch: expected %s, found %s at %s\n' \
-                "$P4_PINNED_IDF_TAG" "${P4_ACTIVE_IDF_TAG:-untagged}" "$P4_RESOLVED_IDF_PATH" >&2
-            return 1
-        fi
-
-        P4_IDF_SUBMODULE_STATUS=$(git -C "$P4_RESOLVED_IDF_PATH" submodule status --recursive)
-        if printf '%s\n' "$P4_IDF_SUBMODULE_STATUS" | grep -E '^[+-U]' >/dev/null; then
-            printf 'ESP-IDF submodules are missing or do not match %s at %s.\n' \
-                "$P4_PINNED_IDF_TAG" "$P4_RESOLVED_IDF_PATH" >&2
-            return 1
-        fi
-
-        P4_IDF_TRACKED_CHANGES=$(git -C "$P4_RESOLVED_IDF_PATH" status \
-            --short --untracked-files=no)
-        if [ -n "$P4_IDF_TRACKED_CHANGES" ]; then
-            printf 'ESP-IDF checkout has tracked changes at %s; refusing an unlocked build.\n' \
-                "$P4_RESOLVED_IDF_PATH" >&2
-            return 1
-        fi
-
-        case "$P4_PINNED_IDF_COMMIT" in
-            ''|pending-*) ;;
-            *)
-                P4_ACTIVE_IDF_COMMIT=$(git -C "$P4_RESOLVED_IDF_PATH" rev-parse HEAD)
-                if [ "$P4_ACTIVE_IDF_COMMIT" != "$P4_PINNED_IDF_COMMIT" ]; then
-                    printf 'ESP-IDF commit mismatch: expected %s, found %s at %s\n' \
-                        "$P4_PINNED_IDF_COMMIT" "$P4_ACTIVE_IDF_COMMIT" "$P4_RESOLVED_IDF_PATH" >&2
-                    return 1
-                fi
-                ;;
-        esac
-    elif [ -n "$P4_PINNED_IDF_COMMIT" ]; then
-        case "$P4_PINNED_IDF_COMMIT" in
-            pending-*) ;;
-            *)
-                printf 'ESP-IDF checkout at %s has no Git metadata; cannot verify locked commit.\n' \
-                    "$P4_RESOLVED_IDF_PATH" >&2
-                return 1
-                ;;
-        esac
     fi
 }
 

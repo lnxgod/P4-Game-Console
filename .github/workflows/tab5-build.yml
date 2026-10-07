@@ -1,0 +1,209 @@
+name: Tab5 prebuilt install
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Pull requests can build and upload artifacts, but cannot publish releases.
+permissions:
+  contents: read
+
+concurrency:
+  group: tab5-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build:
+    name: Build and verify Tab5
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    env:
+      P4_IDF_PATH: ${{ github.workspace }}/.tools/esp-idf
+      IDF_TOOLS_PATH: ${{ github.workspace }}/.tools/espressif
+      CCACHE_DIR: ${{ github.workspace }}/.tools/ccache
+      IDF_CCACHE_ENABLE: "1"
+      P4_TAB5_FIRMWARE_ONLY: "0"
+      P4_TAB5_DEV_GAMES_ONLY: "0"
+    steps:
+      - name: Check out the exact source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Install build prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y \
+            build-essential git wget flex bison gperf python3 python3-pip \
+            python3-venv cmake ninja-build ccache libffi-dev libssl-dev \
+            dfu-util libusb-1.0-0
+
+      - name: Test installer, archives and SDK setup without downloads or hardware
+        run: make install-path-host
+
+      # The lockfiles select both SDK/tool binaries and the Tab5 component graph.
+      # Never restore a prefix-only SDK/component cache from different locks.
+      - name: Restore locked SDK, tools and components
+        id: dependencies
+        uses: actions/cache/restore@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        with:
+          path: |
+            .tools/esp-idf
+            .tools/espressif
+            apps/console_os/managed_components
+          key: tab5-dependencies-v1-${{ runner.os }}-${{ runner.arch }}-ubuntu24-python312-${{ hashFiles('toolchain.lock.json', 'apps/console_os/dependencies-tab5.lock', 'scripts/install-esp-idf.sh', 'scripts/lib/project-env.sh') }}
+
+      - name: Restore compiler cache
+        id: compiler
+        uses: actions/cache/restore@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        with:
+          path: .tools/ccache
+          key: tab5-compiler-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('toolchain.lock.json', 'apps/console_os/dependencies-tab5.lock') }}-${{ github.sha }}
+          restore-keys: |
+            tab5-compiler-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('toolchain.lock.json', 'apps/console_os/dependencies-tab5.lock') }}-
+
+      - name: Install and verify the pinned ESP-IDF environment
+        run: |
+          make setup
+          make verify
+
+      - name: Prepare the exact local-only Doom input
+        run: make prepare-game-data
+
+      - name: Build and verify the full Tab5 firmware and standard game bundle
+        run: |
+          make console-os-tab5-idf
+          git diff --exit-code -- toolchain.lock.json apps/console_os/dependencies-tab5.lock
+
+      - name: Export verified runtime and optional source packs
+        run: |
+          mkdir -p dist/tab5 dist/source dist/release
+          python3 scripts/package-tab5-release.py --output dist/tab5 --commit "$GITHUB_SHA"
+          python3 scripts/package-source.py --output dist/source --commit "$GITHUB_SHA"
+          cp "dist/tab5/tab5-$GITHUB_SHA.tar.gz" dist/tab5/release-manifest.json dist/release/
+          cp "dist/source/p4console-$GITHUB_SHA-source-lite.tar.gz" \
+            "dist/source/p4console-$GITHUB_SHA-art-source.tar.gz" \
+            "dist/source/p4console-$GITHUB_SHA-source-manifest.json" dist/release/
+          cd dist/release
+          sha256sum -- *.tar.gz *.json > SHA256SUMS
+          sha256sum --check SHA256SUMS
+
+      - name: Save locked dependencies from trusted main builds
+        if: >-
+          github.ref == 'refs/heads/main' &&
+          (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
+          steps.dependencies.outputs.cache-hit != 'true'
+        uses: actions/cache/save@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        with:
+          path: |
+            .tools/esp-idf
+            .tools/espressif
+            apps/console_os/managed_components
+          key: ${{ steps.dependencies.outputs.cache-primary-key }}
+
+      - name: Save compiler cache from trusted main builds
+        if: >-
+          github.ref == 'refs/heads/main' &&
+          (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
+          steps.compiler.outputs.cache-hit != 'true'
+        uses: actions/cache/save@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        with:
+          path: .tools/ccache
+          key: ${{ steps.compiler.outputs.cache-primary-key }}
+
+      - name: Upload the build-only candidate
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: tab5-${{ github.sha }}
+          path: dist/release/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+
+      - name: Record verification limits
+        run: |
+          printf '%s\n' \
+            'Tab5 firmware and standard games passed the repository build verifier.' \
+            'The runtime archive excludes Doom/Chex WADs, Quake PAKs and factory recovery images.' \
+            'This is a build-only candidate: hardware_verified=false, flash_authorized=false.' \
+            'A precompiled image retains the exact-unit backup and guarded installation requirements.' \
+            >> "$GITHUB_STEP_SUMMARY"
+
+  release:
+    name: Publish exact-commit candidate
+    needs: build
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      # This job never checks out or executes repository build code with its
+      # write token. It only publishes artifacts from the successful main job.
+      - name: Download the current run's exact-commit artifacts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: tab5-${{ github.sha }}
+          path: release
+
+      - name: Verify assets and publish without replacing an existing release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          cd release
+          sha256sum --check SHA256SUMS
+          python3 - <<'PY'
+          import json
+          import os
+          import pathlib
+          import re
+          import subprocess
+
+          commit = os.environ['GITHUB_SHA']
+          if re.fullmatch(r'[0-9a-f]{40}', commit) is None:
+              raise SystemExit('Expected an exact 40-character source commit')
+          manifest = json.loads(pathlib.Path('release-manifest.json').read_text())
+          if manifest.get('source_commit') != commit:
+              raise SystemExit('Runtime manifest does not match this workflow commit')
+          if manifest.get('hardware_verified') is not False or manifest.get('flash_authorized') is not False:
+              raise SystemExit('CI artifacts must remain build-only and unauthorized for hardware')
+          tag = 'tab5-' + commit
+          repo = os.environ['GH_REPO']
+          reference = subprocess.run(
+              ['gh', 'api', f'repos/{repo}/git/ref/tags/{tag}'],
+              capture_output=True, text=True,
+          )
+          if reference.returncode == 0:
+              target = json.loads(reference.stdout)['object']
+              if target.get('type') != 'commit' or target.get('sha') != commit:
+                  raise SystemExit('Existing release tag does not identify this exact commit')
+          elif 'HTTP 404' not in reference.stderr:
+              raise SystemExit('Unable to verify the exact-commit release tag')
+          PY
+          P4_RELEASE_TAG="tab5-$GITHUB_SHA"
+          if gh release view "$P4_RELEASE_TAG" >/dev/null 2>&1; then
+            printf 'Release %s already exists; refusing to replace its assets.\n' "$P4_RELEASE_TAG" >&2
+            exit 1
+          fi
+          cat > "$RUNNER_TEMP/tab5-release-notes.md" <<'EOF'
+          Precompiled M5Stack Tab5 firmware and standard native games from the exact tagged source commit. The firmware and content passed the repository build verifier; physical gameplay and peripheral acceptance remain pending for this candidate.
+
+          Download `tab5-<commit>.tar.gz` and `SHA256SUMS` for installation without compiling. The source-lite pack omits large authoring media; the optional art-source pack restores it for artwork development. Doom/Chex WADs and Quake PAKs are not included. Prepare authorized game data separately through the pinned repository workflow.
+
+          These artifacts do not grant hardware flash authorization. Preserve the complete factory backup and exact-unit checks, use the guarded Tab5 installation workflow, and keep `hardware_verified=false` and `flash_authorized=false` until separately authorized and verified.
+          EOF
+          gh release create "$P4_RELEASE_TAG" ./* \
+            --target "$GITHUB_SHA" --title "Tab5 build $GITHUB_SHA" \
+            --notes-file "$RUNNER_TEMP/tab5-release-notes.md" \
+            --draft --prerelease --latest=false
+          # Attach every asset before publication, including when repository
+          # release immutability is enabled. Never upload with --clobber.
+          gh release edit "$P4_RELEASE_TAG" --draft=false

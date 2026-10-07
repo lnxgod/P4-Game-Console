@@ -1,6 +1,6 @@
 ---
 name: esp32-setup
-description: "Set up or provision P4 Console OS with native games and Doom shareware. Use for initial Tab5 installation, storage selection and first boot; other boards require explicitly requested legacy maintenance. Use esp32-add-game for compatible game-only updates."
+description: "Set up or provision P4 Console OS with exact-revision precompiled Tab5 packages, native games and verified Doom shareware. Use for initial installation, storage selection and first boot; other boards require explicitly requested legacy maintenance. Ask about microSD; current Tab5 game storage is SD-only. Use esp32-add-game for compatible game-only updates."
 ---
 
 # ESP32 - Set Up
@@ -43,8 +43,16 @@ or Doom to make a layout fit.
 ## Prepare a fresh checkout
 
 Run commands from the repository root. Use the checked-in skills and scripts;
-no personal skill directory or machine-specific SDK path is required. Read
-`toolchain.lock.json`; use `make setup` only when its pinned tools are absent,
+no personal skill directory or machine-specific SDK path is required. For a
+Tab5 installation, prefer `make prebuilt` and `make install-tools`, then
+activate `.tools/install-python/bin/activate`. Read
+[prebuilt installation](../../../docs/INSTALL_PREBUILT.md) for the lightweight
+clone, cached exact-revision package, manifest-bound guarded flash and content
+paths. No SDK/compiler is needed for this path. If the exact package is absent,
+report that fact and choose the matching CI artifact or a source build; never
+substitute an older release or silently start a long compile.
+
+For a source build, read `toolchain.lock.json`; use `make setup` only when its pinned tools are absent,
 then `make verify` as described by the
 [platform workflow](../esp32-fix-console/references/workflow.md).
 Use that environment's Python for serial transfer (pyserial is required); the
@@ -138,7 +146,11 @@ recovery coverage; an app-only install cannot create internal game storage.
 Honor installation authorization already given in the session without asking
 for the same permission again.
 
-For the current Tab5 SD route, use the locked environment and:
+For a prebuilt Tab5 SD route, use the verified package's `firmware/` and
+`content/` directories and `--prebuilt` guarded install as documented in
+`docs/INSTALL_PREBUILT.md`. The local authorization must bind the manifest
+digest as well as all image hashes; preserve all device/backup/predecessor
+checks. A source build instead uses the locked environment and:
 ```sh
 make console-os-tab5-idf
 ```
@@ -159,6 +171,8 @@ connected native USB-C cable:
 python scripts/p4-transfer.py push-bundle apps/console_os/build-tab5/sd-card --port <explicit-port>
 python scripts/p4-usb-content.py doom --port <explicit-port>
 ```
+For a prebuilt bundle, replace `apps/console_os/build-tab5/sd-card` with
+`build-host/prebuilt/tab5/<source-commit>/content` in `push-bundle`.
 Only after the SD user selects Chex:
 ```sh
 python scripts/p4-usb-content.py chex --port <explicit-port>
