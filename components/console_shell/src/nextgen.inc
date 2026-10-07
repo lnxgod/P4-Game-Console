@@ -189,9 +189,9 @@ static bool ng_game(const console_app_descriptor_t *app)
 { return app->page==CONSOLE_PAGE_EXTERNAL&&!ng_system_utility(app); }
 static size_t ng_games(const console_shell_t *sh,size_t *indices)
 {
-    size_t count=0;const char *preferred[]={"BYTE","MAZE","BLAST","SOLITAIRE"};
+    size_t count=0;const char *preferred[]={"BLAST","WACKY","MAZE","SOLITAIRE"};
     for(size_t p=0;p<4U;++p)for(size_t i=0;i<sh->app_count;++i)
-        if(ng_game(&sh->apps[i])&&ng_contains(sh->apps[i].title,preferred[p])){
+        if(ng_game(&sh->apps[i])&&sh->apps[i].enabled&&ng_contains(sh->apps[i].title,preferred[p])){
             bool seen=false;for(size_t j=0;j<count;++j)if(indices[j]==i)seen=true;
             if(!seen)indices[count++]=i;}
     for(size_t i=0;i<sh->app_count;++i)if(ng_game(&sh->apps[i])){

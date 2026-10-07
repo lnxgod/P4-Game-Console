@@ -2,7 +2,7 @@
 
 cmake_minimum_required(VERSION 3.16)
 
-set(PROJECT_VER "0.58")
+set(PROJECT_VER "0.59")
 
 if(NOT DEFINED P4_BOARD_PROFILE)
     set(P4_BOARD_PROFILE "m5stack-tab5")
@@ -515,10 +515,9 @@ if(P4_BOARD_PROFILE STREQUAL "m5stack-tab5" OR
    P4_BOARD_PROFILE STREQUAL
        "waveshare-esp32-p4-wifi6-touch-lcd-4.3")
     set(P4_GAME_STORAGE_SEED_DIR "${CMAKE_BINARY_DIR}/sd-card")
-    # This is a generated staging tree, never a mounted user card. Recreate it
-    # on configure so stale packages and host-created duplicate filenames can
-    # never leak into a release bundle.
-    file(REMOVE_RECURSE "${P4_GAME_STORAGE_SEED_DIR}")
+    # This is a generated staging tree, never a mounted user card. The build
+    # wrapper prunes malformed roots; package selection below prunes stale games.
+    # Preserve valid outputs when configuring the separate developer target.
 else()
     set(P4_GAME_STORAGE_SEED_DIR "${CMAKE_BINARY_DIR}/game-storage-seed")
 endif()
@@ -536,6 +535,7 @@ if(NOT P4_LOCAL_DOOM_WAD_BYTES EQUAL 4196020 OR
     message(FATAL_ERROR "local Doom shareware WAD identity does not match")
 endif()
 file(MAKE_DIRECTORY "${P4_GAME_STORAGE_SEED_DIR}")
+file(MAKE_DIRECTORY "${P4_GAME_STORAGE_SEED_DIR}/GAMES")
 file(MAKE_DIRECTORY "${P4_GAME_STORAGE_SEED_DIR}/UPDATE")
 
 configure_file(
@@ -576,6 +576,7 @@ file(GLOB_RECURSE P4_CARTRIDGE_SHARED_INPUTS CONFIGURE_DEPENDS
 set(P4_CARTRIDGE_COMMON_SOURCES
     ${P4_CARTRIDGE_SHARED_INPUTS}
     "${P4_PACKAGE_SCRIPT}"
+    "${P4_REPOSITORY_ROOT}/scripts/p4_game_release.py"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api/runtime/cartridge_main.c"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_cp437/include/p4/cp437.h"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_cp437/src/cp437.c"
@@ -589,10 +590,21 @@ set(P4_CARTRIDGE_COMMON_SOURCES
 )
 
 function(p4_add_seed_game PACKAGE_NAME GAME_NAME RESOURCE_NAME RESOURCE_PAYLOAD)
+    set(P4_PACKAGE_ROOT "${P4_GAME_STORAGE_SEED_DIR}")
+    set(P4_PACKAGE_LIST P4_SEEDED_GAME_PACKAGES)
+    set(P4_PACKAGE_FLAGS "")
+    if(ARGV4 STREQUAL "DEV")
+        set(P4_PACKAGE_ROOT "${CMAKE_BINARY_DIR}/dev-games")
+        set(P4_PACKAGE_LIST P4_DEV_GAME_PACKAGES)
+        set(P4_PACKAGE_FLAGS --allow-dev)
+    endif()
     set(P4_GAME_DIR
         "${P4_REPOSITORY_ROOT}/games/${GAME_NAME}")
     set(P4_PACKAGE_OUTPUT
-        "${P4_GAME_STORAGE_SEED_DIR}/GAMES/${PACKAGE_NAME}")
+        "${P4_PACKAGE_ROOT}/GAMES/${PACKAGE_NAME}")
+    if(GAME_NAME STREQUAL "lord")
+        set(P4_PROTECTED_LORD_PACKAGE "${P4_PACKAGE_OUTPUT}" PARENT_SCOPE)
+    endif()
     file(GLOB_RECURSE P4_GAME_SOURCES CONFIGURE_DEPENDS
         "${P4_GAME_DIR}/*.c" "${P4_GAME_DIR}/*.h"
         "${P4_GAME_DIR}/*.inc" "${P4_GAME_DIR}/*.p4i")
@@ -605,20 +617,21 @@ function(p4_add_seed_game PACKAGE_NAME GAME_NAME RESOURCE_NAME RESOURCE_PAYLOAD)
             --compiler "${CMAKE_C_COMPILER}"
             --strip "${P4_RISCV_STRIP}"
             --output "${P4_PACKAGE_OUTPUT}"
+            ${P4_PACKAGE_FLAGS}
         DEPENDS
             ${P4_CARTRIDGE_COMMON_SOURCES}
             ${P4_GAME_SOURCES}
             "${P4_GAME_DIR}/game.json"
         VERBATIM
     )
-    set(P4_SEEDED_GAME_PACKAGES
-        ${P4_SEEDED_GAME_PACKAGES} "${P4_PACKAGE_OUTPUT}"
+    set(${P4_PACKAGE_LIST}
+        ${${P4_PACKAGE_LIST}} "${P4_PACKAGE_OUTPUT}"
         PARENT_SCOPE)
     if(NOT RESOURCE_NAME STREQUAL "")
         set(P4_RESOURCE_PAYLOAD
             "${P4_GAME_DIR}/${RESOURCE_PAYLOAD}")
         set(P4_RESOURCE_OUTPUT
-            "${P4_GAME_STORAGE_SEED_DIR}/GAMES/${RESOURCE_NAME}")
+            "${P4_PACKAGE_ROOT}/GAMES/${RESOURCE_NAME}")
         add_custom_command(
             OUTPUT "${P4_RESOURCE_OUTPUT}"
             COMMAND
@@ -633,8 +646,8 @@ function(p4_add_seed_game PACKAGE_NAME GAME_NAME RESOURCE_NAME RESOURCE_PAYLOAD)
                 "${P4_GAME_DIR}/game.json"
             VERBATIM
         )
-        set(P4_SEEDED_GAME_PACKAGES
-            ${P4_SEEDED_GAME_PACKAGES} "${P4_PACKAGE_OUTPUT}"
+        set(${P4_PACKAGE_LIST}
+            ${${P4_PACKAGE_LIST}} "${P4_PACKAGE_OUTPUT}"
             "${P4_RESOURCE_OUTPUT}"
             PARENT_SCOPE)
     endif()
@@ -642,6 +655,10 @@ endfunction()
 
 file(GLOB P4_GAME_MANIFESTS CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_LIST_DIR}/../../games/*/game.json")
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+    ${P4_GAME_MANIFESTS}
+    "${P4_REPOSITORY_ROOT}/scripts/generate-game-registry.py"
+    "${P4_REPOSITORY_ROOT}/scripts/p4_game_release.py")
 set(P4_GENERATED_GAMES_CMAKE "${CMAKE_BINARY_DIR}/p4-games.cmake")
 execute_process(
     COMMAND
@@ -659,7 +676,31 @@ if(NOT P4_GAME_MANIFEST_RESULT EQUAL 0)
 endif()
 message(STATUS "${P4_GAME_MANIFEST_REPORT}")
 include("${P4_GENERATED_GAMES_CMAKE}")
+# CMake owns this staging tree. Remove stale cartridges/resources after a
+# title is held back so incremental builds cannot reinstall an old WIP game.
+file(GLOB P4_OLD_SEED_FILES
+    "${P4_GAME_STORAGE_SEED_DIR}/GAMES/*.P4G"
+    "${P4_GAME_STORAGE_SEED_DIR}/GAMES/*.P4R")
+foreach(P4_OLD_SEED_FILE IN LISTS P4_OLD_SEED_FILES)
+    if(NOT P4_OLD_SEED_FILE IN_LIST P4_SEEDED_GAME_PACKAGES)
+        file(REMOVE "${P4_OLD_SEED_FILE}")
+    endif()
+endforeach()
 add_custom_target(p4_game_packages ALL DEPENDS ${P4_SEEDED_GAME_PACKAGES})
+
+set(P4_DEV_GAMES_CMAKE "${CMAKE_BINARY_DIR}/p4-dev-games.cmake")
+execute_process(
+    COMMAND "${P4_IDF_PYTHON}"
+        "${P4_REPOSITORY_ROOT}/scripts/generate-game-registry.py"
+        --games-root "${P4_REPOSITORY_ROOT}/games"
+        --dev-only --output-cmake "${P4_DEV_GAMES_CMAKE}"
+    RESULT_VARIABLE P4_DEV_RESULT ERROR_VARIABLE P4_DEV_ERROR
+    OUTPUT_QUIET)
+if(NOT P4_DEV_RESULT EQUAL 0)
+    message(FATAL_ERROR "development manifests invalid: ${P4_DEV_ERROR}")
+endif()
+include("${P4_DEV_GAMES_CMAKE}")
+add_custom_target(p4_dev_game_packages DEPENDS ${P4_DEV_GAME_PACKAGES})
 
 # Saves for protected realm games are available only to the exact deterministic
 # cartridge payload built with this Console OS successor.  The generated
@@ -668,8 +709,8 @@ add_custom_target(p4_game_packages ALL DEPENDS ${P4_SEEDED_GAME_PACKAGES})
 # a paired OS + P4G successor and automatically produces its new allowed digest.
 set(P4_PROTECTED_LINEAGE_GENERATOR
     "${P4_REPOSITORY_ROOT}/scripts/generate-protected-game-lineage.py")
-set(P4_PROTECTED_LORD_PACKAGE
-    "${P4_GAME_STORAGE_SEED_DIR}/GAMES/LORD.P4G")
+# Red Dragon remains save-protected even while held back. Its paired payload
+# lives outside the standard SD bundle and is installed only by explicit opt-in.
 set(P4_PROTECTED_LINEAGE_DIR
     "${CMAKE_BINARY_DIR}/generated/protected-games")
 set(P4_PROTECTED_LINEAGE_HEADER

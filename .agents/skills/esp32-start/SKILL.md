@@ -82,3 +82,13 @@ New games use native C `.P4G` cartridges and stable OS services. Keep toolchain
 locks, game/save identities, data licensing and factory-backup gates intact.
 Read the selected specialist's contracts for the task instead of loading every
 skill or running every test by default.
+
+## Standard and development content
+
+Standard bundles exclude disabled manifests and every `GAMES/WIP` title.
+Byte Buddy, Red Dragon and Skyline Leap require an explicit
+`make install-dev GAME=<slug> PORT=<port>`; see the
+[developer install guide](../../../games/README.md#developer-installs).
+Tide Maze remains in the normal bundle by the owner's request; preserve its
+open device-lag acceptance. Feature Blast Circuit, with Wacky Wheels as an
+installed fallback. Preserve hidden games' source, package IDs and saves.

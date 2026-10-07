@@ -31,6 +31,9 @@ fallback layouts, without altering the underlying rules to fit the artwork.
 ## Ship an honest, curated library
 
 Incomplete prototypes remain disabled and out of default content bundles.
+Build them in the separate developer output and require an explicit
+`make install-dev GAME=<slug> PORT=<port>` opt-in; never promote a WIP tile
+as the standard home feature.
 An explicit request to retain a WIP title is an exception for that title only;
 mark its status clearly. Removal must cover registry/default bundles and any
 authorized exact installed copy, while preserving saves and reserved IDs.

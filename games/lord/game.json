@@ -33,6 +33,6 @@
   },
   "license": "LORD-PERMISSION",
   "assets": "authorized-upstream-text-generated-title-and-friendship-concept-shared-cp437-ansi-scenes",
-  "enabled": true,
+  "enabled": false,
   "launcher_icon": "assets/launcher.p4i"
 }

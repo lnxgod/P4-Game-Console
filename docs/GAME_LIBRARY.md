@@ -7,7 +7,9 @@ the [engine-game inventory](../README.md#engine-games-and-ports). This document
 records library policy and historical review; it is not the OS overview.
 
 Tab5 is the primary Console OS target. The enabled native bundle contains
-12 main-library games, two available works in progress, and three utilities.
+12 main-library games and three utilities. Byte Buddy, Red Dragon and Skyline
+Leap are held back for explicit developer installs only. Tide Maze remains
+available at the owner’s request, with its device-lag acceptance still open.
 Doom v1.9 shareware is the default engine-data title; provisioning includes its
 verified WAD download when missing. Chex Quest is an optional SD add-on and
 requires an explicit opt-in plus its verified WAD and patch. Game data stays
@@ -29,19 +31,19 @@ changes only presentation: launching and saved progress still use stable IDs.
 | Optional | Chex Quest; explicit SD opt-in, verified WAD and patch required |
 | Sports | Air Hockey |
 | Tabletop | Checkers, Yahtzee |
-| WIP (Work in progress) | Byte Buddy, Red Dragon |
+| Development only (hidden by default) | Byte Buddy, Red Dragon, Skyline Leap |
 
 Byte Buddy 5.0.0, Red Dragon 1.9.0 and Maze Chase 1.1.1 (the Pac-Man-style
 game) are native C `.P4G` games. The initial-launch remixes update Byte Buddy's
 city/panels and Red Dragon's native ANSI presentation while preserving their
 game identities and saved progress. See their game READMEs for exact acceptance.
 
-Byte Buddy and Red Dragon stay enabled and available under
-`GAMES/WIP`. This is a development status, not a claim that they are complete or
-an instruction to remove them. Their game IDs, cartridge names, saved progress
-remain unchanged. Category changes travel in their rebuilt
-cartridges. The optional Chex category is an OS catalog change; seeing its tile
-does not prove its game data is present or verified.
+Byte Buddy, Red Dragon and Skyline Leap have disabled manifests. Default
+bundles also exclude `GAMES/WIP` even if a future edit leaves `enabled: true`.
+Use [developer installs](../games/README.md#developer-installs) to opt in to a
+named title. Their source, package IDs and saves remain available; this is not
+retirement. Blast Circuit leads the Tab5 home view, followed by Wacky Wheels
+when installed. Wacky keeps its separate experimental install workflow.
 
 Calculator lives in System / Tools. Input Monitor and Sound & Motion live in
 System / Tests; Sound & Motion checks animation and tones, while the built-in

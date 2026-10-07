@@ -2,9 +2,12 @@
 
 [Game index](../README.md) · [Build and install](../README.md#build-and-play) · [Console OS](../../apps/console_os/README.md)
 
-**Availability:** Included work in progress; protected OS pairing. **Folder:** `GAMES/WIP`.
+**Availability:** Developer install only; protected OS pairing. **Folder:** `GAMES/WIP`.
 
 **Package:** `LORD.P4G`. **Players:** Solo; 2-player linked profile / realm features.
+
+Hidden from standard installs; see [developer installs](../README.md#developer-installs).
+Game IDs and saved progress are preserved.
 
 **Local preview:** `make play-game GAME=lord` from the repository root.
 

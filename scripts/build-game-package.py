@@ -107,7 +107,7 @@ def capability_mask(manifest: dict[str, Any], key: str) -> int:
     return sum(CAPABILITIES[value] for value in values)
 
 
-def load_manifest(path: pathlib.Path) -> dict[str, Any]:
+def load_manifest(path: pathlib.Path, *, allow_dev: bool = False) -> dict[str, Any]:
     try:
         value = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, UnicodeError, json.JSONDecodeError) as error:
@@ -116,8 +116,11 @@ def load_manifest(path: pathlib.Path) -> dict[str, Any]:
         raise PackageError("manifest schema must be 1")
     if value.get("format") != FORMAT or value.get("api_version") != API_VERSION:
         raise PackageError(f"manifest must target {FORMAT} API {API_VERSION}")
-    if value.get("enabled") is not True:
-        raise PackageError("manifest must describe an enabled game")
+    from p4_game_release import development_only
+    if not isinstance(value.get("enabled"), bool):
+        raise PackageError("enabled must be boolean")
+    if development_only(value) and not allow_dev:
+        raise PackageError("development game requires --allow-dev (or make install-dev)")
     component = value.get("component")
     symbol = value.get("entry_symbol")
     game_id = value.get("id")
@@ -324,9 +327,11 @@ def main() -> int:
     parser.add_argument("--compiler", type=pathlib.Path, required=True)
     parser.add_argument("--strip", dest="strip_tool", type=pathlib.Path, required=True)
     parser.add_argument("--output", type=pathlib.Path, required=True)
+    parser.add_argument("--allow-dev", action="store_true",
+                        help="explicitly build a held-back development game")
     args = parser.parse_args()
     root = pathlib.Path(__file__).resolve().parent.parent
-    manifest = load_manifest(args.manifest.resolve())
+    manifest = load_manifest(args.manifest.resolve(), allow_dev=args.allow_dev)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="p4-package-") as temporary:
         elf_path = pathlib.Path(temporary) / "payload.elf"

@@ -217,7 +217,10 @@ if [ "$P4_APP" = console_os ] &&
     p4_idf_action reconfigure
 fi
 
-if [ "${P4_TAB5_FIRMWARE_ONLY:-0}" = 1 ]; then
+if [ "${P4_TAB5_DEV_GAMES_ONLY:-0}" = 1 ]; then
+    [ "$P4_APP" = console_os ] && [ "$P4_BOARD_PROFILE" = m5stack-tab5 ] || exit 2
+    p4_idf_action p4_dev_game_packages
+elif [ "${P4_TAB5_FIRMWARE_ONLY:-0}" = 1 ]; then
     [ "$P4_APP" = console_os ] && [ "$P4_BOARD_PROFILE" = m5stack-tab5 ] || exit 2
     p4_idf_action app
     p4_idf_action p4_os_update_package

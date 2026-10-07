@@ -143,6 +143,22 @@ class GameTransferTests(unittest.TestCase):
                     opened.assert_not_called(); pushed.assert_not_called()
             self.assertTrue((root/"P4/GAMES/old.p4cart").exists())
 
+    def test_wip_bundle_requires_explicit_opt_in_before_opening_device(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root=Path(temporary); (root/"GAMES").mkdir()
+            native=self.native(); native[176:185]=b"GAMES/WIP"
+            (root/"GAMES/GAME.P4G").write_bytes(native)
+            (root/"GAMES/GAME.P4R").write_bytes(self.resource())
+            args=argparse.Namespace(input=root,port="fixture",no_replace=False,done_timeout=30)
+            with mock.patch.object(tool,"open_port") as opened:
+                with self.assertRaisesRegex(tool.TransferError, "install-dev"):
+                    tool.push_bundle(args)
+                opened.assert_not_called()
+            args.include_dev=True
+            with mock.patch.object(tool,"open_port"), mock.patch.object(tool,"push") as pushed:
+                tool.push_bundle(args)
+                self.assertEqual([call.args[0].file_class for call in pushed.call_args_list],["p4r","p4g"])
+
     def test_native_bundle_prevalidates_and_preserves_resource_first_order(self):
         with tempfile.TemporaryDirectory() as temporary:
             root=Path(temporary); (root/"GAMES").mkdir(); (root/"P4/GAMES").mkdir(parents=True)

@@ -732,6 +732,11 @@ def push_bundle(args: argparse.Namespace) -> None:
         for source in sorted((root / directory).glob(f"*.{extension}")):
             checked_remote_name(source.name, FILE_CLASSES[kind])
             validate_upload(source, FILE_CLASSES[kind])
+            native = source.with_suffix(".P4G") if kind == "p4r" else source
+            if native.exists() and not getattr(args, "include_dev", False):
+                folder = native.read_bytes()[176:208].split(b"\0", 1)[0]
+                if folder == b"GAMES/WIP":
+                    raise TransferError("bundle contains a development game; use make install-dev or --include-dev")
             if kind == "p4r":
                 native = source.with_suffix(".P4G")
                 validate_upload(native, CLASS_P4G)
@@ -858,6 +863,8 @@ def parser() -> argparse.ArgumentParser:
     bundle.add_argument("input", type=Path, help="native board bundle root containing GAMES")
     bundle.add_argument("--port")
     bundle.add_argument("--no-replace", action="store_true")
+    bundle.add_argument("--include-dev", action="store_true",
+                        help="explicitly opt in to a bundle containing WIP games")
     bundle.add_argument("--done-timeout", type=bounded_done_timeout, default=600.0)
     usb_drive_parser = subparsers.add_parser(
         "usb-drive",
