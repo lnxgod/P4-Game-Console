@@ -4,6 +4,8 @@
 
 #include <inttypes.h>
 #include <limits.h>
+#include <stdatomic.h>
+#include <stdio.h>
 #include <string.h>
 
 #pragma GCC diagnostic push
@@ -71,6 +73,24 @@ typedef struct {
 } p4_mp_uart_endpoint_t;
 
 static p4_mp_uart_endpoint_t s_endpoint;
+
+#if P4_MP_NATIVE_USB_RELAY
+_Static_assert(ATOMIC_INT_LOCK_FREE == 2, "USB readiness must be lock-free");
+/* Separate from foreground-owned s_endpoint. Published once; the native USB
+ * driver is retained until reboot, including game/route handoffs. */
+static atomic_uint s_console_record_ready;
+#if CONFIG_LIBC_NEWLIB
+static bool console_stream_retains_lock(const FILE *stream)
+{
+    /* Pinned newlib vfprintf can release the original FILE lock before
+     * __sbprintf for unbuffered streams (including malloc fallback). String
+     * or caller-locked streams also bypass the original stdio lock. */
+    return stream != NULL &&
+        (stream->_flags & (__SWR | __SNBF | __SSTR)) == __SWR &&
+        (stream->_flags2 & __SNLK) == 0;
+}
+#endif
+#endif
 
 static void add_counter(uint32_t *counter, size_t amount)
 {
@@ -265,6 +285,11 @@ esp_err_t p4_mp_uart_endpoint_init(
     }
     s_endpoint.initialized = true;
     s_endpoint.last_error = ESP_OK;
+#if P4_MP_NATIVE_USB_RELAY
+    if (s_endpoint.relay.ready) {
+        atomic_store_explicit(&s_console_record_ready, 1U, memory_order_release);
+    }
+#endif
     ESP_LOGI(TAG,
              "P4_MP_UART_READY policy=direct-first fallback=h1-relay "
              "direct=%u relay=%u frame_max=%u",
@@ -546,6 +571,57 @@ esp_err_t p4_mp_uart_endpoint_send_raw(
         bytes, bytes_length, false);
     s_endpoint.last_error = result;
     return result;
+}
+
+esp_err_t p4_mp_uart_endpoint_try_console_record(
+    const uint8_t *bytes,
+    size_t bytes_length)
+{
+    if (bytes == NULL || bytes_length < 3U ||
+        bytes_length > P4_MP_UART_RAW_TX_MAX_BYTES ||
+        bytes[0] != '\n' || bytes[bytes_length - 1U] != '\n') {
+        return ESP_ERR_INVALID_ARG;
+    }
+    for (size_t i = 1U; i + 1U < bytes_length; ++i) {
+        if (bytes[i] < 0x20U || bytes[i] > 0x7eU) {
+            return ESP_ERR_INVALID_ARG;
+        }
+    }
+#if P4_MP_NATIVE_USB_RELAY
+    if (atomic_load_explicit(&s_console_record_ready,
+                             memory_order_acquire) == 0U) {
+        return ESP_ERR_INVALID_STATE;
+    }
+#if CONFIG_LIBC_NEWLIB
+    /* Pinned newlib shares standard FILEs across tasks. ESP_LOG v1 uses
+     * vprintf(stdout); Doom errors use stderr. Respect each whole stdio
+     * write before bypassing VFS, whose private byte-writer lock cannot be
+     * acquired here. Never wait for either stream or flush it. */
+    if (ftrylockfile(stdout) != 0) return ESP_ERR_TIMEOUT;
+    if (ftrylockfile(stderr) != 0) {
+        funlockfile(stdout);
+        return ESP_ERR_TIMEOUT;
+    }
+    if (!console_stream_retains_lock(stdout) ||
+        !console_stream_retains_lock(stderr)) {
+        funlockfile(stderr);
+        funlockfile(stdout);
+        return ESP_ERR_NOT_SUPPORTED;
+    }
+    /* IDF 5.5.3 takes its TX mutex and admits the complete ring-buffer item,
+     * or returns zero. Zero ticks also rejects contention without waiting.
+     * Do not use VFS: its per-byte writes can silently discard a suffix. */
+    const int written = usb_serial_jtag_write_bytes(bytes, bytes_length, 0U);
+    funlockfile(stderr);
+    funlockfile(stdout);
+    if (written == 0) return ESP_ERR_TIMEOUT;
+    return written > 0 && (size_t)written == bytes_length ? ESP_OK : ESP_FAIL;
+#else
+    return ESP_ERR_NOT_SUPPORTED;
+#endif
+#else
+    return ESP_ERR_NOT_SUPPORTED;
+#endif
 }
 
 esp_err_t p4_mp_uart_endpoint_wait_tx_done(uint32_t timeout_ms)

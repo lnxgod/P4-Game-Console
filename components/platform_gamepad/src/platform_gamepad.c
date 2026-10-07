@@ -56,13 +56,28 @@ static bool snapshot_valid(
     const platform_gamepad_snapshot_t *snapshot,
     platform_gamepad_transport_t transport)
 {
-    return snapshot != NULL &&
-        snapshot->version == PLATFORM_GAMEPAD_SNAPSHOT_VERSION &&
-        snapshot->size == sizeof(*snapshot) &&
-        snapshot->state.version == GAMEPAD_STATE_VERSION &&
-        snapshot->state.size == sizeof(snapshot->state) &&
-        snapshot->state.connected <= 1U &&
-        snapshot->identity.transport == (uint8_t)transport;
+    if (snapshot == NULL ||
+        snapshot->version != PLATFORM_GAMEPAD_SNAPSHOT_VERSION ||
+        snapshot->size != sizeof(*snapshot) ||
+        snapshot->state.version != GAMEPAD_STATE_VERSION ||
+        snapshot->state.size != sizeof(snapshot->state) ||
+        snapshot->state.connected > 1U) {
+        return false;
+    }
+    if (snapshot->identity.transport == (uint8_t)transport) {
+        return true;
+    }
+
+    /* model_init has no controller identity until the first connection.
+     * Accept only that empty, disconnected publication as neutral; a
+     * connected or previously used snapshot still needs its real transport. */
+    static const platform_gamepad_identity_t empty_identity = {0};
+    return snapshot->state.connected == 0U &&
+        snapshot->session == 0U && snapshot->capabilities == 0U &&
+        snapshot->state.sequence == 0U && snapshot->state.timestamp_us == 0U &&
+        snapshot->state.reserved[0] == 0U && snapshot->state.reserved[1] == 0U &&
+        gamepad_state_is_neutral(&snapshot->state) &&
+        memcmp(&snapshot->identity, &empty_identity, sizeof(empty_identity)) == 0;
 }
 
 esp_err_t platform_gamepad_register_provider(

@@ -19,7 +19,7 @@ static unsigned start_replies;
 static uint64_t last_start_reply_ms;
 int64_t esp_timer_get_time(void) { return (int64_t)now_ms*1000; }
 void vTaskDelay(unsigned ms) { now_ms+=ms; }
-void p4_doom_gc_engine_begin(uint8_t count,uint8_t map) { assert(count==4 && map==1); }
+void p4_doom_gc_engine_begin_mask(uint8_t count,uint8_t mask,uint8_t map) { assert(count==4 && mask==15 && map==1); }
 void D_ReceiveTic(ticcmd_t *commands,boolean *mask)
 {
     (void)commands;last_mask=0;
@@ -96,7 +96,7 @@ int main(int argc,char **argv)
     const uint8_t local=client_case?1:0;
     p4_doom_mp_launch_config_t config={.enabled=true,.role=local?P4_MP_ROLE_CLIENT:P4_MP_ROLE_HOST,
         .session_id=7,.self_peer_id=100U+local,.remote_peer_id=local?100:101,.route_id=local?1:2,
-        .local_player_slot=local,.player_count=4,.input_delay_tics=2,.session_seed=1,
+        .local_player_slot=local,.player_count=4,.initial_player_mask=15,.input_delay_tics=2,.session_seed=1,
         .setup={.game=P4_DOOM_MP_GAME_GAME_CHANGERS_AI,.mode=P4_DOOM_MP_MODE_ALTDEATH,
             .episode=1,.map=1,.skill=3,.no_monsters=true}};
     const p4_doom_p4mp_transport_t transport={.set_handler=set_handler,.send_to=send_to,.poll=poll,.connected=connected};
@@ -105,7 +105,9 @@ int main(int argc,char **argv)
     if(lobby_only) {
         assert(!configured && p4_doom_gc_failed() && delivered==0);
         assert(now_ms>=30100 && now_ms<30200);
-        assert(start_replies==300); /* Replies are bounded at ten/second. */
+        /* Ten replies/second, with at most one at the 30s expiry boundary.
+         * send_to also checks every consecutive reply is at least 100ms apart. */
+        assert(start_replies>=300 && start_replies<=301);
         p4_doom_gc_quit();puts("PASS: lobby retries cannot bypass engine readiness or its deadline");return 0;
     }
     assert(configured);assert(delivered==2);

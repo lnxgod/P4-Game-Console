@@ -30,6 +30,24 @@ Shared audio, display, storage, build or device problems use **Fix Console**;
 its Tab5 route owns the dual-core and guarded-flash contracts.
 Documentation-only work needs reference/skill validation, not a firmware build.
 
+## Require native game resolution
+
+Every game on maintained Tab5 must render directly at 768×480 RGB565. Follow
+[the presentation standard](../../../docs/GAME_ART.md): native cartridges
+require `video-highres` in both manifest and C descriptor. Canonical 320×200
+touch coordinates remain input units. Never lower the game framebuffer,
+upscale a completed 320×200 frame, or enable a per-title low-resolution override
+to fix readability or performance.
+
+For a blurry, noisy or unreadable game, establish the actual runtime surface
+before changing textures. If it is 320×200, use **Fix Console** to trace the
+manifest, descriptor, OS resolution overrides and framebuffer selection, then
+**Make Game → Game Art → Test Game** for native presentation. Require exact
+package/OS/unit-bound `surface=768x480` evidence plus readable active play before
+closing device acceptance. A high-resolution declaration or enlarged screenshot
+alone is insufficient. Preserve legacy source/recovery contracts only for
+explicitly requested legacy maintenance.
+
 ## Know the monorepo boundaries
 
 **P4 Game Console** is the monorepo. **Console OS** is the shared platform in

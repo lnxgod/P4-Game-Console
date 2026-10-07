@@ -509,3 +509,60 @@ bool platform_display_layout_rgb565_384x240_to_rgb888_1280x720(
     }
     return true;
 }
+
+bool platform_display_layout_rgb565_prescaled_game_384x240(
+    const uint16_t *source, size_t source_stride_pixels,
+    uint16_t *destination, size_t destination_stride_pixels,
+    size_t destination_height)
+{
+#if defined(CONFIG_P4_BOARD_M5STACK_TAB5) && CONFIG_P4_BOARD_M5STACK_TAB5
+    if (source == NULL || destination == NULL || source_stride_pixels < 384U ||
+        source_stride_pixels > SIZE_MAX / 240U / sizeof(*source) ||
+        destination_stride_pixels < DESTINATION_WIDTH ||
+        destination_stride_pixels > SIZE_MAX / DESTINATION_HEIGHT / sizeof(*destination) ||
+        destination_height < DESTINATION_HEIGHT)
+        return false;
+
+    /* The prescale keeps every original pixel at ceil(index * 6 / 5).
+     * Recover the exact baseline 320x200 sampling first, then map those
+     * coordinates into the expanded source. Direct 384x240 scaling would
+     * move nearest-neighbor boundaries when the accelerator fails. */
+    enum { TILE = 32 };
+    const size_t first_y = LOGICAL_WIDTH - LEFT_MARGIN - VIEWPORT_WIDTH;
+    const size_t end_y = LOGICAL_WIDTH - LEFT_MARGIN;
+    size_t source_rows[DESTINATION_WIDTH];
+    for (size_t x = 0U; x < DESTINATION_WIDTH; ++x) {
+        const size_t original_y = x * 200U / VIEWPORT_HEIGHT;
+        source_rows[x] = ((original_y * 6U + 4U) / 5U) * source_stride_pixels;
+    }
+    for (size_t y = 0U; y < first_y; ++y)
+        memset(destination + y * destination_stride_pixels, 0,
+               DESTINATION_WIDTH * sizeof(*destination));
+    for (size_t y = end_y; y < DESTINATION_HEIGHT; ++y)
+        memset(destination + y * destination_stride_pixels, 0,
+               DESTINATION_WIDTH * sizeof(*destination));
+    for (size_t by = first_y; by < end_y; by += TILE) {
+        const size_t limit_y = by + TILE < end_y ? by + TILE : end_y;
+        for (size_t bx = 0U; bx < DESTINATION_WIDTH; bx += TILE) {
+            const size_t limit_x = bx + TILE < DESTINATION_WIDTH
+                ? bx + TILE : DESTINATION_WIDTH;
+            for (size_t y = by; y < limit_y; ++y) {
+                const size_t original_x =
+                    (LOGICAL_WIDTH - 1U - y - LEFT_MARGIN) * 320U / VIEWPORT_WIDTH;
+                const size_t source_x = (original_x * 6U + 4U) / 5U;
+                uint16_t *row = destination + y * destination_stride_pixels;
+                for (size_t x = bx; x < limit_x; ++x)
+                    row[x] = source[source_rows[x] + source_x];
+            }
+        }
+    }
+    return true;
+#else
+    (void)source;
+    (void)source_stride_pixels;
+    (void)destination;
+    (void)destination_stride_pixels;
+    (void)destination_height;
+    return false;
+#endif
+}

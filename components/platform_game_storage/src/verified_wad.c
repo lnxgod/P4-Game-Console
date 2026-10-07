@@ -9,6 +9,39 @@ static uint32_t u32(const uint8_t *p)
            ((uint32_t)p[2]<<16) | ((uint32_t)p[3]<<24);
 }
 
+typedef struct {
+    bool (*read)(void *,size_t,void *,size_t);
+    void *read_context;
+    void (*progress)(void *);
+    void *progress_context;
+} validation_reader_t;
+
+static bool read_with_progress(void *context,size_t offset,void *out,size_t bytes)
+{
+    const validation_reader_t *reader=context;
+    const bool result=reader->read(reader->read_context,offset,out,bytes);
+    reader->progress(reader->progress_context);
+    return result;
+}
+
+bool p4_verified_wad_validate_with_progress(
+    p4_verified_reader_t *reader, p4_wad_kind_t kind,
+    void (*progress)(void *), void *context)
+{
+    if (!reader || !reader->read || !progress)
+        return p4_verified_wad_validate(reader,kind);
+    validation_reader_t borrowed={.read=reader->read,.read_context=reader->context,
+        .progress=progress,.progress_context=context};
+    reader->read=read_with_progress;
+    reader->context=&borrowed;
+    const bool valid=p4_verified_wad_validate(reader,kind);
+    /* The reader persists into gameplay. Never retain the stack wrapper or
+     * loading callback, including when validation or an underlying read fails. */
+    reader->read=borrowed.read;
+    reader->context=borrowed.read_context;
+    return valid;
+}
+
 bool p4_verified_wad_validate(p4_verified_reader_t *r, p4_wad_kind_t kind)
 {
     const bool pure_hades=kind==P4_WAD_PURE_HADES, dwango=kind==P4_WAD_DWANGO5;

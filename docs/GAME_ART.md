@@ -1,12 +1,26 @@
 # Game presentation standard
 
-New native games and visual upgrades target **768×480 RGB565**, with a tested
-320×200 fallback. Declare optional `video-highres` in the manifest and
-`P4_GAME_CAP_VIDEO_HIGH_RES` in the C descriptor. The creator does this by
-default; `--low-res` is an explicit legacy exception. Render directly into the
-supplied surface. Enlarging a completed 320×200 frame does not meet this bar.
-The current Tab5, Waveshare and SDL3 paths negotiate high resolution; other
-boards retain their existing fallback until their platform supports it.
+Every game on maintained Tab5 must render directly into a **768×480 RGB565**
+game framebuffer. Native cartridges require `video-highres` in the manifest's
+`required_capabilities` and `P4_GAME_CAP_VIDEO_HIGH_RES` in the C descriptor's
+required capabilities. The creator emits both requirements by default;
+verify they remain aligned after edits. A 320×200 game framebuffer, an enlarged
+completed low-resolution frame, or a title-specific resolution downgrade does
+not meet this standard. Pixel art is welcome; compose the scene, glyphs and
+controls at the native render resolution.
+
+Check the actual selected surface before changing textures. For device
+acceptance, bind a `CARTRIDGE_START ... surface=768x480` record and native-size
+active-play capture to the exact cartridge, OS and unit. Optional metadata,
+an enlarged window or a scaled screenshot alone cannot prove native rendering.
+If the runtime selects 320×200, investigate the manifest, descriptor, OS
+`P4_CONSOLE_NATIVE_*_LOW_RES` overrides and surface allocation with **Fix Console**.
+Do not simplify artwork around that downgrade and call the visual defect fixed.
+
+Legacy low-resolution ABI/source paths remain preserved for explicitly
+requested legacy maintenance; they are not a maintained Tab5 presentation mode.
+Engine ports use their owning workflow and must verify their actual game
+framebuffer as well. Historical low-resolution results remain historical.
 
 Input and simulation remain independent of render resolution. Native touch
 coordinates are always 320×200. Scale drawing or convert a touch point once,
@@ -93,8 +107,9 @@ keep package/load limits unchanged. Verify converter regeneration is identical.
 
 ## Acceptance
 
-Run focused game tests and sanitizer smoke, render both resolutions with
-padded-stride guard checks, and inspect native-size title, gameplay, menus and
+Run focused game tests and sanitizer smoke with padded-stride guard checks
+at native resolution. Retain legacy-size bounds checks as compatibility tests
+only. Inspect native-size title, gameplay, menus and
 result screens. Play the real SDL game with keyboard and mouse/touch. Check
 text clipping, card overlap, animation, selected states, pause/retry and Back.
 Exercise existing session tests when a multiplayer game's renderer changes.
@@ -122,7 +137,11 @@ branded launcher transition; do not add a redundant confirmation or permanent
 virtual controller to touch-first play. Preserve network start barriers and
 never pause only one participant's simulation.
 
-Inspect native and fallback opening, active play, pause, and results. Cover-only
+Inspect native-resolution opening, active play, pause, and results. Check quiet
+backgrounds against clear actor, obstacle, pickup and hazard silhouettes; texture
+detail must not hide paths or game state. Review movement and overlapping effects,
+not only a neutral board. Legacy fallback captures establish compatibility only.
+Cover-only
 work is not evidence of improved gameplay graphics or actual-device cadence.
 Future artwork replacements must travel with the cartridge rather than require
 a new title/ID map in Console OS. Built-in Doom/Chex use OS-owned cover assets;

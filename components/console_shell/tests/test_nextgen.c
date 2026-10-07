@@ -39,13 +39,20 @@ static const char *capture_prefix;
 static void capture(const char *name)
 {
     render();if(!capture_prefix)return;
+    /* Save an authoritative full frame and verify the production cached path
+     * preserved every pixel, including navigation and status chrome. */
+    uint16_t *frame=malloc(1280U*720U*sizeof(*frame));assert(frame);
+    console_shell_t reference=shell;
+    assert(console_shell_render_rgb565(&reference,frame,1280U));
+    for(size_t y=0;y<720U;++y)
+        assert(memcmp(pixels+y*stride,frame+y*1280U,1280U*sizeof(*frame))==0);
     char path[1024];(void)snprintf(path,sizeof(path),"%s-%s.ppm",capture_prefix,name);
     FILE *f=fopen(path,"wb");assert(f);fprintf(f,"P6\n1280 720\n255\n");
-    for(size_t y=0;y<720U;++y)for(size_t x=0;x<1280U;++x){uint16_t v=pixels[y*stride+x];
+    for(size_t y=0;y<720U;++y)for(size_t x=0;x<1280U;++x){uint16_t v=frame[y*1280U+x];
         const unsigned char rgb[3]={(unsigned char)(((v>>11U)&31U)*255U/31U),
             (unsigned char)(((v>>5U)&63U)*255U/63U),(unsigned char)((v&31U)*255U/31U)};
         assert(fwrite(rgb,1,3,f)==3);}
-    assert(fclose(f)==0);
+    assert(fclose(f)==0);free(frame);
 }
 static void init(void)
 {
@@ -120,6 +127,87 @@ static void check_game_covers(void)
     assert(shell.page==CONSOLE_PAGE_EXTERNAL&&shell.active_app_id==14U);
     shell.active_app_id=0xffffffffU;render();
     init();
+}
+
+static void check_loading_progress(void)
+{
+    init();
+    shell.page=CONSOLE_PAGE_EXTERNAL;shell.active_app_id=apps[0].id;
+    render();
+    uint16_t original[306];
+    memcpy(original,pixels+435U*stride+910U,sizeof(original));
+    const uint16_t focus=shell.ng_focus;
+    shell.loading=(console_shell_loading_info_t){
+        .active=true,.progress_visible=true,.elapsed_seconds=12,
+        .title="Doom Arena by Game Changers",.stage="1/3 Check files",
+        .detail="16.7 / 33.4 MB  50%",
+    };
+    render();
+    const uint16_t track=pixels[435U*stride+910U];
+    shell.loading.progress_percent=50;capture("arena-loading-files");
+    const uint16_t fill=pixels[435U*stride+910U];
+    assert(fill!=track);
+    for(size_t x=0;x<306U;++x)
+        assert(pixels[435U*stride+910U+x]==(x<153U?fill:track));
+    shell.loading.progress_percent=255;render();
+    for(size_t x=0;x<306U;++x)assert(pixels[435U*stride+910U+x]==fill);
+    shell.loading.progress_visible=false;
+    (void)snprintf(shell.loading.stage,sizeof(shell.loading.stage),"1/3 Check WAD structure");
+    (void)snprintf(shell.loading.detail,sizeof(shell.loading.detail),"File 1 of 16");
+    capture("arena-loading-structure");
+    assert(memcmp(original,pixels+435U*stride+910U,sizeof(original))==0);
+    assert(shell.page==CONSOLE_PAGE_EXTERNAL&&shell.active_app_id==apps[0].id&&shell.ng_focus==focus);
+    shell.loading=(console_shell_loading_info_t){0};
+    render();
+    assert(memcmp(original,pixels+435U*stride+910U,sizeof(original))==0);
+    puts("TAB5 LOADING PASS measured_bar=1 structure_indeterminate=1 bounded=1 no_navigation=1");
+}
+
+static void check_loading_region_cache(void)
+{
+    init();
+    shell.page=CONSOLE_PAGE_EXTERNAL;shell.active_app_id=apps[0].id;
+    shell.loading=(console_shell_loading_info_t){
+        .active=true,.progress_visible=true,
+        .title="Doom Arena by Game Changers",.stage="1/3 Check files",
+        .detail="0.0 / 33.4 MB  0%",
+    };
+    uint16_t *reference=malloc(1280U*720U*sizeof(*reference));assert(reference);
+    uint16_t *before=malloc(1280U*720U*sizeof(*before));assert(before);
+    for(unsigned frame=0;frame<24U;++frame){
+        for(size_t y=0;y<720U;++y)memcpy(before+y*1280U,pixels+y*stride,1280U*sizeof(*before));
+        bool full=frame==0U;
+        shell.loading.progress_percent=(uint8_t)(frame*13U);
+        shell.loading.elapsed_seconds=frame*7U;
+        shell.loading.progress_visible=frame%3U!=1U;
+        (void)snprintf(shell.loading.stage,sizeof(shell.loading.stage),"%s",
+            frame%3U==1U?"1/3 Check WAD structure":frame%3U==2U?"1/3 Files verified":"1/3 Check files");
+        (void)snprintf(shell.loading.detail,sizeof(shell.loading.detail),"%s",
+            frame%2U?"File 1 of 16":"33.4 / 33.4 MB  100%");
+        if(frame==6U){shell.runtime.game_volume_step=0U;full=true;}
+        if(frame==8U){shell.active_app_id=apps[1].id;full=true;}
+        if(frame==10U){(void)snprintf(shell.loading.title,sizeof(shell.loading.title),"Other title");full=true;}
+        if(frame==12U){console_shell_invalidate_native_cache(&shell);full=true;}
+        if(frame==14U){shell.active_app_id=UINT32_MAX;full=true;}
+        if(frame==15U){shell.active_app_id=apps[0].id;full=true;}
+        if(frame==17U){shell.loading.active=false;full=true;}
+        if(frame==18U){shell.loading.active=true;full=true;}
+        if(frame==20U){shell.page=CONSOLE_PAGE_HOME;full=true;}
+        if(frame==21U){shell.page=CONSOLE_PAGE_EXTERNAL;full=true;}
+        render();
+        console_shell_native_update_t update;assert(console_shell_get_native_update(&shell,&update));
+        assert(update.kind==(full?CONSOLE_SHELL_NATIVE_UPDATE_FULL:CONSOLE_SHELL_NATIVE_UPDATE_REGION));
+        if(!full)assert(update.x==910U&&update.y==340U&&update.width==306U&&update.height==164U);
+        console_shell_t exact=shell;
+        assert(console_shell_render_rgb565(&exact,reference,1280U));
+        for(size_t y=0;y<720U;++y)for(size_t x=0;x<1280U;++x){
+            assert(pixels[y*stride+x]==reference[y*1280U+x]);
+            if(!full&&(x<910U||x>=1216U||y<340U||y>=504U))
+                assert(pixels[y*stride+x]==before[y*1280U+x]);
+        }
+    }
+    free(before);free(reference);
+    puts("TAB5 LOADING REGION PASS pixel_exact=24 bounded_damage=1 invalidation=1 no_stale_bar=1");
 }
 
 static void check_scroll_cache(void)
@@ -210,6 +298,214 @@ static void check_catalog_grouping(void)
     }
     puts("TAB5 CATALOG PASS: utility exclusion, utility launch access, WIP and Optional categories");
 }
+static void multiplayer_fixture(void)
+{
+    init();
+    console_shell_runtime_info_t rt=shell.runtime;
+    rt.multiplayer_core_ready=true;
+    rt.multiplayer_settings_editable=true;
+    rt.multiplayer_game_ready=true;
+    rt.multiplayer_transport_ready=true;
+    rt.multiplayer_game_is_doom=true;
+    rt.multiplayer_game_count=12;
+    rt.multiplayer_game_selection=0;
+    rt.multiplayer_transport_kind=2;
+    rt.multiplayer_lobby_action_enabled=true;
+    rt.multiplayer_games[0]=(console_multiplayer_game_display_t){"DOOM",true,7};
+    rt.multiplayer_games[1]=(console_multiplayer_game_display_t){"CHEX QUEST",false,7};
+    rt.multiplayer_games[2]=(console_multiplayer_game_display_t){"Doom Arena by Game Changers",true,4};
+    /* These are the nine native entries reported by both Tab5 registries.
+     * Production registry-to-runtime coverage lives in the inventory test. */
+    static const char *const installed[]={"Blast Circuit","Checkers","Color Clash",
+        "Air Hockey","Rummy 500","Yahtzee","Texas Hold'em","Tide Maze","Wacky Wheels"};
+    for(unsigned i=0;i<9U;++i){
+        (void)snprintf(rt.multiplayer_games[i+3U].title,sizeof(rt.multiplayer_games[i+3U].title),"%s",installed[i]);
+        rt.multiplayer_games[i+3U].available=true;
+        rt.multiplayer_games[i+3U].transport_mask=7;
+    }
+    memcpy(rt.multiplayer_game_title,"DOOM",sizeof("DOOM"));
+    console_shell_set_runtime_info(&shell,&rt);
+    assert(tap(100,350).type==CONSOLE_ACTION_PAGE_CHANGED);
+    assert(shell.page==CONSOLE_PAGE_MULTIPLAYER);
+}
+static void check_multiplayer_hierarchy(void)
+{
+    multiplayer_fixture();
+    assert(shell.multiplayer_view==CONSOLE_MULTIPLAYER_VIEW_GAME);
+    capture("multiplayer-games");
+    assert(tap(1010,254).type==CONSOLE_ACTION_NONE); /* Missing optional game. */
+    assert(tap(1000,635).type==CONSOLE_ACTION_NONE&&shell.ng_list_first==0);
+    /* Every installed game is visible and selects its original registry index. */
+    for(unsigned i=3;i<12U;++i){
+        const console_shell_action_t selected=tap((uint16_t)(506U+(i%2U)*506U),
+            (uint16_t)(254U+(i/2U)*56U));
+        assert(selected.type==CONSOLE_ACTION_MULTIPLAYER_GAME_SELECT&&selected.multiplayer_game_selection==i);
+        assert(shell.multiplayer_view==CONSOLE_MULTIPLAYER_VIEW_TRANSPORT);
+        assert(key(CONSOLE_BUTTON_BACK).type==CONSOLE_ACTION_PAGE_CHANGED);
+        assert(shell.multiplayer_view==CONSOLE_MULTIPLAYER_VIEW_GAME);
+    }
+    console_shell_action_t action=tap(506,310);
+    assert(action.type==CONSOLE_ACTION_MULTIPLAYER_GAME_SELECT);
+    assert(action.multiplayer_game_selection==2);
+    assert(shell.multiplayer_view==CONSOLE_MULTIPLAYER_VIEW_TRANSPORT);
+    shell.runtime.multiplayer_game_selection=2;
+    shell.runtime.multiplayer_game_is_arena=true;
+    (void)snprintf(shell.runtime.multiplayer_game_title,sizeof(shell.runtime.multiplayer_game_title),"Doom Arena by Game Changers");
+    capture("multiplayer-connection");
+    assert(tap(750,360).type==CONSOLE_ACTION_NONE); /* Arena needs Wi-Fi. */
+    assert(tap(750,442).type==CONSOLE_ACTION_NONE);
+    action=tap(750,524);
+    assert(action.type==CONSOLE_ACTION_MULTIPLAYER_TRANSPORT_SELECT);
+    assert(action.multiplayer_transport_kind==2);
+    assert(shell.multiplayer_view==CONSOLE_MULTIPLAYER_VIEW_ROLE);
+    capture("multiplayer-role");
+    assert(tap(1000,402).type==CONSOLE_ACTION_PAGE_CHANGED);
+    assert(shell.multiplayer_view==CONSOLE_MULTIPLAYER_VIEW_JOIN);
+    shell.runtime.multiplayer_lobby_count=1;
+    shell.runtime.multiplayer_lobby_selection=1;
+    shell.runtime.multiplayer_lobbies[0]=(console_multiplayer_lobby_display_t){
+        .session_id=123,.players_present=1,.player_capacity=4,
+        .game_available=true,.game_title="ARENA"};
+    capture("multiplayer-rooms");
+    action=tap(750,342);
+    assert(action.type==CONSOLE_ACTION_MULTIPLAYER_LOBBY_SELECT);
+    assert(action.multiplayer_lobby_selection==1);
+    assert(action.multiplayer_lobby_session_id==123);
+    assert(tap(750,634).type==CONSOLE_ACTION_MULTIPLAYER_JOIN_LOBBY);
+    shell.runtime.multiplayer_lobby_phase=CONSOLE_MULTIPLAYER_LOBBY_JOINING;
+    shell.runtime.multiplayer_settings_editable=false;
+    capture("multiplayer-joining");
+    assert(tap(750,634).type==CONSOLE_ACTION_NONE);
+    console_shell_runtime_info_t rt=shell.runtime;
+    rt.multiplayer_lobby_phase=CONSOLE_MULTIPLAYER_LOBBY_CONNECTED;
+    rt.multiplayer_lobby_ready=true;rt.multiplayer_can_start=true;
+    rt.multiplayer_lobby_is_host=false;
+    console_shell_set_runtime_info(&shell,&rt);
+    assert(shell.multiplayer_view==CONSOLE_MULTIPLAYER_VIEW_JOIN);
+    capture("multiplayer-connected");
+    assert(tap(750,634).type==CONSOLE_ACTION_NONE); /* Only host starts. */
+    assert(tap(100,350).type==CONSOLE_ACTION_NONE); /* Active rail preserves room. */
+    assert(shell.multiplayer_view==CONSOLE_MULTIPLAYER_VIEW_JOIN);
+    assert(key(CONSOLE_BUTTON_BACK).type==CONSOLE_ACTION_MULTIPLAYER_LOBBY_RESET);
+    assert(shell.multiplayer_view==CONSOLE_MULTIPLAYER_VIEW_ROLE);
+    assert(key(CONSOLE_BUTTON_BACK).type==CONSOLE_ACTION_PAGE_CHANGED);
+    assert(shell.multiplayer_view==CONSOLE_MULTIPLAYER_VIEW_TRANSPORT);
+    assert(key(CONSOLE_BUTTON_BACK).type==CONSOLE_ACTION_PAGE_CHANGED);
+    assert(shell.multiplayer_view==CONSOLE_MULTIPLAYER_VIEW_GAME);
+    assert(key(CONSOLE_BUTTON_BACK).type==CONSOLE_ACTION_PAGE_CHANGED);
+    assert(shell.page==CONSOLE_PAGE_HOME);
+
+    /* Controller-only setup follows the same enabled choices as touch. */
+    multiplayer_fixture();
+    action=key(CONSOLE_BUTTON_ACCEPT);
+    assert(action.type==CONSOLE_ACTION_MULTIPLAYER_GAME_SELECT&&action.multiplayer_game_selection==0);
+    action=key(CONSOLE_BUTTON_ACCEPT);
+    assert(action.type==CONSOLE_ACTION_MULTIPLAYER_TRANSPORT_SELECT&&action.multiplayer_transport_kind==0);
+    action=key(CONSOLE_BUTTON_ACCEPT);
+    assert(action.type==CONSOLE_ACTION_PAGE_CHANGED&&shell.multiplayer_view==CONSOLE_MULTIPLAYER_VIEW_HOST);
+    assert(tap(750,524).type==CONSOLE_ACTION_PAGE_CHANGED);
+    assert(shell.multiplayer_view==CONSOLE_MULTIPLAYER_VIEW_HOST_SETTINGS);
+    action=tap(1200,350);
+    assert(action.type==CONSOLE_ACTION_MULTIPLAYER_CONFIGURE&&action.multiplayer_option==CONSOLE_MULTIPLAYER_OPTION_MODE);
+    shell.runtime.multiplayer_game_is_arena=true;shell.ng_list_first=0;
+    shell.runtime.multiplayer_game_selection=2;
+    shell.runtime.multiplayer_episode=1;shell.runtime.multiplayer_map=1;
+    capture("multiplayer-arena-settings");
+    action=tap(1200,350);
+    assert(action.type==CONSOLE_ACTION_MULTIPLAYER_CONFIGURE&&action.multiplayer_option==CONSOLE_MULTIPLAYER_OPTION_MAP);
+    assert(tap(1200,430).type==CONSOLE_ACTION_NONE);
+    shell.runtime.multiplayer_game_is_arena=false;shell.runtime.multiplayer_game_is_doom=false;
+    shell.runtime.multiplayer_dice_available=true;
+    action=tap(1200,350);
+    assert(action.type==CONSOLE_ACTION_MULTIPLAYER_CONFIGURE&&action.multiplayer_option==CONSOLE_MULTIPLAYER_OPTION_DICE);
+    shell.runtime.multiplayer_dice_available=false;
+    assert(tap(1200,350).type==CONSOLE_ACTION_NONE);
+
+    /* Neither a starting nor a failed connection may enable Host or Join. */
+    multiplayer_fixture();shell.multiplayer_view=CONSOLE_MULTIPLAYER_VIEW_ROLE;
+    shell.runtime.multiplayer_game_selection=2;
+    shell.runtime.multiplayer_game_is_arena=true;
+    shell.runtime.multiplayer_transport_starting=true;
+    (void)snprintf(shell.runtime.multiplayer_status,sizeof(shell.runtime.multiplayer_status),
+        "Starting Local Wi-Fi. Back remains available.");
+    capture("multiplayer-role-starting");
+    assert(tap(506,402).type==CONSOLE_ACTION_NONE);
+    assert(tap(1010,402).type==CONSOLE_ACTION_NONE);
+    assert(key(CONSOLE_BUTTON_BACK).type==CONSOLE_ACTION_PAGE_CHANGED);
+    assert(shell.multiplayer_view==CONSOLE_MULTIPLAYER_VIEW_TRANSPORT);
+    shell.multiplayer_view=CONSOLE_MULTIPLAYER_VIEW_ROLE;
+    shell.runtime.multiplayer_transport_starting=false;
+    shell.runtime.multiplayer_transport_ready=false;
+    (void)snprintf(shell.runtime.multiplayer_status,sizeof(shell.runtime.multiplayer_status),
+        "Local Wi-Fi could not start. Go back and choose it again.");
+    capture("multiplayer-role-error");
+    assert(tap(506,402).type==CONSOLE_ACTION_NONE);
+    assert(tap(1010,402).type==CONSOLE_ACTION_NONE);
+    assert(key(CONSOLE_BUTTON_BACK).type==CONSOLE_ACTION_PAGE_CHANGED);
+    assert(shell.multiplayer_view==CONSOLE_MULTIPLAYER_VIEW_TRANSPORT);
+
+    shell.multiplayer_view=CONSOLE_MULTIPLAYER_VIEW_ROLE;
+    shell.runtime.multiplayer_transport_ready=true;
+    shell.runtime.multiplayer_status[0]='\0';
+    capture("multiplayer-role-ready");
+    assert(tap(506,402).type==CONSOLE_ACTION_PAGE_CHANGED);
+    assert(shell.multiplayer_view==CONSOLE_MULTIPLAYER_VIEW_HOST);
+
+    /* Discovery cannot replace the room underneath a held finger. */
+    multiplayer_fixture();shell.multiplayer_view=CONSOLE_MULTIPLAYER_VIEW_JOIN;
+    shell.runtime.multiplayer_lobby_count=1;
+    shell.runtime.multiplayer_lobbies[0]=(console_multiplayer_lobby_display_t){
+        .session_id=123,.players_present=1,.player_capacity=2,.game_available=true,.game_title="DOOM"};
+    console_shell_contact_t contact={.x=750,.y=342};
+    assert(console_shell_handle_touch(&shell,true,&contact,1).type==CONSOLE_ACTION_NONE);
+    shell.runtime.multiplayer_lobbies[0].session_id=456;
+    assert(console_shell_handle_touch(&shell,true,NULL,0).type==CONSOLE_ACTION_NONE);
+    shell.runtime.multiplayer_lobbies[0].game_available=false;
+    assert(tap(750,342).type==CONSOLE_ACTION_NONE);
+    shell.runtime.multiplayer_lobby_selection=1;
+    assert(tap(750,634).type==CONSOLE_ACTION_NONE);
+    shell.runtime.multiplayer_lobby_selection=CONSOLE_MULTIPLAYER_LOBBY_LIST_MAX+1;
+    assert(tap(750,634).type==CONSOLE_ACTION_NONE);
+    shell.multiplayer_view=CONSOLE_MULTIPLAYER_VIEW_HOST;
+    shell.runtime.multiplayer_lobby_phase=CONSOLE_MULTIPLAYER_LOBBY_CONNECTED;
+    shell.runtime.multiplayer_can_start=true;shell.runtime.multiplayer_lobby_is_host=false;
+    assert(tap(750,634).type==CONSOLE_ACTION_NONE);
+    shell.runtime.multiplayer_lobby_is_host=true;
+    assert(tap(750,634).type==CONSOLE_ACTION_MULTIPLAYER_LAUNCH_GAME);
+
+    /* Updating only availability or a failure message must reach the screen. */
+    multiplayer_fixture();
+    rt=shell.runtime;rt.multiplayer_games[1].available=true;shell.dirty=false;
+    console_shell_set_runtime_info(&shell,&rt);
+    assert(shell.dirty&&shell.runtime.multiplayer_games[1].available);
+    rt=shell.runtime;
+    (void)snprintf(rt.multiplayer_status,sizeof(rt.multiplayer_status),"Room no longer available. Choose another room.");
+    shell.dirty=false;console_shell_set_runtime_info(&shell,&rt);
+    assert(shell.dirty&&strcmp(shell.runtime.multiplayer_status,rt.multiplayer_status)==0);
+
+    /* All installed games remain reachable across the bounded list pages. */
+    rt=shell.runtime;rt.multiplayer_game_count=CONSOLE_MULTIPLAYER_MAX_GAMES;
+    for(unsigned i=12;i<CONSOLE_MULTIPLAYER_MAX_GAMES;++i){
+        (void)snprintf(rt.multiplayer_games[i].title,sizeof(rt.multiplayer_games[i].title),"GAME %u",i);
+        rt.multiplayer_games[i].available=true;rt.multiplayer_games[i].transport_mask=7;
+    }
+    console_shell_set_runtime_info(&shell,&rt);
+    (void)tap(1000,635);
+    assert(shell.ng_list_first==12);
+    capture("multiplayer-more-games");
+    assert(tap(1000,635).type==CONSOLE_ACTION_NONE&&shell.ng_list_first==12);
+    (void)tap(506,635);
+    assert(shell.ng_list_first==0);
+    (void)tap(1000,635);
+    action=tap(506,422);
+    assert(action.type==CONSOLE_ACTION_MULTIPLAYER_GAME_SELECT&&action.multiplayer_game_selection==18);
+    assert(key(CONSOLE_BUTTON_BACK).type==CONSOLE_ACTION_PAGE_CHANGED);
+    shell.runtime.multiplayer_game_count=3;
+    assert(tap(1010,310).type==CONSOLE_ACTION_NONE); /* Removed catalog entry. */
+    shell.ng_large_text=true;
+    capture("multiplayer-large-text");
+    puts("TAB5 MULTIPLAYER PASS: game/connection/role hierarchy, per-game settings, join state and room identity");
+}
 int main(int argc,char **argv)
 {
     capture_prefix=argc>1?argv[1]:NULL;
@@ -217,8 +513,11 @@ int main(int argc,char **argv)
     pixels=malloc((721U)*stride*sizeof(*pixels));assert(pixels);
     for(size_t i=0;i<721U*stride;++i)pixels[i]=0xdead;
     check_game_covers();
+    check_loading_progress();
+    check_loading_region_cache();
     check_featured_game();
     check_scroll_cache();check_scroll_motion();check_catalog_grouping();
+    check_multiplayer_hierarchy();
     init();
     /* Every shell page reports the effective game master volume, and the
      * status target has its own identity rather than duplicating Sound tiles. */
@@ -236,19 +535,6 @@ int main(int argc,char **argv)
     apps[0].icon_pixels=icon_pixels;apps[0].icon_palette=icon_palette;
     shell.dirty=true;render();
     assert(pixels[300U*stride+430U]==0xf800);
-    init();
-    /* All transports remain selectable before choosing Host or Join. */
-    shell.page=CONSOLE_PAGE_MULTIPLAYER;
-    shell.multiplayer_view=CONSOLE_MULTIPLAYER_VIEW_ROLE;
-    shell.runtime.multiplayer_core_ready=true;
-    shell.runtime.multiplayer_settings_editable=true;
-    for(unsigned transport=0;transport<3;++transport) {
-        shell.runtime.multiplayer_transport_kind=(uint8_t)transport;render();
-        console_shell_action_t action=tap(750,625);
-        assert(action.type==CONSOLE_ACTION_MULTIPLAYER_CONFIGURE);
-        assert(action.multiplayer_option==CONSOLE_MULTIPLAYER_OPTION_TRANSPORT);
-        assert(action.multiplayer_delta==1);
-    }
     init();
     assert(!console_shell_render_rgb565(&shell,pixels,1279));
     assert(!console_shell_render_rgb565(&shell,pixels,SIZE_MAX));

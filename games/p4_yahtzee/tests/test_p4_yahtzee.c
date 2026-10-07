@@ -878,6 +878,9 @@ static void test_touch_owns_gesture(void)
     p4_game_instance_stop(&instance);
 }
 
+/* Share the paired transport fixture with the lifecycle regression cases. */
+#include "test_network_lifecycle.h"
+
 int main(void)
 {
     test_touch_owns_gesture();
@@ -896,6 +899,7 @@ int main(void)
     test_network_host_authority();
     test_four_player_network_snapshot();
     test_touch_regions();
+    test_network_lifecycle();
     if (s_failures != 0) {
         fprintf(stderr, "%d P4 Yahtzee test failure(s)\n", s_failures);
         return EXIT_FAILURE;

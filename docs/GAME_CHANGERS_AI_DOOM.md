@@ -1,11 +1,11 @@
-# Game Changers AI multiplayer arena
+# Doom Arena by Game Changers
 
 [Game README](games/arena/README.md) · [Console OS](../apps/console_os/README.md) · [Monorepo](../README.md)
 
 This guide describes one Doom-based game mode in the monorepo. Console OS
 is the shared platform that hosts it; Pure Hades is one of its content packs.
 
-M5Stack Tab5 candidate, Console OS **0.58**. This is a special selection inside
+M5Stack Tab5 candidate, Console OS **0.63**. This is a special selection inside
 **Multiplayer**, with no separate launcher tile. Ordinary Doom shareware and
 Chex Quest retain their separate content and two-player adapters. Installation and physical acceptance are recorded separately below.
 
@@ -17,13 +17,16 @@ ticks. The four-process loss regression passes; physical acceptance is pending.
 
 ## Playing and choosing arenas
 
-Use **Multiplayer → Host → Game Changers AI**, select **Local Wi-Fi**, and let
-the other consoles find and join that host before starting. Every console needs
+On each Tab5, choose **Multiplayer → Doom Arena by Game Changers → Local Wi-Fi**. The host
+chooses **Host game**, reviews **Match settings**, then selects **Create room**.
+Guests choose **Join game**, select that room, and press **Join selected room**.
+Once everyone is connected, the host selects **Start game**. Every console needs
 the exact arena bundle on microSD. The host is both a player and the server:
 one host plus up to three guests, two to four total. There is no separate fifth,
 non-playing server.
 
-The host's **Map** setting offers 29 choices:
+The host's **Match settings → Map** offers 29 choices; Arena's other match rules
+are fixed:
 
 - **Pure Hades MAP01–MAP05**: Shotguns (default), Rockets, Plasma, Pure Chaos,
   and Double-Barrel Finale. Start at any of the five maps, then loop through
@@ -32,7 +35,7 @@ The host's **Map** setting offers 29 choices:
 - **DWANGO 5 MAP01–MAP24**: start at the selected map, advance through that
   pack, and wrap MAP24 to MAP01. Both exit types stay inside the pack.
 
-During play, open **Menu/Start → Choose Arena**, use the directional controls
+During play, open **Menu/Back → Choose Arena**, use the directional controls
 and confirm to propose a map. Other active players open the menu and choose
 **Vote Yes** or **Vote No**. A strict majority of active, connected players
 changes the map immediately. The proposer supplies the first yes ballot; each
@@ -44,6 +47,16 @@ Doom Options / Quit. It does not pause the network simulation.
 Votes and ordinary exits preserve active visit scores. Everyone sees the same
 P1–P4 current-visit kills; another active human killed adds one, while suicides
 and environmental deaths add none.
+
+The scoreboard starts hidden. Tap the small **SCORE** button at the top to show
+current kills, break/departure status and the arena name; tap **CLOSE** to hide
+it. Controller **Start** (or the touch **P** shortcut) toggles the same local
+panel without pausing the match. **Back/Menu** still opens the Arena menu and
+Guide/Map still opens the automap. Scores close when entering a menu or changing
+maps, and reset hidden for a new session. Vote and break prompts remain visible
+while scores are hidden. The score UI host regressions cover rendering, touch
+press edges, menu/map/session resets and unchanged rules/commands; on-device
+legibility and input acceptance still require the next flashed image.
 
 **15 seconds without movement or firing** ends a visit and clears its score.
 The screen says **TAKE A BREAK**. Turning alone and Use do not reset the timer.
@@ -205,6 +218,69 @@ All consoles need the 0.58 firmware and replacement content bundle together.
 The old Pure Hell bundle is incompatible with protocol 5. The earlier 0.53 receipts remain historical host/build evidence. The prior
 [implementation receipt](../test-runs/2026-10-05-game-changers-ai-doom-implementation.json)
 is historical and predates the supplied PWAD/voting work.
+
+## Tab5 0.65 two-unit runtime result
+
+The [0.65 runtime record](../hardware/test-runs/2026-10-07-tab5-065-multiplayer-runtime.json)
+and [reviewed evidence](../hardware/test-runs/2026-10-07-tab5-065-multiplayer-runtime/README.md)
+record one A-host/B-guest Local Wi-Fi session on the exact installed image.
+Initial joining, one original-roster B return to the same match at tic 16514,
+two clean B exits, continued A runtime and clean A exit passed serial checks.
+The returned guest ran for 305.005 seconds before cleanup, including capture
+and quit-menu time; this is not a continuous gameplay-cadence claim.
+
+**Cadence still failed:** screenshot-free resumed submission intervals averaged
+17.518 FPS on A and 17.516 FPS on B, below both the operator's 25 FPS minimum
+and the repository's 30 FPS release floor. Four raw-backed screenshots were
+inspected: the score panel clears, but the large black score/break button still
+needs revision. Music and mixed-output counters are nonzero without observed
+write/parse failures; heard music/SFX and physical gameplay acceptance remain
+pending. No fresh first late join, additional return cycles, reversed host
+direction or other multiplayer title was qualified on 0.65. Controller snapshot
+warnings and all command errors remain in the closed evidence; both units
+ended at Home with neutral inactive inputs.
+
+## Tab5 0.64 two-unit runtime result
+
+The [0.64 runtime record](../hardware/test-runs/2026-10-07-tab5-064-multiplayer-runtime.json)
+and [sanitized evidence](../hardware/test-runs/2026-10-07-tab5-064-multiplayer-runtime/README.md)
+record a successful serial host/join/engine-entry sequence with A hosting B,
+followed by clean guest quit, host continuation and clean host quit. Gameplay
+acceptance **failed**: the operator reported rubberbanding and stale black
+break/score boxes; local submitted-frame counters averaged 14.999/15.103 FPS on
+A/B, below the requested 25 FPS minimum (aim 30) and repository 30 FPS floor.
+
+Increasing local counter spans have 229.953 seconds of conservatively bounded
+overlap before departure, which is serial lifecycle evidence rather than proof
+of continuous simulation or visible input effects. No engine screenshots,
+reversed-host test, active-match rejoin or other multiplayer game test occurred
+on this image. Music counters stayed zero; audible music/sound acceptance remains
+open. Both units ended at Home with inactive sessions and neutral inputs. The
+record binds the exact 0.64 application and preserves command errors and warnings.
+
+## Tab5 0.63 two-unit runtime result
+
+The [0.63 runtime record](../hardware/test-runs/2026-10-07-tab5-063-multiplayer-runtime.json)
+and [sanitized evidence](../hardware/test-runs/2026-10-07-tab5-063-multiplayer-runtime/README.md)
+cover A hosting B, then B hosting A, on Arena map 1 over Local Wi-Fi.
+Both directions reached the matching two-player engine barrier. Serial receipts
+confirm guest cleanup and return to Home, host detection of the departing guest,
+continued host frame submissions, and subsequent host cleanup and return to Home.
+
+**Gameplay performance failed.** The operator reported lag. Device-local frame
+submission counters averaged approximately **14.6–15.3 FPS**, below the 30 FPS
+release floor; these are submission rates, not measured display or simulation
+rates. Validation-to-engine-ready startup took approximately 79–83 seconds.
+
+Conservative overlap of the two increasing counter spans, bounded by READY and
+departure/quit evidence, was 68.563 seconds with A hosting and 227.809 seconds
+with B hosting. This establishes serial session evidence, not continuous
+simulation or physical gameplay acceptance. Movement/fire/use commands were
+acknowledged; their visible effects, audio and return from a break remain
+unverified. Disconnected-guest rejoin was not tested. The operator's requested
+scoreboard button is a later change and is not qualified by this run. Both
+consoles finished at Home with neutral debug input, and the ports closed at
+2026-10-07 05:14:36.896923 UTC. Earlier failed runs remain historical evidence.
 
 ## Tab5 0.58 without per-file restarts
 

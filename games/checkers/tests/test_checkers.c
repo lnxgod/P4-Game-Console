@@ -574,15 +574,230 @@ static bool test_network_flipped_drag(void)
     return true;
 }
 
+/* Exercise the actual client update and host snapshot encoder together. */
+typedef struct {
+    test_link_t link;
+    audio_mock_t host_audio, client_audio;
+    checkers_state_t h, c;
+    p4_game_instance_t host, client;
+} snapshot_pair_t;
+
+static bool snapshot_pair_start(snapshot_pair_t *pair, bool white_turn)
+{
+    memset(pair, 0, sizeof(*pair));
+    link_init(&pair->link);
+    const p4_game_services_t hs = network_services(
+        &pair->host_audio, &pair->link.endpoint[0]);
+    const p4_game_services_t cs = network_services(
+        &pair->client_audio, &pair->link.endpoint[1]);
+    CHECK(p4_game_instance_start(&pair->host, &p4_checkers_game, &hs,
+                                 &pair->h, sizeof(pair->h)));
+    CHECK(p4_game_instance_start(&pair->client, &p4_checkers_game, &cs,
+                                 &pair->c, sizeof(pair->c)));
+    if (!white_turn) {
+        return true;
+    }
+    CHECK(touch_step(&pair->host, false, 0U, 0U, 0U));
+    CHECK(touch_step(&pair->client, false, 0U, 0U, 0U));
+    uint8_t flags = 0U;
+    CHECK(checkers_perform_move(&pair->host.context, &pair->h,
+                                17U, 24U, &flags));
+    CHECK(touch_step(&pair->host, false, 0U, 0U, 0U));
+    CHECK(touch_step(&pair->client, false, 0U, 0U, 0U));
+    CHECK(pair->c.current_player == CHECKERS_PLAYER_WHITE);
+    CHECK(pair->c.revision == 2U);
+    return true;
+}
+
+static void snapshot_pair_stop(snapshot_pair_t *pair)
+{
+    p4_game_instance_stop(&pair->host);
+    p4_game_instance_stop(&pair->client);
+}
+
+static bool test_equal_snapshot_preserves_delayed_tap(void)
+{
+    snapshot_pair_t pair;
+    CHECK(snapshot_pair_start(&pair, true));
+    CHECK(touch_step(&pair.client, true, 156U, 78U, 0U));
+    CHECK(touch_step(&pair.client, false, 0U, 0U, 0U));
+    CHECK(pair.c.selected == 40U);
+    for (unsigned heartbeat = 0U; heartbeat < 8U; ++heartbeat) {
+        checkers_network_poll(&pair.host.context, &pair.h, 2000U);
+        CHECK(touch_step(&pair.client, false, 0U, 0U, 0U));
+        CHECK(pair.c.selected == 40U && pair.c.cursor == 40U);
+    }
+    CHECK(touch_step(&pair.client, true, 136U, 98U, 0U));
+    CHECK(pair.c.network_request_pending);
+    CHECK(touch_step(&pair.client, false, 0U, 0U, 0U));
+    CHECK(touch_step(&pair.host, false, 0U, 0U, 0U));
+    CHECK(touch_step(&pair.client, false, 0U, 0U, 0U));
+    CHECK(pair.h.board[33] == CHECKERS_WHITE_MAN);
+    CHECK(pair.h.board[40] == CHECKERS_EMPTY);
+    CHECK(pair.h.revision == 3U && pair.c.revision == 3U);
+    CHECK(memcmp(pair.h.board, pair.c.board, sizeof(pair.h.board)) == 0);
+    snapshot_pair_stop(&pair);
+    return true;
+}
+
+static bool test_equal_snapshot_preserves_drag(void)
+{
+    snapshot_pair_t pair;
+    CHECK(snapshot_pair_start(&pair, true));
+    CHECK(touch_step(&pair.client, true, 156U, 78U, 0U));
+    CHECK(touch_step(&pair.client, true, 136U, 98U, 0U));
+    CHECK(pair.c.touch_dragging && pair.c.touch_origin == 40U);
+    checkers_network_poll(&pair.host.context, &pair.h, 2000U);
+    CHECK(touch_step(&pair.client, true, 136U, 98U, 0U));
+    CHECK(pair.c.selected == 40U && pair.c.cursor == 33U);
+    CHECK(pair.c.touch_dragging && pair.c.touch_origin == 40U);
+    CHECK(pair.c.touch_revision == pair.c.revision && pair.c.touch_was_down);
+    CHECK(touch_step(&pair.client, false, 0U, 0U, 0U));
+    CHECK(pair.c.network_request_pending);
+    CHECK(touch_step(&pair.host, false, 0U, 0U, 0U));
+    CHECK(touch_step(&pair.client, false, 0U, 0U, 0U));
+    CHECK(pair.h.board[33] == CHECKERS_WHITE_MAN && pair.c.revision == 3U);
+    CHECK(memcmp(pair.h.board, pair.c.board, sizeof(pair.h.board)) == 0);
+    snapshot_pair_stop(&pair);
+    return true;
+}
+
+static bool test_equal_snapshot_rejects_changed_or_invalid_state(void)
+{
+    /* First three alternatives are valid positions, but conflict with the
+     * already accepted revision. Remaining alternatives are malformed. */
+    for (unsigned variant = 0U; variant < 7U; ++variant) {
+        snapshot_pair_t pair;
+        CHECK(snapshot_pair_start(&pair, true));
+        CHECK(touch_step(&pair.client, true, 156U, 78U, 0U));
+        CHECK(touch_step(&pair.client, false, 0U, 0U, 0U));
+        pair.c.network_request_pending = true;
+        pair.c.network_retry_ms = 123U;
+        if (variant == 0U) {
+            pair.h.quiet_ply = 2U;
+        } else if (variant == 1U) {
+            pair.h.current_player = CHECKERS_PLAYER_RED;
+        } else if (variant == 2U) {
+            pair.h.board[40] = CHECKERS_WHITE_KING;
+        }
+        pair.h.network_snapshot_dirty = true;
+        checkers_network_poll(&pair.host.context, &pair.h, 0U);
+        message_queue_t *const queue = &pair.link.inbox[1];
+        CHECK(queue->read_index < queue->write_index);
+        p4_game_multiplayer_message_t *const message =
+            &queue->messages[queue->write_index - 1U];
+        if (variant == 3U) {
+            message->data[10] = 0U; /* Count does not match the board. */
+        } else if (variant == 4U) {
+            message->data[6] = 2U; /* Invalid current player. */
+        } else if (variant == 5U) {
+            --message->bytes;
+        } else if (variant == 6U) {
+            ++message->data[0];
+        }
+        const checkers_state_t before = pair.c;
+        checkers_network_poll(&pair.client.context, &pair.c, 0U);
+        /* Receiving a new transport sequence may advance its dedup counter,
+         * but rejected payloads cannot change game/UI/reconciliation state. */
+        CHECK(memcmp(pair.c.board, before.board, sizeof(before.board)) == 0);
+        CHECK(pair.c.current_player == before.current_player);
+        CHECK(pair.c.quiet_ply == before.quiet_ply);
+        CHECK(pair.c.revision == before.revision);
+        CHECK(pair.c.selected == before.selected && pair.c.cursor == before.cursor);
+        CHECK(pair.c.forced_piece == before.forced_piece && pair.c.phase == before.phase);
+        CHECK(pair.c.winner == before.winner);
+        CHECK(pair.c.red_count == before.red_count && pair.c.white_count == before.white_count);
+        CHECK(pair.c.network_request_pending && pair.c.network_retry_ms == 123U);
+        snapshot_pair_stop(&pair);
+    }
+    return true;
+}
+
+static bool test_initial_equal_snapshot_starts_client(void)
+{
+    snapshot_pair_t pair;
+    CHECK(snapshot_pair_start(&pair, false));
+    CHECK(!pair.c.network_started && pair.h.revision == pair.c.revision);
+    pair.c.selected = 40U;
+    pair.c.cursor = 40U;
+    checkers_network_poll(&pair.host.context, &pair.h, 0U);
+    checkers_network_poll(&pair.client.context, &pair.c, 0U);
+    CHECK(pair.c.network_started);
+    CHECK(pair.c.selected == CHECKERS_NO_SQUARE);
+    CHECK(pair.c.cursor == checkers_default_cursor(&pair.c, pair.c.current_player));
+    CHECK(memcmp(pair.h.board, pair.c.board, sizeof(pair.h.board)) == 0);
+    snapshot_pair_stop(&pair);
+    return true;
+}
+
+static bool test_newer_snapshot_invalidates_old_drag(void)
+{
+    snapshot_pair_t pair;
+    CHECK(snapshot_pair_start(&pair, true));
+    CHECK(touch_step(&pair.client, true, 156U, 78U, 0U));
+    CHECK(touch_step(&pair.client, true, 136U, 98U, 0U));
+    CHECK(pair.c.touch_dragging);
+    uint8_t flags = 0U;
+    CHECK(checkers_apply_move(&pair.h, 40U, 33U, &flags));
+    pair.h.network_snapshot_dirty = true;
+    checkers_network_poll(&pair.host.context, &pair.h, 0U);
+    CHECK(touch_step(&pair.client, true, 136U, 98U, 0U));
+    CHECK(pair.c.revision == 3U && pair.c.touch_revision == 2U);
+    CHECK(pair.c.selected == CHECKERS_NO_SQUARE);
+    CHECK(pair.c.cursor == checkers_default_cursor(&pair.c, pair.c.current_player));
+    const size_t queued = pair.link.inbox[0].write_index;
+    CHECK(touch_step(&pair.client, false, 0U, 0U, 0U));
+    CHECK(!pair.c.network_request_pending && !pair.c.touch_dragging);
+    CHECK(pair.link.inbox[0].write_index == queued);
+    CHECK(memcmp(pair.h.board, pair.c.board, sizeof(pair.h.board)) == 0);
+    snapshot_pair_stop(&pair);
+    return true;
+}
+
+static bool test_equal_snapshot_reconciles_pending_request(void)
+{
+    snapshot_pair_t pair;
+    CHECK(snapshot_pair_start(&pair, true));
+    CHECK(touch_step(&pair.client, true, 156U, 78U, 0U));
+    CHECK(touch_step(&pair.client, false, 0U, 0U, 0U));
+    pair.c.network_request_pending = true;
+    pair.c.network_retry_ms = 123U;
+    checkers_network_poll(&pair.host.context, &pair.h, 2000U);
+    checkers_network_poll(&pair.client.context, &pair.c, 0U);
+    CHECK(!pair.c.network_request_pending && pair.c.network_retry_ms == 0U);
+    CHECK(pair.c.selected == 40U && pair.c.cursor == 40U);
+    snapshot_pair_stop(&pair);
+    return true;
+}
+
+static bool test_snapshot_interaction_regressions(void)
+{
+    unsigned failures = 0U;
+#define SNAPSHOT_CASE(function) do { \
+    const bool passed = function(); \
+    printf("%s: %s\n", #function, passed ? "PASS" : "FAIL"); \
+    if (!passed) { ++failures; } \
+} while (0)
+    SNAPSHOT_CASE(test_equal_snapshot_preserves_delayed_tap);
+    SNAPSHOT_CASE(test_equal_snapshot_preserves_drag);
+    SNAPSHOT_CASE(test_equal_snapshot_rejects_changed_or_invalid_state);
+    SNAPSHOT_CASE(test_initial_equal_snapshot_starts_client);
+    SNAPSHOT_CASE(test_newer_snapshot_invalidates_old_drag);
+    SNAPSHOT_CASE(test_equal_snapshot_reconciles_pending_request);
+#undef SNAPSHOT_CASE
+    return failures == 0U;
+}
+
 int main(void)
 {
+    const bool snapshots_passed = test_snapshot_interaction_regressions();
     if (!test_direct_touch_drag_and_capture() ||
         !test_network_flipped_drag() ||
         !test_initial_position_and_simple_move() ||
         !test_compulsory_capture_and_multi_jump() ||
         !test_crowning_king_and_game_endings() ||
         !test_descriptor_lifecycle_controller_touch_and_render() ||
-        !test_network_host_authority_and_peer_loss()) {
+        !test_network_host_authority_and_peer_loss() || !snapshots_passed) {
         return 1;
     }
     puts("checkers tests passed");

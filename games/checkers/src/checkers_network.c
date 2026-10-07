@@ -192,6 +192,24 @@ static bool apply_snapshot(checkers_state_t *state,
     if (!snapshot_state_valid(&candidate)) {
         return false;
     }
+    if (state->network_started && candidate.revision == state->revision) {
+        /* Periodic snapshots acknowledge unchanged authoritative state; they
+         * must not cancel a local selection or an in-progress touch gesture.
+         * A changed state requires a new revision, even if it is valid. */
+        if (memcmp(state->board, candidate.board, sizeof(state->board)) != 0 ||
+            state->current_player != candidate.current_player ||
+            state->forced_piece != candidate.forced_piece ||
+            state->winner != candidate.winner ||
+            state->phase != candidate.phase ||
+            state->red_count != candidate.red_count ||
+            state->white_count != candidate.white_count ||
+            state->quiet_ply != candidate.quiet_ply) {
+            return false;
+        }
+        state->network_request_pending = false;
+        state->network_retry_ms = 0U;
+        return true;
+    }
     memcpy(state->board, candidate.board, sizeof(state->board));
     state->current_player = candidate.current_player;
     state->forced_piece = candidate.forced_piece;

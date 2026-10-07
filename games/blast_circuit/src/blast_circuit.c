@@ -136,9 +136,9 @@ const p4_game_descriptor_t p4_blast_circuit_game={
     .launcher_id=119U,.id="org.p4console.blast-circuit",
     .title="Blast Circuit",.subtitle="Four-player bomb battles",
     .accent_rgb565=0x5f79,
-    .required_capabilities=P4_GAME_CAP_VIDEO|P4_GAME_CAP_CONTROLS,
+    .required_capabilities=P4_GAME_CAP_VIDEO|P4_GAME_CAP_CONTROLS|P4_GAME_CAP_VIDEO_HIGH_RES,
     .optional_capabilities=P4_GAME_CAP_AUDIO_TONE|P4_GAME_CAP_AUDIO_STREAM|
-        P4_GAME_CAP_VIDEO_HIGH_RES|P4_GAME_CAP_MULTIPLAYER_SESSION|P4_GAME_CAP_SAVE,
+        P4_GAME_CAP_MULTIPLAYER_SESSION|P4_GAME_CAP_SAVE,
     .state_bytes=sizeof(bc_state_t),.start=game_start,.update=game_update,
     .render=bc_render,.stop=game_stop,
 };

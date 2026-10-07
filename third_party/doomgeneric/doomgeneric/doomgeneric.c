@@ -27,6 +27,15 @@ void doomgeneric_Create(int argc, char **argv)
 	D_DoomMain ();
 }
 
+/* Legacy/host platforms keep their allocation for the engine lifetime. */
+#if defined(__GNUC__)
+__attribute__((weak))
+#endif
+int DG_PrepareFrame(void)
+{
+    return DG_ScreenBuffer != NULL;
+}
+
 void doomgeneric_RequestQuit(void)
 {
 	doomgeneric_quit_requested = 1;

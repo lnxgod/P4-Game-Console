@@ -2,7 +2,7 @@
   "schema": 1,
   "format": "p4-native-elf-v1",
   "api_version": 1,
-  "version": "1.4.1",
+  "version": "1.4.2",
   "package_file": "P4_YAHTZEE.P4G",
   "component": "p4_yahtzee",
   "sources": [

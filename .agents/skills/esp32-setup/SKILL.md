@@ -40,6 +40,23 @@ WIP title with its status visible. System tools and diagnostics retain
 than hard-coding a game count or size. Do not silently drop required resources
 or Doom to make a layout fit.
 
+## Require native game presentation
+
+Every maintained Tab5 game must render directly at 768×480 RGB565; follow
+[the presentation standard](../../../docs/GAME_ART.md). Validate required high
+resolution in native manifests and C descriptors. Inspect the intended OS's
+resolution gates/build flags as well: a package declaration alone cannot prove
+its launch mode. Never enable low-resolution title overrides, use `--low-res`
+or upscale a completed 320×200 frame to make a bundle fit or run faster.
+Canonical 320×200 touch coordinates remain input units.
+
+During authorized device acceptance, record `surface=768x480` for each tested
+native game with exact package/OS/unit bindings and readable active play. Engine
+ports use their owning acceptance workflow and verify actual game framebuffer
+resolution. Preserve missing or failed qualification explicitly; do not convert
+historical low-resolution receipts or a successful upload into native acceptance.
+Legacy board source/recovery contracts remain for explicitly requested work.
+
 ## Prepare a fresh checkout
 
 Run commands from the repository root. Use the checked-in skills and scripts;
@@ -52,8 +69,8 @@ paths. No SDK/compiler is needed for this path. If the exact package is absent,
 report that fact and choose the matching CI artifact or a source build; never
 substitute an older release or silently start a long compile.
 
-For a source build, read `toolchain.lock.json`; use `make setup` only when its pinned tools are absent,
-then `make verify` as described by the
+For a source build, read `toolchain.lock.json`; use `make setup` only when its
+pinned tools are absent, then `make verify` as described by the
 [platform workflow](../esp32-fix-console/references/workflow.md).
 Use that environment's Python for serial transfer (pyserial is required); the
 data-preparation helper below uses only the Python standard library and Git.

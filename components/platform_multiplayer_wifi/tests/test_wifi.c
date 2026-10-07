@@ -38,6 +38,43 @@ static size_t packet(uint8_t *out,uint32_t session)
 {const uint8_t stamp[8]={0};size_t n=0;assert(p4_mp_packet_encode(P4_MP_PACKET_PING,session,42,1,0,stamp,8,out,P4_MP_MAX_DATAGRAM_BYTES,&n)==P4_MP_OK);return n;}
 static void transmit(int fd,const void *bytes,size_t n)
 {struct sockaddr_in to={.sin_family=AF_INET,.sin_port=htons(PORT),.sin_addr.s_addr=inet_addr("127.0.0.1")};assert(sendto(fd,bytes,n,0,(void *)&to,sizeof(to))==(int)n);usleep(1000);}
+static void test_game_discovery(void)
+{
+    platform_multiplayer_wifi_lobby_t rooms[PLATFORM_MULTIPLAYER_WIFI_MAX_LOBBIES];
+    memset(mock_records,0,sizeof(mock_records));
+    mock_count=9;
+    for(unsigned i=0;i<mock_count;++i) {
+        assert(p4_wifi_room_name((char *)mock_records[i].ssid,i+1,i<4?11:13));
+        mock_records[i].bssid[5]=(uint8_t)(i+1);
+        mock_records[i].authmode=WIFI_AUTH_OPEN;
+    }
+    /* Other titles may be stronger/earlier scan results. They must not use
+     * the selected game's four discovery slots. */
+    assert(platform_multiplayer_wifi_browse_game(13)==ESP_OK);
+    unsigned previous_generation=s_generation;
+    scan_rooms(s_generation);
+    assert(platform_multiplayer_wifi_list_lobbies(rooms,4)==4);
+    for(unsigned i=0;i<4;++i) {
+        assert(rooms[i].game_token==13 && rooms[i].session_id==i+5);
+    }
+    assert(platform_multiplayer_wifi_join(rooms[2].lobby_id)==ESP_OK);
+    assert(s_target.bssid[5]==7 && s_session==7 && s_game==13);
+    assert(platform_multiplayer_wifi_browse_game(11)==ESP_OK);
+    scan_rooms(previous_generation);
+    assert(platform_multiplayer_wifi_list_lobbies(rooms,4)==0);
+    scan_rooms(s_generation);
+    assert(platform_multiplayer_wifi_list_lobbies(rooms,4)==4);
+    for(unsigned i=0;i<4;++i) assert(rooms[i].game_token==11);
+    assert(platform_multiplayer_wifi_browse_game(99)==ESP_OK);
+    scan_rooms(s_generation);
+    assert(platform_multiplayer_wifi_list_lobbies(rooms,4)==0);
+    /* The original browse entry point keeps its wildcard behavior. */
+    assert(platform_multiplayer_wifi_browse()==ESP_OK);
+    scan_rooms(s_generation);
+    assert(platform_multiplayer_wifi_list_lobbies(rooms,4)==4);
+    assert(rooms[0].game_token==11 && rooms[0].session_id==1);
+    memset(mock_records,0,sizeof(mock_records));
+}
 int main(void)
 {
     char name[33];uint32_t session;uint16_t game;
@@ -46,16 +83,17 @@ int main(void)
     for(unsigned i=0;i<21;++i){char saved=name[i];name[i]='!';assert(!p4_wifi_room_parse((uint8_t *)name,&session,&game));name[i]=saved;}
     name[21]='x';assert(!p4_wifi_room_parse((uint8_t *)name,&session,&game));name[21]=0;
     memset(name,'x',sizeof(name));assert(!p4_wifi_room_parse((uint8_t *)name,&session,&game));
-    assert(platform_multiplayer_wifi_enable(frame,NULL)==ESP_OK);assert(initialize()==ESP_OK);
+    assert(platform_multiplayer_wifi_enable(frame,NULL)==ESP_OK);assert(initialize(s_generation)==ESP_OK);
+    test_game_discovery();
     assert(p4_wifi_room_name((char *)mock_records[0].ssid,7,13));mock_records[0].bssid[5]=4;mock_records[0].authmode=WIFI_AUTH_OPEN;mock_count=1;
     scan_rooms(s_generation);platform_multiplayer_wifi_lobby_t rooms[4];assert(platform_multiplayer_wifi_list_lobbies(rooms,4)==1);
     assert(rooms[0].session_id==7 && rooms[0].game_token==13);
     assert(platform_multiplayer_wifi_join(999)==ESP_ERR_NOT_FOUND);
     assert(platform_multiplayer_wifi_join(rooms[0].lobby_id)==ESP_OK);
     scan_rooms(s_generation-1);assert(platform_multiplayer_wifi_list_lobbies(rooms,4)==0);
-    assert(start_mode(MODE_CLIENT,7,13,&s_target)==ESP_OK);assert(mock_config.sta.bssid_set && mock_config.sta.bssid[5]==4);
+    assert(start_mode(s_generation,MODE_CLIENT,7,13,&s_target)==ESP_OK);assert(mock_config.sta.bssid_set && mock_config.sta.bssid[5]==4);
     assert(platform_multiplayer_wifi_host(7,13)==ESP_OK);
-    assert(start_mode(MODE_HOST,7,13,NULL)==ESP_OK);assert(mock_mode==WIFI_MODE_AP && mock_config.ap.max_connection==3);
+    assert(start_mode(s_generation,MODE_HOST,7,13,NULL)==ESP_OK);assert(mock_mode==WIFI_MODE_AP && mock_config.ap.max_connection==3);
     s_status.available=true;assert(open_socket_locked()==ESP_OK);
     int peer=socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP);assert(peer>=0);
     struct sockaddr_in from={.sin_family=AF_INET,.sin_port=htons(PORT+1),.sin_addr.s_addr=inet_addr("127.0.0.1")};

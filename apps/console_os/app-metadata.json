@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "app": "console_os",
-  "version": "0.59",
+  "version": "0.78",
   "stage": "native-game-catalog-ota-launcher",
-  "purpose": "GameChangersAI OS: native 1280x720 navy/cyan Tab5 interface with live system services, installed-game library, normalized touch/controller input and existing game viewport compatibility.",
+  "purpose": "GameChangersAI OS: native 1280x720 Tab5 interface with game-first multiplayer setup, reliable Arena loading handoff, and bounded USB debug input through the existing touch/controller paths.",
   "runtime_supported": false,
   "top_level_runtime_authorized": false,
   "flash_authorized": false,
@@ -296,6 +296,6 @@
       "dedicated original Doom/Chex cover art and branded game-loading screen",
       "cartridge-owned artwork throughout the enabled native catalog"
     ],
-    "status": "0.59 curated default library on the 0.58 Pure Hades and USB batch foundation; Blast Circuit featured; explicit developer install for held-back games; core-1 audio and four-player local Wi-Fi retained; exact-image hardware acceptance recorded separately"
+    "status": "0.72 multiplayer diagnostic candidate: indexed Doom palette conversion, sequential storage reads and serviced native loading, internal save-worker stack, Air rematch and Checkers selection fixes, and opt-in Air/Tide/Blast 320x200 rendering; exact-image device, audio and sustained cadence acceptance pending"
   }
 }

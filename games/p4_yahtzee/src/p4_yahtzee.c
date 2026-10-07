@@ -195,16 +195,7 @@ static bool game_start(p4_game_context_t *context)
         multiplayer.state == P4_GAME_MULTIPLAYER_CONNECTED) {
         state->mode = P4_YAHTZEE_NETWORK;
         state->phase = P4_YAHTZEE_NETWORK_WAIT;
-        state->local_player_slot = multiplayer.local_player_slot;
-        state->network_role = multiplayer.role;
-        state->network_seed = multiplayer.session_seed;
-        if (multiplayer.player_count >= P4_YAHTZEE_MIN_PLAYERS &&
-            multiplayer.player_count <= P4_YAHTZEE_PLAYERS &&
-            multiplayer.local_player_slot < multiplayer.player_count) {
-            state->player_count = multiplayer.player_count;
-        } else {
-            state->network_error = true;
-        }
+        (void)p4_yahtzee_accept_network_status(state, &multiplayer);
     }
     (void)p4_game_play_tone(context, 523U, 70U, 3U, P4_WAVE_TRIANGLE);
     return true;
@@ -220,7 +211,8 @@ static p4_game_result_t game_update(
     const bool touch_owned = touch_down || state->touch_was_down;
     const uint32_t pressed = touch_owned ? 0U : input->pressed;
     if ((pressed & P4_BUTTON_BACK) != 0U) {
-        if (state->phase == P4_YAHTZEE_MENU) {
+        if (state->mode == P4_YAHTZEE_NETWORK ||
+            state->phase == P4_YAHTZEE_MENU) {
             return P4_GAME_EXIT_TO_LAUNCHER;
         }
         state->phase = P4_YAHTZEE_MENU;
@@ -236,13 +228,19 @@ static p4_game_result_t game_update(
                  EXIT_X, EXIT_Y, EXIT_W, EXIT_H)) {
         return P4_GAME_EXIT_TO_LAUNCHER;
     }
+    if (state->mode == P4_YAHTZEE_NETWORK &&
+        state->phase != P4_YAHTZEE_MENU) {
+        /* Validate the bound session before animation, packets or game input. */
+        p4_yahtzee_poll_network(context, state);
+        if (state->network_error) {
+            p4_yahtzee_poll_dice(context, state);
+            state->touch_was_down = touch_down;
+            return P4_GAME_CONTINUE;
+        }
+    }
     state->rng ^= (uint32_t)context->elapsed_ms ^
         context->frame_index * UINT32_C(33);
     p4_yahtzee_update_animation(state, elapsed_ms);
-    if (state->mode == P4_YAHTZEE_NETWORK &&
-        state->phase != P4_YAHTZEE_MENU) {
-        p4_yahtzee_poll_network(context, state);
-    }
     p4_yahtzee_poll_dice(context, state);
     if (input->touch_valid && input->touch_count != 0U &&
         !state->touch_was_down) {
@@ -571,6 +569,7 @@ static bool game_render(p4_game_context_t *context,
             "WAITING FOR PLAYERS...",
             state->network_error ? COLOR_DANGER : COLOR_ACCENT, 1U, 28U);
         table_text(surface, 41, 132,
+            state->network_error ? "TAP EXIT TO RETURN" :
             "KEEP BOTH GAMES OPEN", COLOR_MUTED, 1U, 34U);
         draw_exit_button(surface);
         return true;

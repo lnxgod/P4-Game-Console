@@ -112,9 +112,12 @@ endif()
 
 def source_text(slug: str, game_id: str, title: str,
                 launcher_id: int, accent: str,
-                optional_capabilities: list[str]) -> str:
+                optional_capabilities: list[str], high_res: bool) -> str:
     symbol = f"p4_{slug}_game"
     c_title = json.dumps(title)
+    required_expression = "P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS"
+    if high_res:
+        required_expression += " |\n        P4_GAME_CAP_VIDEO_HIGH_RES"
     optional_expression = " |\n        ".join(
         CAPABILITY_CONSTANTS[name] for name in optional_capabilities
     ) or "UINT32_C(0)"
@@ -240,7 +243,7 @@ const p4_game_descriptor_t {symbol} = {{
     .title = {c_title},
     .subtitle = \"WORK IN PROGRESS\",
     .accent_rgb565 = UINT16_C({accent}),
-    .required_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS,
+    .required_capabilities = {required_expression},
     .optional_capabilities = {optional_expression},
     .state_bytes = sizeof({slug}_state_t),
     .start = game_start,
@@ -280,14 +283,26 @@ Tab5 Local Wi-Fi supports up to four consoles where the game profile does;
 Bluetooth and USB serial remain limited to two. This scaffold does not prove
 physical multiplayer acceptance.
 """
-    resolution = ""
+    resolution = """
+
+This is an explicit legacy 320x200 scaffold for requested legacy maintenance.
+Maintained Tab5 games must use the default native 768x480 RGB565 scaffold.
+Legacy compatibility does not qualify a maintained Tab5 release.
+"""
     if high_res:
         resolution = """
 
-This starter follows the default presentation standard in `docs/GAME_ART.md`
-and negotiates optional `video-highres`: a 768x480 RGB565 surface
-where supported, with 320x200 fallback. Touch remains normalized to 320x200;
-scale drawing using `surface->width` and `surface->height`.
+This starter follows the [presentation standard](../../docs/GAME_ART.md)
+and requires `video-highres` in both the manifest and C descriptor. Maintained
+Tab5 games render directly into a native 768x480 RGB565 surface; startup fails
+cleanly if the required capability is unavailable. Never lower the framebuffer
+resolution or upscale a completed low-resolution frame to fix performance or
+readability. Canonical 320x200 touch coordinates are input units, not render
+resolution; scale drawing using `surface->width` and `surface->height`.
+
+Before device acceptance, verify the actual runtime surface is 768x480 and
+inspect active play, opening, pause and results on the exact package/OS/unit.
+A capability declaration or a large screenshot does not prove native rendering.
 """
     return f"""# {title}
 
@@ -339,7 +354,7 @@ row spans or a budgeted custom renderer; retain fractional
 motion and animation time, and budget state, art and per-tick work. Review costly
 pixel loops with the pinned RV32 compiler before adding more work.
 
-Benchmark active motion/dragging at native and fallback resolution, then record
+Benchmark active motion/dragging at the selected render resolution, then record
 exact package, OS and device cadence for release qualification. Host CPU timing
 and successful installation do not prove tablet FPS; leave device acceptance
 pending until measured.
@@ -395,7 +410,7 @@ def main() -> int:
     resolution = parser.add_mutually_exclusive_group()
     resolution.add_argument(
         "--high-res", dest="high_res", action="store_true", default=True,
-        help="request native 768x480 RGB565 with 320x200 fallback (default)",
+        help="require native 768x480 RGB565 (default for maintained Tab5)",
     )
     resolution.add_argument(
         "--low-res", dest="high_res", action="store_false",
@@ -430,8 +445,11 @@ def main() -> int:
     if args.multiplayer is not None and \
             "multiplayer-session" not in optional_capabilities:
         optional_capabilities.append("multiplayer-session")
-    if args.high_res and "video-highres" not in optional_capabilities:
-        optional_capabilities.append("video-highres")
+    required_capabilities = ["video", "controls"]
+    if args.high_res:
+        required_capabilities.append("video-highres")
+        optional_capabilities = [capability for capability in optional_capabilities
+                                 if capability != "video-highres"]
     game_id = "org.p4console." + slug.replace("_", "-")
     retired_path = games_root / "retired.json"
     if retired_path.exists():
@@ -453,7 +471,7 @@ def main() -> int:
         "subtitle": "WORK IN PROGRESS",
         "folder": args.folder,
         "accent_rgb565": args.accent.lower(),
-        "required_capabilities": ["video", "controls"],
+        "required_capabilities": required_capabilities,
         "optional_capabilities": optional_capabilities,
         "license": "MIT",
         "assets": "original-code-rendered-shapes-and-pinned-Arimo-OFL-1.1-font",
@@ -473,7 +491,7 @@ def main() -> int:
          json.dumps(manifest, indent=2) + "\n"),
         (pathlib.Path("src") / f"{slug}.c",
          source_text(slug, game_id, args.title, launcher_id,
-                     args.accent.lower(), optional_capabilities)),
+                     args.accent.lower(), optional_capabilities, args.high_res)),
         (pathlib.Path("README.md"),
          readme_text(args.title, args.folder, args.multiplayer,
                      args.high_res, slug)),
@@ -486,6 +504,7 @@ def main() -> int:
         "game_id": game_id,
         "launcher_id": launcher_id,
         "folder": args.folder,
+        "required_capabilities": required_capabilities,
         "optional_capabilities": optional_capabilities,
         "high_resolution": args.high_res,
         "multiplayer": manifest.get("multiplayer"),

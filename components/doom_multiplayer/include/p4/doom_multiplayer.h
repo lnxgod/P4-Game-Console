@@ -14,6 +14,8 @@ extern "C" {
 #endif
 
 enum {
+    /* Distinct from protocol 7 tic-zero replay peers: checkpoints are required. */
+    P4_DOOM_ARENA_CHECKPOINT_PROTOCOL = 8,
     P4_DOOM_MP_TICK_RATE_HZ = 35,
     P4_DOOM_MP_TIC_RING_SIZE = 128,
     P4_DOOM_MP_TX_WINDOW_SIZE = 32,
@@ -84,10 +86,17 @@ typedef struct {
     uint64_t route_id;
     uint8_t local_player_slot;
     uint8_t player_count;
+    /* Arena engine capacity is four; this frozen mask describes tic zero. */
+    uint8_t initial_player_mask;
     uint8_t input_delay_tics;
     uint32_t start_tic;
     uint64_t session_seed;
     p4_doom_mp_setup_t setup;
+    /* A resumed Arena replays the original match before sending live input. */
+    bool rejoining;
+    uint8_t resume_ticket[16];
+    uint64_t resume_nonce;
+    p4_mp_lobby_offer_t lobby_offer;
 } p4_doom_mp_launch_config_t;
 
 typedef struct {

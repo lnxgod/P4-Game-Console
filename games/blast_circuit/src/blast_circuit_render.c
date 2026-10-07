@@ -30,10 +30,11 @@ static void centered(p4_game_surface_t *f, int x, int y, const char *t, uint16_t
     const int width = (int)(length(t) * 6U * z);
     p4_draw_text(f, sx(f,x)-width/2, sy(f,y), t,c,z,40U);
 }
-static void sprite(p4_game_surface_t *f, const uint16_t *data, int source_size,
-                    int x, int y, int size)
+static void sprite_blit(p4_game_surface_t *f, const uint16_t *data, int source_size,
+                       int x, int y, int size, int dx, int dy, bool silhouette)
 {
-    const int left=sx(f,x),top=sy(f,y),w=sx(f,x+size)-left,h=sy(f,y+size)-top;
+    const int w=sx(f,x+size)-sx(f,x),h=sy(f,y+size)-sy(f,y);
+    const int left=sx(f,x)+dx,top=sy(f,y)+dy;
     if (w<=0 || h<=0) return;
     const int x0=left<0?-left:0,y0=top<0?-top:0;
     const int x1=left+w>(int)f->width?(int)f->width-left:w;
@@ -48,16 +49,31 @@ static void sprite(p4_game_surface_t *f, const uint16_t *data, int source_size,
         int source_x=first,error=initial_error;
         for(int xx=x0;xx<x1;++xx) {
             const uint16_t c=row[source_x];
-            if(c!=KEY) *out=c;
+            if(c!=KEY) *out=silhouette?INK:c;
             ++out;source_x+=step;error+=remainder;
             if(error>=w) {++source_x;error-=w;}
         }
     }
 }
+static void sprite(p4_game_surface_t *f,const uint16_t *data,int source_size,
+                   int x,int y,int size)
+{ sprite_blit(f,data,source_size,x,y,size,0,0,false); }
+static void outlined_sprite(p4_game_surface_t *f,const uint16_t *data,int source_size,
+                            int x,int y,int size)
+{
+    // Separate moving foreground sprites from nearby materials at native size.
+    const int border=f->width>320U?2:1;
+    sprite_blit(f,data,source_size,x,y,size,-border,0,true);
+    sprite_blit(f,data,source_size,x,y,size,border,0,true);
+    sprite_blit(f,data,source_size,x,y,size,0,-border,true);
+    sprite_blit(f,data,source_size,x,y,size,0,border,true);
+    sprite(f,data,source_size,x,y,size);
+}
+static const uint16_t *character_art(unsigned player,unsigned frame)
+{ return player==1U?bc_ember[frame]:player==2U?bc_volt[frame]:player==3U?bc_gilt[frame]:bc_runner[frame]; }
 static void character(p4_game_surface_t *f,unsigned player,unsigned frame,int x,int y,int size)
 {
-    const uint16_t *pixels=player==1U?bc_ember[frame]:player==2U?bc_volt[frame]:player==3U?bc_gilt[frame]:bc_runner[frame];
-    sprite(f,pixels,player?32:48,x,y,size);
+    sprite(f,character_art(player,frame),player?32:48,x,y,size);
 }
 static const char *theme_name(unsigned theme)
 { return theme==1U?"COPPER FOUNDRY":theme==2U?"PRISM VAULT":"ORBITAL GREENHOUSE"; }
@@ -159,8 +175,15 @@ void bc_visual_step(bc_state_t *s, uint32_t elapsed)
         p->vy+=80*(int32_t)elapsed;
     }
 }
+static void floor_swatch(p4_game_surface_t *f,int x,int y,int size,unsigned theme)
+{
+    // Walkable space stays quiet; only obstacles and hazards carry busy artwork.
+    static const uint16_t floor[3]={0x1168,0x18e6,0x18e9};
+    box(f,x,y,size,size,INK);
+    box(f,x+1,y+1,size-1,size-1,floor[theme<BC_THEMES?theme:0U]);
+}
 static void floor_tile(p4_game_surface_t *f,int x,int y,unsigned variation,unsigned theme)
-{ sprite(f,tile_art(theme,BC_FLOOR,variation),32,x,y,TILE); }
+{ (void)variation;floor_swatch(f,x,y,TILE,theme); }
 static void flame(p4_game_surface_t *f,const bc_state_t *s,int x,int y,unsigned life,unsigned hash)
 {
     const bc_world_t *w=&s->world;
@@ -208,7 +231,7 @@ static void arena(p4_game_surface_t *f,const bc_state_t *s)
         } else if(bc_pickup(w->tile[c]) && !w->fire[c]) {
             const int bob=(int)((s->visual_ms/180U+(unsigned)c)%4U);
             circle(f,px+TILE/2,py+TILE-6,9,0x126b);
-            sprite(f,bc_greenhouse[12U+w->tile[c]-BC_RANGE],32,px+2,py-2+(bob<2?bob:3-bob),TILE-4);
+            outlined_sprite(f,bc_greenhouse[12U+w->tile[c]-BC_RANGE],32,px+2,py-2+(bob<2?bob:3-bob),TILE-4);
         }
     }
     for(unsigned i=0;i<BC_BOMBS;++i) {
@@ -216,7 +239,7 @@ static void arena(p4_game_surface_t *f,const bc_state_t *s)
         const int x=ox+b->x*TILE,y=oy+b->y*TILE;
         const unsigned frame=(BC_FUSE-b->fuse)/(b->fuse<14U?2U:5U)%4U;
         circle(f,x+TILE/2,y+TILE-6,10,0x0926);
-        sprite(f,bc_greenhouse[8U+frame],32,x-3,y-7,TILE+6);
+        outlined_sprite(f,bc_greenhouse[8U+frame],32,x-3,y-7,TILE+6);
         box(f,x+8,y+TILE-3,12,2,colors[b->owner]);
     }
     for(unsigned i=0;i<BC_CELLS;++i)
@@ -245,7 +268,7 @@ static void arena(p4_game_surface_t *f,const bc_state_t *s)
         circle(f,x+TILE/2,y+TILE-6,10,0x0926);
         box(f,x+7,y+TILE-5,14,3,colors[i]);
         const unsigned frame=p->cooldown?(s->visual_ms/70U)%4U:1U;
-        character(f,i,s->face[i]*4U+frame,x-8,y-18,TILE+16);
+        outlined_sprite(f,character_art(i,s->face[i]*4U+frame),i?32:48,x-8,y-18,TILE+16);
         if(i==s->local_slot && p->alive) {
             box(f,x+11,y-17,6,2,PAPER); box(f,x+13,y-15,2,2,PAPER);
         }
@@ -413,7 +436,8 @@ static void authoring(p4_game_surface_t *f,const bc_state_t *s)
     } else {
         static const char *names[10]={"FLOOR","WALL","WOOD","RANGE","BOMB","SPEED","ARMOR","CRACKED","GLASS","EMBER"};
         centered(f,72,83,"BRUSH",MUTED,1U);
-        sprite(f,tile_art(s->level.theme,s->brush,0U),32,36,113,72);
+        if(s->brush==BC_FLOOR) floor_swatch(f,36,113,72,s->level.theme);
+        else sprite(f,tile_art(s->level.theme,s->brush,0U),32,36,113,72);
         centered(f,72,212,names[s->brush],PAPER,1U);
         if(bc_destructible(s->brush) || s->brush==BC_WALL)
             centered(f,72,229,s->brush==BC_WALL?"PERMANENT":

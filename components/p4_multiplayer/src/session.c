@@ -110,6 +110,35 @@ void p4_mp_session_init(p4_mp_session_t *session)
     }
 }
 
+p4_mp_join_admission_t p4_mp_session_join_admission(
+    const p4_mp_session_t *session,
+    uint32_t peer_id,
+    uint64_t route_id,
+    bool accepting_new)
+{
+    if (session == NULL || session->role != P4_MP_ROLE_HOST ||
+        (session->state != P4_MP_SESSION_HOSTING &&
+         session->state != P4_MP_SESSION_CONNECTED) ||
+        peer_id == 0U || peer_id == session->self_peer_id || route_id == 0U) {
+        return P4_MP_JOIN_REJECT;
+    }
+    for (size_t index = 0; index < P4_MP_MAX_REMOTE_PEERS; ++index) {
+        const p4_mp_peer_t *peer = &session->peers[index];
+        if (peer->peer_id == 0U ||
+            (peer->peer_id != peer_id && peer->route_id != route_id)) {
+            continue;
+        }
+        if (peer->peer_id != peer_id || peer->route_id != route_id) {
+            return P4_MP_JOIN_REJECT;
+        }
+        if (peer->connected) {
+            return P4_MP_JOIN_RETRY;
+        }
+        break;
+    }
+    return accepting_new ? P4_MP_JOIN_NEW : P4_MP_JOIN_REJECT;
+}
+
 p4_mp_status_t p4_mp_session_host_start(
     p4_mp_session_t *session,
     uint32_t session_id,
@@ -222,6 +251,26 @@ p4_mp_status_t p4_mp_session_accept_peer(
     return P4_MP_OK;
 }
 
+p4_mp_status_t p4_mp_session_accept_host(
+    p4_mp_session_t *session, uint32_t host_peer_id, uint64_t route_id,
+    uint32_t initial_sequence, uint64_t now_ms)
+{
+    if (session == NULL || host_peer_id == 0U || route_id == 0U || initial_sequence == 0U)
+        return P4_MP_INVALID_ARGUMENT;
+    if (session->role != P4_MP_ROLE_CLIENT || session->state != P4_MP_SESSION_JOINING)
+        return P4_MP_INVALID_STATE;
+    p4_mp_peer_t *const peer = &session->peers[0];
+    if (peer->peer_id != host_peer_id || peer->player_slot != 0U)
+        return P4_MP_BAD_IDENTITY;
+    if (peer->route_id != route_id) return P4_MP_ROUTE_MISMATCH;
+    if (!sequence_newer(initial_sequence, peer->last_sequence)) return P4_MP_REPLAYED;
+    peer->last_sequence = initial_sequence;
+    peer->last_seen_ms = now_ms;
+    peer->connected = true;
+    session->state = P4_MP_SESSION_CONNECTED;
+    return P4_MP_OK;
+}
+
 p4_mp_status_t p4_mp_session_encode(
     p4_mp_session_t *session,
     p4_mp_packet_type_t type,
@@ -288,8 +337,11 @@ p4_mp_status_t p4_mp_session_receive(
     if (status != P4_MP_OK) {
         return status;
     }
-    /* Accessories have their own route/session and never refresh a player. */
-    if (packet.type == P4_MP_PACKET_ACCESSORY) {
+    /* Dedicated payload owners validate their own negotiated identity/epoch.
+     * Neither accessories nor checkpoints may refresh a generic player or
+     * advance its receive sequence before that owner accepts the payload. */
+    if (packet.type == P4_MP_PACKET_ACCESSORY ||
+        packet.type == P4_MP_PACKET_CHECKPOINT) {
         return P4_MP_BAD_TYPE;
     }
     if (packet.type == P4_MP_PACKET_DISCOVER ||
@@ -427,6 +479,60 @@ p4_mp_status_t p4_mp_session_receive(
     if (type == P4_MP_EVENT_REJECTED && session->role == P4_MP_ROLE_CLIENT) {
         session->state = P4_MP_SESSION_CLOSED;
     }
+    return P4_MP_OK;
+}
+
+p4_mp_status_t p4_mp_session_receive_checkpoint(
+    p4_mp_session_t *session,
+    uint64_t route_id,
+    uint64_t now_ms,
+    const uint8_t *datagram,
+    size_t datagram_length,
+    p4_mp_event_t *event_out)
+{
+    if (session == NULL || event_out == NULL || route_id == 0U) {
+        return P4_MP_INVALID_ARGUMENT;
+    }
+    event_clear(event_out);
+    if ((session->role != P4_MP_ROLE_HOST &&
+         session->role != P4_MP_ROLE_CLIENT) ||
+        session->state != P4_MP_SESSION_CONNECTED) {
+        return P4_MP_INVALID_STATE;
+    }
+    p4_mp_packet_view_t packet;
+    const p4_mp_status_t status = p4_mp_packet_decode(
+        datagram, datagram_length, &packet);
+    if (status != P4_MP_OK) {
+        return status;
+    }
+    if (packet.type != P4_MP_PACKET_CHECKPOINT) {
+        return P4_MP_BAD_TYPE;
+    }
+    if (packet.session_id != session->session_id) {
+        return P4_MP_WRONG_SESSION;
+    }
+    if (packet.peer_id == session->self_peer_id) {
+        return P4_MP_BAD_IDENTITY;
+    }
+    p4_mp_peer_t *const peer = find_peer(session, packet.peer_id);
+    if (peer == NULL || !peer->connected) {
+        return P4_MP_UNKNOWN_PEER;
+    }
+    if (peer->route_id != route_id) {
+        return P4_MP_ROUTE_MISMATCH;
+    }
+    if (!sequence_newer(packet.sequence, peer->last_sequence)) {
+        return P4_MP_REPLAYED;
+    }
+    peer->last_sequence = packet.sequence;
+    peer->last_seen_ms = now_ms;
+    *event_out = (p4_mp_event_t){
+        .type = P4_MP_EVENT_CHECKPOINT,
+        .peer_id = peer->peer_id,
+        .route_id = peer->route_id,
+        .player_slot = peer->player_slot,
+        .packet = packet,
+    };
     return P4_MP_OK;
 }
 

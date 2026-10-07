@@ -72,3 +72,30 @@ add_test(
     NAME doom_touch_audio_source_contract
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_LIST_DIR}/test_source_contract.py
 )
+add_test(
+    NAME doom_usb_debug_input
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_LIST_DIR}/test_debug_input.py
+)
+add_test(
+    NAME doom_startup_presentation
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_LIST_DIR}/test_startup_presentation.py
+)
+add_test(
+    NAME doom_arena_score_touch
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_LIST_DIR}/test_arena_score_touch.py
+)
+
+add_test(
+    NAME doom_sampled_touch_input
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_LIST_DIR}/test_sampled_touch.py
+)
+
+add_test(
+    NAME doom_touch_sampler_diagnostics_owner
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_LIST_DIR}/test_touch_sampler_diagnostics.py
+)
+
+add_test(
+    NAME doom_main_loop_fairness
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_LIST_DIR}/test_main_loop_fairness.py
+)

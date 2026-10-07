@@ -1,0 +1,1500 @@
+{
+  "schema": "p4-tab5-native-runtime-v1",
+  "recorded_at": "2026-10-07T15:09:29.502313+00:00",
+  "result": "PASS_BOUNDED_CHECKERS_FUNCTIONAL_AND_CLEAN_EXIT_OBSERVATIONS_WITH_CADENCE_AND_HEARD_AUDIO_UNQUALIFIED",
+  "scope": "Exact 0.73 Tab5 pair, B host/A guest Checkers session bf338534: synchronized ready board, five agreed moves including captures, retained selection, guest departure preserving host board, and clean launcher returns. This is a bounded functional smoke, not a full-match, rejoin, reversed-role, performance-release, or overall project completion claim.",
+  "os_install": {
+    "path": "hardware/test-runs/2026-10-07-tab5-073-multiplayer-debug-install.json",
+    "bytes": 28520,
+    "sha256": "e45fcc876998bcab95fee64ef5f9aaf2ef10e0915d9646cec3a692d061935c9e"
+  },
+  "application": {
+    "file": "apps/console_os/build-tab5/p4_console_os.bin",
+    "bytes": 4460976,
+    "sha256": "947edff0c2cee5f19c917346e434e54532fa30bcce2eb02149f51361baaaf0ce",
+    "version": "0.73",
+    "write_offset": "0x20000"
+  },
+  "board": "M5Stack Tab5 v1.3",
+  "game": {
+    "title": "Checkers",
+    "app": "org.p4console.checkers",
+    "version": "1.1.1",
+    "version_basis": "Pinned 072 selected scope/073 lineage declaration; this analysis verifies exact fresh073 package hashes rather than deriving version from a current source tree.",
+    "api": 1,
+    "surface": "768x480",
+    "session_hex": "bf338534",
+    "host": "B",
+    "guest": "A",
+    "transport": "wifi-local",
+    "content_readback_receipt": {
+      "path": "build-host/native-refresh-073-20261007T1438/receipt.json",
+      "bytes": 61142,
+      "sha256": "06b19417adad22b4b7935bebcaa6667a1d4af8a3b736ef0d578a1a16c0061914"
+    },
+    "verified_readbacks": {
+      "A": {
+        "path": "build-host/native-refresh-073-20261007T1438/A/CHECKERS.P4G",
+        "bytes": 94984,
+        "sha256": "970b1b740b0cf79218d482c1fa8ef1cd24c6b6cbfce70f348ee7ac63ee2763c3"
+      },
+      "B": {
+        "path": "build-host/native-refresh-073-20261007T1438/B/CHECKERS.P4G",
+        "bytes": 94984,
+        "sha256": "970b1b740b0cf79218d482c1fa8ef1cd24c6b6cbfce70f348ee7ac63ee2763c3"
+      }
+    }
+  },
+  "evidence": {
+    "prefix_receipt": {
+      "path": "build-host/runtime-acceptance-073/prefix-checkers-native/receipt.json",
+      "bytes": 689,
+      "sha256": "5995b18fc6b32e7b96c9561a05ae67bf55afcd05ffec165cb7170ef88c61e965"
+    },
+    "prefix_captured_at": "2026-10-07T15:03:08.787554+00:00",
+    "raw_inputs": {
+      "commands.jsonl": {
+        "path": "build-host/runtime-acceptance-073/prefix-checkers-native/commands.jsonl",
+        "bytes": 280035,
+        "sha256": "6122ce1a9f9e401adb40ab0cd9d318d6ee3e2e2e93c8f62558a51701a6bd45bc"
+      },
+      "a.rx": {
+        "path": "build-host/runtime-acceptance-073/prefix-checkers-native/a.rx",
+        "bytes": 4588480,
+        "sha256": "6fb1a97a8ec2834ed3b65f99eb5cb73e33bd71a743c2a5083c8676c2df30bb97"
+      },
+      "b.rx": {
+        "path": "build-host/runtime-acceptance-073/prefix-checkers-native/b.rx",
+        "bytes": 4586662,
+        "sha256": "35fba443163075dedc25bce1ca2958bbd86bd8756178cd28711b2f2617995899"
+      }
+    },
+    "analysis_run_receipt": {
+      "path": "build-host/runtime-acceptance-073/checkers-analysis/analysis-run-receipt.json",
+      "bytes": 3173,
+      "sha256": "b0dfcc6c884e0842a6e65d9fff678621f1a755abf093a0671367f6c60348e916"
+    },
+    "analysis": {
+      "path": "build-host/runtime-acceptance-073/checkers-analysis/analysis.json",
+      "bytes": 481392,
+      "sha256": "c804f9e29a1c808d116c185ec425bbc3f208e6d98a7a00694a86851b0e3ea96a"
+    },
+    "window": {
+      "path": "build-host/runtime-acceptance-073/checkers-analysis/windows.json",
+      "bytes": 840,
+      "sha256": "4d19ec3837270f61d06cdb81c1ea79b92a7e3362375126d19358b47f1bbd3888"
+    },
+    "independent_lifecycle_audio_review": {
+      "path": "build-host/runtime-acceptance-073/checkers-analysis/independent-lifecycle-review.json",
+      "bytes": 55347,
+      "sha256": "a39bd30d538102e4311340dcacb192b717f857ff182fbbaa6b09e967069b8224"
+    }
+  },
+  "units": {
+    "A": {
+      "role": "guest",
+      "device_binding_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+      "boot": 1,
+      "native_launch_epoch": 2,
+      "epoch_scope": "One 0.73 boot; prior Air Hockey is native epoch1 and excluded from Checkers lifecycle and counters.",
+      "lifecycle_markers": [
+        {
+          "kind": "CARTRIDGE_START",
+          "app": "org.p4console.checkers",
+          "epoch": 2,
+          "raw_start": 2805752,
+          "raw_end": 2806023,
+          "launch_app": "org.p4console.checkers",
+          "launch_active": true,
+          "tag_uptime_ms": 862603,
+          "tag": "p4_console_os",
+          "text": "P4_CONSOLE_OS CARTRIDGE_START app=org.p4console.checkers file=CHECKERS.P4G api=1 source=microsd-games-directory runtime=psram-elf audio=ready signals=offline saves=session-only multiplayer=connected surface=768x480 save_bytes=0 save_sequence=0",
+          "fields": {
+            "app": "org.p4console.checkers",
+            "file": "CHECKERS.P4G",
+            "api": 1,
+            "source": "microsd-games-directory",
+            "runtime": "psram-elf",
+            "audio": "ready",
+            "signals": "offline",
+            "saves": "session-only",
+            "multiplayer": "connected",
+            "surface": "768x480",
+            "save_bytes": 0,
+            "save_sequence": 0
+          },
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T14:59:10.674360+00:00",
+            "utc_upper": "2026-10-07T14:59:11.439329+00:00",
+            "prior_journal_index": 272,
+            "following_journal_index": 273,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          },
+          "parse_errors": [],
+          "interleaved_line": false
+        },
+        {
+          "kind": "AUDIO_WORKER_STOP",
+          "app": "org.p4console.checkers",
+          "epoch": 2,
+          "raw_start": 4350966,
+          "raw_end": 4351081,
+          "launch_app": "org.p4console.checkers",
+          "launch_active": true,
+          "tag_uptime_ms": 1075366,
+          "tag": "p4_console_os",
+          "text": "P4_CONSOLE_OS AUDIO_WORKER_STOP core=1 frames=3404160 underrun=0 rejected=0 stack=2076",
+          "fields": {
+            "core": 1,
+            "frames": 3404160,
+            "underrun": 0,
+            "rejected": 0,
+            "stack": 2076
+          },
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:02:43.714395+00:00",
+            "utc_upper": "2026-10-07T15:02:44.465837+00:00",
+            "prior_journal_index": 358,
+            "following_journal_index": 359,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          },
+          "parse_errors": [],
+          "interleaved_line": false
+        },
+        {
+          "kind": "CARTRIDGE_STOP",
+          "app": "org.p4console.checkers",
+          "epoch": 2,
+          "raw_start": 4351169,
+          "raw_end": 4351433,
+          "launch_app": "org.p4console.checkers",
+          "launch_active": false,
+          "tag_uptime_ms": 1075565,
+          "tag": "p4_console_os",
+          "text": "P4_CONSOLE_OS CARTRIDGE_STOP app=org.p4console.checkers result=ESP_OK frames=3058 deadline_misses=3057 max_frame_ms=100 max_late_ms=138 display_ack_misses=0 return=launcher audio_frames=3404416 audio_stream_underrun_frames=0 amp_safe=1",
+          "fields": {
+            "app": "org.p4console.checkers",
+            "result": "ESP_OK",
+            "frames": 3058,
+            "deadline_misses": 3057,
+            "max_frame_ms": 100,
+            "max_late_ms": 138,
+            "display_ack_misses": 0,
+            "return": "launcher",
+            "audio_frames": 3404416,
+            "audio_stream_underrun_frames": 0,
+            "amp_safe": 1
+          },
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:02:43.714395+00:00",
+            "utc_upper": "2026-10-07T15:02:44.465837+00:00",
+            "prior_journal_index": 358,
+            "following_journal_index": 359,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          },
+          "parse_errors": [],
+          "interleaved_line": false
+        }
+      ],
+      "cadence": {
+        "result": "UNAVAILABLE_FOR_CLEAN_WINDOW_QUALIFICATION",
+        "summary": {
+          "interval_count": 0,
+          "frames": 0,
+          "wall_us": 0,
+          "weighted_fps": null,
+          "minimum_interval_fps": null
+        },
+        "candidate_intervals": 10,
+        "exclusion_counts": {
+          "not-wholly-inside-declared-PLAY-window": 3,
+          "possible-screenshot-overlap": 10,
+          "not-bound-to-active-matching-cartridge-launch": 1
+        },
+        "final_cumulative_timing": {
+          "kind": "CARTRIDGE_TIMING",
+          "app": "org.p4console.checkers",
+          "epoch": 2,
+          "raw_start": 4351433,
+          "raw_end": 4351916,
+          "launch_app": "org.p4console.checkers",
+          "launch_active": false,
+          "tag_uptime_ms": 1075568,
+          "tag": "p4_console_os",
+          "text": "P4_CONSOLE_OS CARTRIDGE_TIMING app=org.p4console.checkers samples=3058 wall_total_us=212529660 wall_avg_us=69499 wall_max_us=155003 update_render_avg_us=43848 update_render_max_us=46382 input_avg_us=527 input_max_us=1975 audio_avg_us=1 audio_max_us=27 present_avg_us=23360 present_max_us=25302 reuse_avg_us=24 reuse_max_us=356 transform_avg_us=19850 transform_max_us=20667 handoff_avg_us=612 handoff_max_us=1227 deadline_rebases=3057 audio_discarded_us=0",
+          "fields": {
+            "app": "org.p4console.checkers",
+            "samples": 3058,
+            "wall_total_us": 212529660,
+            "wall_avg_us": 69499,
+            "wall_max_us": 155003,
+            "update_render_avg_us": 43848,
+            "update_render_max_us": 46382,
+            "input_avg_us": 527,
+            "input_max_us": 1975,
+            "audio_avg_us": 1,
+            "audio_max_us": 27,
+            "present_avg_us": 23360,
+            "present_max_us": 25302,
+            "reuse_avg_us": 24,
+            "reuse_max_us": 356,
+            "transform_avg_us": 19850,
+            "transform_max_us": 20667,
+            "handoff_avg_us": 612,
+            "handoff_max_us": 1227,
+            "deadline_rebases": 3057,
+            "audio_discarded_us": 0
+          },
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:02:43.714395+00:00",
+            "utc_upper": "2026-10-07T15:02:44.465837+00:00",
+            "prior_journal_index": 358,
+            "following_journal_index": 359,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          },
+          "parse_errors": [],
+          "interleaved_line": false
+        },
+        "whole_lifetime_samples_per_wall_second": 14.388579928090978,
+        "scope": "The descriptive rate covers the full measured gameplay-loop lifetime, including deliberation and screenshot servicing; it excludes package loading, initial presentation and teardown, and is not an eligible clean active-play interval or optical frame rate. Nearly every 60FPS deadline was missed; no 30FPS release-floor or 60FPS target pass is claimed. STOP max_frame_ms100 is the capped game elapsed delta, not an unclamped wall maximum or intended10Hz schedule; CARTRIDGE_TIMING wall_max_us retains the unclamped maximum."
+      },
+      "audio": {
+        "software_result": "Worker frame production advanced; all ten observed periodic worker records report zero underrun/rejected/write_failures/clipped.",
+        "periodic_record_count": 10,
+        "first_record": {
+          "kind": "AUDIO_WORKER",
+          "app": "org.p4console.checkers",
+          "epoch": 2,
+          "raw_start": 3039678,
+          "raw_end": 3039877,
+          "launch_app": "org.p4console.checkers",
+          "launch_active": true,
+          "tag_uptime_ms": 883682,
+          "tag": "p4_console_os",
+          "text": "P4_CONSOLE_OS AUDIO_WORKER app=org.p4console.checkers game_core=0 audio_core=1 running=1 queued=0 rejected=0 underrun=0 clipped=0 frames=337280 write_failures=0 stack=2076",
+          "fields": {
+            "app": "org.p4console.checkers",
+            "game_core": 0,
+            "audio_core": 1,
+            "running": 1,
+            "queued": 0,
+            "rejected": 0,
+            "underrun": 0,
+            "clipped": 0,
+            "frames": 337280,
+            "write_failures": 0,
+            "stack": 2076
+          },
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T14:59:28.127554+00:00",
+            "utc_upper": "2026-10-07T14:59:42.200579+00:00",
+            "prior_journal_index": 278,
+            "following_journal_index": 282,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          },
+          "parse_errors": [],
+          "interleaved_line": false
+        },
+        "last_record": {
+          "kind": "AUDIO_WORKER",
+          "app": "org.p4console.checkers",
+          "epoch": 2,
+          "raw_start": 4349493,
+          "raw_end": 4349694,
+          "launch_app": "org.p4console.checkers",
+          "launch_active": true,
+          "tag_uptime_ms": 1071375,
+          "tag": "p4_console_os",
+          "text": "P4_CONSOLE_OS AUDIO_WORKER app=org.p4console.checkers game_core=0 audio_core=1 running=1 queued=0 rejected=0 underrun=0 clipped=0 frames=3340416 write_failures=0 stack=2076",
+          "fields": {
+            "app": "org.p4console.checkers",
+            "game_core": 0,
+            "audio_core": 1,
+            "running": 1,
+            "queued": 0,
+            "rejected": 0,
+            "underrun": 0,
+            "clipped": 0,
+            "frames": 3340416,
+            "write_failures": 0,
+            "stack": 2076
+          },
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:02:25.512974+00:00",
+            "utc_upper": "2026-10-07T15:02:43.714304+00:00",
+            "prior_journal_index": 353,
+            "following_journal_index": 357,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          },
+          "parse_errors": [],
+          "interleaved_line": false
+        },
+        "eligible_clean_intervals": 0,
+        "eligible_contiguous_runs": [],
+        "heard_sfx": "PENDING",
+        "music_content": "NOT_ESTABLISHED",
+        "scope": "Frames may include silence. No audible output, music content, or uninterrupted 120-second audio-health acceptance follows from these counters."
+      },
+      "parse_anomalies": []
+    },
+    "B": {
+      "role": "host",
+      "device_binding_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+      "boot": 1,
+      "native_launch_epoch": 2,
+      "epoch_scope": "One 0.73 boot; prior Air Hockey is native epoch1 and excluded from Checkers lifecycle and counters.",
+      "lifecycle_markers": [
+        {
+          "kind": "CARTRIDGE_START",
+          "app": "org.p4console.checkers",
+          "epoch": 2,
+          "raw_start": 2802974,
+          "raw_end": 2803245,
+          "launch_app": "org.p4console.checkers",
+          "launch_active": true,
+          "tag_uptime_ms": 862708,
+          "tag": "p4_console_os",
+          "text": "P4_CONSOLE_OS CARTRIDGE_START app=org.p4console.checkers file=CHECKERS.P4G api=1 source=microsd-games-directory runtime=psram-elf audio=ready signals=offline saves=session-only multiplayer=connected surface=768x480 save_bytes=0 save_sequence=0",
+          "fields": {
+            "app": "org.p4console.checkers",
+            "file": "CHECKERS.P4G",
+            "api": 1,
+            "source": "microsd-games-directory",
+            "runtime": "psram-elf",
+            "audio": "ready",
+            "signals": "offline",
+            "saves": "session-only",
+            "multiplayer": "connected",
+            "surface": "768x480",
+            "save_bytes": 0,
+            "save_sequence": 0
+          },
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T14:59:10.674360+00:00",
+            "utc_upper": "2026-10-07T14:59:11.439329+00:00",
+            "prior_journal_index": 272,
+            "following_journal_index": 273,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          },
+          "parse_errors": [],
+          "interleaved_line": false
+        },
+        {
+          "kind": "AUDIO_WORKER_STOP",
+          "app": "org.p4console.checkers",
+          "epoch": 2,
+          "raw_start": 4467448,
+          "raw_end": 4467563,
+          "launch_app": "org.p4console.checkers",
+          "launch_active": true,
+          "tag_uptime_ms": 1093936,
+          "tag": "p4_console_os",
+          "text": "P4_CONSOLE_OS AUDIO_WORKER_STOP core=1 frames=3699584 underrun=0 rejected=0 stack=2076",
+          "fields": {
+            "core": 1,
+            "frames": 3699584,
+            "underrun": 0,
+            "rejected": 0,
+            "stack": 2076
+          },
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:03:02.322576+00:00",
+            "utc_upper": "2026-10-07T15:03:03.035945+00:00",
+            "prior_journal_index": 365,
+            "following_journal_index": 366,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          },
+          "parse_errors": [],
+          "interleaved_line": false
+        },
+        {
+          "kind": "CARTRIDGE_STOP",
+          "app": "org.p4console.checkers",
+          "epoch": 2,
+          "raw_start": 4467651,
+          "raw_end": 4467915,
+          "launch_app": "org.p4console.checkers",
+          "launch_active": false,
+          "tag_uptime_ms": 1094136,
+          "tag": "p4_console_os",
+          "text": "P4_CONSOLE_OS CARTRIDGE_STOP app=org.p4console.checkers result=ESP_OK frames=3318 deadline_misses=3317 max_frame_ms=100 max_late_ms=132 display_ack_misses=0 return=launcher audio_frames=3699840 audio_stream_underrun_frames=0 amp_safe=1",
+          "fields": {
+            "app": "org.p4console.checkers",
+            "result": "ESP_OK",
+            "frames": 3318,
+            "deadline_misses": 3317,
+            "max_frame_ms": 100,
+            "max_late_ms": 132,
+            "display_ack_misses": 0,
+            "return": "launcher",
+            "audio_frames": 3699840,
+            "audio_stream_underrun_frames": 0,
+            "amp_safe": 1
+          },
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:03:02.322576+00:00",
+            "utc_upper": "2026-10-07T15:03:03.035945+00:00",
+            "prior_journal_index": 365,
+            "following_journal_index": 366,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          },
+          "parse_errors": [],
+          "interleaved_line": false
+        }
+      ],
+      "cadence": {
+        "result": "UNAVAILABLE_FOR_CLEAN_WINDOW_QUALIFICATION",
+        "summary": {
+          "interval_count": 0,
+          "frames": 0,
+          "wall_us": 0,
+          "weighted_fps": null,
+          "minimum_interval_fps": null
+        },
+        "candidate_intervals": 10,
+        "exclusion_counts": {
+          "not-wholly-inside-declared-PLAY-window": 3,
+          "possible-screenshot-overlap": 10
+        },
+        "final_cumulative_timing": {
+          "kind": "CARTRIDGE_TIMING",
+          "app": "org.p4console.checkers",
+          "epoch": 2,
+          "raw_start": 4467915,
+          "raw_end": 4468398,
+          "launch_app": "org.p4console.checkers",
+          "launch_active": false,
+          "tag_uptime_ms": 1094139,
+          "tag": "p4_console_os",
+          "text": "P4_CONSOLE_OS CARTRIDGE_TIMING app=org.p4console.checkers samples=3318 wall_total_us=231024611 wall_avg_us=69627 wall_max_us=150316 update_render_avg_us=43827 update_render_max_us=46989 input_avg_us=525 input_max_us=1901 audio_avg_us=1 audio_max_us=37 present_avg_us=23600 present_max_us=25144 reuse_avg_us=24 reuse_max_us=359 transform_avg_us=19985 transform_max_us=20768 handoff_avg_us=627 handoff_max_us=1346 deadline_rebases=3317 audio_discarded_us=0",
+          "fields": {
+            "app": "org.p4console.checkers",
+            "samples": 3318,
+            "wall_total_us": 231024611,
+            "wall_avg_us": 69627,
+            "wall_max_us": 150316,
+            "update_render_avg_us": 43827,
+            "update_render_max_us": 46989,
+            "input_avg_us": 525,
+            "input_max_us": 1901,
+            "audio_avg_us": 1,
+            "audio_max_us": 37,
+            "present_avg_us": 23600,
+            "present_max_us": 25144,
+            "reuse_avg_us": 24,
+            "reuse_max_us": 359,
+            "transform_avg_us": 19985,
+            "transform_max_us": 20768,
+            "handoff_avg_us": 627,
+            "handoff_max_us": 1346,
+            "deadline_rebases": 3317,
+            "audio_discarded_us": 0
+          },
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:03:02.322576+00:00",
+            "utc_upper": "2026-10-07T15:03:03.035945+00:00",
+            "prior_journal_index": 365,
+            "following_journal_index": 366,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          },
+          "parse_errors": [],
+          "interleaved_line": false
+        },
+        "whole_lifetime_samples_per_wall_second": 14.36210620867575,
+        "scope": "The descriptive rate covers the full measured gameplay-loop lifetime, including deliberation and screenshot servicing; it excludes package loading, initial presentation and teardown, and is not an eligible clean active-play interval or optical frame rate. Nearly every 60FPS deadline was missed; no 30FPS release-floor or 60FPS target pass is claimed. STOP max_frame_ms100 is the capped game elapsed delta, not an unclamped wall maximum or intended10Hz schedule; CARTRIDGE_TIMING wall_max_us retains the unclamped maximum."
+      },
+      "audio": {
+        "software_result": "Worker frame production advanced; all ten observed periodic worker records report zero underrun/rejected/write_failures/clipped.",
+        "periodic_record_count": 10,
+        "first_record": {
+          "kind": "AUDIO_WORKER",
+          "app": "org.p4console.checkers",
+          "epoch": 2,
+          "raw_start": 3039529,
+          "raw_end": 3039728,
+          "launch_app": "org.p4console.checkers",
+          "launch_active": true,
+          "tag_uptime_ms": 883819,
+          "tag": "p4_console_os",
+          "text": "P4_CONSOLE_OS AUDIO_WORKER app=org.p4console.checkers game_core=0 audio_core=1 running=1 queued=0 rejected=0 underrun=0 clipped=0 frames=337792 write_failures=0 stack=2076",
+          "fields": {
+            "app": "org.p4console.checkers",
+            "game_core": 0,
+            "audio_core": 1,
+            "running": 1,
+            "queued": 0,
+            "rejected": 0,
+            "underrun": 0,
+            "clipped": 0,
+            "frames": 337792,
+            "write_failures": 0,
+            "stack": 2076
+          },
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T14:59:28.127554+00:00",
+            "utc_upper": "2026-10-07T14:59:42.200579+00:00",
+            "prior_journal_index": 278,
+            "following_journal_index": 282,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          },
+          "parse_errors": [],
+          "interleaved_line": false
+        },
+        "last_record": {
+          "kind": "AUDIO_WORKER",
+          "app": "org.p4console.checkers",
+          "epoch": 2,
+          "raw_start": 4465975,
+          "raw_end": 4466176,
+          "launch_app": "org.p4console.checkers",
+          "launch_active": true,
+          "tag_uptime_ms": 1092684,
+          "tag": "p4_console_os",
+          "text": "P4_CONSOLE_OS AUDIO_WORKER app=org.p4console.checkers game_core=0 audio_core=1 running=1 queued=0 rejected=0 underrun=0 clipped=0 frames=3679616 write_failures=0 stack=2076",
+          "fields": {
+            "app": "org.p4console.checkers",
+            "game_core": 0,
+            "audio_core": 1,
+            "running": 1,
+            "queued": 0,
+            "rejected": 0,
+            "underrun": 0,
+            "clipped": 0,
+            "frames": 3679616,
+            "write_failures": 0,
+            "stack": 2076
+          },
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:02:44.466093+00:00",
+            "utc_upper": "2026-10-07T15:03:02.322492+00:00",
+            "prior_journal_index": 360,
+            "following_journal_index": 364,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          },
+          "parse_errors": [],
+          "interleaved_line": false
+        },
+        "eligible_clean_intervals": 0,
+        "eligible_contiguous_runs": [],
+        "heard_sfx": "PENDING",
+        "music_content": "NOT_ESTABLISHED",
+        "scope": "Frames may include silence. No audible output, music content, or uninterrupted 120-second audio-health acceptance follows from these counters."
+      },
+      "parse_anomalies": []
+    }
+  },
+  "root_hardware_observations": [
+    {
+      "observer": "/root",
+      "basis": "Root explicitly reported personally viewing these saved paired captures; offline analyst does not substitute telemetry for that observation.",
+      "screenshot_journal_indices": [
+        279
+      ],
+      "observation": "Both consoles showed 12/12 pieces and red turn; the synchronization label was gone."
+    },
+    {
+      "observer": "/root",
+      "basis": "Root explicitly reported personally viewing these saved paired captures; offline analyst does not substitute telemetry for that observation.",
+      "screenshot_journal_indices": [
+        286,
+        293
+      ],
+      "observation": "Selection and first move agreed on both consoles."
+    },
+    {
+      "observer": "/root",
+      "basis": "Root explicitly reported personally viewing these saved paired captures; offline analyst does not substitute telemetry for that observation.",
+      "screenshot_journal_indices": [
+        300,
+        305,
+        312
+      ],
+      "observation": "Guest white selection and green target remained visible in the later hold capture, then the second move completed."
+    },
+    {
+      "observer": "/root",
+      "basis": "Root explicitly reported personally viewing these saved paired captures; offline analyst does not substitute telemetry for that observation.",
+      "screenshot_journal_indices": [
+        319,
+        326
+      ],
+      "observation": "Third selection and move agreed on both consoles."
+    },
+    {
+      "observer": "/root",
+      "basis": "Root explicitly reported personally viewing these saved paired captures; offline analyst does not substitute telemetry for that observation.",
+      "screenshot_journal_indices": [
+        333,
+        340,
+        347,
+        354
+      ],
+      "observation": "White then red captures produced 11/12 then 11/11 counts; both consoles agreed on white turn after the fifth move."
+    },
+    {
+      "observer": "/root",
+      "basis": "Root explicitly reported personally viewing these saved paired captures; offline analyst does not substitute telemetry for that observation.",
+      "screenshot_journal_indices": [
+        361
+      ],
+      "observation": "After guest A departed, A showed Home and host B showed LINK LOST: LOCAL with the 11/11 board and white turn preserved."
+    },
+    {
+      "observer": "/root",
+      "basis": "Root explicitly reported personally viewing these saved paired captures; offline analyst does not substitute telemetry for that observation.",
+      "screenshot_journal_indices": [
+        368
+      ],
+      "observation": "After host exit, both consoles showed Home."
+    }
+  ],
+  "selection_persistence_scope": {
+    "select_capture_journal_index": 300,
+    "hold_capture_journal_index": 305,
+    "capture_completion_separation_seconds": 18.693442,
+    "minimum_between_capture_command_windows_seconds": 14.448287,
+    "claim": "Selection visible at both sampled endpoints without an intervening move; not continuous optical monitoring or an exact first-frame latency measurement."
+  },
+  "screenshot_receipts": [
+    {
+      "journal_index": 279,
+      "name": "ck73ready-checkers-b-observe",
+      "started_at": "2026-10-07T14:59:28.242408+00:00",
+      "completed_at": "2026-10-07T14:59:32.461005+00:00",
+      "responses": {
+        "A": {
+          "capture_id": 2207696922,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "7d2817abda97b68c8532a156607bbde522ddf10027cf0973c094cac83f50746c",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ck73ready-checkers-b-observe-a.png"
+        },
+        "B": {
+          "capture_id": 2871680870,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "3cf82a9362d08057cd9238a4649c4dcf382c19ec5ed8cc98fa1e839eeec46511",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ck73ready-checkers-b-observe-b.png"
+        }
+      },
+      "png_files": {
+        "A": {
+          "path": "build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ck73ready-checkers-b-observe-a.png",
+          "bytes": 8492,
+          "sha256": "ad7bb610c874708ffc33d70992b357fc9801c86064907e460d9a8559acbac55d"
+        },
+        "B": {
+          "path": "build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ck73ready-checkers-b-observe-b.png",
+          "bytes": 8584,
+          "sha256": "15b952cdddd595987011de7cb9eb261834af02b2233fcd6c354af6b7d0b5b9af"
+        }
+      }
+    },
+    {
+      "journal_index": 286,
+      "name": "ck73s1-checkers-b-select1",
+      "started_at": "2026-10-07T14:59:43.099460+00:00",
+      "completed_at": "2026-10-07T14:59:47.348751+00:00",
+      "responses": {
+        "B": {
+          "capture_id": 3852869340,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "cf4678169275b64aac068a6dbc5f0355d2eb8a498002973abef4753659ec6427",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ck73s1-checkers-b-select1-b.png"
+        },
+        "A": {
+          "capture_id": 933316918,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "7d2817abda97b68c8532a156607bbde522ddf10027cf0973c094cac83f50746c",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ck73s1-checkers-b-select1-a.png"
+        }
+      },
+      "png_files": {
+        "B": {
+          "path": "build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ck73s1-checkers-b-select1-b.png",
+          "bytes": 8638,
+          "sha256": "bfdaa36c3ce5cae9c677169842d8a1bcb52fc2e9dd10e8be39a956fd534a397f"
+        },
+        "A": {
+          "path": "build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ck73s1-checkers-b-select1-a.png",
+          "bytes": 8492,
+          "sha256": "ad7bb610c874708ffc33d70992b357fc9801c86064907e460d9a8559acbac55d"
+        }
+      }
+    },
+    {
+      "journal_index": 293,
+      "name": "ck73m1-checkers-b-move1",
+      "started_at": "2026-10-07T14:59:57.760609+00:00",
+      "completed_at": "2026-10-07T15:00:01.943717+00:00",
+      "responses": {
+        "B": {
+          "capture_id": 2705208449,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "1bc316f381efe62b3f52079c39c389fbd50fbd55cd309efd64f54b04c849da91",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ck73m1-checkers-b-move1-b.png"
+        },
+        "A": {
+          "capture_id": 2973524072,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "ab27611e9afb9fac3c66f1297a68d5151d0dffa6ecf5c5fefb717c798432551b",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ck73m1-checkers-b-move1-a.png"
+        }
+      },
+      "png_files": {
+        "B": {
+          "path": "build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ck73m1-checkers-b-move1-b.png",
+          "bytes": 8460,
+          "sha256": "c2ef792571ccb745193db8374b57a72f7e697c9d42ca8b9b6d4cc2d856c4beba"
+        },
+        "A": {
+          "path": "build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ck73m1-checkers-b-move1-a.png",
+          "bytes": 8563,
+          "sha256": "61eb2ef205cd0510a6e0693bff3dfb7a2480ae89719235efe4d27d66db5294bb"
+        }
+      }
+    },
+    {
+      "journal_index": 300,
+      "name": "ck73s2-checkers-b-select2",
+      "started_at": "2026-10-07T15:00:11.880287+00:00",
+      "completed_at": "2026-10-07T15:00:16.147553+00:00",
+      "responses": {
+        "B": {
+          "capture_id": 3545843124,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "1bc316f381efe62b3f52079c39c389fbd50fbd55cd309efd64f54b04c849da91",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ck73s2-checkers-b-select2-b.png"
+        },
+        "A": {
+          "capture_id": 2136013567,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "4a4f16ce4ede95edc98963655a528a6d0b37d0837cc0beeeeb314230b5c16058",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ck73s2-checkers-b-select2-a.png"
+        }
+      },
+      "png_files": {
+        "B": {
+          "path": "build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ck73s2-checkers-b-select2-b.png",
+          "bytes": 8460,
+          "sha256": "c2ef792571ccb745193db8374b57a72f7e697c9d42ca8b9b6d4cc2d856c4beba"
+        },
+        "A": {
+          "path": "build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ck73s2-checkers-b-select2-a.png",
+          "bytes": 8607,
+          "sha256": "af034bc58865c7cc9b6cb94b560911683279c0eb797026c5b13711b971b415d9"
+        }
+      }
+    },
+    {
+      "journal_index": 305,
+      "name": "ck73hold-checkers-b-observe",
+      "started_at": "2026-10-07T15:00:30.595840+00:00",
+      "completed_at": "2026-10-07T15:00:34.840995+00:00",
+      "responses": {
+        "B": {
+          "capture_id": 1407402924,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "1bc316f381efe62b3f52079c39c389fbd50fbd55cd309efd64f54b04c849da91",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ck73hold-checkers-b-observe-b.png"
+        },
+        "A": {
+          "capture_id": 3168942747,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "4a4f16ce4ede95edc98963655a528a6d0b37d0837cc0beeeeb314230b5c16058",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ck73hold-checkers-b-observe-a.png"
+        }
+      },
+      "png_files": {
+        "B": {
+          "path": "build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ck73hold-checkers-b-observe-b.png",
+          "bytes": 8460,
+          "sha256": "c2ef792571ccb745193db8374b57a72f7e697c9d42ca8b9b6d4cc2d856c4beba"
+        },
+        "A": {
+          "path": "build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ck73hold-checkers-b-observe-a.png",
+          "bytes": 8607,
+          "sha256": "af034bc58865c7cc9b6cb94b560911683279c0eb797026c5b13711b971b415d9"
+        }
+      }
+    },
+    {
+      "journal_index": 312,
+      "name": "ck73m2-checkers-b-move2",
+      "started_at": "2026-10-07T15:00:47.720512+00:00",
+      "completed_at": "2026-10-07T15:00:51.931491+00:00",
+      "responses": {
+        "A": {
+          "capture_id": 615650090,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "3baae73618ee8ae12ddc4c619bfbb042e6acff8b9839f2d033f47f88c59a6a52",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ck73m2-checkers-b-move2-a.png"
+        },
+        "B": {
+          "capture_id": 179198274,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "47db6bbc158b495319116e7c1a360d78e7979fb75ba2d12a881a4ec50914a39c",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ck73m2-checkers-b-move2-b.png"
+        }
+      },
+      "png_files": {
+        "A": {
+          "path": "build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ck73m2-checkers-b-move2-a.png",
+          "bytes": 8530,
+          "sha256": "860311f061f90a0c93e9fa5239a73a3e0e1159ce2b47ca8f25c2d774772ef2fa"
+        },
+        "B": {
+          "path": "build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ck73m2-checkers-b-move2-b.png",
+          "bytes": 8533,
+          "sha256": "7a93d250b0d4555fa630a7ebac675766ff7ff80d42a69ba2ddf727c21bb8f01c"
+        }
+      }
+    },
+    {
+      "journal_index": 319,
+      "name": "ck73s3-checkers-b-select3",
+      "started_at": "2026-10-07T15:01:02.651668+00:00",
+      "completed_at": "2026-10-07T15:01:06.889783+00:00",
+      "responses": {
+        "A": {
+          "capture_id": 49449654,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "3baae73618ee8ae12ddc4c619bfbb042e6acff8b9839f2d033f47f88c59a6a52",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ck73s3-checkers-b-select3-a.png"
+        },
+        "B": {
+          "capture_id": 3274882573,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "18aceeca3e6aa15490c54cfbb4746119d9167fcb18b35e8cd377b1c7a12bd660",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ck73s3-checkers-b-select3-b.png"
+        }
+      },
+      "png_files": {
+        "A": {
+          "path": "build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ck73s3-checkers-b-select3-a.png",
+          "bytes": 8530,
+          "sha256": "860311f061f90a0c93e9fa5239a73a3e0e1159ce2b47ca8f25c2d774772ef2fa"
+        },
+        "B": {
+          "path": "build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ck73s3-checkers-b-select3-b.png",
+          "bytes": 8721,
+          "sha256": "97a21f014336ca2713ec63e6eb8207a8ec5f7d503e610987c88eeef1a8b13875"
+        }
+      }
+    },
+    {
+      "journal_index": 326,
+      "name": "ck73m3-checkers-b-move3",
+      "started_at": "2026-10-07T15:01:17.412571+00:00",
+      "completed_at": "2026-10-07T15:01:21.649944+00:00",
+      "responses": {
+        "A": {
+          "capture_id": 2198998196,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "eb11ed425ed8ffc283711f89be185f6fc2858a3a0b770e268aff14e9fa14b328",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ck73m3-checkers-b-move3-a.png"
+        },
+        "B": {
+          "capture_id": 796151273,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "6a788e2f04ab457f38115e3da89f7ed8fb9bfb9db3c1cc4a509886e80f434e08",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ck73m3-checkers-b-move3-b.png"
+        }
+      },
+      "png_files": {
+        "A": {
+          "path": "build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ck73m3-checkers-b-move3-a.png",
+          "bytes": 8896,
+          "sha256": "96fb8ad154b6a615832b9beb6bd532539ddca4fa2cccc6394bf70d124bd3e999"
+        },
+        "B": {
+          "path": "build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ck73m3-checkers-b-move3-b.png",
+          "bytes": 8863,
+          "sha256": "9c5e1c0f4cdc7f287e73f42b602d00abb896a189e18a139b3443726f690310ad"
+        }
+      }
+    },
+    {
+      "journal_index": 333,
+      "name": "ck73s4-checkers-b-select4",
+      "started_at": "2026-10-07T15:01:37.279266+00:00",
+      "completed_at": "2026-10-07T15:01:41.503110+00:00",
+      "responses": {
+        "B": {
+          "capture_id": 320267482,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "6a788e2f04ab457f38115e3da89f7ed8fb9bfb9db3c1cc4a509886e80f434e08",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ck73s4-checkers-b-select4-b.png"
+        },
+        "A": {
+          "capture_id": 1981727766,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "bbcb0f7a950bd7bd8d777af2e7b67b86676c163e852cfdd4666a43fedd2f3a64",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ck73s4-checkers-b-select4-a.png"
+        }
+      },
+      "png_files": {
+        "B": {
+          "path": "build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ck73s4-checkers-b-select4-b.png",
+          "bytes": 8863,
+          "sha256": "9c5e1c0f4cdc7f287e73f42b602d00abb896a189e18a139b3443726f690310ad"
+        },
+        "A": {
+          "path": "build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ck73s4-checkers-b-select4-a.png",
+          "bytes": 8938,
+          "sha256": "51cfaaba3d4c112876b0a6feb0e101a6f8bbdcd687bf2186363c957dedf9a1c0"
+        }
+      }
+    },
+    {
+      "journal_index": 340,
+      "name": "ck73m4-checkers-b-move4",
+      "started_at": "2026-10-07T15:01:54.351231+00:00",
+      "completed_at": "2026-10-07T15:01:58.595432+00:00",
+      "responses": {
+        "A": {
+          "capture_id": 3981318059,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "caaaa1cbcfe3d789937074bc9096b282d41a6aa0399c820e17f6c487c9364da6",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ck73m4-checkers-b-move4-a.png"
+        },
+        "B": {
+          "capture_id": 1546379185,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "3a027ddfba8bfba23731b9a64cc48e2eec81bfcf004b7549d3cbe694bc05ff70",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ck73m4-checkers-b-move4-b.png"
+        }
+      },
+      "png_files": {
+        "A": {
+          "path": "build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ck73m4-checkers-b-move4-a.png",
+          "bytes": 9192,
+          "sha256": "03b20dd5fa141bf34ec86e4f46abeb0158f76da1c91812f623ef9aaa416c56e4"
+        },
+        "B": {
+          "path": "build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ck73m4-checkers-b-move4-b.png",
+          "bytes": 9234,
+          "sha256": "892db3e7e5b35e44286ea3daf889048d358f2e69bb4599a5cc94deb29d20353f"
+        }
+      }
+    },
+    {
+      "journal_index": 347,
+      "name": "ck73s5-checkers-b-select5",
+      "started_at": "2026-10-07T15:02:08.951263+00:00",
+      "completed_at": "2026-10-07T15:02:13.201807+00:00",
+      "responses": {
+        "A": {
+          "capture_id": 3027547974,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "caaaa1cbcfe3d789937074bc9096b282d41a6aa0399c820e17f6c487c9364da6",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ck73s5-checkers-b-select5-a.png"
+        },
+        "B": {
+          "capture_id": 1864783583,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "1f5d3e4b0490b18a28bbb73b0df19c2ba3aaa001ed4f1f7ba8321962059cf54d",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ck73s5-checkers-b-select5-b.png"
+        }
+      },
+      "png_files": {
+        "A": {
+          "path": "build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ck73s5-checkers-b-select5-a.png",
+          "bytes": 9192,
+          "sha256": "03b20dd5fa141bf34ec86e4f46abeb0158f76da1c91812f623ef9aaa416c56e4"
+        },
+        "B": {
+          "path": "build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ck73s5-checkers-b-select5-b.png",
+          "bytes": 9300,
+          "sha256": "2542930c86128404fedd3610eac80382607ee466a342cc8bf7f19834ef5b8e84"
+        }
+      }
+    },
+    {
+      "journal_index": 354,
+      "name": "ck73m5-checkers-b-move5",
+      "started_at": "2026-10-07T15:02:25.598067+00:00",
+      "completed_at": "2026-10-07T15:02:29.804730+00:00",
+      "responses": {
+        "B": {
+          "capture_id": 3230397666,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "9f61d429dd8b7d744e4049780b77c002c366719c970cf8602d12bd82d5331ca3",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ck73m5-checkers-b-move5-b.png"
+        },
+        "A": {
+          "capture_id": 866381068,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "267d0b3be263ac0778ca01462679c033510c9bc57bbfb06609cd56d38c1dec38",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ck73m5-checkers-b-move5-a.png"
+        }
+      },
+      "png_files": {
+        "B": {
+          "path": "build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ck73m5-checkers-b-move5-b.png",
+          "bytes": 8545,
+          "sha256": "33bcfb96f3f0a0b19c11fd85f24668fb081088e2ec7c84723a60abc7939067cb"
+        },
+        "A": {
+          "path": "build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ck73m5-checkers-b-move5-a.png",
+          "bytes": 8695,
+          "sha256": "973f189e19c81a19bef9a1a63c7e1354b52025d4e6b0d21e8d835fac6e041ed6"
+        }
+      }
+    },
+    {
+      "journal_index": 361,
+      "name": "ck73depart-checkers-b-depart-guest",
+      "started_at": "2026-10-07T15:02:44.562657+00:00",
+      "completed_at": "2026-10-07T15:02:48.767554+00:00",
+      "responses": {
+        "A": {
+          "capture_id": 1677513137,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "8a55b40b7351966055c1f1142c9ece5dce7ddf6904853a564aa4edd81b14b832",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ck73depart-checkers-b-depart-guest-a.png"
+        },
+        "B": {
+          "capture_id": 2755173313,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "f0d037706fb81e0f8395be13aefabca539c8baf4932f026618c5fe9a58b7b771",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ck73depart-checkers-b-depart-guest-b.png"
+        }
+      },
+      "png_files": {
+        "A": {
+          "path": "build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ck73depart-checkers-b-depart-guest-a.png",
+          "bytes": 21569,
+          "sha256": "ac21c2ee6a6441e361f7588174f5ea3fc66ee27378eb61da18a07e7a7a3f35df"
+        },
+        "B": {
+          "path": "build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ck73depart-checkers-b-depart-guest-b.png",
+          "bytes": 8742,
+          "sha256": "3b067be4815488996293de82d80e760182868222714299591322acc0fef03753"
+        }
+      }
+    },
+    {
+      "journal_index": 368,
+      "name": "ck73finish-checkers-b-finish-after-guest-left",
+      "started_at": "2026-10-07T15:03:03.103504+00:00",
+      "completed_at": "2026-10-07T15:03:06.497351+00:00",
+      "responses": {
+        "B": {
+          "capture_id": 2429107570,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "4dd79eaf08f673609db99dabaf5b83b8044c6addaf077773b8d6b49894f4b79d",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ck73finish-checkers-b-finish-after-guest-left-b.png"
+        },
+        "A": {
+          "capture_id": 3314789690,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "8a55b40b7351966055c1f1142c9ece5dce7ddf6904853a564aa4edd81b14b832",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ck73finish-checkers-b-finish-after-guest-left-a.png"
+        }
+      },
+      "png_files": {
+        "B": {
+          "path": "build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ck73finish-checkers-b-finish-after-guest-left-b.png",
+          "bytes": 21567,
+          "sha256": "1fc3f236380793be468ae19699f45e37e13f6fd35bb54c52ffa71ef431fb9250"
+        },
+        "A": {
+          "path": "build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ck73finish-checkers-b-finish-after-guest-left-a.png",
+          "bytes": 21569,
+          "sha256": "ac21c2ee6a6441e361f7588174f5ea3fc66ee27378eb61da18a07e7a7a3f35df"
+        }
+      }
+    }
+  ],
+  "screenshot_scope": "Response sha256 binds RGB565 pixel payload, not PNG bytes; png_files separately hashes saved image files. Capture/transfer windows take about4.2s during Checkers and are excluded conservatively from cadence. No optical scanout or first-frame latency proof.",
+  "preserved_failed_attempt": {
+    "failed_guard_journal_index": 211,
+    "name": "ck73roles-checkers-roles-c1",
+    "outcome": {
+      "ok": false,
+      "name": "ck73roles-checkers-roles-c1",
+      "completed_steps": 0,
+      "error": "release failed for A: {'error': 'release: session (mode=shell page=9 app=9 view=0 row=11 game=4 link=2 rooms=0 ready=0 tr=1 ts=0)', 'response': {'command': 'release', 'command_id': 4, 'result': 'session', 'result_id': 3, 'session': 3460007575, 'sequence': 1269, 'active': False, 'touch': False, 'buttons': 0, 'x': 0, 'y': 0, 'session_remaining_ms': 0, 'input_remaining_ms': 0, 'text': 'mode=shell page=9 app=9 view=0 row=11 game=4 link=2 rooms=0 ready=0 tr=1 ts=0'}}",
+      "last_status": {},
+      "release": {
+        "time": "2026-10-07T14:57:37.317426+00:00",
+        "started_at": "2026-10-07T14:57:37.317417+00:00",
+        "duration_ms": 0.005,
+        "unit_duration_ms": {
+          "A": 0.001,
+          "B": 0.0
+        },
+        "request": {
+          "command": "release",
+          "unit": "both"
+        },
+        "response": {
+          "A": null,
+          "B": null
+        }
+      },
+      "elapsed_ms": 87.59
+    },
+    "dispatched_release_journal_index": 209,
+    "dispatched_release": {
+      "time": "2026-10-07T14:57:37.317328+00:00",
+      "started_at": "2026-10-07T14:57:37.229874+00:00",
+      "duration_ms": 87.432,
+      "unit_duration_ms": {
+        "A": 41.611,
+        "B": 45.806
+      },
+      "request": {
+        "command": "release",
+        "unit": "both"
+      },
+      "response": {
+        "A": {
+          "error": "release: session (mode=shell page=9 app=9 view=0 row=11 game=4 link=2 rooms=0 ready=0 tr=1 ts=0)",
+          "response": {
+            "command": "release",
+            "command_id": 4,
+            "result": "session",
+            "result_id": 3,
+            "session": 3460007575,
+            "sequence": 1269,
+            "active": false,
+            "touch": false,
+            "buttons": 0,
+            "x": 0,
+            "y": 0,
+            "session_remaining_ms": 0,
+            "input_remaining_ms": 0,
+            "text": "mode=shell page=9 app=9 view=0 row=11 game=4 link=2 rooms=0 ready=0 tr=1 ts=0"
+          }
+        },
+        "B": {
+          "error": "release: session (mode=shell page=9 app=9 view=0 row=11 game=4 link=2 rooms=0 ready=0 tr=1 ts=0)",
+          "response": {
+            "command": "release",
+            "command_id": 4,
+            "result": "session",
+            "result_id": 3,
+            "session": 3154466177,
+            "sequence": 1262,
+            "active": false,
+            "touch": false,
+            "buttons": 0,
+            "x": 0,
+            "y": 0,
+            "session_remaining_ms": 0,
+            "input_remaining_ms": 0,
+            "text": "mode=shell page=9 app=9 view=0 row=11 game=4 link=2 rooms=0 ready=0 tr=1 ts=0"
+          }
+        }
+      }
+    },
+    "scope": "completed_steps=0 means no completed guard steps or role taps. RELEASE was dispatched to both devices and returned session errors; this was not pre-dispatch validation and not zero traffic.",
+    "fresh_status_journal_index": 212,
+    "successful_retry_journal_index": 221,
+    "successful_retry_name": "ck73rolesfresh-checkers-roles-c1",
+    "successful_retry_outcome": {
+      "ok": true,
+      "name": "ck73rolesfresh-checkers-roles-c1",
+      "completed_steps": 7,
+      "last_status": {
+        "B": {
+          "mode": "shell",
+          "page": "9",
+          "app": "9",
+          "view": "1",
+          "row": "11",
+          "game": "4",
+          "link": "2",
+          "rooms": "0",
+          "ready": "0",
+          "tr": "1",
+          "ts": "0"
+        },
+        "A": {
+          "mode": "shell",
+          "page": "9",
+          "app": "9",
+          "view": "2",
+          "row": "9",
+          "game": "4",
+          "link": "2",
+          "rooms": "0",
+          "ready": "0",
+          "tr": "1",
+          "ts": "0"
+        }
+      },
+      "elapsed_ms": 5106.459
+    }
+  },
+  "final_status": {
+    "journal_index": 367,
+    "row": {
+      "time": "2026-10-07T15:03:03.103431+00:00",
+      "started_at": "2026-10-07T15:03:03.036037+00:00",
+      "duration_ms": 67.388,
+      "unit_duration_ms": {
+        "A": 33.798,
+        "B": 33.58
+      },
+      "request": {
+        "command": "status",
+        "unit": "both"
+      },
+      "response": {
+        "A": {
+          "command": "status",
+          "command_id": 1,
+          "result": "ok",
+          "result_id": 0,
+          "session": 0,
+          "sequence": 2428,
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 29216,
+          "input_remaining_ms": 0,
+          "text": "mode=shell page=0 app=0 view=2 row=9 game=4 link=2 rooms=1 ready=0 tr=1 ts=0"
+        },
+        "B": {
+          "command": "status",
+          "command_id": 1,
+          "result": "ok",
+          "result_id": 0,
+          "session": 0,
+          "sequence": 2411,
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 29716,
+          "input_remaining_ms": 0,
+          "text": "mode=shell page=0 app=0 view=1 row=11 game=4 link=2 rooms=0 ready=0 tr=1 ts=0"
+        }
+      }
+    },
+    "scope": "Both Home with touchfalse/buttons0 and no pending input. Debug leases remain active; prefix does not contain a subsequent ports-closed event."
+  },
+  "preserved_failures_and_limits": [
+    "Whole-lifetime STOP reports A3057 deadline misses/3058 frames and B3317/3318, capped game elapsed max_frame_ms100. Final native timing averages are approximately69.5ms per sample, with about43.8ms update/render and23.4\u201323.6ms present (transform is nested inside present, not additive); unclamped wall_max_us155003 A/150316 B. These are retained performance concerns; the record does not attribute them solely to screenshots or establish an intentional idle-board schedule.",
+    "Frequent screenshots and conservative UTC brackets exclude every candidate clean timing/audio interval. No qualified30FPS release-floor,60FPS target, or120-second audio-health pass.",
+    "One malformed interleaved AUDIO_WORKER line for prior Air Hockey on A remains in the original prefix and analyzer output; none belongs to the Checkers launch episode.",
+    "No reset/assert/panic/abort/backtrace or ESP error/warning was observed inside the saved Checkers START\u2192STOP spans. Expected native-game-ended warnings follow the stops. This is bounded saved-log evidence, not proof of all physical behavior.",
+    "No per-speaker heard SFX or music report. Software worker frames may contain silence.",
+    "Five moves and captures do not qualify king promotion, multi-jump/endgame rules, full-match results, rematch, save/relaunch, guest rejoin, reversed roles, or physical HID.",
+    "Guest departure preserved board state in host LINK LOST: LOCAL view; no subsequent local move or guest rejoin is established here.",
+    "Both Home and neutral inputs are established at final status, but debug leases are active and serial ports remain root-owned beyond the immutable prefix."
+  ],
+  "review_state": "Prepared for independent record review and root approval; reviews are separate receipts bound to this unchanged record."
+}

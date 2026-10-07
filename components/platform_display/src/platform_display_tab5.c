@@ -4,6 +4,8 @@
 #include "platform/tab5.h"
 #include "platform_display_layout.h"
 #include "tab5_frame_queue.h"
+#include "tab5_game_prescale.h"
+#include "tab5_prescaled_game_transform.h"
 #include <string.h>
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wsign-conversion"
@@ -37,6 +39,8 @@ static uint16_t *s_game_scale;
 static ppa_client_handle_t s_scaler;
 static tab5_frame_queue_t s_queue;
 static tab5_frame_history_t s_ui_history[TAB5_FRAME_COUNT];
+/* Protected by s_lock; valid only after a successful native game submit. */
+static bool s_native_margins_black[TAB5_FRAME_COUNT];
 static bool s_ready, s_backlight, s_pattern;
 static StaticSemaphore_t s_lock_storage, s_refresh_storage;
 static SemaphoreHandle_t s_lock, s_refresh;
@@ -63,6 +67,7 @@ static esp_err_t brightness(uint8_t percent)
 static esp_err_t release(void)
 {
     s_ready=false;memset(s_ui_history,0,sizeof(s_ui_history));
+    memset(s_native_margins_black,0,sizeof(s_native_margins_black));
     esp_err_t ret=s_backlight?brightness(0):ESP_OK;
     if (ret!=ESP_OK) return ret;
     if (s_scaler) {
@@ -220,10 +225,12 @@ static esp_err_t accelerate(const uint16_t *source,size_t stride,size_t width,ui
     if (width==320U) {
         /* 3.6 is not representable by PPA's four fractional bits. A small
          * CPU prescale followed by exact 3x PPA keeps the full touch viewport. */
-        for (size_t y=0;y<240U;++y) {
-            const uint16_t *row=source+(y*200U/240U)*stride;
-            for (size_t x=0;x<384U;++x) s_game_scale[y*384U+x]=row[x*320U/384U];
-        }
+        const int64_t prescale_start=esp_timer_get_time();
+        if (!tab5_game_prescale_rgb565(source,stride,s_game_scale,384U))
+            return ESP_ERR_INVALID_ARG;
+        s_stats.pipeline_prescale_last_us=(uint32_t)(esp_timer_get_time()-prescale_start);
+        if (s_stats.pipeline_prescale_last_us>s_stats.pipeline_prescale_max_us)
+            s_stats.pipeline_prescale_max_us=s_stats.pipeline_prescale_last_us;
         source=s_game_scale; stride=384U; width=384U;
     }
     const ppa_srm_oper_config_t op={
@@ -235,7 +242,12 @@ static esp_err_t accelerate(const uint16_t *source,size_t stride,size_t width,ui
         .scale_x=scale,.scale_y=scale,
         .mode=PPA_TRANS_MODE_BLOCKING,
     };
-    return ppa_do_scale_rotate_mirror(s_scaler,&op);
+    const int64_t ppa_start=esp_timer_get_time();
+    const esp_err_t ret=ppa_do_scale_rotate_mirror(s_scaler,&op);
+    s_stats.pipeline_ppa_last_us=(uint32_t)(esp_timer_get_time()-ppa_start);
+    if (s_stats.pipeline_ppa_last_us>s_stats.pipeline_ppa_max_us)
+        s_stats.pipeline_ppa_max_us=s_stats.pipeline_ppa_last_us;
+    return ret;
 }
 static esp_err_t accelerate_ui_region(const uint16_t *source,size_t stride,
     uint16_t *dest,const platform_display_rgb565_region_t *r,const platform_display_rgb565_region_t *out)
@@ -270,7 +282,12 @@ static esp_err_t submit(const uint16_t *source,size_t stride,size_t width,uint32
         s_stats.pipeline_reuse_wait_max_us=s_stats.pipeline_reuse_wait_last_us;
     if (ret!=ESP_OK) goto done;
     uint16_t *dest=s_frames[(unsigned)slot];
-    if (width != 1280U) {
+    /* Every UI/other transform or failed submit invalidates this slot before
+     * mutation. Native transforms only write the centered 1152-row viewport. */
+    const bool native = width == 320U || width == 768U;
+    const bool reuse_margins = native && s_native_margins_black[(unsigned)slot];
+    s_native_margins_black[(unsigned)slot] = false;
+    if (width != 1280U && !reuse_margins) {
         memset(dest, 0, 64U * 720U * sizeof(*dest));
         memset(dest + 1216U * 720U, 0, 64U * 720U * sizeof(*dest));
     }
@@ -284,8 +301,22 @@ static esp_err_t submit(const uint16_t *source,size_t stride,size_t width,uint32
     /* Invalidate history before any buffer mutation; failed submissions can
      * only be followed by a complete reconstruction. */
     s_ui_history[slot].source=NULL;
+    /* These subphases describe this game submission only. UI submissions
+     * use their existing transform timing and must not retain stale values. */
+    s_stats.pipeline_prescale_last_us=0;
+    s_stats.pipeline_ppa_last_us=0;
     const int64_t transform_start=esp_timer_get_time();
-    ret=width==1280U?accelerate_ui_region(source,stride,dest,&region,&mapped):accelerate(source,stride,width,dest);
+    const bool prescaled_game =
+        layout == platform_display_layout_rgb565_prescaled_game_384x240;
+    tab5_prescaled_game_transform_result_t game_transform = {ESP_OK, false};
+    if (prescaled_game) {
+        game_transform = tab5_prescaled_game_transform(source, stride, dest,
+            PLATFORM_DISPLAY_NATIVE_WIDTH, PLATFORM_DISPLAY_NATIVE_HEIGHT,
+            accelerate);
+        ret = game_transform.accelerator_result;
+    } else {
+        ret=width==1280U?accelerate_ui_region(source,stride,dest,&region,&mapped):accelerate(source,stride,width,dest);
+    }
     if (ret==ESP_OK) {
         ++s_stats.accelerated_submits;
         if(replay){++s_stats.partial_content_submits;s_stats.partial_content_source_pixels+=(uint32_t)region.width*region.height;}
@@ -294,7 +325,8 @@ static esp_err_t submit(const uint16_t *source,size_t stride,size_t width,uint32
         ++s_stats.accelerator_failures;
         if (s_stats.accelerator_failures==1U)
             ESP_LOGW("tab5_display","PPA_FAILED error=%s fallback=cpu",esp_err_to_name(ret));
-        if (!layout(source,stride,dest,PLATFORM_DISPLAY_NATIVE_WIDTH,PLATFORM_DISPLAY_NATIVE_HEIGHT)) {
+        if (!(prescaled_game ? game_transform.complete :
+              layout(source,stride,dest,PLATFORM_DISPLAY_NATIVE_WIDTH,PLATFORM_DISPLAY_NATIVE_HEIGHT))) {
             ret=ESP_ERR_INVALID_ARG; goto done;
         }
     }
@@ -327,6 +359,8 @@ static esp_err_t submit(const uint16_t *source,size_t stride,size_t width,uint32
             (unsigned long)s_stats.pipeline_transform_last_us,
             (unsigned long)__atomic_load_n(&s_refresh_count,__ATOMIC_ACQUIRE));
 done:
+    if (slot >= 0 && ret == ESP_OK && (width == 320U || width == 768U))
+        s_native_margins_black[(unsigned)slot] = true;
     if(ret!=ESP_OK){memset(s_ui_history,0,sizeof(s_ui_history));tab5_frame_queue_cancel(&s_queue,false);} /* The caller may advance its source after a dropped frame. */
     if (ret==ESP_ERR_TIMEOUT) {
         ++s_stats.submit_timeouts;
@@ -339,6 +373,27 @@ done:
 }
 esp_err_t platform_display_submit_ui_rgb565(const uint16_t *s,size_t stride,uint32_t timeout)
 { return submit(s,stride,1280,timeout,platform_display_layout_rgb565_1280x720,false,NULL); }
+esp_err_t platform_display_copy_scanout_rgb565(uint16_t *destination,
+    size_t destination_bytes,uint32_t timeout_ms)
+{
+    if (!destination || destination_bytes<FRAME_BYTES) return ESP_ERR_INVALID_ARG;
+    if (!s_lock) return ESP_ERR_INVALID_STATE;
+    const TickType_t start=xTaskGetTickCount(),budget=pdMS_TO_TICKS(timeout_ms);
+    if (xSemaphoreTake(s_lock,budget)!=pdTRUE) return ESP_ERR_TIMEOUT;
+    esp_err_t ret=ESP_ERR_INVALID_STATE;
+    if (s_ready && !s_pattern && !s_queue.failed) {
+        ret=finish_pending(start,budget);
+        if (ret==ESP_OK && s_queue.completed==0U) ret=ESP_ERR_INVALID_STATE;
+        if (ret==ESP_OK) {
+            const uint16_t *source=s_frames[s_queue.selected];
+            /* PPA writes memory directly; invalidate before the CPU copy. */
+            ret=esp_cache_msync((void *)source,FRAME_BYTES,ESP_CACHE_MSYNC_FLAG_DIR_M2C);
+            if (ret==ESP_OK) memcpy(destination,source,FRAME_BYTES);
+        }
+    }
+    xSemaphoreGive(s_lock);
+    return ret;
+}
 esp_err_t platform_display_submit_ui_region_rgb565(const uint16_t *s,size_t stride,
     const platform_display_rgb565_region_t *r,uint32_t timeout)
 {
@@ -348,6 +403,8 @@ esp_err_t platform_display_submit_ui_region_rgb565(const uint16_t *s,size_t stri
 }
 esp_err_t platform_display_submit_rgb565(const uint16_t *s,size_t stride,uint32_t timeout)
 { return submit(s,stride,320,timeout,platform_display_layout_rgb565_320x200,false,NULL); }
+esp_err_t platform_display_submit_prescaled_game_rgb565(const uint16_t *s,size_t stride,uint32_t timeout)
+{ return submit(s,stride,384,timeout,platform_display_layout_rgb565_prescaled_game_384x240,false,NULL); }
 esp_err_t platform_display_submit_shell_rgb565(const uint16_t *s,size_t stride,uint32_t timeout)
 { return submit(s,stride,384,timeout,platform_display_layout_rgb565_384x240,false,NULL); }
 esp_err_t platform_display_submit_content_rgb565(const uint16_t *s,size_t stride,uint32_t timeout)
@@ -376,6 +433,18 @@ esp_err_t platform_display_get_stats(platform_display_stats_t *out)
     out->refresh_completions=__atomic_load_n(&s_refresh_count,__ATOMIC_ACQUIRE);
     xSemaphoreGive(s_lock);return ESP_OK;
 }
+/* Offline Tab5 candidate extracted from exact 0.71 getter. */
+esp_err_t platform_display_try_get_stats(platform_display_stats_t *out)
+{
+    if (!out) return ESP_ERR_INVALID_ARG;
+    if (!s_lock) { *out=(platform_display_stats_t){0};return ESP_OK; }
+    if (xSemaphoreTake(s_lock,0)!=pdTRUE) return ESP_ERR_TIMEOUT;
+    tab5_frame_queue_observe(&s_queue,__atomic_load_n(&s_refresh_count,__ATOMIC_ACQUIRE));
+    s_stats.submits_completed=s_queue.completed;
+    *out=s_stats;
+    out->refresh_completions=__atomic_load_n(&s_refresh_count,__ATOMIC_ACQUIRE);
+    xSemaphoreGive(s_lock);return ESP_OK;
+}
 esp_err_t platform_display_show_pattern(platform_display_pattern_t pattern)
 {
     if (!s_lock) return ESP_ERR_INVALID_STATE;
@@ -390,6 +459,7 @@ esp_err_t platform_display_show_pattern(platform_display_pattern_t pattern)
     }
     esp_err_t ret=s_ready ? esp_lcd_dpi_panel_set_pattern(s_panel,value):ESP_ERR_INVALID_STATE;
     memset(s_ui_history,0,sizeof(s_ui_history));
+    memset(s_native_margins_black,0,sizeof(s_native_margins_black));
     if (ret==ESP_OK) s_pattern=value!=MIPI_DSI_PATTERN_NONE;
     if (ret==ESP_OK && pattern==PLATFORM_DISPLAY_PATTERN_BLACK) {
         const TickType_t start=xTaskGetTickCount(),budget=pdMS_TO_TICKS(250);

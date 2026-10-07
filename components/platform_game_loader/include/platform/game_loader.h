@@ -11,6 +11,15 @@
 extern "C" {
 #endif
 
+/** Optional calling-task service during package/resource loading. It must
+ * return promptly, must not call storage APIs, and is not retained by games. */
+typedef void (*platform_game_loader_progress_fn_t)(void *context);
+
+esp_err_t platform_game_loader_run_with_progress(
+    const platform_game_catalog_entry_t *entry,
+    p4_cartridge_host_v1_t *host,
+    platform_game_loader_progress_fn_t progress, void *context);
+
 esp_err_t platform_game_loader_run(
     const platform_game_catalog_entry_t *entry,
     p4_cartridge_host_v1_t *host);

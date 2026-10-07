@@ -1,0 +1,86 @@
+{
+  "schema": 1,
+  "created_at": "2026-10-07T16:16:12.008816+00:00",
+  "status": "blocked before 0.74 install; physical power cycle and USB reconnection requested",
+  "candidate_version": "0.74",
+  "installed_version_last_verified": "0.73",
+  "no_074_install_attempted": true,
+  "units": {
+    "A": {
+      "port": "/dev/cu.usbmodem1101",
+      "identity_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b"
+    },
+    "B": {
+      "port": "/dev/cu.usbmodem101",
+      "identity_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93"
+    }
+  },
+  "observations": [
+    "USB descriptor identities matched the backed-up units at this check.",
+    "Both debug clients received zero bytes; each status request timed out after three identical attempts.",
+    "Earlier identity-bound reset-only recovery attempts failed during ROM connection with No serial data received; no ROM identity validation or successful reset occurred.",
+    "The latest debug connections were closed.",
+    "Cause of serial silence is undetermined. No firmware or SD writes were performed by these checks."
+  ],
+  "status_attempt": {
+    "time": "2026-10-07T16:12:01.870350+00:00",
+    "started_at": "2026-10-07T16:11:49.826158+00:00",
+    "duration_ms": 12044.132,
+    "unit_duration_ms": {
+      "A": 6023.019,
+      "B": 6021.09
+    },
+    "request": {
+      "unit": "both",
+      "command": "status"
+    },
+    "response": {
+      "A": {
+        "error": "no status response after 3 identical requests",
+        "response": null
+      },
+      "B": {
+        "error": "no status response after 3 identical requests",
+        "response": null
+      }
+    }
+  },
+  "evidence": [
+    {
+      "path": "build-host/tab5-multiplayer-hardware/remote-073-reconnect-probe-04/commands.jsonl",
+      "bytes": 653,
+      "sha256": "c6c5d159347ba67dcfe701706aa5ed04238b47f6c66c424e1bfbe1c8d95a698c"
+    },
+    {
+      "path": "build-host/tab5-multiplayer-hardware/remote-073-reconnect-probe-04/a.rx",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "build-host/tab5-multiplayer-hardware/remote-073-reconnect-probe-04/b.rx",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "build-host/tab5-multiplayer-hardware/recover-a-before-074/receipt.json",
+      "bytes": 291,
+      "sha256": "d17b84022429bf758a7aaad35807cff48637501c4212ec2fc092cf977b6eb95e"
+    },
+    {
+      "path": "build-host/tab5-multiplayer-hardware/recover-a-before-074/loader.log",
+      "bytes": 49,
+      "sha256": "381e9594ad54dc9a930f98ef5e0e79be4d7223a44e8bd848ed5312e11c69b22b"
+    },
+    {
+      "path": "build-host/tab5-multiplayer-hardware/recover-b-before-074/receipt.json",
+      "bytes": 290,
+      "sha256": "bae14330210575cfee809df5ca4931a966d8d6b7882ae5e46a8f3e4f683b5bae"
+    },
+    {
+      "path": "build-host/tab5-multiplayer-hardware/recover-b-before-074/loader.log",
+      "bytes": 49,
+      "sha256": "381e9594ad54dc9a930f98ef5e0e79be4d7223a44e8bd848ed5312e11c69b22b"
+    }
+  ],
+  "physical_acceptance": false
+}

@@ -383,8 +383,6 @@ void HU_Start(void)
 
 void HU_Drawer(void)
 {
-    P4_DoomArenaHUD();
-
     HUlib_drawSText(&w_message);
     HUlib_drawIText(&w_chat);
     if (automapactive)
@@ -406,6 +404,12 @@ void HU_Ticker(void)
 
     int i, rc;
     char c;
+
+    // Reserved Arena seats have no actor before canonical admission.  Bind
+    // the cosmetic chat widgets without spawning or initializing a player,
+    // so replay still consumes incoming chat exactly as normal play does.
+    if (!plr && P4_DoomArenaActive())
+        HU_Start();
 
     // tick down message counter if message is up
     if (message_counter && !--message_counter)

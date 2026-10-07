@@ -135,6 +135,30 @@ bool doom_touch_overlay_render_xrgb8888(
     uint32_t active_actions
 );
 
+/**
+ * Add the exact full-frame touch overlay to logical row y in place.
+ *
+ * row must address at least row_pixels aligned uint32_t words. row_pixels
+ * must be at least 320; only the first 320 words are modified. y is in
+ * [0, 200), and active_actions may contain only defined action bits.
+ * Invalid arguments return false before any write. The caller owns the row
+ * for the entire call; this function neither retains nor allocates storage.
+ */
+bool doom_touch_overlay_render_row_xrgb8888(
+    uint32_t *row,
+    size_t row_pixels,
+    size_t y,
+    uint32_t active_actions
+);
+
+/**
+ * Conservative row coverage for the overlay, independent of active actions.
+ * False guarantees that neither row nor full-frame rendering changes this
+ * logical row for any valid action mask. True may include untouched pixels
+ * or rows. Invalid y values return true so callers cannot skip validation.
+ */
+bool doom_touch_overlay_row_may_draw(size_t y);
+
 #ifdef __cplusplus
 }
 #endif

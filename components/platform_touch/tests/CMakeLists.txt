@@ -93,3 +93,50 @@ if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
     target_link_options(platform_touch_tab5_runtime_tests PRIVATE -fsanitize=address,undefined)
 endif()
 add_test(NAME platform_touch_tab5_runtime_tests COMMAND platform_touch_tab5_runtime_tests)
+
+add_executable(platform_touch_sample_queue_tests
+    test_platform_touch_sample_queue.c
+    ../src/platform_touch_sample_queue.c ../src/platform_touch_frame.c)
+target_include_directories(platform_touch_sample_queue_tests PRIVATE
+    ../host/include ../include ../src ../../platform_board/include)
+target_compile_definitions(platform_touch_sample_queue_tests PRIVATE CONFIG_P4_BOARD_M5STACK_TAB5=1)
+target_compile_features(platform_touch_sample_queue_tests PRIVATE c_std_11)
+if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
+    target_compile_options(platform_touch_sample_queue_tests PRIVATE
+        -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Werror
+        -fsanitize=address,undefined -fno-omit-frame-pointer)
+    target_link_options(platform_touch_sample_queue_tests PRIVATE -fsanitize=address,undefined)
+endif()
+add_test(NAME platform_touch_sample_queue_tests COMMAND platform_touch_sample_queue_tests)
+
+add_executable(platform_touch_sampler_runtime_tests
+    test_platform_touch_sampler_runtime.c
+    ../src/platform_touch_sampler.c ../src/platform_touch_sample_queue.c
+    ../src/platform_touch_frame.c ../../p4_frame_scheduler/src/frame_scheduler.c)
+target_include_directories(platform_touch_sampler_runtime_tests PRIVATE
+    sampler_mocks ../host/include ../include ../src
+    ../../platform_board/include ../../p4_frame_scheduler/include)
+target_compile_definitions(platform_touch_sampler_runtime_tests PRIVATE CONFIG_P4_BOARD_M5STACK_TAB5=1)
+target_compile_features(platform_touch_sampler_runtime_tests PRIVATE c_std_11)
+if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
+    target_compile_options(platform_touch_sampler_runtime_tests PRIVATE
+        -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Werror
+        -fsanitize=address,undefined -fno-omit-frame-pointer)
+    target_link_options(platform_touch_sampler_runtime_tests PRIVATE -fsanitize=address,undefined)
+endif()
+add_test(NAME platform_touch_sampler_runtime_tests COMMAND platform_touch_sampler_runtime_tests)
+
+add_executable(platform_touch_sample_queue_recovery_tests
+    test_platform_touch_sample_queue_recovery.c
+    ../src/platform_touch_sample_queue.c ../src/platform_touch_frame.c)
+target_include_directories(platform_touch_sample_queue_recovery_tests PRIVATE
+    ../host/include ../include ../src ../../platform_board/include)
+target_compile_definitions(platform_touch_sample_queue_recovery_tests PRIVATE CONFIG_P4_BOARD_M5STACK_TAB5=1)
+target_compile_features(platform_touch_sample_queue_recovery_tests PRIVATE c_std_11)
+if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
+    target_compile_options(platform_touch_sample_queue_recovery_tests PRIVATE
+        -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Werror
+        -fsanitize=address,undefined -fno-omit-frame-pointer)
+    target_link_options(platform_touch_sample_queue_recovery_tests PRIVATE -fsanitize=address,undefined)
+endif()
+add_test(NAME platform_touch_sample_queue_recovery_tests COMMAND platform_touch_sample_queue_recovery_tests)

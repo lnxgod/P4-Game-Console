@@ -85,12 +85,15 @@ unless that artwork work is requested; respect an existing parallel remix.
   raw display, touch, audio, USB, SD, or filesystem handles from a game.
 - Render a complete RGB565 frame using optional clipped `p4/draw.h` primitives
   or a bounded custom software renderer on the supplied surface.
-  Target 768x480 by default: declare optional `video-highres` in `game.json`
-  and `P4_GAME_CAP_VIDEO_HIGH_RES` in the descriptor, with a tested 320x200
-  fallback selected from `surface->width`/`height`. New scaffolds do this
-  automatically. Follow `docs/GAME_ART.md` for native-detail layouts, exact
-  text/symbols, ImageGen assets and byte budgets. Touch input stays canonical
-  320x200 in both modes. Keep state at or below `P4_GAME_MAX_STATE_BYTES` and bound loops,
+  Require native 768x480 for every maintained Tab5 game: declare
+  `video-highres` in `game.json`'s required capabilities and
+  `P4_GAME_CAP_VIDEO_HIGH_RES` in the descriptor's required capabilities.
+  The creator emits both requirements by default; verify they remain aligned
+  after edits. Never accept a 320x200 framebuffer or per-title downgrade as
+  the maintained presentation mode. Follow `docs/GAME_ART.md` for native
+  layouts, text/symbols, ImageGen assets and byte budgets. Touch input stays
+  canonical 320x200; preserve legacy fallback source only for explicit legacy
+  maintenance. Keep state at or below `P4_GAME_MAX_STATE_BYTES` and bound loops,
   coordinates, sprite dimensions, text, timers, and audio requests.
 - Consume complete `held`, `pressed`, and `released` input snapshots. Return
   `P4_GAME_EXIT_TO_LAUNCHER` when Back is pressed.
@@ -189,8 +192,10 @@ USB-A host-power and exact-artifact/controller acceptance.
 
 For a hardware acceptance, perform one named run that launches the changed
 game, exercises its changed behavior, and returns to the launcher with Back.
-Record the exact cartridge hash and device used. A host test or successful
-package build is not hardware verification. When multiplayer behavior changed,
+Record the exact cartridge hash, OS and device used, and verify
+`CARTRIDGE_START ... surface=768x480` plus readable native-resolution active
+play. For linked play, record that surface on both host and guest. A transfer,
+host test, optional capability or enlarged screenshot is not that evidence. When multiplayer behavior changed,
 exercise both OS roles, exact-game room resolution, connected launch, bounded
 message exchange, and the game's offline/peer-loss fallback without claiming
 an unmeasured frame rate.

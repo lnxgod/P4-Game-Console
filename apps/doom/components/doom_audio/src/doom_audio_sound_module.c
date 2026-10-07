@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 /*
- * Project-owned sound and MUS-music adapter for the pinned doomgeneric engine.
+ * Project-owned sound and MUS/SMF-music adapter for the pinned doomgeneric engine.
  * The worker mixes both sources; no external MIDI service or hardware is used.
  */
 

@@ -38,6 +38,7 @@ rcsid[] = "$Id: i_x.c,v 1.6 1997/02/03 22:45:10 b1 Exp $";
 #include "doomkeys.h"
 
 #include "doomgeneric.h"
+#include "p4_doom_net.h"
 
 #include <stdbool.h>
 #include <stdlib.h>
@@ -86,15 +87,66 @@ struct color colors[256];
 
 static struct color colors[256];
 
+/* The Tab5 presentation path consumes unit-scale 0x00RRGGBB words. Keep
+ * gamma-corrected packed entries beside the generic palette so conversion
+ * does one lookup per pixel; unsupported formats retain the generic loop. */
+#if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__ && !defined(SYS_BIG_ENDIAN)
+#define P4_DOOM_XRGB_FASTPATH 1
+static uint32_t xrgb8888_palette[256];
+#endif
+
 
 #endif  // CMAP256
 
+
+/* Optional presentation hook. 0 means unsupported with no side effects;
+ * positive means submitted; negative means failed and MUST NOT fall back.
+ * A supporting platform consumes/copies both arrays before returning. */
+#if defined(__GNUC__)
+__attribute__((weak))
+#endif
+int DG_DrawIndexedFrame(const uint8_t *indices, const uint32_t *palette)
+{
+    (void)indices;
+    (void)palette;
+    return 0;
+}
 
 void I_GetEvent(void);
 
 // The screen buffer; this is modified to draw things to the screen
 
 byte *I_VideoBuffer = NULL;
+static bool p4_indexed_framebuffer_owned;
+
+/* Optional paired platform loan. Host and legacy builds retain zone storage. */
+#if defined(__GNUC__)
+__attribute__((weak))
+#endif
+void *DG_AllocIndexedFramebuffer(size_t bytes)
+{
+    (void)bytes;
+    return NULL;
+}
+
+#if defined(__GNUC__)
+__attribute__((weak))
+#endif
+void DG_ReleaseIndexedFramebuffer(void *buffer)
+{
+    (void)buffer;
+}
+
+static void I_AllocateVideoBuffer(void)
+{
+    if (I_VideoBuffer != NULL) return;
+    I_VideoBuffer = DG_AllocIndexedFramebuffer((size_t)SCREENWIDTH * SCREENHEIGHT);
+    p4_indexed_framebuffer_owned = I_VideoBuffer != NULL;
+    if (!p4_indexed_framebuffer_owned) {
+        I_VideoBuffer = (byte *)Z_Malloc(SCREENWIDTH * SCREENHEIGHT, PU_STATIC, NULL);
+    }
+}
+
 
 // If true, game is running as a screensaver
 
@@ -158,6 +210,49 @@ void cmap_to_fb(uint8_t *out, uint8_t *in, int in_pixels)
     int i, k;
     struct color c;
     uint32_t pix;
+
+#ifdef P4_DOOM_XRGB_FASTPATH
+    if (in_pixels == SCREENWIDTH && fb_scaling == 1 &&
+        s_Fb.bits_per_pixel == 32 &&
+        s_Fb.red.offset == 16 && s_Fb.green.offset == 8 &&
+        s_Fb.blue.offset == 0 && s_Fb.red.length == 8 &&
+        s_Fb.green.length == 8 && s_Fb.blue.length == 8)
+    {
+        uint32_t *pixels = (uint32_t *)out;
+#if defined(__GNUC__)
+        /* The engine's indexed rows are aligned and a multiple of four.
+         * Read four indices with one aligned word load; memcpy preserves
+         * byte-array aliasing rules. Other callers keep byte loads. */
+        uintptr_t input_address = (uintptr_t)in;
+        uintptr_t output_address = (uintptr_t)out;
+        bool disjoint = input_address <= output_address
+            ? output_address - input_address >= SCREENWIDTH
+            : input_address - output_address >= SCREENWIDTH * sizeof(*pixels);
+        if (((uintptr_t)in & 3U) == 0U && disjoint)
+        {
+            const uint8_t *indices = __builtin_assume_aligned(in, 4);
+            for (i = 0; i < SCREENWIDTH; i += 4)
+            {
+                uint32_t packed;
+                memcpy(&packed, indices + i, sizeof(packed));
+                pixels[i] = xrgb8888_palette[packed & 255U];
+                pixels[i + 1] = xrgb8888_palette[(packed >> 8) & 255U];
+                pixels[i + 2] = xrgb8888_palette[(packed >> 16) & 255U];
+                pixels[i + 3] = xrgb8888_palette[packed >> 24];
+            }
+            return;
+        }
+#endif
+        for (i = 0; i < SCREENWIDTH; i += 4)
+        {
+            pixels[i] = xrgb8888_palette[in[i]];
+            pixels[i + 1] = xrgb8888_palette[in[i + 1]];
+            pixels[i + 2] = xrgb8888_palette[in[i + 2]];
+            pixels[i + 3] = xrgb8888_palette[in[i + 3]];
+        }
+        return;
+    }
+#endif
 
     for (i = 0; i < in_pixels; i++)
     {
@@ -287,7 +382,7 @@ void I_InitGraphics (void)
 
 
     /* Allocate screen to draw to */
-	I_VideoBuffer = (byte*)Z_Malloc (SCREENWIDTH * SCREENHEIGHT, PU_STATIC, NULL);  // For DOOM to draw on
+	I_AllocateVideoBuffer();
 
 	screenvisible = true;
 
@@ -297,7 +392,13 @@ void I_InitGraphics (void)
 
 void I_ShutdownGraphics (void)
 {
-	Z_Free (I_VideoBuffer);
+    byte *buffer = I_VideoBuffer;
+    const bool platform_owned = p4_indexed_framebuffer_owned;
+    I_VideoBuffer = NULL;
+    p4_indexed_framebuffer_owned = false;
+    if (buffer == NULL) return;
+    if (platform_owned) DG_ReleaseIndexedFramebuffer(buffer);
+    else Z_Free(buffer);
 }
 
 void I_StartFrame (void)
@@ -323,6 +424,23 @@ void I_FinishUpdate (void)
     int y;
     int x_offset, y_offset, x_offset_end;
     unsigned char *line_in, *line_out;
+
+#ifdef P4_DOOM_XRGB_FASTPATH
+    /* Only the exact default 320x200 RGB888 presentation can use this hook.
+     * CMAP256, alternate dimensions/formats/scales and legacy platforms keep
+     * the original prepare/expand/draw route. Palette already includes gamma. */
+    if (SCREENWIDTH == 320 && SCREENHEIGHT == 200 && fb_scaling == 1 &&
+        s_Fb.xres == SCREENWIDTH && s_Fb.yres == SCREENHEIGHT &&
+        s_Fb.bits_per_pixel == 32 &&
+        s_Fb.red.offset == 16 && s_Fb.green.offset == 8 && s_Fb.blue.offset == 0 &&
+        s_Fb.red.length == 8 && s_Fb.green.length == 8 && s_Fb.blue.length == 8 &&
+        DG_DrawIndexedFrame(I_VideoBuffer, xrgb8888_palette) != 0) return;
+#endif
+
+    /* Acquire before palette expansion: a published frame is immutable. */
+    if (!DG_PrepareFrame()) return;
+
+    P4_ENGINE_PERF_BEGIN(palette_started);
 
     /* Offsets in case FB is bigger than DOOM */
     /* 600 = s_Fb heigt, 200 screenheight */
@@ -365,6 +483,8 @@ void I_FinishUpdate (void)
         }
         line_in += SCREENWIDTH;
     }
+
+    P4_ENGINE_PERF_END(P4_DOOM_ENGINE_PALETTE, palette_started);
 
 	DG_DrawFrame();
 }
@@ -410,6 +530,11 @@ void I_SetPalette (byte* palette)
         colors[i].r = gammatable[usegamma][*palette++];
         colors[i].g = gammatable[usegamma][*palette++];
         colors[i].b = gammatable[usegamma][*palette++];
+#ifdef P4_DOOM_XRGB_FASTPATH
+        xrgb8888_palette[i] = ((uint32_t)colors[i].r << 16) |
+                              ((uint32_t)colors[i].g << 8) |
+                              (uint32_t)colors[i].b;
+#endif
     }
 
 #ifdef CMAP256

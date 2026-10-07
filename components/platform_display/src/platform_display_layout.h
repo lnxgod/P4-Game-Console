@@ -68,4 +68,12 @@ bool platform_display_layout_rgb565_384x240_to_rgb888_1280x720(
     uint8_t *destination, size_t destination_stride_bytes,
     size_t destination_height);
 
+/* Tab5 CPU fallback for an exact 6:5 prescaled 320x200 game surface.
+ * Recovers the original nearest-neighbor sampling instead of rescaling the
+ * expanded pixels, so PPA failure retains the baseline CPU fallback image. */
+bool platform_display_layout_rgb565_prescaled_game_384x240(
+    const uint16_t *source, size_t source_stride_pixels,
+    uint16_t *destination, size_t destination_stride_pixels,
+    size_t destination_height);
+
 #endif

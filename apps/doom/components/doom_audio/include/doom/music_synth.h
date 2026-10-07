@@ -66,7 +66,7 @@ typedef struct {
 } doom_music_stats_t;
 
 /**
- * Worker-owned MUS sequencer and lightweight procedural synthesizer.
+ * Worker-owned MUS/SMF MIDI sequencer and lightweight procedural synthesizer.
  *
  * All mutation and rendering stays on the single audio worker. The song is a
  * ref-counted immutable copy, so the Doom task may unregister its handle while
@@ -74,6 +74,8 @@ typedef struct {
  */
 typedef struct {
     doom_music_song_t *song;
+    /* Fixed-size MIDI state lives off the audio task's bounded stack. */
+    struct doom_music_midi *midi;
     const uint8_t *score;
     size_t score_bytes;
     size_t cursor;
@@ -94,7 +96,10 @@ typedef struct {
 /** Validate one complete MUS lump with every read bounded to the score range. */
 bool doom_music_validate_mus(const uint8_t *data, size_t length);
 
-/** Allocate an immutable, validated song copy with one caller reference. */
+/**
+ * Copy a MUS or SMF type 0/1 song with one caller reference. MUS is validated
+ * completely; MIDI chunk geometry is validated here and events while playing.
+ */
 doom_music_song_t *doom_music_song_create(const void *data, size_t length);
 
 /** Add/drop a song reference. Release frees the copy when the count reaches 0. */

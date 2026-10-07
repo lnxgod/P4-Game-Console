@@ -487,7 +487,6 @@ void R_ProjectSprite (mobj_t* thing)
     if (tz < MINZ)
 	return;
     
-    xscale = FixedDiv(projection, tz);
 	
     gxt = -FixedMul(tr_x,viewsin); 
     gyt = FixedMul(tr_y,viewcos); 
@@ -496,6 +495,8 @@ void R_ProjectSprite (mobj_t* thing)
     // too far off the side?
     if (abs(tx)>(tz<<2))
 	return;
+
+    xscale = FixedDiv(projection, tz);
     
     // decide which patch to use for sprite relative to player
 #ifdef RANGECHECK

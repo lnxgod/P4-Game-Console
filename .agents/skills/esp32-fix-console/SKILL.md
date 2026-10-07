@@ -57,9 +57,17 @@ Keep these boundaries intact:
 - Keep generated `sdkconfig`, managed components, build output, firmware,
   WADs and local backups out of Git. Pin SDKs, components, third-party source
   and board references, and commit dependency lockfiles once generated.
-- Preserve negotiated 768×480 game presentation with 320×200 fallback,
-  native touch coordinates and board-owned scaling; follow `docs/GAME_ART.md`.
-  Authoring policy alone does not add high-resolution board support.
+- Every game on maintained Tab5 must render directly at 768×480 RGB565;
+  follow `docs/GAME_ART.md`. Inspect the actual game framebuffer and launch
+  record, not just high-resolution metadata or panel scaling. Trace optional
+  capabilities, `P4_CONSOLE_NATIVE_*_LOW_RES` build flags, per-title gates and
+  surface allocation when a game launches at 320×200. Correct the maintained
+  path within the authorized task; never introduce or enable a resolution
+  downgrade to repair readability/performance. Native cartridges require
+  high resolution in manifest and descriptor; fail cleanly when unavailable.
+  Keep canonical 320×200 input units and board-owned panel scaling unchanged.
+  Preserve legacy board/ABI source and recovery contracts for explicit legacy
+  work. Skill policy and a host build do not prove the installed OS changed.
 
 ## Build and verify the changed boundary
 

@@ -27,11 +27,19 @@ typedef struct {
 esp_err_t platform_multiplayer_wifi_enable(platform_multiplayer_wifi_handler_t, void *);
 void platform_multiplayer_wifi_disable(void);
 esp_err_t platform_multiplayer_wifi_browse(void);
+/* Filter discovery before applying the bounded lobby cache. Zero browses all
+ * games; the token remains only a hint until P4MP verifies package identity. */
+esp_err_t platform_multiplayer_wifi_browse_game(uint16_t game_token);
 esp_err_t platform_multiplayer_wifi_host(uint32_t session, uint16_t game);
 size_t platform_multiplayer_wifi_list_lobbies(platform_multiplayer_wifi_lobby_t *, size_t);
 esp_err_t platform_multiplayer_wifi_join(uint64_t lobby);
 esp_err_t platform_multiplayer_wifi_set_handler(platform_multiplayer_wifi_handler_t, void *);
 void platform_multiplayer_wifi_poll(void);
+/* The foreground poll owner may query whether its most recent poll observed
+ * EAGAIN/EWOULDBLOCK. False means budget exhausted, error, uninitialized or
+ * link state changed. True is an observation, not a promise about new arrivals.
+ * Polls must not run concurrently or recursively through receive callbacks. */
+bool platform_multiplayer_wifi_poll_drained(void);
 esp_err_t platform_multiplayer_wifi_send(const uint8_t *, size_t);
 /* A nonzero route targets one admitted peer; zero sends to every peer. */
 esp_err_t platform_multiplayer_wifi_send_to(uint64_t route,const uint8_t *,size_t);

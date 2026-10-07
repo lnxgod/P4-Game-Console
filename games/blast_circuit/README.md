@@ -13,13 +13,31 @@ Linked counts describe the game profile; see [transport and hardware limits](../
 An original four-player bomb arena game for P4 Console OS. Version 0.2 adds
 three arenas, four individually animated robot designs, 30 original sound
 cues, an arena workshop, three custom slots, and host-to-peer level sharing.
-The 17×13 field uses 768×480 when available and supports 320×200. Solo play
+The 17×13 field requires direct 768×480 rendering on maintained Tab5. Canonical
+320×200 touch coordinates remain input units; retained low-resolution rendering
+tests cover legacy clipping compatibility only. Solo play
 fills the other three seats with bots. First to three round wins takes the match.
 
-Version **0.2.7** is a locally play-tested, build-tested cartridge candidate
+Version **0.2.8** is a host-tested native-readability cartridge candidate
 (`enabled: true`) included in generated bundles. The requested SNES Bomberman
 benchmark remains a quality target, not an established equivalence.
 No commercial game code, sprites, maps, music or sound samples are included.
+
+This revision requires `video-highres` in both manifest and C descriptor, so
+the existing Tab5 optional-resolution experiment cannot select a 320×200
+framebuffer for it. Walkable floors use quiet theme colors; players, bombs and
+pickups receive dark outlines. Material artwork, rules, saves, controls and
+multiplayer protocol remain unchanged. The workshop FLOOR brush shows the
+same swatch used in the arena.
+
+All three focused game tests and five generic-host tests pass with sanitizers;
+native opening, arena, material/hazard, pause, workshop and result captures
+were inspected. The pinned RISC-V cartridge build is within its size and stack
+frame limits. Exact evidence is in
+[NATIVE_READABILITY_TESTING.json](NATIVE_READABILITY_TESTING.json).
+Fresh interactive play and physical native readability/cadence are still
+pending. Earlier local/device evidence below is history for older artifacts,
+not acceptance of this revision. No device was changed for this update.
 
 ## Play and create
 

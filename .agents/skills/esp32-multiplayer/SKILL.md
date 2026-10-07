@@ -35,12 +35,16 @@ versus competitive rules from the idea; do not force a transport questionnaire.
 
 ## Keep presentation separate from synchronized rules
 
-Use the native 768x480 presentation standard in `docs/GAME_ART.md` with the
-320x200 fallback. Native touch and network coordinates stay canonical; do not
-change packet fields, simulation rates, seat counts or saved state just to
-upgrade art. Preserve each game's supported player count, including four-player
-games. Run its existing multi-instance tests after a rendering upgrade, and
-verify readable player colors plus non-color seat/turn cues at both sizes.
+Every maintained Tab5 game uses native 768x480 presentation under
+`docs/GAME_ART.md`; require high resolution in manifest and descriptor and
+verify actual `surface=768x480` on both host and guest. Never lower either
+role's framebuffer or upscale a completed 320x200 frame to reduce linked load.
+Canonical 320x200 touch units and network coordinates remain independent of
+render resolution; do not change packet fields, simulation rates, seat counts
+or saves to upgrade art. Preserve supported player counts, including four-player
+games. Run the existing multi-instance tests and verify native-size player
+silhouettes, colors and non-color seat/turn cues during active shared play.
+Retain legacy fallback tests as compatibility evidence only.
 
 Apply the [ESP32-P4 performance contract](../../../docs/GAME_PERFORMANCE.md)
 in both roles: budget per-update message work and interpolate presentation

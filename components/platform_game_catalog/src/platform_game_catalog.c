@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "mbedtls/sha256.h"
@@ -142,25 +143,36 @@ esp_err_t platform_game_catalog_scan(platform_game_catalog_t *out_catalog)
         return ESP_ERR_INVALID_ARG;
     }
     memset(out_catalog, 0, sizeof(*out_catalog));
-    platform_game_storage_file_listing_t root_files;
+    /* Both bounded listings must coexist so GAMES wins duplicate identities,
+     * but together they exceed 17 KiB. Keep per-call ownership off the main
+     * task's stack, including foreground refresh after checking an SD card. */
+    platform_game_storage_file_listing_t *const listings =
+        malloc(2U * sizeof(*listings));
+    if (listings == NULL) {
+        return ESP_ERR_NO_MEM;
+    }
+    platform_game_storage_file_listing_t *const root_files = &listings[0];
+    platform_game_storage_file_listing_t *const game_files = &listings[1];
     const esp_err_t root_listed =
-        platform_game_storage_list_root(&root_files);
+        platform_game_storage_list_root(root_files);
     if (root_listed != ESP_OK) {
+        free(listings);
         return root_listed;
     }
     out_catalog->available = true;
-    out_catalog->storage_generation = root_files.storage_generation;
+    out_catalog->storage_generation = root_files->storage_generation;
 
-    platform_game_storage_file_listing_t game_files;
     const esp_err_t games_listed =
-        platform_game_storage_list_games(&game_files);
+        platform_game_storage_list_games(game_files);
     if (games_listed == ESP_OK) {
-        scan_listing(out_catalog, &game_files, true);
+        scan_listing(out_catalog, game_files, true);
     } else if (games_listed != ESP_ERR_NOT_FOUND) {
+        free(listings);
         return games_listed;
     }
     /* Root packages remain readable for cards created by Console OS 0.3. */
-    scan_listing(out_catalog, &root_files, false);
+    scan_listing(out_catalog, root_files, false);
+    free(listings);
     for (size_t index = 0U; index < out_catalog->entry_count; ++index) {
         if (out_catalog->entries[index].valid) {
             ++out_catalog->valid_count;

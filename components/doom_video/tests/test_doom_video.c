@@ -87,6 +87,8 @@ static void test_channels_stride_and_bounds(void)
         source, SOURCE_STRIDE, destination, WIDTH - 1U));
     EXPECT_TRUE(!doom_video_convert_xrgb8888_to_rgb565(
         NULL, SOURCE_STRIDE, destination, DESTINATION_STRIDE));
+    EXPECT_TRUE(!doom_video_convert_xrgb8888_to_rgb565(
+        source, SOURCE_STRIDE, NULL, DESTINATION_STRIDE));
 
     free(destination);
     free(source);
@@ -113,10 +115,88 @@ static void test_rgb565_little_endian_bytes(void)
     EXPECT_TRUE(memcmp(expected, actual, sizeof(actual)) == 0);
 }
 
+static uint16_t reference_rgb565(uint32_t pixel)
+{
+    const uint32_t red = (pixel / UINT32_C(65536)) % UINT32_C(256);
+    const uint32_t green = (pixel / UINT32_C(256)) % UINT32_C(256);
+    const uint32_t blue = pixel % UINT32_C(256);
+    return (uint16_t)((red / 8U) * 2048U +
+                      (green / 4U) * 32U + blue / 8U);
+}
+
+static void test_color_batches(size_t source_stride, size_t destination_stride,
+                               size_t destination_offset, bool exhaustive)
+{
+    const size_t source_count = source_stride * HEIGHT;
+    const size_t destination_count = destination_stride * HEIGHT;
+    const size_t prefix = 2U + destination_offset;
+    uint32_t *source_allocation = malloc((source_count + 2U) * sizeof(uint32_t));
+    uint16_t *destination_allocation =
+        malloc((destination_count + prefix + 1U) * sizeof(uint16_t));
+    EXPECT_TRUE(source_allocation != NULL);
+    EXPECT_TRUE(destination_allocation != NULL);
+    if (source_allocation == NULL || destination_allocation == NULL) {
+        free(destination_allocation);
+        free(source_allocation);
+        return;
+    }
+    uint32_t *source = source_allocation + 1U;
+    uint16_t *destination = destination_allocation + prefix;
+    EXPECT_EQ(destination_offset * sizeof(uint16_t),
+              (uintptr_t)destination % sizeof(uint32_t));
+    const uint32_t color_limit = exhaustive ? UINT32_C(0x01000000) : 1U;
+    for (unsigned opaque = 0U; opaque < 2U; ++opaque) {
+        const uint32_t high_byte = opaque == 0U ? 0U : UINT32_C(0xff000000);
+        for (uint32_t base = 0U; base < color_limit; base += WIDTH * HEIGHT) {
+            for (size_t i = 0U; i < source_count + 2U; ++i)
+                source_allocation[i] = UINT32_C(0xdeadbeef);
+            for (size_t i = 0U; i < destination_count + prefix + 1U; ++i)
+                destination_allocation[i] = UINT16_C(0xa55a);
+            for (size_t y = 0U; y < HEIGHT; ++y) {
+                for (size_t x = 0U; x < WIDTH; ++x) {
+                    /* An odd multiplier permutes all 24-bit colors while
+                     * making adjacent unrolled lanes visibly different. */
+                    const uint32_t color =
+                        ((base + (uint32_t)(y * WIDTH + x)) *
+                         UINT32_C(0x9e3779)) & UINT32_C(0xffffff);
+                    source[y * source_stride + x] = high_byte | color;
+                }
+            }
+            EXPECT_TRUE(doom_video_convert_xrgb8888_to_rgb565(
+                source, source_stride, destination, destination_stride));
+            for (size_t y = 0U; y < HEIGHT; ++y) {
+                for (size_t x = 0U; x < WIDTH; ++x) {
+                    const uint32_t color =
+                        ((base + (uint32_t)(y * WIDTH + x)) *
+                         UINT32_C(0x9e3779)) & UINT32_C(0xffffff);
+                    EXPECT_EQ(reference_rgb565(color),
+                              destination[y * destination_stride + x]);
+                    EXPECT_EQ(high_byte | color, source[y * source_stride + x]);
+                }
+                for (size_t x = WIDTH; x < source_stride; ++x)
+                    EXPECT_EQ(UINT32_C(0xdeadbeef), source[y * source_stride + x]);
+                for (size_t x = WIDTH; x < destination_stride; ++x)
+                    EXPECT_EQ(UINT16_C(0xa55a), destination[y * destination_stride + x]);
+            }
+            EXPECT_EQ(UINT32_C(0xdeadbeef), source_allocation[0]);
+            EXPECT_EQ(UINT32_C(0xdeadbeef), source_allocation[source_count + 1U]);
+            for (size_t i = 0U; i < prefix; ++i)
+                EXPECT_EQ(UINT16_C(0xa55a), destination_allocation[i]);
+            EXPECT_EQ(UINT16_C(0xa55a), destination[destination_count]);
+        }
+    }
+    free(destination_allocation);
+    free(source_allocation);
+}
+
 int main(void)
 {
     test_channels_stride_and_bounds();
     test_rgb565_little_endian_bytes();
+    test_color_batches(WIDTH, WIDTH, 0U, false);
+    test_color_batches(SOURCE_STRIDE, WIDTH, 1U, false);
+    test_color_batches(WIDTH, DESTINATION_STRIDE, 0U, false);
+    test_color_batches(SOURCE_STRIDE, DESTINATION_STRIDE, 1U, true);
     if (failures != 0U) {
         fprintf(stderr, "Doom video tests failed: %u\n", failures);
         return 1;

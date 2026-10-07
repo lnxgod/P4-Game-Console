@@ -234,7 +234,13 @@ static void receive_messages(p4_game_context_t *context,
         p4_air_hockey_set_touch_target(
             state, message.player_slot,
             (message.data[6] & 1U) != 0U, touch_x, touch_y);
-        state->restart_requested = (message.data[6] & 2U) != 0U;
+        /* Rematch is an event: later neutral input must not erase an accepted
+         * request. Ignore requests outside results so they cannot arm the
+         * next match's results screen. The host consumes the latch on reset. */
+        if (state->phase == P4_AIR_HOCKEY_GAME_OVER &&
+            (message.data[6] & 2U) != 0U) {
+            state->restart_requested = true;
+        }
     }
 }
 

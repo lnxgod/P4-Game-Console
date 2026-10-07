@@ -73,6 +73,8 @@
 #include "statdump.h"
 
 #include "d_main.h"
+#include "doomgeneric.h"
+#include "p4_doom_net.h"
 
 //
 // D-DoomLoop()
@@ -260,7 +262,10 @@ void D_Display (void)
     // see if the border needs to be updated to the screen
     if (gamestate == GS_LEVEL && !automapactive && scaledviewwidth != 320)
     {
-		if (menuactive || menuactivestate || !viewactivestate)
+		// Arena widgets can cover retained pixels outside the 3D view.
+		// Restore those pixels every frame before drawing the current HUD.
+		if (menuactive || menuactivestate || !viewactivestate
+		    || P4_DoomArenaActive())
 			borderdrawcount = 3;
 		if (borderdrawcount)
 		{
@@ -268,6 +273,10 @@ void D_Display (void)
 			borderdrawcount--;
 		}
     }
+
+    // Composite Arena after border cleanup, which otherwise clips its HUD.
+    if (gamestate == GS_LEVEL && gametic)
+        P4_DoomArenaHUD();
 
     if (testcontrols)
     {
@@ -301,7 +310,9 @@ void D_Display (void)
     // normal update
     if (!wipe)
     {
+        P4_DoomNetSetFrameTail(true);
 	I_FinishUpdate ();              // page flip or blit buffer
+        P4_DoomNetSetFrameTail(false);
 	return;
     }
     
@@ -407,14 +418,30 @@ void doomgeneric_Tick()
     // frame syncronous IO operations
     I_StartFrame ();
 
+    P4_ENGINE_PERF_BEGIN(tics_started);
     TryRunTics (); // will run at least one tic
+    P4_ENGINE_PERF_END(P4_DOOM_ENGINE_TICS, tics_started);
 
+    // A failed cold checkpoint restore must reach platform cleanup without
+    // touching any partially restored actor, sound origin or renderer cache.
+    if (doomgeneric_QuitRequested()) return;
+
+    // A cold guest may be replaying old maps with its local seat absent.
+    // Keep the loading view and avoid dereferencing a missing camera actor.
+    if (P4_DoomNetReplaying()
+        || (P4_DoomArenaActive() && !players[consoleplayer].mo))
+        return;
+
+    P4_ENGINE_PERF_BEGIN(sound_started);
     S_UpdateSounds (players[consoleplayer].mo);// move positional sounds
+    P4_ENGINE_PERF_END(P4_DOOM_ENGINE_SOUND, sound_started);
 
     // Update display, next frame, with current state.
     if (screenvisible)
     {
+        P4_ENGINE_PERF_BEGIN(display_started);
         D_Display ();
+        P4_ENGINE_PERF_END(P4_DOOM_ENGINE_DISPLAY, display_started);
     }
 }
 
@@ -1842,4 +1869,3 @@ void D_DoomMain (void)
 
     D_DoomLoop ();
 }
-

@@ -147,6 +147,14 @@ console-shell-host:
 	cmake --build build-host/console_shell
 	ctest --test-dir build-host/console_shell --output-on-failure
 
+.PHONY: console-multiplayer-flow-host
+console-multiplayer-flow-host:
+	python3 scripts/tests/test-console-multiplayer-flow.py
+	python3 scripts/tests/test-console-arena-resume.py
+	python3 scripts/tests/test-console-arena-start.py
+	python3 scripts/tests/test-console-doom-loading-boundary.py
+	python3 scripts/tests/test-console-transport-response.py
+
 console-os-host:
 	cmake -S tools/p4-console-host -B build-host/p4-console-host -G Ninja
 	cmake --build build-host/p4-console-host

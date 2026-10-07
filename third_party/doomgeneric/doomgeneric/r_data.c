@@ -18,6 +18,8 @@
 //
 
 #include <stdio.h>
+#include <limits.h>
+#include <stddef.h>
 
 #include "deh_main.h"
 #include "i_swap.h"
@@ -37,6 +39,7 @@
 
 
 #include "r_data.h"
+#include "p4_doom_net.h"
 
 //
 // Graphics.
@@ -289,9 +292,46 @@ void R_GenerateComposite (int texnum)
 
 
 //
+// Startup needs only the patch header and column offsets. Keep this temporary
+// cache separate from lumpinfo[].cache, which always holds complete lumps.
+//
+static patch_t *R_CachePatchMetadata(int lumpnum, patch_t **cache)
+{
+    patch_t header;
+    patch_t *result;
+    size_t header_bytes = offsetof(patch_t, columnofs);
+    size_t table_bytes;
+    int width;
+
+    if (cache == NULL)
+        return W_CacheLumpNum(lumpnum, PU_CACHE);
+
+    if ((unsigned int) lumpnum >= numlumps)
+        I_Error("R_CachePatchMetadata: invalid lump %d", lumpnum);
+    if (cache[lumpnum] != NULL)
+        return cache[lumpnum];
+
+    W_ReadLumpRange((unsigned int) lumpnum, 0, &header, header_bytes);
+    width = SHORT(header.width);
+    if (width <= 0
+     || (size_t) width > ((size_t) W_LumpLength(lumpnum) - header_bytes)
+                         / sizeof(header.columnofs[0]))
+        I_Error("R_CachePatchMetadata: invalid width on lump %d", lumpnum);
+
+    table_bytes = (size_t) width * sizeof(header.columnofs[0]);
+    result = Z_Malloc(header_bytes + table_bytes, PU_STATIC, NULL);
+    memcpy(result, &header, header_bytes);
+    W_ReadLumpRange((unsigned int) lumpnum, header_bytes,
+                   (byte *) result + header_bytes, table_bytes);
+    cache[lumpnum] = result;
+    return result;
+}
+
+
+//
 // R_GenerateLookup
 //
-void R_GenerateLookup (int texnum)
+static void R_GenerateLookupWithMetadata(int texnum, patch_t **metadata)
 {
     texture_t*		texture;
     byte*		patchcount;	// patchcount[texture->width]
@@ -325,7 +365,7 @@ void R_GenerateLookup (int texnum)
 	 i<texture->patchcount;
 	 i++, patch++)
     {
-	realpatch = W_CacheLumpNum (patch->patch, PU_CACHE);
+	realpatch = R_CachePatchMetadata (patch->patch, metadata);
 	x1 = patch->originx;
 	x2 = x1 + SHORT(realpatch->width);
 	
@@ -371,6 +411,11 @@ void R_GenerateLookup (int texnum)
     }
 
     Z_Free(patchcount);
+}
+
+void R_GenerateLookup(int texnum)
+{
+    R_GenerateLookupWithMetadata(texnum, NULL);
 }
 
 
@@ -467,6 +512,8 @@ void R_InitTextures (void)
     char*		name_p;
     
     int*		patchlookup;
+    patch_t**           patchmetadata;
+    unsigned int        lumpnum;
     
     int			totalwidth;
     int			nummappatches;
@@ -548,6 +595,8 @@ void R_InitTextures (void)
             printf("\b");
     }
 	
+    P4_DoomLoadingProgress(P4_DOOM_ENGINE_LOADING_TEXTURES, 0,
+                          (uint32_t)numtextures * 2U);
     for (i=0 ; i<numtextures ; i++, directory++)
     {
 	if (!(i&63))
@@ -603,6 +652,8 @@ void R_InitTextures (void)
 	textureheight[i] = texture->height<<FRACBITS;
 		
 	totalwidth += texture->width;
+        P4_DoomLoadingProgress(P4_DOOM_ENGINE_LOADING_TEXTURES,
+                              (uint32_t)i + 1U, (uint32_t)numtextures * 2U);
     }
 
     Z_Free(patchlookup);
@@ -613,8 +664,21 @@ void R_InitTextures (void)
     
     // Precalculate whatever possible.	
 
+    if (numlumps > INT_MAX / sizeof(*patchmetadata))
+        I_Error("R_InitTextures: too many lumps for metadata");
+    patchmetadata = Z_Malloc(numlumps * sizeof(*patchmetadata), PU_STATIC, NULL);
+    memset(patchmetadata, 0, numlumps * sizeof(*patchmetadata));
     for (i=0 ; i<numtextures ; i++)
-	R_GenerateLookup (i);
+    {
+	R_GenerateLookupWithMetadata(i, patchmetadata);
+        P4_DoomLoadingProgress(P4_DOOM_ENGINE_LOADING_TEXTURES,
+            (uint32_t)numtextures + (uint32_t)i + 1U,
+            (uint32_t)numtextures * 2U);
+    }
+    for (lumpnum=0 ; lumpnum<numlumps ; lumpnum++)
+        if (patchmetadata[lumpnum] != NULL)
+            Z_Free(patchmetadata[lumpnum]);
+    Z_Free(patchmetadata);
     
     // Create translation table for global animation.
     texturetranslation = Z_Malloc ((numtextures+1)*sizeof(*texturetranslation), PU_STATIC, 0);
@@ -655,7 +719,8 @@ void R_InitFlats (void)
 void R_InitSpriteLumps (void)
 {
     int		i;
-    patch_t	*patch;
+    patch_t	patch;
+    wad_file_t *sprite_file = NULL;
 	
     firstspritelump = W_GetNumForName (DEH_String("S_START")) + 1;
     lastspritelump = W_GetNumForName (DEH_String("S_END")) - 1;
@@ -665,16 +730,27 @@ void R_InitSpriteLumps (void)
     spriteoffset = Z_Malloc (numspritelumps*sizeof(*spriteoffset), PU_STATIC, 0);
     spritetopoffset = Z_Malloc (numspritelumps*sizeof(*spritetopoffset), PU_STATIC, 0);
 	
+    P4_DoomLoadingProgress(P4_DOOM_ENGINE_LOADING_SPRITES, 0,
+                          (uint32_t)numspritelumps);
     for (i=0 ; i< numspritelumps ; i++)
     {
 	if (!(i&63))
 	    printf (".");
 
-	patch = W_CacheLumpNum (firstspritelump+i, PU_CACHE);
-	spritewidth[i] = SHORT(patch->width)<<FRACBITS;
-	spriteoffset[i] = SHORT(patch->leftoffset)<<FRACBITS;
-	spritetopoffset[i] = SHORT(patch->topoffset)<<FRACBITS;
+        wad_file_t *file = lumpinfo[firstspritelump+i].wad_file;
+        if (file != sprite_file) {
+            W_SpriteHeaderHint(sprite_file, 0);
+            sprite_file = file;
+            W_SpriteHeaderHint(sprite_file, 1);
+        }
+        W_ReadLumpRange(firstspritelump+i, 0, &patch, offsetof(patch_t, columnofs));
+	spritewidth[i] = SHORT(patch.width)<<FRACBITS;
+	spriteoffset[i] = SHORT(patch.leftoffset)<<FRACBITS;
+	spritetopoffset[i] = SHORT(patch.topoffset)<<FRACBITS;
+        P4_DoomLoadingProgress(P4_DOOM_ENGINE_LOADING_SPRITES,
+                              (uint32_t)i + 1U, (uint32_t)numspritelumps);
     }
+    W_SpriteHeaderHint(sprite_file, 0);
 }
 
 
@@ -906,7 +982,6 @@ void R_PrecacheLevel (void)
 
     Z_Free(spritepresent);
 }
-
 
 
 

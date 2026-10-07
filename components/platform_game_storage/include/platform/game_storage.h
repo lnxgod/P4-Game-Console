@@ -234,6 +234,32 @@ esp_err_t platform_game_storage_remove_file(
 /** Remove one regular file from the fixed GAMES directory. */
 esp_err_t platform_game_storage_remove_game_file(const char *name);
 
+/** Service a caller-owned activity between bounded content-validation reads. */
+typedef void (*platform_game_storage_progress_fn_t)(void *context);
+
+/** A copied snapshot of the current Arena launch validation pass. */
+typedef struct {
+    uint64_t bytes_checked;
+    uint64_t bytes_total;
+    uint16_t file_index;
+    uint16_t file_count;
+    bool active;
+    bool checking_structure;
+    /** True only after every file hash and required WAD structure passed. */
+    bool complete;
+} platform_game_storage_doom_load_progress_t;
+
+/**
+ * Copy Arena launch progress without reading files or changing ownership.
+ * bytes_checked counts bytes fed successfully into the hash checks; it does
+ * not establish content identity until complete is true. The calling-task
+ * progress callback may use this getter while the recursive storage lock is
+ * held. Other tasks may block until validation ends, so this is not a worker
+ * polling API. No other storage API is permitted from that callback.
+ */
+esp_err_t platform_game_storage_get_doom_load_progress(
+    platform_game_storage_doom_load_progress_t *out_progress);
+
 /**
  * Read one bounded regular root file into PSRAM (or internal RAM fallback).
  * The returned allocation must be released with the matching function.
@@ -246,6 +272,22 @@ esp_err_t platform_game_storage_load_root_file(
 esp_err_t platform_game_storage_load_game_file(
     const char *name, size_t maximum_bytes,
     uint8_t **out_data, size_t *out_size_bytes);
+
+/**
+ * Like the corresponding load function, with optional calling-task progress
+ * before the first read and between reads of at most 64 KiB. The storage lock
+ * stays held: the callback must not call storage APIs or retain file buffers.
+ * It must return promptly and must not change storage ownership.
+ */
+esp_err_t platform_game_storage_load_root_file_with_progress(
+    const char *name, size_t maximum_bytes,
+    uint8_t **out_data, size_t *out_size_bytes,
+    platform_game_storage_progress_fn_t progress, void *context);
+
+esp_err_t platform_game_storage_load_game_file_with_progress(
+    const char *name, size_t maximum_bytes,
+    uint8_t **out_data, size_t *out_size_bytes,
+    platform_game_storage_progress_fn_t progress, void *context);
 
 /** Read one bounded regular file from the fixed UPDATE directory. */
 esp_err_t platform_game_storage_load_update_file(
@@ -287,6 +329,17 @@ esp_err_t platform_game_storage_lock_for_doom_title(
     platform_game_storage_doom_title_t title);
 
 /**
+ * Like lock_for_doom_title(), with optional progress on the calling task after
+ * each hashed block. The storage lock is held: the callback may copy status
+ * with get_doom_load_progress(), but must not call any other storage API or
+ * retain content buffers. This lets an admitted multiplayer
+ * session poll and exchange keepalives during a long SD validation pass.
+ */
+esp_err_t platform_game_storage_lock_for_doom_title_with_progress(
+    platform_game_storage_doom_title_t title,
+    platform_game_storage_progress_fn_t progress, void *context);
+
+/**
  * Borrow the verified in-memory data for the current terminal game lease.
  *
  * The snapshot is created during the same bounded SD pass that computes the
@@ -301,6 +354,13 @@ esp_err_t platform_game_storage_get_locked_doom_snapshot(
 bool platform_game_storage_game_locked(void);
 /** Dedicated SD-backed, block-verified arena stream; no full-WAD allocation. */
 esp_err_t platform_game_storage_read_arena_wad(unsigned file, size_t offset, void *out, size_t bytes);
+/* Optional one-descriptor startup hint. Failed begin means use normal reads;
+ * failure after begin is an I/O failure, never an integrity-bypassing fallback.
+ * Owner closes the scope before gameplay; lease teardown also frees it. */
+bool platform_game_storage_arena_sprite_begin(unsigned file);
+esp_err_t platform_game_storage_arena_sprite_read(unsigned file, size_t offset,
+                                                  void *out, size_t bytes);
+void platform_game_storage_arena_sprite_end(void);
 /** Cheap presence/size preflight; the terminal lease performs full validation. */
 bool platform_game_storage_arena_present(void);
 

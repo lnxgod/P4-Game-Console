@@ -11,6 +11,7 @@
 #include <string.h>
 
 #include "doom/audio_mixer.h"
+#include "p4/midi.h"
 
 #define DOOM_MUS_HEADER_BYTES ((size_t)16U)
 #define DOOM_MUS_MAGIC_0 UINT8_C(0x4d)
@@ -35,8 +36,16 @@
 struct doom_music_song {
     atomic_uint_least32_t references;
     size_t length;
+    bool midi;
     uint8_t data[];
 };
+
+struct doom_music_midi {
+    p4_midi_player_t player;
+};
+
+_Static_assert((int)DOOM_AUDIO_OUTPUT_RATE_HZ == (int)P4_MIDI_SAMPLE_RATE,
+               "Doom and MIDI mixers must use the same sample rate");
 
 typedef struct {
     const uint8_t *bytes;
@@ -175,8 +184,21 @@ bool doom_music_validate_mus(const uint8_t *data, size_t length)
 
 doom_music_song_t *doom_music_song_create(const void *data, size_t length)
 {
-    if (data == NULL || length > SIZE_MAX - sizeof(doom_music_song_t) ||
-        !doom_music_validate_mus(data, length)) {
+    if (data == NULL || length < 4U ||
+        length > (size_t)DOOM_MUSIC_MAX_SONG_BYTES ||
+        length > SIZE_MAX - sizeof(doom_music_song_t)) {
+        return NULL;
+    }
+    const bool midi = memcmp(data, "MThd", 4U) == 0;
+    if (midi) {
+        /* Registration runs on the Doom task. Keep this fixed-size scratch
+         * state off both tasks' stacks and never retain the caller's bytes. */
+        p4_midi_player_t *const validator = malloc(sizeof(*validator));
+        if (validator == NULL) return NULL;
+        const bool valid = p4_midi_start(validator, data, length, false);
+        free(validator);
+        if (!valid) return NULL;
+    } else if (!doom_music_validate_mus(data, length)) {
         return NULL;
     }
     doom_music_song_t *const song = malloc(sizeof(*song) + length);
@@ -185,6 +207,7 @@ doom_music_song_t *doom_music_song_create(const void *data, size_t length)
     }
     atomic_init(&song->references, UINT32_C(1));
     song->length = length;
+    song->midi = midi;
     memcpy(song->data, data, length);
     return song;
 }
@@ -252,6 +275,9 @@ void doom_music_player_init(doom_music_player_t *player)
 static void release_player_song(doom_music_player_t *player)
 {
     doom_music_song_t *const song = player->song;
+    /* MIDI borrows the song copy; retire it before dropping that reference. */
+    free(player->midi);
+    player->midi = NULL;
     player->song = NULL;
     player->score = NULL;
     player->score_bytes = 0U;
@@ -282,6 +308,25 @@ bool doom_music_player_start(doom_music_player_t *player,
     if (player == NULL || song == NULL ||
         !doom_music_song_retain(song)) {
         return false;
+    }
+    if (song->midi) {
+        struct doom_music_midi *const midi = malloc(sizeof(*midi));
+        if (midi == NULL ||
+            !p4_midi_start(&midi->player, song->data, song->length, looping)) {
+            free(midi);
+            doom_music_song_release(song);
+            return false;
+        }
+        p4_midi_volume(&midi->player, player->volume);
+        release_player_song(player);
+        player->song = song;
+        player->midi = midi;
+        player->looping = looping;
+        player->playing = true;
+        ++player->stats.songs_started;
+        player->stats.playing = true;
+        player->stats.paused = false;
+        return true;
     }
     const size_t score_start = (size_t)read_u16_le(&song->data[6]);
     const size_t score_bytes = (size_t)read_u16_le(&song->data[4]);
@@ -332,6 +377,9 @@ bool doom_music_player_set_volume(doom_music_player_t *player,
     }
     player->volume = volume;
     player->gain_dirty = true;
+    if (player->midi != NULL) {
+        p4_midi_volume(&player->midi->player, volume);
+    }
     return true;
 }
 
@@ -835,6 +883,35 @@ bool doom_music_player_mix(doom_music_player_t *player,
     if (player == NULL || interleaved_pcm == NULL || frame_count == 0U ||
         frame_count > SIZE_MAX / (size_t)DOOM_AUDIO_CHANNEL_COUNT) {
         return false;
+    }
+    if (player->midi != NULL) {
+        if (player->paused) return true;
+        p4_midi_player_t *const midi = &player->midi->player;
+        const p4_midi_stats_t before = midi->stats;
+        bool valid = true;
+        /* Keep the shared sequencer's per-call event/PCM bounds even when a
+         * host caller requests more than the worker's 128-frame block. */
+        for (size_t frame = 0U; frame < frame_count && midi->playing;) {
+            const size_t remaining = frame_count - frame;
+            const size_t block = remaining > 256U ? 256U : remaining;
+            if (!p4_midi_mix(midi, &interleaved_pcm[frame * 2U], block)) {
+                valid = false;
+                break;
+            }
+            frame += block;
+        }
+        player->stats.events_processed += midi->stats.events_processed - before.events_processed;
+        player->stats.notes_started += midi->stats.notes_started - before.notes_started;
+        player->stats.loops_completed += midi->stats.loops_completed - before.loops_completed;
+        player->stats.mixed_frames += midi->stats.mixed_frames - before.mixed_frames;
+        player->stats.parse_failures += midi->stats.parse_failures - before.parse_failures;
+        if (midi->stats.maximum_absolute_mix > player->stats.maximum_absolute_mix) {
+            player->stats.maximum_absolute_mix = midi->stats.maximum_absolute_mix;
+        }
+        if (!midi->playing) release_player_song(player);
+        player->stats.playing = player->playing;
+        player->stats.paused = player->paused;
+        return valid;
     }
     for (size_t frame = 0U; frame < frame_count; ++frame) {
         if (player->playing && !player->paused) {

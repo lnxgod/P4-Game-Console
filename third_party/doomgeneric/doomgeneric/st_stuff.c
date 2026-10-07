@@ -734,7 +734,8 @@ void ST_updateFaceWidget(void)
   
     if (priority < 8)
     {
-	if (plyr->damagecount
+	if (plyr->mo
+	    && plyr->damagecount
 	    && plyr->attacker
 	    && plyr->attacker != plyr->mo)
 	{
@@ -929,6 +930,13 @@ void ST_Ticker (void)
 
     st_clock++;
     st_randomnumber = M_Random();
+
+    // A cold Arena guest can replay from before its first spawn.  Preserve
+    // the normal cosmetic RNG cadence, but the status widgets are not bound
+    // to a local player until P_SpawnPlayer calls ST_Start.
+    if (!plyr)
+        return;
+
     ST_updateWidgets();
     st_oldhealth = plyr->health;
 
@@ -1416,4 +1424,3 @@ void ST_Init (void)
     ST_loadData();
     st_backing_screen = (byte *) Z_Malloc(ST_WIDTH * ST_HEIGHT, PU_STATIC, 0);
 }
-

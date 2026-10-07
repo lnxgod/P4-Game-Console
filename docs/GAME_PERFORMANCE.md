@@ -9,7 +9,15 @@ complete with device qualification explicitly pending.
 
 Native games target **60 presented FPS**, with **30 FPS the release floor on
 the actual ESP32-P4** during sustained representative play. Render native
-768×480 RGB565 with the tested 320×200 fallback and canonical 320×200 touch.
+768×480 RGB565 for every maintained Tab5 game. Require high resolution in
+the native manifest and descriptor, then verify the selected runtime surface.
+Canonical 320×200 touch coordinates are input units, not a framebuffer target.
+Never use a 320×200 framebuffer, upscale a completed low-resolution frame or
+enable a per-title low-resolution override to satisfy the frame-rate floor or
+repair readability. Optimize the measured native update/render/presentation
+cost instead. Keep an unmet native cadence or readability gate open until it
+passes; a fallback benchmark cannot close it. Preserve existing fallback source
+and bounded ABI tests for explicitly requested legacy maintenance.
 Native C is the supported authoring route, including custom software 2D/3D
 engines and raycasters. A language or engine choice does not guarantee cadence;
 measure the real P4 candidate. Native games have no script-renderer ceiling.
@@ -103,8 +111,10 @@ review first. The optimized native CPU benchmark compiles real game sources:
 ```sh
 cmake --build build-host/play-<slug> --target p4_game_benchmark
 build-host/play-<slug>/p4_game_benchmark 2000 768 path/to/input-tape.txt
-build-host/play-<slug>/p4_game_benchmark 2000 320 path/to/input-tape.txt
 ```
+
+The benchmark's 320-size mode is retained for explicit legacy diagnostics;
+it cannot qualify maintained Tab5 performance or presentation.
 
 Tape rows are increasing frame indices, held button masks and canonical touch
 x/y; `30 16 -1 -1` presses A, and a later mask-zero row releases it. Use -1/-1

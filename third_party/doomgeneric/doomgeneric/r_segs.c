@@ -196,10 +196,22 @@ R_RenderMaskedSegRange
 #define HEIGHTBITS		12
 #define HEIGHTUNIT		(1<<HEIGHTBITS)
 
+/* Opaque tiers share one setup per column. Masked-only columns prepare
+ * their own drawing parameters later in R_RenderMaskedSegRange. */
+static inline void R_SetWallColumn(void)
+{
+    unsigned index = rw_scale >> LIGHTSCALESHIFT;
+    if (index >= MAXLIGHTSCALE)
+        index = MAXLIGHTSCALE - 1;
+    dc_colormap = walllights[index];
+    dc_x = rw_x;
+    dc_iscale = 0xffffffffu / (unsigned)rw_scale;
+}
+
 void R_RenderSegLoop (void)
 {
     angle_t		angle;
-    unsigned		index;
+    boolean             columnsetup;
     int			yl;
     int			yh;
     int			mid;
@@ -209,6 +221,7 @@ void R_RenderSegLoop (void)
 
     for ( ; rw_x < rw_stopx ; rw_x++)
     {
+        columnsetup = false;
 	// mark floor / ceiling areas
 	yl = (topfrac+HEIGHTUNIT-1)>>HEIGHTBITS;
 
@@ -256,15 +269,7 @@ void R_RenderSegLoop (void)
 	    angle = (rw_centerangle + xtoviewangle[rw_x])>>ANGLETOFINESHIFT;
 	    texturecolumn = rw_offset-FixedMul(finetangent[angle],rw_distance);
 	    texturecolumn >>= FRACBITS;
-	    // calculate lighting
-	    index = rw_scale>>LIGHTSCALESHIFT;
 
-	    if (index >=  MAXLIGHTSCALE )
-		index = MAXLIGHTSCALE-1;
-
-	    dc_colormap = walllights[index];
-	    dc_x = rw_x;
-	    dc_iscale = 0xffffffffu / (unsigned)rw_scale;
 	}
         else
         {
@@ -277,6 +282,7 @@ void R_RenderSegLoop (void)
 	if (midtexture)
 	{
 	    // single sided line
+            R_SetWallColumn();
 	    dc_yl = yl;
 	    dc_yh = yh;
 	    dc_texturemid = rw_midtexturemid;
@@ -299,6 +305,11 @@ void R_RenderSegLoop (void)
 
 		if (mid >= yl)
 		{
+                    if (!columnsetup)
+                    {
+                        R_SetWallColumn();
+                        columnsetup = true;
+                    }
 		    dc_yl = yl;
 		    dc_yh = mid;
 		    dc_texturemid = rw_toptexturemid;
@@ -328,6 +339,11 @@ void R_RenderSegLoop (void)
 		
 		if (mid <= yh)
 		{
+                    if (!columnsetup)
+                    {
+                        R_SetWallColumn();
+                        columnsetup = true;
+                    }
 		    dc_yl = mid;
 		    dc_yh = yh;
 		    dc_texturemid = rw_bottomtexturemid;
@@ -740,4 +756,3 @@ R_StoreWallRange
     }
     ds_p++;
 }
-

@@ -71,17 +71,29 @@ build unless the user explicitly asks only for diagnosis.
 
 ## Inspect high-resolution presentation
 
-Follow `docs/GAME_ART.md`. New and upgraded games should negotiate 768x480,
-with guarded render coverage for the 320x200 fallback and padded strides.
-Inspect native-size captures of gameplay, menus and results; check text bounds,
-card overlap, texture contrast, selected states and sprites at screen edges.
-The SDL runner selects its surface from the compiled game descriptor; keep
-that descriptor aligned with the manifest. A large window alone does not prove
-that the game draws native detail. Test canonical 320x200 touch hit regions against
-the visible high-resolution controls. Record asset bytes and cartridge size.
+Follow `docs/GAME_ART.md`. Every maintained Tab5 game must render directly at
+768x480 RGB565. Verify required high resolution in the manifest and compiled
+C descriptor, then inspect the actual selected framebuffer dimensions. A
+320x200 render, per-title OS downgrade or enlarged completed low-resolution
+frame fails native presentation acceptance. Route a mode mismatch through
+**Fix Console** before adapting textures to the wrong resolution.
+
+Inspect native-size opening, active play, pause and results. Check paths,
+actor/obstacle/pickup/hazard silhouettes, quiet background textures, overlapping
+effects, text bounds, selected states and sprites at screen edges. The SDL
+runner selects its surface from the compiled descriptor; a large window alone
+does not prove native detail. Test canonical 320x200 touch hit regions against
+the visible controls. Record asset bytes and cartridge size. Preserve bounded
+legacy fallback/stride tests as compatibility evidence only.
+
+For a device claim, require `CARTRIDGE_START ... surface=768x480`, exact package,
+OS and unit bindings, and an active-play capture/readability review on that
+unit. For multiplayer, verify both host and guest surfaces. An install receipt,
+optional capability or scaled screenshot cannot close that gate. Keep device
+readability and cadence pending when only host evidence is available.
 
 Follow the canonical [ESP32-P4 performance contract](../../../docs/GAME_PERFORMANCE.md)
-for native/fallback CPU benchmarks, deliberately active movement/drag traces,
+for native-resolution CPU benchmarks, deliberately active movement/drag traces,
 changed-frame checks and exact artifact bindings. Review real motion, timers
 and audio in the SDL runner; its FPS title and Mac CPU results cannot establish
 the actual-device 30 FPS release floor. Report limited or idle trace coverage.

@@ -11,7 +11,7 @@ enum { NG_W=1280, NG_H=720, NG_MAX_CONTROLS=64,
     NC_REFRESH,NC_FILE_OPEN,NC_DELETE,NC_CANCEL,NC_CONFIRM,NC_AUDIO,
     NC_STORAGE,NC_CONTROLLER,NC_USB,NC_MP_VIEW,NC_MP_OPTION,NC_MP_PRIMARY,
     NC_MP_ROOM,NC_KEY,NC_APPEARANCE,NC_LIST_PREV,NC_LIST_NEXT,NC_MP_OPTIONS,NC_KEYBOARD,NC_FILTER,NC_CATEGORY,NC_CATEGORY_PREV,NC_CATEGORY_NEXT,
-    NC_FILE_MENU,NC_DISMISS,NC_SCROLL,NC_AUDIO_STATUS };
+    NC_FILE_MENU,NC_DISMISS,NC_SCROLL,NC_AUDIO_STATUS,NC_MP_GAME,NC_MP_TRANSPORT };
 enum { NG_GRID_TOP=178, NG_GRID_BOTTOM=626, NG_GRID_PITCH=210,
     NG_FILES_TOP=178, NG_FILES_BOTTOM=536, NG_FILE_PITCH=90 };
 typedef struct { uint16_t id; int16_t x,y,w,h; bool enabled; } ng_control_t;
@@ -170,7 +170,9 @@ static void ng_button(ng_scene_t *s,int x,int y,int w,int h,const char *label,
     const uint16_t fill=enabled&&primary?NG_CYAN:NG_SURFACE;
     ng_panel(s,x,y,w,h,focused&&enabled?ng_mix(NG_WHITE,NG_CYAN,(unsigned)s->shell->ng_focus_ms*15U/100U):(primary&&enabled?NG_CYAN:NG_LINE),fill);
     if(pressed)ng_round(s,x+5,y+5,w-10,h-10,8,ng_mix(NG_WHITE,fill,3));
-    const int font=s->shell->ng_large_text?32:28;
+    int font=s->shell->ng_large_text?32:28;
+    /* Preserve recognizable game names in the compact inventory grid. */
+    if(kind==NC_MP_GAME)while(font>24&&ng_text_width(label,font)>w-24)font-=2;
     ng_center(s,x,y+(h-font*40/32)/2,w,label,font,enabled?(primary?NG_INK:NG_WHITE):NG_MUTED);
 }
 static bool ng_contains(const char *text,const char *needle)
@@ -332,13 +334,33 @@ static void ng_empty(ng_scene_t *s,const char *title,const char *detail)
     ng_center(s,288,298,940,title,36,NG_WHITE);
     ng_center(s,288,362,940,detail,26,NG_MUTED);
 }
+/* The dynamic launch region is entirely inside the flat panel fill.
+ * Keep its bounds synchronized with the pixel-equivalence regression. */
+enum { NG_LOADING_X=910, NG_LOADING_Y=340,
+       NG_LOADING_W=306, NG_LOADING_H=164 };
+static void ng_launch_progress(ng_scene_t *s)
+{
+    const console_shell_loading_info_t *loading=&s->shell->loading;
+    char elapsed[32];
+    (void)snprintf(elapsed,sizeof(elapsed),"Elapsed %lus",
+        (unsigned long)loading->elapsed_seconds);
+    ng_label(s,910,340,loading->stage,24,NG_WHITE,306);
+    ng_label(s,910,385,loading->detail,21,NG_MUTED,306);
+    if(loading->progress_visible){
+        const unsigned percent=loading->progress_percent>100U?100U:loading->progress_percent;
+        ng_rect(s,910,430,306,14,NG_LINE);
+        ng_rect(s,910,430,(int)(306U*percent/100U),14,NG_CYAN);
+    }
+    ng_label(s,910,474,elapsed,24,NG_MUTED,306);
+}
 static void ng_launch(ng_scene_t *s)
 {
     const console_shell_t *sh=s->shell;
     const console_app_descriptor_t *app=NULL;
     for(size_t i=0;i<sh->app_count;++i)if(sh->apps[i].id==sh->active_app_id){app=&sh->apps[i];break;}
     if(!app){ng_heading(s,"Opening game");ng_empty(s,"Getting ready","");return;}
-    ng_heading(s,app->title);
+    const console_shell_loading_info_t *loading=&sh->loading;
+    ng_heading(s,loading->active&&loading->title[0]?loading->title:app->title);
     ng_panel(s,264,168,988,448,NG_LINE,NG_SURFACE);
     ng_game_art(s,app,284,188,600,337);
     ng_label(s,910,206,"GET READY",24,NG_CYAN,306);
@@ -346,7 +368,8 @@ static void ng_launch(ng_scene_t *s)
     ng_category_label(ng_app_category(app),category);
     ng_label(s,910,254,category,30,NG_WHITE,306);
     ng_label(s,288,558,app->subtitle?app->subtitle:"",28,NG_WHITE,932);
-    ng_label(s,910,452,"Opening...",28,NG_MUTED,306);
+    if(loading->active)ng_launch_progress(s);
+    else ng_label(s,910,452,"Opening...",28,NG_MUTED,306);
 }
 static unsigned ng_nav_selection(const console_shell_t *sh)
 {
@@ -715,59 +738,153 @@ static void ng_mp_value(const console_shell_runtime_info_t *r,unsigned option,ch
     default:(void)snprintf(value,bytes,"%u rooms",(unsigned)r->multiplayer_lobby_count);break;
     }
 }
+static const console_multiplayer_game_display_t *ng_mp_game(const console_shell_runtime_info_t *r)
+{
+    return r->multiplayer_game_selection<r->multiplayer_game_count&&
+        r->multiplayer_game_selection<CONSOLE_MULTIPLAYER_MAX_GAMES
+        ?&r->multiplayer_games[r->multiplayer_game_selection]:NULL;
+}
+static size_t ng_mp_settings(const console_shell_runtime_info_t *r,unsigned *options)
+{
+    if(r->multiplayer_game_is_arena){options[0]=CONSOLE_MULTIPLAYER_OPTION_MAP;return 1U;}
+    if(r->multiplayer_game_is_doom){
+        for(unsigned i=0;i<7U;++i)options[i]=CONSOLE_MULTIPLAYER_OPTION_MODE+i;
+        return 7U;
+    }
+    if(r->multiplayer_dice_available){options[0]=CONSOLE_MULTIPLAYER_OPTION_DICE;return 1U;}
+    return 0U;
+}
+static void ng_mp_status(ng_scene_t *s)
+{
+    const char *status=s->shell->runtime.multiplayer_status;
+    if(status[0])ng_label(s,282,571,status,22,NG_AMBER,950);
+}
+enum { NG_MP_GAMES_PER_PAGE=12U };
+static size_t ng_list_page_size(const console_shell_t *sh)
+{
+    return sh->page==CONSOLE_PAGE_MULTIPLAYER&&sh->multiplayer_view==CONSOLE_MULTIPLAYER_VIEW_GAME
+        ?NG_MP_GAMES_PER_PAGE:4U;
+}
 static void ng_multiplayer(ng_scene_t *s)
 {
     console_shell_t *sh=s->shell;const console_shell_runtime_info_t *r=&sh->runtime;
-    ng_heading(s,sh->multiplayer_view==CONSOLE_MULTIPLAYER_VIEW_ROLE?"Multiplayer":
-        sh->multiplayer_view==CONSOLE_MULTIPLAYER_VIEW_JOIN?"Join game":
-        sh->multiplayer_view==CONSOLE_MULTIPLAYER_VIEW_HOST_SETTINGS?"Match settings":"Host game");
-    if(sh->multiplayer_view==CONSOLE_MULTIPLAYER_VIEW_ROLE){
-        ng_panel(s,264,178,988,190,NG_LINE,NG_SURFACE);
-        ng_label(s,292,205,r->multiplayer_transport_ready?"Console link ready":"Set up a console link",38,NG_WHITE,920);
-        ng_label(s,292,270,r->multiplayer_transport_kind==2U?"Host creates a network. No router needed.":r->multiplayer_transport_kind==1U?"Bluetooth transport selected":"USB / wired relay transport",28,NG_MUTED,920);
-        ng_button(s,264,402,474,142,"Host game",NC_MP_VIEW,CONSOLE_MULTIPLAYER_VIEW_HOST,r->multiplayer_core_ready,true);
-        ng_button(s,778,402,474,142,"Join game",NC_MP_VIEW,CONSOLE_MULTIPLAYER_VIEW_JOIN,r->multiplayer_core_ready,false);
-        char transport[80]; ng_mp_value(r,CONSOLE_MULTIPLAYER_OPTION_TRANSPORT,transport,sizeof(transport));
-        ng_button(s,264,580,988,88,transport,NC_MP_OPTION,CONSOLE_MULTIPLAYER_OPTION_TRANSPORT*2U+1U,r->multiplayer_settings_editable,false);
+    const console_multiplayer_game_display_t *game=ng_mp_game(r);
+    const bool choose_game=sh->multiplayer_view==CONSOLE_MULTIPLAYER_VIEW_GAME;
+    const bool choose_transport=sh->multiplayer_view==CONSOLE_MULTIPLAYER_VIEW_TRANSPORT;
+    const bool joining=sh->multiplayer_view==CONSOLE_MULTIPLAYER_VIEW_JOIN;
+    const bool busy=r->multiplayer_launch_syncing||r->multiplayer_transport_starting;
+    const bool editable=r->multiplayer_settings_editable&&!busy;
+    ng_heading(s,choose_game?"Choose a game":choose_transport?"Choose a connection":
+        sh->multiplayer_view==CONSOLE_MULTIPLAYER_VIEW_ROLE?"Host or join":
+        joining?"Join game":sh->multiplayer_view==CONSOLE_MULTIPLAYER_VIEW_HOST_SETTINGS?"Match settings":"Host game");
+    ng_label(s,282,178,choose_game?"Step 1 of 3: Game":
+        choose_transport?"Step 2 of 3: Connection":
+        "Step 3 of 3: Host or join",24,NG_CYAN,940);
+    if(choose_game){
+        const size_t count=r->multiplayer_game_count<CONSOLE_MULTIPLAYER_MAX_GAMES?
+            r->multiplayer_game_count:CONSOLE_MULTIPLAYER_MAX_GAMES;
+        const size_t first=sh->ng_list_first<count?sh->ng_list_first:0U;
+        char position[64];
+        (void)snprintf(position,sizeof(position),"%u titles  /  Page %u of %u",(unsigned)count,
+            (unsigned)(first/NG_MP_GAMES_PER_PAGE+1U),
+            (unsigned)((count+NG_MP_GAMES_PER_PAGE-1U)/NG_MP_GAMES_PER_PAGE));
+        if(count)ng_label(s,882,178,position,22,NG_MUTED,354);
+        for(size_t i=first;i<count&&i<first+NG_MP_GAMES_PER_PAGE;++i){
+            const console_multiplayer_game_display_t *entry=&r->multiplayer_games[i];
+            char label[96];(void)snprintf(label,sizeof(label),"%s%s",entry->title,
+                entry->available?"":"  - unavailable");
+            ng_button(s,264+(int)((i-first)%2U)*506,228+(int)((i-first)/2U)*56,482,52,label,NC_MP_GAME,(unsigned)i,
+                r->multiplayer_core_ready&&editable&&entry->available&&entry->transport_mask,
+                i==r->multiplayer_game_selection);
+        }
+        if(!count)ng_empty(s,"No multiplayer games","Install a multiplayer game to get started.");
+        ng_mp_status(s);
+        if(count>NG_MP_GAMES_PER_PAGE){
+            ng_button(s,264,606,474,64,"Previous games",NC_LIST_PREV,0,first>0U,false);
+            ng_button(s,778,606,474,64,"More games",NC_LIST_NEXT,0,first+NG_MP_GAMES_PER_PAGE<count,false);
+        }else if(count){
+            ng_label(s,282,616,"Choose a game to see its supported connections.",26,NG_MUTED,950);
+        }
         return;
+    }
+    char transport[80];ng_mp_value(r,CONSOLE_MULTIPLAYER_OPTION_TRANSPORT,transport,sizeof(transport));
+    ng_panel(s,264,216,988,84,NG_LINE,NG_SURFACE);
+    ng_label(s,282,225,game&&game->title[0]?game->title:r->multiplayer_game_title,30,NG_WHITE,946);
+    ng_label(s,282,265,choose_transport?"Choose the same connection on both consoles.":transport,22,NG_CYAN,946);
+    if(choose_transport){
+        const char *names[]={"USB / wired relay","Bluetooth","Local Wi-Fi"};
+        for(unsigned i=0;i<3U;++i){
+            const bool supported=game&&game->available&&(game->transport_mask&(1U<<i));
+            ng_button(s,264,330+(int)i*82,988,70,names[i],NC_MP_TRANSPORT,i,
+                editable&&supported,i==r->multiplayer_transport_kind);
+        }
+        ng_mp_status(s);return;
+    }
+    if(sh->multiplayer_view==CONSOLE_MULTIPLAYER_VIEW_ROLE){
+        const bool ready=r->multiplayer_core_ready&&r->multiplayer_game_ready&&r->multiplayer_transport_ready&&!busy;
+        ng_button(s,264,330,474,150,"Host game",NC_MP_VIEW,CONSOLE_MULTIPLAYER_VIEW_HOST,ready,true);
+        ng_button(s,778,330,474,150,"Join game",NC_MP_VIEW,CONSOLE_MULTIPLAYER_VIEW_JOIN,ready,false);
+        ng_label(s,282,507,"Host creates a room. Join finds a room for this game.",26,NG_MUTED,942);
+        ng_mp_status(s);return;
     }
     if(sh->multiplayer_view==CONSOLE_MULTIPLAYER_VIEW_HOST_SETTINGS){
         const char *names[]={"Game","Mode","Map","Difficulty","Monsters","Fast monsters","Respawn","Time limit","Transport","Rooms","Dice"};
-        const size_t first=sh->ng_list_first<CONSOLE_MULTIPLAYER_OPTION_COUNT?sh->ng_list_first:0U;
-        for(size_t i=first;i<CONSOLE_MULTIPLAYER_OPTION_COUNT&&i<first+4U;++i){
-            const int y=178+(int)(i-first)*94;char value[80];ng_mp_value(r,(unsigned)i,value,sizeof(value));
-            ng_label(s,282,y+4,names[i],26,NG_MUTED,590);
-            ng_label(s,282,y+39,value,30,NG_WHITE,640);
-            const bool enabled=r->multiplayer_settings_editable&&!r->multiplayer_launch_syncing&&i!=CONSOLE_MULTIPLAYER_OPTION_LOBBY&&
-                (i!=CONSOLE_MULTIPLAYER_OPTION_DICE||(!r->multiplayer_game_is_doom&&r->multiplayer_dice_available));
-            ng_button(s,1036,y,88,82,"-",NC_MP_OPTION,(unsigned)i*2U,enabled,false);
-            ng_button(s,1160,y,88,82,"+",NC_MP_OPTION,(unsigned)i*2U+1U,enabled,true);
+        unsigned options[7];const size_t count=ng_mp_settings(r,options);
+        const size_t first=sh->ng_list_first<count?sh->ng_list_first:0U;
+        for(size_t i=first;i<count&&i<first+4U;++i){
+            const unsigned option=options[i];const int y=318+(int)(i-first)*62;
+            char value[80];ng_mp_value(r,option,value,sizeof(value));
+            ng_label(s,282,y+2,names[option],22,NG_MUTED,300);
+            ng_label(s,590,y+12,value,26,NG_WHITE,416);
+            ng_button(s,1036,y,88,56,"-",NC_MP_OPTION,option*2U,editable,false);
+            ng_button(s,1160,y,88,56,"+",NC_MP_OPTION,option*2U+1U,editable,true);
         }
-        ng_button(s,264,580,304,88,"Previous",NC_LIST_PREV,0,first>0U,false);
-        ng_button(s,606,580,304,88,"Next",NC_LIST_NEXT,0,first+4U<CONSOLE_MULTIPLAYER_OPTION_COUNT,false);
-        ng_button(s,948,580,304,88,"Done",NC_MP_VIEW,CONSOLE_MULTIPLAYER_VIEW_HOST,true,true);
+        if(!count)ng_label(s,282,350,"This game has no additional match settings.",28,NG_MUTED,942);
+        ng_mp_status(s);
+        ng_button(s,264,606,304,64,"Previous",NC_LIST_PREV,0,first>0U,false);
+        ng_button(s,606,606,304,64,"Next",NC_LIST_NEXT,0,first+4U<count,false);
+        ng_button(s,948,606,304,64,"Done",NC_MP_VIEW,CONSOLE_MULTIPLAYER_VIEW_HOST,true,true);
         return;
     }
-    if(sh->multiplayer_view==CONSOLE_MULTIPLAYER_VIEW_JOIN){
-        if(!r->multiplayer_lobby_count)ng_empty(s,"No rooms found",r->multiplayer_lobby_scanning?"Looking for a compatible room...":"Connect the console link and start a host.");
+    const bool connected=r->multiplayer_lobby_phase==CONSOLE_MULTIPLAYER_LOBBY_CONNECTED;
+    const bool connecting=r->multiplayer_lobby_phase==CONSOLE_MULTIPLAYER_LOBBY_JOINING;
+    if(joining&&!connecting&&!connected&&!r->multiplayer_launch_syncing){
+        if(!r->multiplayer_lobby_count){
+            ng_label(s,282,366,"No rooms found",36,NG_WHITE,942);
+            ng_label(s,282,420,r->multiplayer_lobby_scanning?"Looking for a room for this game...":
+                "Ask the host to create a room with this connection.",26,NG_MUTED,942);
+        }
         for(unsigned i=0;i<r->multiplayer_lobby_count&&i<CONSOLE_MULTIPLAYER_LOBBY_LIST_MAX;++i){
-            const int y=178+(int)i*92;char label[96];
-            (void)snprintf(label,sizeof(label),"%s   %u/%u players",r->multiplayer_lobbies[i].game_title,
-                (unsigned)r->multiplayer_lobbies[i].players_present,(unsigned)r->multiplayer_lobbies[i].player_capacity);
-            ng_button(s,264,y,988,84,label,NC_MP_ROOM,i+1U,r->multiplayer_lobbies[i].game_available,
-                r->multiplayer_lobby_selection==i+1U);
+            const console_multiplayer_lobby_display_t *room=&r->multiplayer_lobbies[i];char label[96];
+            (void)snprintf(label,sizeof(label),"Room %04lX   %u/%u players%s",
+                (unsigned long)(room->session_id&UINT32_C(0xffff)),
+                (unsigned)room->players_present,(unsigned)room->player_capacity,
+                room->game_available?"":"  - incompatible");
+            ng_button(s,264,318+(int)i*60,988,54,label,NC_MP_ROOM,i+1U,
+                editable&&room->game_available,r->multiplayer_lobby_selection==i+1U);
         }
     }else {
-        ng_panel(s,264,178,988,250,NG_LINE,NG_SURFACE);
-        ng_label(s,292,199,r->multiplayer_game_title[0]?r->multiplayer_game_title:"Select a game",40,NG_WHITE,914);
-        ng_label(s,292,269,r->multiplayer_launch_syncing?"Synchronizing consoles...":
-            r->multiplayer_peer_seen?"Another console is connected.":"Waiting for another console.",28,NG_MUTED,914);
-        ng_label(s,292,337,r->multiplayer_transport_encrypted?"Encrypted Bluetooth link":r->multiplayer_transport_kind==2U?"Local Wi-Fi · no router or internet":"USB / wired local link",26,NG_CYAN,914);
-        ng_button(s,264,452,988,82,"Match settings",NC_MP_OPTIONS,0,r->multiplayer_settings_editable,false);
+        const char *headline=r->multiplayer_launch_syncing?"Starting game...":
+            connecting?"Connecting to host...":connected?"Room connected":
+            r->multiplayer_lobby_phase==CONSOLE_MULTIPLAYER_LOBBY_HOSTING?"Room open":"Ready to host";
+        const char *detail=r->multiplayer_launch_syncing?"Synchronizing the selected game on every console.":
+            connecting?"Keep both consoles here while the connection completes.":
+            joining?"Waiting for the host to start the game.":
+            r->multiplayer_can_start?"Players are ready. Start when everyone has joined.":
+            r->multiplayer_lobby_phase==CONSOLE_MULTIPLAYER_LOBBY_HOSTING?"Waiting for players to join this room.":
+            "Review match settings, then create your room.";
+        ng_panel(s,264,318,988,162,NG_LINE,NG_SURFACE);
+        ng_label(s,282,340,headline,36,NG_WHITE,942);
+        ng_label(s,282,407,detail,26,NG_MUTED,942);
+        if(!joining)ng_button(s,264,494,988,64,"Match settings",NC_MP_OPTIONS,0,editable,false);
     }
+    ng_mp_status(s);
     const bool enabled=multiplayer_primary_action(sh).type!=CONSOLE_ACTION_NONE;
-    ng_button(s,264,576,988,88,sh->multiplayer_view==CONSOLE_MULTIPLAYER_VIEW_JOIN?"Join selected room":
-        r->multiplayer_can_start?"Start game":"Create room",NC_MP_PRIMARY,0,enabled,true);
+    const char *primary=r->multiplayer_launch_syncing?"Starting game...":
+        joining?(connected?"Waiting for host":connecting?"Connecting...":"Join selected room"):
+        r->multiplayer_can_start?"Start game":
+        r->multiplayer_lobby_phase==CONSOLE_MULTIPLAYER_LOBBY_HOSTING?"Waiting for players":"Create room";
+    ng_button(s,264,606,988,64,primary,NC_MP_PRIMARY,0,enabled,true);
 }
 static void ng_modal(ng_scene_t *s)
 {
@@ -879,6 +996,8 @@ static void ng_initial_focus(console_shell_t *sh)
 }
 static console_shell_action_t ng_open(console_shell_t *sh,console_page_t page)
 {
+    /* Re-tapping the active rail must not silently abandon a joined room. */
+    if(page==CONSOLE_PAGE_MULTIPLAYER&&sh->page==page)return no_action();
     sh->control_panel_active=false;sh->file_delete_confirm=false;sh->storage_repair_confirm=false;
     sh->ng_list_first=0U;sh->ng_file_scroll=0;sh->ng_focus=0U;sh->ng_keyboard=false;
     sh->ng_categories=false;sh->ng_file_menu=false;sh->ng_scroll_kind=0;
@@ -901,7 +1020,7 @@ static console_shell_action_t ng_back(console_shell_t *sh)
         sh->file_delete_confirm=false;sh->storage_repair_confirm=false;sh->ng_focus=0U;sh->dirty=true;
         ng_initial_focus(sh);return no_action();}
     if(sh->ng_keyboard){sh->ng_keyboard=false;sh->ng_focus=0U;sh->dirty=true;ng_initial_focus(sh);return no_action();}
-    if(sh->page==CONSOLE_PAGE_MULTIPLAYER&&sh->multiplayer_view!=CONSOLE_MULTIPLAYER_VIEW_ROLE){
+    if(sh->page==CONSOLE_PAGE_MULTIPLAYER&&sh->multiplayer_view!=CONSOLE_MULTIPLAYER_VIEW_GAME){
         sh->ng_list_first=0U;sh->ng_focus=0U;return multiplayer_back_action(sh);}
     if(sh->page==CONSOLE_PAGE_HOME){
         if(sh->home_all_programs)return ng_open(sh,CONSOLE_PAGE_HOME);
@@ -968,14 +1087,26 @@ static console_shell_action_t ng_activate(console_shell_t *sh,uint16_t id)
     case NC_USB:return system_usb_action(sh);
     case NC_MP_VIEW:sh->ng_list_first=0U;sh->ng_focus=0U;return enter_multiplayer_view(sh,(console_multiplayer_view_t)param);
     case NC_MP_OPTIONS:sh->ng_list_first=0U;sh->ng_focus=0U;return enter_multiplayer_host_settings(sh);
+    case NC_MP_GAME:
+        if(sh->multiplayer_view!=CONSOLE_MULTIPLAYER_VIEW_GAME||
+           param>=sh->runtime.multiplayer_game_count||param>=CONSOLE_MULTIPLAYER_MAX_GAMES||
+           !sh->runtime.multiplayer_games[param].available)return no_action();
+        sh->multiplayer_view=CONSOLE_MULTIPLAYER_VIEW_TRANSPORT;sh->ng_list_first=0U;sh->ng_focus=0U;
+        return (console_shell_action_t){.type=CONSOLE_ACTION_MULTIPLAYER_GAME_SELECT,
+            .app_id=sh->active_app_id,.file_source_index=UINT32_MAX,.multiplayer_game_selection=(uint8_t)param};
+    case NC_MP_TRANSPORT:
+        if(sh->multiplayer_view!=CONSOLE_MULTIPLAYER_VIEW_TRANSPORT||param>2U)return no_action();
+        sh->multiplayer_view=CONSOLE_MULTIPLAYER_VIEW_ROLE;sh->ng_focus=0U;
+        return (console_shell_action_t){.type=CONSOLE_ACTION_MULTIPLAYER_TRANSPORT_SELECT,
+            .app_id=sh->active_app_id,.file_source_index=UINT32_MAX,.multiplayer_transport_kind=(uint8_t)param};
     case NC_MP_OPTION:return multiplayer_config_action(sh,(console_multiplayer_option_t)(param/2U),param%2U?1:-1);
     case NC_MP_PRIMARY:return multiplayer_primary_action(sh);
     case NC_MP_ROOM:return multiplayer_lobby_select_action(sh,(uint8_t)param);
     case NC_KEYBOARD:sh->ng_keyboard=!sh->ng_keyboard;sh->ng_focus=0U;break;
     case NC_KEY:(void)console_shell_handle_text_key(sh,(char)param);break;
     case NC_APPEARANCE:if(param==0U)sh->ng_large_text=!sh->ng_large_text;else sh->ng_reduce_motion=!sh->ng_reduce_motion;break;
-    case NC_LIST_PREV:sh->ng_list_first=sh->ng_list_first>=4U?sh->ng_list_first-4U:0U;break;
-    case NC_LIST_NEXT:sh->ng_list_first+=4U;break;
+    case NC_LIST_PREV:{const size_t step=ng_list_page_size(sh);sh->ng_list_first=sh->ng_list_first>=step?sh->ng_list_first-step:0U;break;}
+    case NC_LIST_NEXT:sh->ng_list_first+=ng_list_page_size(sh);break;
     default:break;
     }
     ng_initial_focus(sh);return no_action();
@@ -1040,6 +1171,11 @@ static console_shell_action_t nextgen_touch(console_shell_t *sh,bool valid,const
         if(activate&&id<=UINT16_MAX){
             if(id/128U==NC_LAUNCH&&(id%128U>=sh->app_count||sh->apps[id%128U].id!=sh->ng_press_identity))return no_action();
             if(id/128U==NC_FILE_ROW&&sh->ng_press_revision!=sh->files.revision)return no_action();
+            if(id/128U==NC_MP_ROOM){
+                const size_t row=id%128U;
+                if(row==0U||row>sh->runtime.multiplayer_lobby_count||row>CONSOLE_MULTIPLAYER_LOBBY_LIST_MAX||
+                    sh->runtime.multiplayer_lobbies[row-1U].session_id!=sh->ng_press_identity)return no_action();
+            }
             return ng_activate(sh,(uint16_t)id);}
         return no_action();
     }
@@ -1059,7 +1195,13 @@ static console_shell_action_t nextgen_touch(console_shell_t *sh,bool valid,const
             if(hit&&hit->id/128U==NC_SCROLL){sh->ng_scroll_kind+=2U;sh->press_active=false;}}
         if(stopping)sh->press_active=false; /* A touch that stops a fling must not launch. */
         if(hit){sh->ng_focus=hit->id;sh->ng_focus_ms=100U;
-            sh->ng_press_identity=hit->id/128U==NC_LAUNCH&&hit->id%128U<sh->app_count?sh->apps[hit->id%128U].id:0U;}
+            sh->ng_press_identity=hit->id/128U==NC_LAUNCH&&hit->id%128U<sh->app_count?sh->apps[hit->id%128U].id:0U;
+            if(hit->id/128U==NC_MP_ROOM){
+                const size_t row=hit->id%128U;
+                if(row>0U&&row<=sh->runtime.multiplayer_lobby_count&&row<=CONSOLE_MULTIPLAYER_LOBBY_LIST_MAX)
+                    sh->ng_press_identity=sh->runtime.multiplayer_lobbies[row-1U].session_id;
+            }
+        }
         sh->dirty=true;
     }else {
         const int dx=(int)x-(int)sh->press_start_physical_x,dy=(int)y-(int)sh->press_start_physical_y;
@@ -1125,6 +1267,8 @@ static uint64_t ng_cache_signature(const console_shell_t *sh)
     uint64_t hash=home_cache_signature(sh);
 #define NG_HASH(field) hash=home_cache_hash_bytes(hash,&sh->field,sizeof(sh->field))
     NG_HASH(page);NG_HASH(ng_category);NG_HASH(ng_focus);NG_HASH(ng_focus_ms);
+    /* A launch frame may only reuse its own static identity and chrome. */
+    if(sh->page==CONSOLE_PAGE_EXTERNAL){NG_HASH(active_app_id);NG_HASH(loading.title);}
     NG_HASH(ng_large_text);NG_HASH(file_selected_index);NG_HASH(file_notice);
     NG_HASH(runtime.game_volume_step);
     NG_HASH(runtime.battery_sample_valid);NG_HASH(runtime.battery_percent);NG_HASH(runtime.game_storage_state);
@@ -1143,7 +1287,13 @@ static bool nextgen_render(console_shell_t *sh,uint16_t *pixels,size_t stride,bo
     /* Loading is a transient, non-interactive view; retain the game tile focus. */
     if(sh->page!=CONSOLE_PAGE_EXTERNAL)ng_initial_focus(sh);
     const bool library=sh->page==CONSOLE_PAGE_HOME&&sh->home_all_programs;
-    const bool eligible=(library||sh->page==CONSOLE_PAGE_FILES||sh->page==CONSOLE_PAGE_GAMES)&&
+    bool loading=sh->page==CONSOLE_PAGE_EXTERNAL&&sh->loading.active;
+    if(loading){
+        bool found=false;
+        for(size_t i=0;i<sh->app_count;++i)if(sh->apps[i].id==sh->active_app_id){found=true;break;}
+        loading=found;
+    }
+    const bool eligible=(loading||library||sh->page==CONSOLE_PAGE_FILES||sh->page==CONSOLE_PAGE_GAMES)&&
         !sh->ng_categories&&!sh->ng_file_menu&&!sh->file_delete_confirm&&!sh->storage_repair_confirm&&!sh->pointer_visible&&!sh->press_active;
     const uint64_t signature=eligible?ng_cache_signature(sh):0;
     const int offset=library?sh->ng_library_scroll:sh->ng_file_scroll;
@@ -1151,7 +1301,14 @@ static bool nextgen_render(console_shell_t *sh,uint16_t *pixels,size_t stride,bo
     const int shift=previous-offset,magnitude=abs(shift);
     const int top=library?NG_GRID_TOP:NG_FILES_TOP,bottom=library?NG_GRID_BOTTOM:NG_FILES_BOTTOM;
     ng_scene_t scene={.shell=sh,.pixels=pixels,.stride=stride};
-    if(cached&&eligible&&sh->native_home_cache_valid&&sh->native_home_cache_pixels==(uintptr_t)pixels&&
+    if(cached&&eligible&&loading&&sh->native_home_cache_valid&&
+       sh->native_home_cache_pixels==(uintptr_t)pixels&&
+       sh->native_home_cache_stride==stride&&sh->native_home_cache_signature==signature){
+        ng_rect(&scene,NG_LOADING_X,NG_LOADING_Y,NG_LOADING_W,NG_LOADING_H,NG_SURFACE);
+        ng_launch_progress(&scene);
+        sh->native_update=(console_shell_native_update_t){.kind=CONSOLE_SHELL_NATIVE_UPDATE_REGION,
+            .x=NG_LOADING_X,.y=NG_LOADING_Y,.width=NG_LOADING_W,.height=NG_LOADING_H};
+    }else if(cached&&eligible&&sh->native_home_cache_valid&&sh->native_home_cache_pixels==(uintptr_t)pixels&&
        sh->native_home_cache_stride==stride&&sh->native_home_cache_signature==signature&&
        magnitude>0&&magnitude<bottom-top&&
        (library||(previous>0&&offset>0&&previous<ng_scroll_max(sh->files.entry_count,false)&&offset<ng_scroll_max(sh->files.entry_count,false)))){

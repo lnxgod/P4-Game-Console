@@ -3,7 +3,10 @@ set(PLATFORM_GAME_STORAGE_MODEL_SOURCES
     src/game_storage_files.c
     src/msc_write_policy.c
     src/verified_reader.c
+    src/verified_window.c
     src/verified_wad.c
+    src/storage_block_read.c
+    src/sd_metadata.c
 )
 
 if(COMMAND idf_component_register)

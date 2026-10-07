@@ -1,5 +1,14 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 
+option(P4_CONSOLE_NATIVE_AIR_LOW_RES
+       "Opt-in 320x200 Air Hockey experiment on Tab5" OFF)
+
+option(P4_CONSOLE_NATIVE_TIDE_BLAST_LOW_RES
+       "Opt-in 320x200 Tide Maze and Blast Circuit experiment on Tab5" OFF)
+
+option(P4_CONSOLE_NATIVE_CHECKERS_LOW_RES
+       "Opt-in 320x200 Checkers experiment on Tab5" OFF)
+
 set(P4_DOOM_TOUCH_AUDIO_MAIN
     "${CMAKE_CURRENT_LIST_DIR}/../../doom_embedded_touch_audio/main")
 set(P4_DOOM_GAMEPAD_AUDIO_MAIN
@@ -95,6 +104,12 @@ else()
     list(APPEND P4_CONSOLE_MAIN_INCLUDE_DIRS
         "${P4_DOOM_TOUCH_AUDIO_MAIN}"
     )
+    if(P4_ACTIVE_BOARD_PROFILE STREQUAL "m5stack-tab5")
+        list(APPEND P4_CONSOLE_MAIN_SOURCES
+            "${P4_DOOM_TOUCH_AUDIO_MAIN}/diag_mailbox.c"
+            "${P4_DOOM_TOUCH_AUDIO_MAIN}/doom_diagnostics.c"
+        )
+    endif()
     if(P4_ACTIVE_BOARD_PROFILE STREQUAL
        "waveshare-esp32-p4-wifi6-touch-lcd-4.3")
         set(P4_TOUCH_BOARD_DEPS board_deps_waveshare)
@@ -140,9 +155,11 @@ else()
             set(P4_CONSOLE_WIFI_MULTIPLAYER_ENABLED 1)
             set(P4_CONSOLE_BLE_MULTIPLAYER_ENABLED 1)
         endif()
+        # Normalized input is also used by the bounded local USB debug service.
+        list(APPEND P4_CONSOLE_MAIN_REQUIREMENTS
+            doom_gamepad_input gamepad_core platform_gamepad)
         if(P4_TAB5_USB_HOST_BUILD)
             list(APPEND P4_CONSOLE_MAIN_REQUIREMENTS
-                doom_gamepad_input gamepad_core platform_gamepad
                 platform_gamepad_usb platform_gamepad_xusb platform_usb_host)
         endif()
     else()
@@ -193,6 +210,12 @@ target_compile_definitions(${COMPONENT_LIB} PRIVATE
     P4_BLE_DIAGNOSTIC_AUTOSTART=${P4_CONSOLE_BLE_DIAGNOSTIC_AUTOSTART_ENABLED}
     CONSOLE_OS_ENABLE_RUNTIME_STATS=${P4_CONSOLE_RUNTIME_STATS_ENABLED}
 )
+if(P4_ACTIVE_BOARD_PROFILE STREQUAL "m5stack-tab5")
+    target_compile_definitions(${COMPONENT_LIB} PRIVATE
+        P4_CONSOLE_NATIVE_AIR_LOW_RES=$<BOOL:${P4_CONSOLE_NATIVE_AIR_LOW_RES}>
+        P4_CONSOLE_NATIVE_TIDE_BLAST_LOW_RES=$<BOOL:${P4_CONSOLE_NATIVE_TIDE_BLAST_LOW_RES}>
+        P4_CONSOLE_NATIVE_CHECKERS_LOW_RES=$<BOOL:${P4_CONSOLE_NATIVE_CHECKERS_LOW_RES}>)
+endif()
 target_compile_features(${COMPONENT_LIB} PRIVATE c_std_11)
 target_compile_options(${COMPONENT_LIB} PRIVATE
     -Wall

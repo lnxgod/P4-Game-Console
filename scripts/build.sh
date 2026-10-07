@@ -39,6 +39,13 @@ case "$P4_BOARD" in
             0) P4_TAB5_BLE_CONFIG='# CONFIG_P4_TAB5_BLE_MULTIPLAYER is not set' ;;
             *) printf '%s\n' 'P4_TAB5_BLE_MULTIPLAYER must be 0 or 1' >&2; exit 2 ;;
         esac
+        # Always pass the chosen value to CMake: an existing OFF cache must
+        # not silently disable the default Tab5 fused renderer candidate.
+        P4_DOOM_TAB5_FUSED_PRESCALE=${P4_DOOM_TAB5_FUSED_PRESCALE:-ON}
+        case "$P4_DOOM_TAB5_FUSED_PRESCALE" in
+            ON|OFF) ;;
+            *) printf '%s\n' 'P4_DOOM_TAB5_FUSED_PRESCALE must be ON or OFF' >&2; exit 2 ;;
+        esac
         P4_TAB5_USB_HOST=${P4_TAB5_USB_HOST:-1}
         case "$P4_TAB5_USB_HOST" in
             1) P4_TAB5_USB_CONFIG='CONFIG_P4_TAB5_USB_HOST=y' ;;
@@ -93,7 +100,9 @@ p4_idf_action() {
     fi
     if [ "$P4_APP" = console_os ] &&
        [ "$P4_BOARD_PROFILE" = m5stack-tab5 ]; then
-        set -- -D "P4_TAB5_USB_HOST_BUILD=$P4_TAB5_USB_HOST" -D "P4_TAB5_BLE_MULTIPLAYER_BUILD=$P4_TAB5_BLE_MULTIPLAYER" "$@"
+        set -- -D "P4_TAB5_USB_HOST_BUILD=$P4_TAB5_USB_HOST" \
+            -D "P4_TAB5_BLE_MULTIPLAYER_BUILD=$P4_TAB5_BLE_MULTIPLAYER" \
+            -D "P4_DOOM_TAB5_FUSED_PRESCALE=$P4_DOOM_TAB5_FUSED_PRESCALE" "$@"
     fi
     if [ "$P4_APP" = console_os ] &&
        [ "$P4_WAVESHARE_CONTROLLER_FIRST_BUILD" -eq 1 ]; then
@@ -188,14 +197,18 @@ if [ "$P4_APP" = console_os ] &&
 fi
 
 # sdkconfig defaults do not override an existing generated configuration.
-# Regenerate when switching the explicit Tab5 USB-A host selection, in either
-# direction, so an incremental build cannot retain the wrong peripheral scope.
+# Regenerate when switching Tab5 peripheral selections or adopting bounded
+# FAT seek maps and UDP mailboxes, so incremental builds keep board defaults.
 if [ "$P4_APP" = console_os ] &&
    [ "$P4_BOARD_PROFILE" = m5stack-tab5 ] &&
    [ -f "$P4_BUILD_DIR/sdkconfig" ] &&
    { ! grep -Fqx "$P4_TAB5_USB_CONFIG" "$P4_BUILD_DIR/sdkconfig" ||
-     ! grep -Fqx "$P4_TAB5_BLE_CONFIG" "$P4_BUILD_DIR/sdkconfig"; }; then
-    printf 'Regenerating Tab5 Console OS sdkconfig for USB-A host=%s.\n' "$P4_TAB5_USB_HOST"
+     ! grep -Fqx "$P4_TAB5_BLE_CONFIG" "$P4_BUILD_DIR/sdkconfig" ||
+     ! grep -Fqx 'CONFIG_FATFS_USE_FASTSEEK=y' "$P4_BUILD_DIR/sdkconfig" ||
+     ! grep -Fqx 'CONFIG_FATFS_ALLOC_PREFER_EXTRAM=y' "$P4_BUILD_DIR/sdkconfig" ||
+     ! grep -Fqx 'CONFIG_FATFS_FAST_SEEK_BUFFER_SIZE=112456' "$P4_BUILD_DIR/sdkconfig" ||
+     ! grep -Fqx 'CONFIG_LWIP_UDP_RECVMBOX_SIZE=32' "$P4_BUILD_DIR/sdkconfig"; }; then
+    printf 'Regenerating Tab5 Console OS sdkconfig for board defaults (USB-A host=%s).\n' "$P4_TAB5_USB_HOST"
     cmake -E remove "$P4_BUILD_DIR/sdkconfig"
     p4_idf_action reconfigure
 fi

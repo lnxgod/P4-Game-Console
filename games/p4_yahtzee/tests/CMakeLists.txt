@@ -1,4 +1,4 @@
-add_executable(p4_yahtzee_tests test_p4_yahtzee.c)
+add_executable(p4_yahtzee_tests test_p4_yahtzee.c test_network_lifecycle.h)
 target_include_directories(p4_yahtzee_tests PRIVATE ../src)
 target_link_libraries(p4_yahtzee_tests PRIVATE p4_yahtzee p4_game_api)
 target_compile_features(p4_yahtzee_tests PRIVATE c_std_11)

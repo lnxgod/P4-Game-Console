@@ -67,6 +67,8 @@ wad_file_t *W_OpenFile(char *path);
 // Close the specified WAD file.
 
 void W_CloseFile(wad_file_t *wad);
+// Optional descriptor-scoped startup hint; other file classes are unchanged.
+void W_SpriteHeaderHint(wad_file_t *wad, int active);
 
 // Read data from the specified file into the provided buffer.  The
 // data is read from the specified offset from the start of the file.

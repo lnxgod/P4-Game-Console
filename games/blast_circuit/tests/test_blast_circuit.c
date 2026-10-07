@@ -137,7 +137,7 @@ static void network(unsigned count)
     for(unsigned i=0;i<count;++i) {
         endpoint_t *e=&link->endpoints[i];e->link=link;e->slot=i;e->generation=7U;
         e->status=P4_GAME_MULTIPLAYER_CONNECTED;
-        const p4_game_services_t services={.available_capabilities=P4_GAME_CAP_VIDEO|P4_GAME_CAP_CONTROLS|P4_GAME_CAP_MULTIPLAYER_SESSION,
+        const p4_game_services_t services={.available_capabilities=P4_GAME_CAP_VIDEO|P4_GAME_CAP_CONTROLS|P4_GAME_CAP_VIDEO_HIGH_RES|P4_GAME_CAP_MULTIPLAYER_SESSION,
             .multiplayer_context=e,.multiplayer_read_status=status_read,.multiplayer_send=send_packet,
             .multiplayer_receive=receive_packet,.multiplayer_profile=&profile};
         CHECK(p4_game_instance_start(&game[i],&p4_blast_circuit_game,&services,&state[i],sizeof(state[i])));
@@ -366,6 +366,10 @@ static void lifecycle_and_render(void)
     bc_state_t state;p4_game_instance_t game={0};
     const p4_game_services_t services={.available_capabilities=P4_GAME_CAP_VIDEO|P4_GAME_CAP_CONTROLS|P4_GAME_CAP_AUDIO_STREAM|P4_GAME_CAP_VIDEO_HIGH_RES,
         .submit_pcm16_stereo=pcm,.stop_audio=stop_audio};
+    // Missing native video must refuse launch rather than quietly downgrade.
+    p4_game_services_t legacy_services=services;
+    legacy_services.available_capabilities&=~(uint32_t)P4_GAME_CAP_VIDEO_HIGH_RES;
+    CHECK(!p4_game_instance_start(&game,&p4_blast_circuit_game,&legacy_services,&state,sizeof(state)));
     CHECK(p4_game_instance_start(&game,&p4_blast_circuit_game,&services,&state,sizeof(state)));
     CHECK(state.world.phase==BC_TITLE && state.humans==1U);
     const p4_game_input_t title_touch={.touch_valid=true,.touch_count=1U,.touches={{205U,156U}}};
@@ -395,7 +399,11 @@ static void lifecycle_and_render(void)
     update(&game,P4_BUTTON_A,P4_BUTTON_A,100U);
     CHECK(state.world.tick==before_fast_forward+16U);
     state.world.players[0].alive=1U;
+    const bc_state_t render_state=state;
+    // The legacy render path remains a clipping/stride compatibility test;
+    // maintained Tab5 launch and presentation require the native mode above.
     for(unsigned mode=0;mode<2U;++mode) {
+        state=render_state;
         if(mode) game.services.available_capabilities|=P4_GAME_CAP_VIDEO_HIGH_RES;
         else game.services.available_capabilities&=~(uint32_t)P4_GAME_CAP_VIDEO_HIGH_RES;
         const unsigned width=mode?768U:320U,height=mode?480U:200U,stride=width+7U;
@@ -405,12 +413,19 @@ static void lifecycle_and_render(void)
         p4_game_surface_t surface={.pixels=buffer+16,.stride_pixels=stride,.width=(uint16_t)width,.height=(uint16_t)height};
         for(unsigned phase=BC_TITLE;phase<=BC_COPY;++phase) {
             state.world.phase=(uint8_t)phase;state.world.winner=3U;state.touch_seen=true;
+            state.banner_ms=0U;state.shake_ms=0U;state.world.timer=60U;
             CHECK(p4_game_instance_render(&game,&surface));
+            if(phase==BC_TITLE) capture(&surface,mode,"title");
+            else if(phase==BC_READY) capture(&surface,mode,"ready");
+            else if(phase==BC_PAUSED) capture(&surface,mode,"pause");
+            else if(phase==BC_ROUND) capture(&surface,mode,"round");
+            else if(phase==BC_MATCH) capture(&surface,mode,"results");
         }
         for(unsigned i=0;i<16U;++i) CHECK(buffer[i]==0xdead && buffer[count-1U-i]==0xdead);
         for(unsigned y=0;y<height;++y) for(unsigned xpad=width;xpad<stride;++xpad)
             CHECK(buffer[16U+(size_t)y*stride+xpad]==0xdead);
         state.world.phase=BC_PLAY;
+        state.banner_ms=0U;state.shake_ms=0U;
         CHECK(p4_game_instance_render(&game,&surface));capture(&surface,mode,"arena");
         state.world.tile[5*BC_W+7]=BC_FLOOR;
         for(unsigned life=1U;life<=BC_EMBER_FIRE;++life) {
@@ -425,8 +440,26 @@ static void lifecycle_and_render(void)
         }
         bc_editor_enter(&state);state.brush=BC_ARMOR;
         CHECK(p4_game_instance_render(&game,&surface));capture(&surface,mode,"workshop");
+        state.brush=BC_FLOOR;
+        CHECK(p4_game_instance_render(&game,&surface));capture(&surface,mode,"floor-brush");
         state.world.phase=BC_EDITOR_MENU;
         CHECK(p4_game_instance_render(&game,&surface));capture(&surface,mode,"tools");
+        // A deterministic active scene exposes every material and all three
+        // upgrade symbols together, without relying on random pickup drops.
+        empty_arena(&state.world);state.world.time_left=1800U;
+        memset(state.debris_ms,0,sizeof(state.debris_ms));
+        memset(state.death_ms,0,sizeof(state.death_ms));
+        memset(state.particles,0,sizeof(state.particles));
+        state.banner_ms=0U;state.shake_ms=0U;
+        static const uint8_t materials[]={BC_CRATE,BC_ARMOR,BC_DAMAGED,BC_GLASS,BC_FUEL,BC_RANGE,BC_EXTRA,BC_SPEED};
+        for(unsigned i=0;i<sizeof(materials);++i) state.world.tile[5U*BC_W+3U+i]=materials[i];
+        state.world.bombs[0]=(bc_bomb_t){5,7,0,25,2};
+        state.world.fire[7U*BC_W+9U]=BC_EMBER_FIRE;
+        state.world.fire[7U*BC_W+10U]=BC_FIRE;
+        CHECK(p4_game_instance_render(&game,&surface));capture(&surface,mode,"materials");
+        for(unsigned i=0;i<16U;++i) CHECK(buffer[i]==0xdead && buffer[count-1U-i]==0xdead);
+        for(unsigned y=0;y<height;++y) for(unsigned xpad=width;xpad<stride;++xpad)
+            CHECK(buffer[16U+(size_t)y*stride+xpad]==0xdead);
         free(buffer);
     }
     const p4_game_input_t back={.pressed=P4_BUTTON_BACK};

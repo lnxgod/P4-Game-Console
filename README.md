@@ -5,8 +5,12 @@ development tools and AI skills in one repository.** The primary device is the
 **M5Stack Tab5**. Open this repository to build the console, play or create a
 game, work on a port, or improve the shared platform.
 
+This private development copy preserves the public project's history and
+notices. See [internal development](docs/INTERNAL_DEVELOPMENT.md) for provenance
+and authenticated installation.
+
 **Console OS** is the launcher and system platform, currently branded
-*Game Changers AI OS* on the device. **Game Changers AI multiplayer arena** is
+*Game Changers AI OS* on the device. **Doom Arena by Game Changers** is
 one Doom-based game mode that runs inside it. **Pure Hades** is a map pack used
 by that mode. Each has its own documentation below.
 
@@ -89,7 +93,7 @@ folders or default-installed games.
 | --- | --- | --- |
 | [Doom](docs/games/doom/README.md) | OS-integrated engine, controls, MIDI/effects and two-player adapter | Verified v1.9 shareware is the default setup data; WAD stays local |
 | [Chex Quest](docs/games/chex-quest/README.md) | Optional title using the integrated Doom engine | Explicit SD opt-in; verified WAD and patch required |
-| [Game Changers AI arena](docs/games/arena/README.md) | Doom-based 2–4 player Wi-Fi mode with arena voting and visit scores | Optional exact content bundle; hardware multiplayer/cadence acceptance pending |
+| [Doom Arena by Game Changers](docs/games/arena/README.md) | Doom-based 2–4 player Wi-Fi mode with arena voting and visit scores | Optional exact content bundle; hardware multiplayer/cadence acceptance pending |
 | [Pure Hades](game-data/pure-hades/README.md) | Original Shotguns and Rockets arenas with MIDI and notices | Map pack for the arena mode; committed with the owner's authorization |
 | [Wacky Wheels](scripts/wacky/README.md) | Five race courses, championship, Duck Shoot, MIDI/effects and new 2–4 racer sprint | Experimental local port; absent from default catalog, source/data redistribution and device acceptance unresolved |
 | [Quake](ports/quake/README.md) | Pinned engine, SDL3 host adapter and retained OS adapter | Dormant: not linked or exposed by current OS; local shareware PAK required |
@@ -111,10 +115,14 @@ For installation, use the lightweight checkout and precompiled build. Large
 art-authoring images stay available in Git but are omitted from this checkout:
 
 ```sh
-curl --fail --location \
-  https://raw.githubusercontent.com/lnxgod/P4-Game-Console/main/scripts/clone-lite.sh \
-  --output /tmp/p4-clone-lite.sh
-sh /tmp/p4-clone-lite.sh https://github.com/lnxgod/P4-Game-Console.git p4console
+gh auth login --hostname github.com
+gh auth setup-git --hostname github.com
+p4_clone_helper="$(mktemp)"
+gh api --hostname github.com \
+  'repos/openai/P4-Game-Console/contents/scripts/clone-lite.sh?ref=main' \
+  --header 'Accept: application/vnd.github.raw+json' > "$p4_clone_helper"
+sh "$p4_clone_helper" https://github.com/openai/P4-Game-Console.git p4console
+rm "$p4_clone_helper"
 cd p4console
 make prebuilt               # Download and verify this exact revision's CI build
 make install-tools         # Small USB-tool environment; no SDK or compiler

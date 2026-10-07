@@ -1,10 +1,17 @@
 # SPDX-License-Identifier: MIT
 
 if(COMMAND idf_component_register)
+    idf_build_get_property(P4_ACTIVE_BOARD_PROFILE P4_BOARD_PROFILE)
+    set(P4_NATIVE_VIDEO_SOURCES)
+    set(P4_NATIVE_VIDEO_REQUIREMENTS)
+    if(P4_ACTIVE_BOARD_PROFILE STREQUAL "m5stack-tab5")
+        list(APPEND P4_NATIVE_VIDEO_SOURCES "src/video_presenter.c")
+        list(APPEND P4_NATIVE_VIDEO_REQUIREMENTS platform_display)
+    endif()
     idf_component_register(
-        SRCS "src/audio_session.c" "src/audio_worker.c"
+        SRCS "src/audio_session.c" "src/audio_worker.c" ${P4_NATIVE_VIDEO_SOURCES}
         INCLUDE_DIRS "include"
-        REQUIRES platform_audio p4_game_api
+        REQUIRES platform_audio p4_game_api ${P4_NATIVE_VIDEO_REQUIREMENTS}
         PRIV_REQUIRES freertos heap esp_timer
     )
     target_compile_features(${COMPONENT_LIB} PUBLIC c_std_11)

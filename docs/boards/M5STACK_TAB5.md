@@ -221,6 +221,21 @@ SHA-256 verification and the PSRAM snapshot before engine use. B's SD initializa
 measured 47 ms; populated-card launcher startup fell from about 25 seconds to
 about six seconds. Muted boot skips the eight-second audio animation.
 
+Arena random WAD reads use the pinned FatFs fast-seek cluster map. The earlier
+64-word default covered only 31 fragments; on unit B in the 0.62 Arena test,
+`fast-seek not activated reason code: 17` meant the file needed a larger map,
+so reads fell back to walking the FAT. This was not a failed heap allocation.
+Tab5 now reserves 112,456 words (449,824 bytes) per read-only file, preferring
+PSRAM. This is `2 + 2 * ceil(28,787,748 / 512)` words: enough for the largest
+pinned Arena WAD even when every 512-byte cluster is a separate fragment.
+Existing cards need not use the mount configuration's 16 KiB formatting hint.
+Three open WADs cost about 1.29 MiB, and all eight storage handles bound map
+allocation at 3,598,592 bytes (3.43 MiB). Closing a file frees its map. The SDK
+can fall back to internal memory if PSRAM allocation fails; this option does
+not remove that SDK behavior. Larger future files need the bound reviewed;
+insufficient maps retain normal seeking. This sizing change still requires
+on-device timing verification and does not establish gameplay acceptance.
+
 ## Unified Control Panel
 
 Tab5 has one Control Panel rather than individual system icons in All Programs.

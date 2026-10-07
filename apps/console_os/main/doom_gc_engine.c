@@ -16,6 +16,8 @@ extern boolean p4_doom_gc_active(void);
 #include "v_video.h"
 #include "m_menu.h"
 #include "m_controls.h"
+#include "doomkeys.h"
+#include "doom_arena_ui.h"
 #include <strings.h>
 #include <inttypes.h>
 #include <stdio.h>
@@ -26,6 +28,7 @@ static p4_doom_arena_t arena;
 static int map_lumps[P4_DOOM_ARENA_SELECTIONS], music_lumps[P4_DOOM_ARENA_SELECTIONS];
 static uint8_t queued[2], queue_count, menu_row, picker;
 static boolean panel_open, picker_open;
+static bool scores_open, score_touch_held;
 static void reload_arena(void);
 
 void P4_DoomArenaWadLoaded(const char *filename,int first,int count)
@@ -91,16 +94,61 @@ static bool queue_vote(uint8_t opcode)
     return true;
 }
 
+void p4_doom_gc_engine_begin_mask(uint8_t count, uint8_t initial_mask, uint8_t map)
+{
+    if (!p4_doom_arena_begin_selected_mask(&arena,count,initial_mask,map)) I_Error("Invalid arena setup");
+    queue_count=0; panel_open=picker_open=false;
+    scores_open=score_touch_held=false;
+}
+
 void p4_doom_gc_engine_begin(uint8_t count, uint8_t map)
 {
-    if (!p4_doom_arena_begin_selected(&arena,count,map)) I_Error("Invalid arena setup");
-    queue_count=0; panel_open=picker_open=false;
+    if (count < 2 || count > MAXPLAYERS) I_Error("Invalid arena capacity");
+    p4_doom_gc_engine_begin_mask(count, (uint8_t)((1U << count) - 1U), map);
 }
 
 boolean P4_DoomArenaActive(void) { return p4_doom_gc_active() && arena.map_count!=0; }
 boolean P4_DoomArenaPlayerActive(int slot)
 {
     return !P4_DoomArenaActive() || (slot>=0 && slot<MAXPLAYERS && arena.players[slot].active);
+}
+
+static void remove_arena_body(player_t *p)
+{
+    mobj_t *body = p->mo;
+    p->attacker = NULL;
+    if (!body) return;
+    /* Vanilla quits keep their actor. Arena seats remove it, so outstanding
+     * damage and projectile references must stop pointing at the freed body. */
+    for (unsigned i=0; i<MAXPLAYERS; ++i)
+        if (players[i].attacker == body) players[i].attacker = NULL;
+    for (int i=0; i<numsectors; ++i)
+        if (sectors[i].soundtarget == body) sectors[i].soundtarget = NULL;
+    for (thinker_t *th=thinkercap.next; th!=&thinkercap; th=th->next) {
+        if (th->function.acp1 != (actionf_p1)P_MobjThinker) continue;
+        mobj_t *mo=(mobj_t *)th;
+        if (mo->target == body) mo->target = NULL;
+        if (mo->tracer == body) mo->tracer = NULL;
+    }
+    S_StopSound(body);
+    body->player = NULL;
+    P_RemoveMobj(body);
+    p->mo = NULL;
+}
+
+void P4_DoomArenaRejoin(int slot)
+{
+    if (slot < 0 || slot >= MAXPLAYERS
+        || !p4_doom_arena_activate(&arena, (uint8_t)slot))
+        I_Error("Invalid arena reactivation");
+    player_t *p = &players[slot];
+    remove_arena_body(p);
+    p->playerstate = PST_REBORN;
+    /* A pending voted-map load will spawn this seat with every other seat.
+     * Otherwise use the existing first-spawn path, never G_DoReborn's corpse
+     * path: a departed seat has no previous body. */
+    if (gameaction != ga_loadlevel)
+        G_DeathMatchSpawnPlayer(slot);
 }
 
 void P4_DoomArenaTicker(void)
@@ -124,23 +172,13 @@ void P4_DoomArenaTicker(void)
     for (unsigned i=0;i<MAXPLAYERS;++i) {
         player_t *p=&players[i];
         if (!playeringame[i]) {
-            if (p->mo) {
-                S_StopSound(p->mo);
-                p->mo->player=NULL;
-                P_RemoveMobj(p->mo);
-                p->mo=NULL;
-            }
+            remove_arena_body(p);
             continue;
         }
         if (transition.returned & (1U<<i)) {
             /* Do not insert a frozen live actor into Doom's corpse queue.
              * A NULL previous body follows the normal first-spawn path. */
-            if (p->mo) {
-                S_StopSound(p->mo);
-                p->mo->player=NULL;
-                P_RemoveMobj(p->mo);
-            }
-            p->mo=NULL;
+            remove_arena_body(p);
             p->playerstate=PST_REBORN;
             G_DeathMatchSpawnPlayer((int)i);
             memset(&p->cmd,0,sizeof(p->cmd));
@@ -167,6 +205,7 @@ static void reload_arena(void)
 {
     if (automapactive) AM_Stop();
     panel_open=picker_open=false; menuactive=false; queue_count=0;
+    scores_open=score_touch_held=false;
     gamemap=p4_doom_arena_map_number(arena.maps[arena.map_index]);
     for (unsigned i=0;i<MAXPLAYERS;++i)
         if (playeringame[i]) players[i].playerstate=PST_REBORN;
@@ -189,12 +228,18 @@ static void text_line(int x,int y,const char *text)
     HUlib_drawTextLine(&line,false);
 }
 
-void P4_DoomArenaHUD(void)
+void p4_doom_arena_score_touch(bool pressed)
 {
-    if (!P4_DoomArenaActive()) return;
-    V_DrawFilledBox(0,11,320,48,0);
-    text_line(4,12,"GAME CHANGERS AI");
-    text_line(4,23,p4_doom_arena_label(arena.maps[arena.map_index]));
+    if (P4_DoomArenaActive() && gamestate==GS_LEVEL && !menuactive &&
+        pressed && !score_touch_held) scores_open=!scores_open;
+    score_touch_held=pressed;
+}
+
+static void draw_scores(void)
+{
+    V_DrawFilledBox(12,44,296,64,0);
+    text_line(20,48,"Doom Arena by Game Changers");
+    text_line(20,59,p4_doom_arena_label(arena.maps[arena.map_index]));
     for (unsigned i=0;i<MAXPLAYERS;++i) {
         if (!arena.players[i].visit) continue;
         char text[32];
@@ -204,15 +249,52 @@ void P4_DoomArenaHUD(void)
             (void)snprintf(text,sizeof(text),"P%u BREAK",i+1U);
         else
             (void)snprintf(text,sizeof(text),"P%u %" PRIu32,i+1U,arena.players[i].kills);
-        text_line(i%2U ? 168 : 4,36+(int)(i/2U)*12,text);
+        text_line(i%2U ? 168 : 20,76+(int)(i/2U)*12,text);
+    }
+}
+
+static void draw_score_control(void)
+{
+    enum { C, E, L, O, R, S };
+    static const uint8_t glyphs[][5]={
+        {7,4,4,4,7}, {7,4,6,4,7}, {4,4,4,4,7},
+        {7,5,5,5,7}, {6,5,6,5,5}, {7,4,7,1,7}};
+    static const uint8_t labels[2][5]={{S,C,O,R,E},{C,L,O,S,E}};
+    const unsigned left=P4_DOOM_SCORE_LEFT+(P4_DOOM_SCORE_WIDTH-20U)/2U;
+    const unsigned glyph_top=P4_DOOM_SCORE_TOP+(P4_DOOM_SCORE_HEIGHT-6U)/2U;
+    /* Leave gameplay visible throughout the large touch target. These tiny
+     * glyphs use Doom's black/white palette entries and a one-pixel shadow. */
+    for (unsigned pass=0;pass<2;++pass) {
+        const unsigned shadow=1U-pass;
+        for (unsigned letter=0;letter<5;++letter)
+            for (unsigned row=0;row<5;++row)
+                for (unsigned column=0;column<3;++column)
+                    if (glyphs[labels[scores_open ? 1 : 0][letter]][row]
+                        & (1U << (2U-column)))
+                        V_DrawFilledBox((int)(left+letter*4U+column+shadow),
+                                        (int)(glyph_top+row+shadow),1,1,pass ? 4 : 0);
+    }
+}
+
+void P4_DoomArenaHUD(void)
+{
+    if (!P4_DoomArenaActive() || gamestate!=GS_LEVEL) {
+        scores_open=score_touch_held=false;
+        return;
+    }
+    if (menuactive) scores_open=false;
+    else {
+        draw_score_control();
+        if (scores_open) draw_scores();
     }
     if (arena.vote_map) {
         text_line(4,141,"MAP VOTE: OPEN MENU TO VOTE");
         text_line(4,153,p4_doom_arena_label(arena.vote_map));
     }
     if (!arena.players[consoleplayer].active) {
-        text_line(100,78,"TAKE A BREAK");
-        text_line(48,94,"PRESS USE TO RETURN AT ZERO");
+        const int y=scores_open && !menuactive ? 114 : 78;
+        text_line(100,y,"TAKE A BREAK");
+        text_line(48,y+16,"PRESS USE TO RETURN AT ZERO");
     }
 }
 
@@ -224,16 +306,22 @@ int P4_DoomArenaFragCount(int vanilla)
 {
     if (!P4_DoomArenaActive()) return vanilla;
     const uint32_t kills=arena.players[consoleplayer].kills;
-    /* Vanilla's two-digit status widget caps at 99; the shared HUD is full. */
+    /* Vanilla's two-digit status widget caps at 99; the score panel is full. */
     return kills>99U?99:(int)kills;
 }
 
 boolean P4_DoomArenaMenuKey(int key)
 {
     if (!P4_DoomArenaActive() || gamestate!=GS_LEVEL) return false;
+    /* Start/Pause is local score inspection in Arena; Back opens its menu. */
+    if (key==KEY_PAUSE) {
+        if (!menuactive) scores_open=!scores_open;
+        return true;
+    }
     if (!panel_open) {
         if (menuactive || key!=key_menu_activate) return false;
         panel_open=true; menuactive=true; picker_open=false; menu_row=0;
+        scores_open=false;
         picker=arena.maps[arena.map_index];
         return true;
     }
@@ -260,7 +348,7 @@ boolean P4_DoomArenaMenuDraw(void)
 {
     if (!P4_DoomArenaActive() || !panel_open) return false;
     V_DrawFilledBox(12,61,296,106,0);
-    text_line(24,67,arena.vote_map ? p4_doom_arena_label(arena.vote_map) : "GAME CHANGERS AI");
+    text_line(24,67,arena.vote_map ? p4_doom_arena_label(arena.vote_map) : "Doom Arena by Game Changers");
     if (picker_open) {
         text_line(24,88,"CHOOSE AN ARENA");
         text_line(24,106,p4_doom_arena_label(picker));
@@ -284,5 +372,32 @@ boolean P4_DoomArenaMenuDraw(void)
             text_line(24,155,tally);
         } else text_line(24,155,"MAP CHANGES KEEP YOUR KILLS");
     }
+    return true;
+}
+
+/* Exact deterministic state only; local panels/input remain guest-owned. */
+void p4_doom_gc_checkpoint_get_arena(p4_doom_arena_t *out)
+{
+    if (out) *out = arena;
+}
+bool p4_doom_gc_checkpoint_set_arena(const p4_doom_arena_t *in)
+{
+    if (!in || in->capacity != 4 || !in->map_count
+        || in->map_count > P4_DOOM_ARENA_MAX_MAPS || in->map_index >= in->map_count
+        || !(in->connected_mask & 1U) || (in->connected_mask & ~15U)
+        || in->vote_generation > 63 || in->vote_map > P4_DOOM_ARENA_SELECTIONS
+        || (in->vote_yes & ~15U) || (in->vote_no & ~15U)
+        || in->vote_tics > P4_DOOM_ARENA_VOTE_TICS
+        || in->vote_cooldown > P4_DOOM_ARENA_VOTE_COOLDOWN)
+        return false;
+    for (unsigned i = 0; i < in->map_count; ++i)
+        if (!in->maps[i] || in->maps[i] > P4_DOOM_ARENA_SELECTIONS) return false;
+    for (unsigned i = 0; i < 4; ++i) {
+        if (in->players[i].active && !(in->connected_mask & (1U << i))) return false;
+        if (in->players[i].idle_tics > P4_DOOM_ARENA_IDLE_TICS) return false;
+    }
+    arena = *in;
+    queue_count = 0; panel_open = picker_open = false;
+    scores_open = score_touch_held = false;
     return true;
 }

@@ -1,0 +1,4063 @@
+{
+  "schema": "p4-tab5-native-save-failure-v1",
+  "recorded_at": "2026-10-07T15:25:16.342918+00:00",
+  "result": "FAIL: both A and B offline Wacky Wheels Back/save attempts caused game_save stack protection panics and reboots; restoration remains unverified.",
+  "scope": "Separate offline follow-up after the sealed linked run. Both units relaunch with 36-byte sequence1 saves, change CLOCK ON to OFF; only A Back is attempted in this prefix. No full release or successful save2 claim. A separately preserved later immutable prefix adds B CLOCK OFF-to-ON and Back/save crash; both finish at Home.",
+  "board": "M5Stack Tab5 v1.3",
+  "os_install": {
+    "path": "hardware/test-runs/2026-10-07-tab5-073-multiplayer-debug-install.json",
+    "bytes": 28520,
+    "sha256": "e45fcc876998bcab95fee64ef5f9aaf2ef10e0915d9646cec3a692d061935c9e"
+  },
+  "application": {
+    "file": "apps/console_os/build-tab5/p4_console_os.bin",
+    "bytes": 4460976,
+    "sha256": "947edff0c2cee5f19c917346e434e54532fa30bcce2eb02149f51361baaaf0ce",
+    "version": "0.73",
+    "write_offset": "0x20000"
+  },
+  "game": {
+    "title": "Wacky Wheels",
+    "app": "org.p4console.wacky-probe",
+    "version": "0.1.1",
+    "api": 1,
+    "surface": "320x200",
+    "content_readback_receipt": {
+      "path": "build-host/native-refresh-073-20261007T1438/receipt.json",
+      "bytes": 61142,
+      "sha256": "06b19417adad22b4b7935bebcaa6667a1d4af8a3b736ef0d578a1a16c0061914"
+    },
+    "verified_readbacks": {
+      "A": {
+        "WACKYTRY.P4G": {
+          "path": "build-host/native-refresh-073-20261007T1438/A/WACKYTRY.P4G",
+          "bytes": 68804,
+          "sha256": "a376d0edb01ad546d4aa5520c28d0535c8ed2370abb7e59ece796b2da411e739"
+        },
+        "WACKYTRY.P4R": {
+          "path": "build-host/native-refresh-073-20261007T1438/A/WACKYTRY.P4R",
+          "bytes": 4399076,
+          "sha256": "56373050954dc9126a001bcbdba8f24c7a0b7c65ccd73553ccd0735ef33f09c1"
+        }
+      },
+      "B": {
+        "WACKYTRY.P4G": {
+          "path": "build-host/native-refresh-073-20261007T1438/B/WACKYTRY.P4G",
+          "bytes": 68804,
+          "sha256": "a376d0edb01ad546d4aa5520c28d0535c8ed2370abb7e59ece796b2da411e739"
+        },
+        "WACKYTRY.P4R": {
+          "path": "build-host/native-refresh-073-20261007T1438/B/WACKYTRY.P4R",
+          "bytes": 4399076,
+          "sha256": "56373050954dc9126a001bcbdba8f24c7a0b7c65ccd73553ccd0735ef33f09c1"
+        }
+      }
+    }
+  },
+  "mode": "offline; no multiplayer host or guest for this follow-up",
+  "prior_linked_record_preserved": {
+    "path": "hardware/test-runs/2026-10-07-tab5-073-native-wacky-wheels-runtime.json",
+    "bytes": 79300,
+    "sha256": "9e1b2b265b0e217dbe7d4e2c872d9e70ebc8d1278030325031dc42f77fb2f520"
+  },
+  "evidence": {
+    "prefix_receipt": {
+      "path": "build-host/runtime-acceptance-073/prefix-wacky-save-failure/receipt.json",
+      "bytes": 689,
+      "sha256": "68d3f1510e8faac68844ca67444c04cf6b3234da928d3e1bb78111e6a5362fc7"
+    },
+    "captured_at": "2026-10-07T15:19:52.519086+00:00",
+    "raw_inputs": {
+      "commands.jsonl": {
+        "path": "build-host/runtime-acceptance-073/prefix-wacky-save-failure/commands.jsonl",
+        "bytes": 437613,
+        "sha256": "63f57b9e7bc736148fefd2d833261f876f3c5ab81ed7d1ca8ab267989c4a6f53"
+      },
+      "a.rx": {
+        "path": "build-host/runtime-acceptance-073/prefix-wacky-save-failure/a.rx",
+        "bytes": 7152521,
+        "sha256": "1ab3b24f54d146a59a184672bd2fd305bc0f0568b83ca30b8506791ccbd9589c"
+      },
+      "b.rx": {
+        "path": "build-host/runtime-acceptance-073/prefix-wacky-save-failure/b.rx",
+        "bytes": 7158656,
+        "sha256": "87e7a7768feae624fea251ddf70787f15be6445086a96b80a769a70d83f1563f"
+      }
+    },
+    "exact_extension_of_prior_prefix": {
+      "commands.jsonl": 394427,
+      "a.rx": 6281947,
+      "b.rx": 6279752
+    },
+    "recorder": {
+      "path": "build-host/native-mp-tracker-073/record-wacky73-save-failure.py",
+      "bytes": 16459,
+      "sha256": "4b2c7cb643850c72e6498c9bf6e88c9cf4e373cd47a197f4cbd923372d0bb3e7"
+    },
+    "receipt_adapter": {
+      "path": "build-host/native-mp-tracker-073/receipt-adapter.py",
+      "bytes": 2744,
+      "sha256": "1d0b567eb9f6c77055e53ea4d4ac262983c4610efd6bf541d6503ee2fb6b858f"
+    },
+    "frozen_analyzer": {
+      "path": "build-host/native-av-analyzer-073-review/analyze.py",
+      "bytes": 15632,
+      "sha256": "0a92e6ab45343859d0d57aa703ac2df23ce954b2c2b44b9cc1d12c9b51d3a3f8"
+    },
+    "parser_dependencies": {
+      "build-host/tab5-multiplayer-hardware/paired-log-position-063.py": {
+        "path": "build-host/tab5-multiplayer-hardware/paired-log-position-063.py",
+        "bytes": 8565,
+        "sha256": "3d73d5daecbe28e6d57d508ab921c5cc06101ec028bb1a7b4d6a511f0f83e088"
+      },
+      "scripts/p4-debug-control.py": {
+        "path": "scripts/p4-debug-control.py",
+        "bytes": 29660,
+        "sha256": "a0f0155a5c7e5fca64d0cec7e1682f66b13446d84ef3233ea41d3adcd6ce9ca9"
+      }
+    },
+    "receipt_adapter_review": {
+      "path": "build-host/native-mp-tracker-073-adapter-review/receipt.json",
+      "bytes": 1192,
+      "sha256": "255a2174653f9fe311dcfafda84f488a37e8281ffa0280a15413ae888e9fc8a9"
+    },
+    "later_b_failure_prefix": {
+      "receipt": {
+        "path": "build-host/runtime-acceptance-073/prefix-wacky-save-failure-b/receipt.json",
+        "bytes": 689,
+        "sha256": "81699c10b821262c81a298c4157b94a6974caced9e8a087d6806d3dd2d05f76b"
+      },
+      "captured_at": "2026-10-07T15:23:49.716862+00:00",
+      "raw_inputs": {
+        "commands.jsonl": {
+          "path": "build-host/runtime-acceptance-073/prefix-wacky-save-failure-b/commands.jsonl",
+          "bytes": 452317,
+          "sha256": "e89a6c1a28295bb5455b717271d0652c357ea9eb90266af680ec0c8f5c320dcd"
+        },
+        "a.rx": {
+          "path": "build-host/runtime-acceptance-073/prefix-wacky-save-failure-b/a.rx",
+          "bytes": 9268137,
+          "sha256": "8e70b92a6f8df54eafaf3928ee250f08883f64b8c0b7faaf49e6682f48b6ef2f"
+        },
+        "b.rx": {
+          "path": "build-host/runtime-acceptance-073/prefix-wacky-save-failure-b/b.rx",
+          "bytes": 9319318,
+          "sha256": "6dc7119ff1b7800157a55a184ccc908fd9b394612d25f60035db544921c00b2d"
+        }
+      },
+      "exact_extension_of_first_failure_prefix": {
+        "commands.jsonl": 437613,
+        "a.rx": 7152521,
+        "b.rx": 7158656
+      }
+    }
+  },
+  "commands": [
+    {
+      "journal_index": 540,
+      "time": "2026-10-07T15:14:07.531531+00:00",
+      "started_at": "2026-10-07T15:14:07.515080+00:00",
+      "duration_ms": 16.44,
+      "unit_duration_ms": {
+        "A": 16.434
+      },
+      "request": {
+        "command": "status",
+        "unit": "A"
+      },
+      "response": {
+        "A": {
+          "command": "status",
+          "command_id": 1,
+          "result": "ok",
+          "result_id": 0,
+          "session": 0,
+          "sequence": 3479,
+          "active": false,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 0,
+          "input_remaining_ms": 0,
+          "text": "mode=shell page=0 app=0 view=2 row=9 game=11 link=2 rooms=0 ready=0 tr=1 ts=0"
+        }
+      }
+    },
+    {
+      "journal_index": 541,
+      "time": "2026-10-07T15:14:08.186693+00:00",
+      "started_at": "2026-10-07T15:14:07.531616+00:00",
+      "duration_ms": 655.067,
+      "unit_duration_ms": {
+        "A": 655.054
+      },
+      "request": {
+        "command": "tap",
+        "unit": "A",
+        "x": 740,
+        "y": 280,
+        "hold_ms": 180
+      },
+      "response": {
+        "A": {
+          "command": "release",
+          "command_id": 4,
+          "result": "ok",
+          "result_id": 0,
+          "session": 3484803104,
+          "sequence": 3482,
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 30000,
+          "input_remaining_ms": 0,
+          "text": "mode=shell page=0 app=0 view=2 row=9 game=11 link=2 rooms=0 ready=0 tr=1 ts=0"
+        }
+      }
+    },
+    {
+      "journal_index": 542,
+      "time": "2026-10-07T15:14:08.240809+00:00",
+      "started_at": "2026-10-07T15:14:08.186881+00:00",
+      "duration_ms": 53.917,
+      "unit_duration_ms": {
+        "B": 53.909
+      },
+      "request": {
+        "command": "status",
+        "unit": "B"
+      },
+      "response": {
+        "B": {
+          "command": "status",
+          "command_id": 1,
+          "result": "ok",
+          "result_id": 0,
+          "session": 0,
+          "sequence": 3456,
+          "active": false,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 0,
+          "input_remaining_ms": 0,
+          "text": "mode=shell page=0 app=0 view=1 row=11 game=11 link=2 rooms=0 ready=0 tr=1 ts=0"
+        }
+      }
+    },
+    {
+      "journal_index": 543,
+      "time": "2026-10-07T15:14:08.895528+00:00",
+      "started_at": "2026-10-07T15:14:08.240926+00:00",
+      "duration_ms": 654.594,
+      "unit_duration_ms": {
+        "B": 654.588
+      },
+      "request": {
+        "command": "tap",
+        "unit": "B",
+        "x": 740,
+        "y": 280,
+        "hold_ms": 180
+      },
+      "response": {
+        "B": {
+          "command": "release",
+          "command_id": 4,
+          "result": "ok",
+          "result_id": 0,
+          "session": 2443147858,
+          "sequence": 3459,
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 30000,
+          "input_remaining_ms": 0,
+          "text": "mode=shell page=0 app=0 view=1 row=11 game=11 link=2 rooms=0 ready=0 tr=1 ts=0"
+        }
+      }
+    },
+    {
+      "journal_index": 544,
+      "time": "2026-10-07T15:14:08.895597+00:00",
+      "event": "guarded-batch",
+      "request": {
+        "command": "guarded_batch",
+        "name": "ww73-offline1-card",
+        "steps": [
+          {
+            "expect": {
+              "A": {
+                "mode": "shell",
+                "page": 0
+              }
+            },
+            "timeout_ms": 5000
+          },
+          {
+            "request": {
+              "command": "tap",
+              "unit": "A",
+              "x": 740,
+              "y": 280,
+              "hold_ms": 180
+            }
+          },
+          {
+            "expect": {
+              "B": {
+                "mode": "shell",
+                "page": 0
+              }
+            },
+            "timeout_ms": 5000
+          },
+          {
+            "request": {
+              "command": "tap",
+              "unit": "B",
+              "x": 740,
+              "y": 280,
+              "hold_ms": 180
+            }
+          }
+        ]
+      },
+      "outcome": {
+        "ok": true,
+        "name": "ww73-offline1-card",
+        "completed_steps": 4,
+        "last_status": {
+          "B": {
+            "mode": "shell",
+            "page": "0",
+            "app": "0",
+            "view": "1",
+            "row": "11",
+            "game": "11",
+            "link": "2",
+            "rooms": "0",
+            "ready": "0",
+            "tr": "1",
+            "ts": "0"
+          }
+        },
+        "elapsed_ms": 1380.515
+      }
+    },
+    {
+      "journal_index": 545,
+      "time": "2026-10-07T15:14:19.824114+00:00",
+      "started_at": "2026-10-07T15:14:16.398973+00:00",
+      "duration_ms": 3425.115,
+      "unit_duration_ms": {
+        "A": 3424.142,
+        "B": 3424.885
+      },
+      "request": {
+        "command": "screenshot",
+        "unit": "both",
+        "name": "ww73-offline1-intro",
+        "scale": 4,
+        "parallel": true
+      },
+      "response": {
+        "A": {
+          "capture_id": 858727877,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "0dfb80858078f9cf8e6dd5e5f5b71ae27c306b0b852f6e5420f930699c848042",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ww73-offline1-intro-a.png"
+        },
+        "B": {
+          "capture_id": 1431530392,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "0dfb80858078f9cf8e6dd5e5f5b71ae27c306b0b852f6e5420f930699c848042",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ww73-offline1-intro-b.png"
+        }
+      }
+    },
+    {
+      "journal_index": 546,
+      "time": "2026-10-07T15:14:29.570418+00:00",
+      "started_at": "2026-10-07T15:14:29.519968+00:00",
+      "duration_ms": 50.431,
+      "unit_duration_ms": {
+        "A": 50.421
+      },
+      "request": {
+        "command": "status",
+        "unit": "A"
+      },
+      "response": {
+        "A": {
+          "command": "status",
+          "command_id": 1,
+          "result": "ok",
+          "result_id": 0,
+          "session": 0,
+          "sequence": 3542,
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 8409,
+          "input_remaining_ms": 0,
+          "text": "mode=native id=org.p4console.wacky-probe"
+        }
+      }
+    },
+    {
+      "journal_index": 547,
+      "time": "2026-10-07T15:14:30.160244+00:00",
+      "started_at": "2026-10-07T15:14:29.570512+00:00",
+      "duration_ms": 589.724,
+      "unit_duration_ms": {
+        "A": 589.714
+      },
+      "request": {
+        "command": "pulse",
+        "unit": "A",
+        "buttons": "a",
+        "hold_ms": 180
+      },
+      "response": {
+        "A": {
+          "command": "release",
+          "command_id": 4,
+          "result": "ok",
+          "result_id": 0,
+          "session": 3484803104,
+          "sequence": 3544,
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 30000,
+          "input_remaining_ms": 0,
+          "text": "mode=native id=org.p4console.wacky-probe"
+        }
+      }
+    },
+    {
+      "journal_index": 548,
+      "time": "2026-10-07T15:14:30.230327+00:00",
+      "started_at": "2026-10-07T15:14:30.160327+00:00",
+      "duration_ms": 69.995,
+      "unit_duration_ms": {
+        "A": 69.988
+      },
+      "request": {
+        "command": "release",
+        "unit": "A"
+      },
+      "response": {
+        "A": {
+          "command": "release",
+          "command_id": 4,
+          "result": "ok",
+          "result_id": 0,
+          "session": 3484803104,
+          "sequence": 3545,
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 30000,
+          "input_remaining_ms": 0,
+          "text": "mode=native id=org.p4console.wacky-probe"
+        }
+      }
+    },
+    {
+      "journal_index": 549,
+      "time": "2026-10-07T15:14:30.283278+00:00",
+      "started_at": "2026-10-07T15:14:30.230392+00:00",
+      "duration_ms": 52.882,
+      "unit_duration_ms": {
+        "A": 52.877
+      },
+      "request": {
+        "command": "status",
+        "unit": "A"
+      },
+      "response": {
+        "A": {
+          "command": "status",
+          "command_id": 1,
+          "result": "ok",
+          "result_id": 0,
+          "session": 0,
+          "sequence": 3546,
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 29946,
+          "input_remaining_ms": 0,
+          "text": "mode=native id=org.p4console.wacky-probe"
+        }
+      }
+    },
+    {
+      "journal_index": 550,
+      "time": "2026-10-07T15:14:30.283348+00:00",
+      "event": "guarded-batch",
+      "request": {
+        "command": "guarded_batch",
+        "name": "ww73aintro1",
+        "steps": [
+          {
+            "expect": {
+              "A": {
+                "mode": "native",
+                "id": "org.p4console.wacky-probe"
+              }
+            },
+            "timeout_ms": 5000
+          },
+          {
+            "request": {
+              "command": "pulse",
+              "unit": "A",
+              "buttons": "a",
+              "hold_ms": 180
+            }
+          },
+          {
+            "request": {
+              "command": "release",
+              "unit": "A"
+            }
+          },
+          {
+            "request": {
+              "command": "status",
+              "unit": "A"
+            }
+          }
+        ]
+      },
+      "outcome": {
+        "ok": true,
+        "name": "ww73aintro1",
+        "completed_steps": 4,
+        "last_status": {
+          "A": {
+            "mode": "native",
+            "id": "org.p4console.wacky-probe"
+          }
+        },
+        "elapsed_ms": 763.383
+      }
+    },
+    {
+      "journal_index": 551,
+      "time": "2026-10-07T15:14:35.148706+00:00",
+      "started_at": "2026-10-07T15:14:35.084679+00:00",
+      "duration_ms": 64.016,
+      "unit_duration_ms": {
+        "B": 64.011
+      },
+      "request": {
+        "command": "status",
+        "unit": "B"
+      },
+      "response": {
+        "B": {
+          "command": "status",
+          "command_id": 1,
+          "result": "ok",
+          "result_id": 0,
+          "session": 0,
+          "sequence": 3519,
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 3546,
+          "input_remaining_ms": 0,
+          "text": "mode=native id=org.p4console.wacky-probe"
+        }
+      }
+    },
+    {
+      "journal_index": 552,
+      "time": "2026-10-07T15:14:35.757669+00:00",
+      "started_at": "2026-10-07T15:14:35.148778+00:00",
+      "duration_ms": 608.884,
+      "unit_duration_ms": {
+        "B": 608.875
+      },
+      "request": {
+        "command": "pulse",
+        "unit": "B",
+        "buttons": "a",
+        "hold_ms": 180
+      },
+      "response": {
+        "B": {
+          "command": "release",
+          "command_id": 4,
+          "result": "ok",
+          "result_id": 0,
+          "session": 2443147858,
+          "sequence": 3521,
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 30000,
+          "input_remaining_ms": 0,
+          "text": "mode=native id=org.p4console.wacky-probe"
+        }
+      }
+    },
+    {
+      "journal_index": 553,
+      "time": "2026-10-07T15:14:35.771669+00:00",
+      "started_at": "2026-10-07T15:14:35.757742+00:00",
+      "duration_ms": 13.923,
+      "unit_duration_ms": {
+        "B": 13.919
+      },
+      "request": {
+        "command": "release",
+        "unit": "B"
+      },
+      "response": {
+        "B": {
+          "command": "release",
+          "command_id": 4,
+          "result": "ok",
+          "result_id": 0,
+          "session": 2443147858,
+          "sequence": 3522,
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 30000,
+          "input_remaining_ms": 0,
+          "text": "mode=native id=org.p4console.wacky-probe"
+        }
+      }
+    },
+    {
+      "journal_index": 554,
+      "time": "2026-10-07T15:14:35.831738+00:00",
+      "started_at": "2026-10-07T15:14:35.771717+00:00",
+      "duration_ms": 60.017,
+      "unit_duration_ms": {
+        "B": 60.013
+      },
+      "request": {
+        "command": "status",
+        "unit": "B"
+      },
+      "response": {
+        "B": {
+          "command": "status",
+          "command_id": 1,
+          "result": "ok",
+          "result_id": 0,
+          "session": 0,
+          "sequence": 3523,
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 29973,
+          "input_remaining_ms": 0,
+          "text": "mode=native id=org.p4console.wacky-probe"
+        }
+      }
+    },
+    {
+      "journal_index": 555,
+      "time": "2026-10-07T15:14:35.831795+00:00",
+      "event": "guarded-batch",
+      "request": {
+        "command": "guarded_batch",
+        "name": "ww73bintro1",
+        "steps": [
+          {
+            "expect": {
+              "B": {
+                "mode": "native",
+                "id": "org.p4console.wacky-probe"
+              }
+            },
+            "timeout_ms": 5000
+          },
+          {
+            "request": {
+              "command": "pulse",
+              "unit": "B",
+              "buttons": "a",
+              "hold_ms": 180
+            }
+          },
+          {
+            "request": {
+              "command": "release",
+              "unit": "B"
+            }
+          },
+          {
+            "request": {
+              "command": "status",
+              "unit": "B"
+            }
+          }
+        ]
+      },
+      "outcome": {
+        "ok": true,
+        "name": "ww73bintro1",
+        "completed_steps": 4,
+        "last_status": {
+          "B": {
+            "mode": "native",
+            "id": "org.p4console.wacky-probe"
+          }
+        },
+        "elapsed_ms": 747.115
+      }
+    },
+    {
+      "journal_index": 556,
+      "time": "2026-10-07T15:14:43.143664+00:00",
+      "started_at": "2026-10-07T15:14:39.650539+00:00",
+      "duration_ms": 3493.098,
+      "unit_duration_ms": {
+        "A": 3427.16,
+        "B": 3492.778
+      },
+      "request": {
+        "command": "screenshot",
+        "unit": "both",
+        "name": "ww73-offline1-menu",
+        "scale": 4,
+        "parallel": true
+      },
+      "response": {
+        "A": {
+          "capture_id": 577418108,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "cf63bf4ba730a326791e225e2f87b87d8377dbe63a8b6cada96734249c885c62",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ww73-offline1-menu-a.png"
+        },
+        "B": {
+          "capture_id": 2854933376,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "f887422c3d7e16552849dd2dfb2de6b544f606c46ebed79052c7095b0a5fc05f",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ww73-offline1-menu-b.png"
+        }
+      }
+    },
+    {
+      "journal_index": 557,
+      "time": "2026-10-07T15:14:59.929580+00:00",
+      "started_at": "2026-10-07T15:14:59.874911+00:00",
+      "duration_ms": 54.658,
+      "unit_duration_ms": {
+        "A": 54.652
+      },
+      "request": {
+        "command": "status",
+        "unit": "A"
+      },
+      "response": {
+        "A": {
+          "command": "status",
+          "command_id": 1,
+          "result": "ok",
+          "result_id": 0,
+          "session": 0,
+          "sequence": 3606,
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 304,
+          "input_remaining_ms": 0,
+          "text": "mode=native id=org.p4console.wacky-probe"
+        }
+      }
+    },
+    {
+      "journal_index": 558,
+      "time": "2026-10-07T15:15:00.400357+00:00",
+      "started_at": "2026-10-07T15:14:59.929666+00:00",
+      "duration_ms": 470.684,
+      "unit_duration_ms": {
+        "A": 470.677
+      },
+      "request": {
+        "command": "tap",
+        "unit": "A",
+        "x": 640,
+        "y": 604,
+        "hold_ms": 180
+      },
+      "response": {
+        "A": {
+          "command": "release",
+          "command_id": 4,
+          "result": "ok",
+          "result_id": 0,
+          "session": 3484803104,
+          "sequence": 3608,
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 30000,
+          "input_remaining_ms": 0,
+          "text": "mode=native id=org.p4console.wacky-probe"
+        }
+      }
+    },
+    {
+      "journal_index": 559,
+      "time": "2026-10-07T15:15:00.466034+00:00",
+      "started_at": "2026-10-07T15:15:00.400442+00:00",
+      "duration_ms": 65.586,
+      "unit_duration_ms": {
+        "B": 65.581
+      },
+      "request": {
+        "command": "status",
+        "unit": "B"
+      },
+      "response": {
+        "B": {
+          "command": "status",
+          "command_id": 1,
+          "result": "ok",
+          "result_id": 0,
+          "session": 0,
+          "sequence": 3583,
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 5359,
+          "input_remaining_ms": 0,
+          "text": "mode=native id=org.p4console.wacky-probe"
+        }
+      }
+    },
+    {
+      "journal_index": 560,
+      "time": "2026-10-07T15:15:00.948085+00:00",
+      "started_at": "2026-10-07T15:15:00.466152+00:00",
+      "duration_ms": 481.916,
+      "unit_duration_ms": {
+        "B": 481.901
+      },
+      "request": {
+        "command": "tap",
+        "unit": "B",
+        "x": 640,
+        "y": 604,
+        "hold_ms": 180
+      },
+      "response": {
+        "B": {
+          "command": "release",
+          "command_id": 4,
+          "result": "ok",
+          "result_id": 0,
+          "session": 2443147858,
+          "sequence": 3585,
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 30000,
+          "input_remaining_ms": 0,
+          "text": "mode=native id=org.p4console.wacky-probe"
+        }
+      }
+    },
+    {
+      "journal_index": 561,
+      "time": "2026-10-07T15:15:00.948386+00:00",
+      "event": "guarded-batch",
+      "request": {
+        "command": "guarded_batch",
+        "name": "ww73-offline1-mainmenu",
+        "steps": [
+          {
+            "expect": {
+              "A": {
+                "mode": "native",
+                "id": "org.p4console.wacky-probe"
+              }
+            },
+            "timeout_ms": 5000
+          },
+          {
+            "request": {
+              "command": "tap",
+              "unit": "A",
+              "x": 640,
+              "y": 604,
+              "hold_ms": 180
+            }
+          },
+          {
+            "expect": {
+              "B": {
+                "mode": "native",
+                "id": "org.p4console.wacky-probe"
+              }
+            },
+            "timeout_ms": 5000
+          },
+          {
+            "request": {
+              "command": "tap",
+              "unit": "B",
+              "x": 640,
+              "y": 604,
+              "hold_ms": 180
+            }
+          }
+        ]
+      },
+      "outcome": {
+        "ok": true,
+        "name": "ww73-offline1-mainmenu",
+        "completed_steps": 4,
+        "last_status": {
+          "B": {
+            "mode": "native",
+            "id": "org.p4console.wacky-probe"
+          }
+        },
+        "elapsed_ms": 1073.467
+      }
+    },
+    {
+      "journal_index": 562,
+      "time": "2026-10-07T15:15:06.741756+00:00",
+      "started_at": "2026-10-07T15:15:03.272232+00:00",
+      "duration_ms": 3469.495,
+      "unit_duration_ms": {
+        "B": 3395.308,
+        "A": 3469.286
+      },
+      "request": {
+        "command": "screenshot",
+        "unit": "both",
+        "name": "ww73-offline1-home",
+        "scale": 4,
+        "parallel": true
+      },
+      "response": {
+        "B": {
+          "capture_id": 3033590805,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "0d9a4c7bb3545748d9a16cf06e7b7219d58b4ff9c91256eadd42ab633e0bd0c3",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ww73-offline1-home-b.png"
+        },
+        "A": {
+          "capture_id": 778703354,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "0d9a4c7bb3545748d9a16cf06e7b7219d58b4ff9c91256eadd42ab633e0bd0c3",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ww73-offline1-home-a.png"
+        }
+      }
+    },
+    {
+      "journal_index": 563,
+      "time": "2026-10-07T15:15:20.533251+00:00",
+      "started_at": "2026-10-07T15:15:20.486591+00:00",
+      "duration_ms": 46.648,
+      "unit_duration_ms": {
+        "A": 46.642
+      },
+      "request": {
+        "command": "status",
+        "unit": "A"
+      },
+      "response": {
+        "A": {
+          "command": "status",
+          "command_id": 1,
+          "result": "ok",
+          "result_id": 0,
+          "session": 0,
+          "sequence": 3668,
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 9702,
+          "input_remaining_ms": 0,
+          "text": "mode=native id=org.p4console.wacky-probe"
+        }
+      }
+    },
+    {
+      "journal_index": 564,
+      "time": "2026-10-07T15:15:21.032016+00:00",
+      "started_at": "2026-10-07T15:15:20.533354+00:00",
+      "duration_ms": 498.655,
+      "unit_duration_ms": {
+        "A": 498.648
+      },
+      "request": {
+        "command": "tap",
+        "unit": "A",
+        "x": 641,
+        "y": 414,
+        "hold_ms": 180
+      },
+      "response": {
+        "A": {
+          "command": "release",
+          "command_id": 4,
+          "result": "ok",
+          "result_id": 0,
+          "session": 3484803104,
+          "sequence": 3670,
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 30000,
+          "input_remaining_ms": 0,
+          "text": "mode=native id=org.p4console.wacky-probe"
+        }
+      }
+    },
+    {
+      "journal_index": 565,
+      "time": "2026-10-07T15:15:21.054077+00:00",
+      "started_at": "2026-10-07T15:15:21.032208+00:00",
+      "duration_ms": 21.86,
+      "unit_duration_ms": {
+        "A": 21.855
+      },
+      "request": {
+        "command": "release",
+        "unit": "A"
+      },
+      "response": {
+        "A": {
+          "command": "release",
+          "command_id": 4,
+          "result": "ok",
+          "result_id": 0,
+          "session": 3484803104,
+          "sequence": 3671,
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 30000,
+          "input_remaining_ms": 0,
+          "text": "mode=native id=org.p4console.wacky-probe"
+        }
+      }
+    },
+    {
+      "journal_index": 566,
+      "time": "2026-10-07T15:15:21.112381+00:00",
+      "started_at": "2026-10-07T15:15:21.054142+00:00",
+      "duration_ms": 58.233,
+      "unit_duration_ms": {
+        "A": 58.228
+      },
+      "request": {
+        "command": "status",
+        "unit": "A"
+      },
+      "response": {
+        "A": {
+          "command": "status",
+          "command_id": 1,
+          "result": "ok",
+          "result_id": 0,
+          "session": 0,
+          "sequence": 3672,
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 29973,
+          "input_remaining_ms": 0,
+          "text": "mode=native id=org.p4console.wacky-probe"
+        }
+      }
+    },
+    {
+      "journal_index": 567,
+      "time": "2026-10-07T15:15:21.112453+00:00",
+      "event": "guarded-batch",
+      "request": {
+        "command": "guarded_batch",
+        "name": "ww73aoptions1",
+        "steps": [
+          {
+            "expect": {
+              "A": {
+                "mode": "native",
+                "id": "org.p4console.wacky-probe"
+              }
+            },
+            "timeout_ms": 5000
+          },
+          {
+            "request": {
+              "command": "tap",
+              "unit": "A",
+              "x": 641,
+              "y": 414,
+              "hold_ms": 180
+            }
+          },
+          {
+            "request": {
+              "command": "release",
+              "unit": "A"
+            }
+          },
+          {
+            "request": {
+              "command": "status",
+              "unit": "A"
+            }
+          }
+        ]
+      },
+      "outcome": {
+        "ok": true,
+        "name": "ww73aoptions1",
+        "completed_steps": 4,
+        "last_status": {
+          "A": {
+            "mode": "native",
+            "id": "org.p4console.wacky-probe"
+          }
+        },
+        "elapsed_ms": 625.861
+      }
+    },
+    {
+      "journal_index": 568,
+      "time": "2026-10-07T15:15:26.079270+00:00",
+      "started_at": "2026-10-07T15:15:26.035836+00:00",
+      "duration_ms": 43.423,
+      "unit_duration_ms": {
+        "B": 43.417
+      },
+      "request": {
+        "command": "status",
+        "unit": "B"
+      },
+      "response": {
+        "B": {
+          "command": "status",
+          "command_id": 1,
+          "result": "ok",
+          "result_id": 0,
+          "session": 0,
+          "sequence": 3645,
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 4672,
+          "input_remaining_ms": 0,
+          "text": "mode=native id=org.p4console.wacky-probe"
+        }
+      }
+    },
+    {
+      "journal_index": 569,
+      "time": "2026-10-07T15:15:26.562213+00:00",
+      "started_at": "2026-10-07T15:15:26.079340+00:00",
+      "duration_ms": 482.858,
+      "unit_duration_ms": {
+        "B": 482.839
+      },
+      "request": {
+        "command": "tap",
+        "unit": "B",
+        "x": 641,
+        "y": 414,
+        "hold_ms": 180
+      },
+      "response": {
+        "B": {
+          "command": "release",
+          "command_id": 4,
+          "result": "ok",
+          "result_id": 0,
+          "session": 2443147858,
+          "sequence": 3647,
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 30000,
+          "input_remaining_ms": 0,
+          "text": "mode=native id=org.p4console.wacky-probe"
+        }
+      }
+    },
+    {
+      "journal_index": 570,
+      "time": "2026-10-07T15:15:26.577379+00:00",
+      "started_at": "2026-10-07T15:15:26.562440+00:00",
+      "duration_ms": 14.93,
+      "unit_duration_ms": {
+        "B": 14.919
+      },
+      "request": {
+        "command": "release",
+        "unit": "B"
+      },
+      "response": {
+        "B": {
+          "command": "release",
+          "command_id": 4,
+          "result": "ok",
+          "result_id": 0,
+          "session": 2443147858,
+          "sequence": 3648,
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 30000,
+          "input_remaining_ms": 0,
+          "text": "mode=native id=org.p4console.wacky-probe"
+        }
+      }
+    },
+    {
+      "journal_index": 571,
+      "time": "2026-10-07T15:15:26.635373+00:00",
+      "started_at": "2026-10-07T15:15:26.577491+00:00",
+      "duration_ms": 57.874,
+      "unit_duration_ms": {
+        "B": 57.863
+      },
+      "request": {
+        "command": "status",
+        "unit": "B"
+      },
+      "response": {
+        "B": {
+          "command": "status",
+          "command_id": 1,
+          "result": "ok",
+          "result_id": 0,
+          "session": 0,
+          "sequence": 3649,
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 29971,
+          "input_remaining_ms": 0,
+          "text": "mode=native id=org.p4console.wacky-probe"
+        }
+      }
+    },
+    {
+      "journal_index": 572,
+      "time": "2026-10-07T15:15:26.635487+00:00",
+      "event": "guarded-batch",
+      "request": {
+        "command": "guarded_batch",
+        "name": "ww73boptions1",
+        "steps": [
+          {
+            "expect": {
+              "B": {
+                "mode": "native",
+                "id": "org.p4console.wacky-probe"
+              }
+            },
+            "timeout_ms": 5000
+          },
+          {
+            "request": {
+              "command": "tap",
+              "unit": "B",
+              "x": 641,
+              "y": 414,
+              "hold_ms": 180
+            }
+          },
+          {
+            "request": {
+              "command": "release",
+              "unit": "B"
+            }
+          },
+          {
+            "request": {
+              "command": "status",
+              "unit": "B"
+            }
+          }
+        ]
+      },
+      "outcome": {
+        "ok": true,
+        "name": "ww73boptions1",
+        "completed_steps": 4,
+        "last_status": {
+          "B": {
+            "mode": "native",
+            "id": "org.p4console.wacky-probe"
+          }
+        },
+        "elapsed_ms": 599.645
+      }
+    },
+    {
+      "journal_index": 573,
+      "time": "2026-10-07T15:15:35.021259+00:00",
+      "started_at": "2026-10-07T15:15:31.606712+00:00",
+      "duration_ms": 3414.514,
+      "unit_duration_ms": {
+        "B": 3413.511,
+        "A": 3414.281
+      },
+      "request": {
+        "command": "screenshot",
+        "unit": "both",
+        "name": "ww73-clock-initial",
+        "scale": 4,
+        "parallel": true
+      },
+      "response": {
+        "B": {
+          "capture_id": 4232581552,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "0cd429b81c5dccd34914d9690fd7516c5e5795574d6442296d057905db3f299d",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ww73-clock-initial-b.png"
+        },
+        "A": {
+          "capture_id": 3581560638,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "0cd429b81c5dccd34914d9690fd7516c5e5795574d6442296d057905db3f299d",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ww73-clock-initial-a.png"
+        }
+      }
+    },
+    {
+      "journal_index": 574,
+      "time": "2026-10-07T15:15:46.472789+00:00",
+      "started_at": "2026-10-07T15:15:46.413288+00:00",
+      "duration_ms": 59.49,
+      "unit_duration_ms": {
+        "A": 59.485
+      },
+      "request": {
+        "command": "status",
+        "unit": "A"
+      },
+      "response": {
+        "A": {
+          "command": "status",
+          "command_id": 1,
+          "result": "ok",
+          "result_id": 0,
+          "session": 0,
+          "sequence": 3732,
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 4626,
+          "input_remaining_ms": 0,
+          "text": "mode=native id=org.p4console.wacky-probe"
+        }
+      }
+    },
+    {
+      "journal_index": 575,
+      "time": "2026-10-07T15:15:46.957061+00:00",
+      "started_at": "2026-10-07T15:15:46.472853+00:00",
+      "duration_ms": 484.201,
+      "unit_duration_ms": {
+        "A": 484.194
+      },
+      "request": {
+        "command": "tap",
+        "unit": "A",
+        "x": 641,
+        "y": 479,
+        "hold_ms": 180
+      },
+      "response": {
+        "A": {
+          "command": "release",
+          "command_id": 4,
+          "result": "ok",
+          "result_id": 0,
+          "session": 3484803104,
+          "sequence": 3734,
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 30000,
+          "input_remaining_ms": 0,
+          "text": "mode=native id=org.p4console.wacky-probe"
+        }
+      }
+    },
+    {
+      "journal_index": 576,
+      "time": "2026-10-07T15:15:46.973106+00:00",
+      "started_at": "2026-10-07T15:15:46.957138+00:00",
+      "duration_ms": 15.965,
+      "unit_duration_ms": {
+        "A": 15.962
+      },
+      "request": {
+        "command": "release",
+        "unit": "A"
+      },
+      "response": {
+        "A": {
+          "command": "release",
+          "command_id": 4,
+          "result": "ok",
+          "result_id": 0,
+          "session": 3484803104,
+          "sequence": 3735,
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 30000,
+          "input_remaining_ms": 0,
+          "text": "mode=native id=org.p4console.wacky-probe"
+        }
+      }
+    },
+    {
+      "journal_index": 577,
+      "time": "2026-10-07T15:15:47.033261+00:00",
+      "started_at": "2026-10-07T15:15:46.973149+00:00",
+      "duration_ms": 60.108,
+      "unit_duration_ms": {
+        "A": 60.103
+      },
+      "request": {
+        "command": "status",
+        "unit": "A"
+      },
+      "response": {
+        "A": {
+          "command": "status",
+          "command_id": 1,
+          "result": "ok",
+          "result_id": 0,
+          "session": 0,
+          "sequence": 3736,
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 29973,
+          "input_remaining_ms": 0,
+          "text": "mode=native id=org.p4console.wacky-probe"
+        }
+      }
+    },
+    {
+      "journal_index": 578,
+      "time": "2026-10-07T15:15:47.033329+00:00",
+      "event": "guarded-batch",
+      "request": {
+        "command": "guarded_batch",
+        "name": "ww73aclock1",
+        "steps": [
+          {
+            "expect": {
+              "A": {
+                "mode": "native",
+                "id": "org.p4console.wacky-probe"
+              }
+            },
+            "timeout_ms": 5000
+          },
+          {
+            "request": {
+              "command": "tap",
+              "unit": "A",
+              "x": 641,
+              "y": 479,
+              "hold_ms": 180
+            }
+          },
+          {
+            "request": {
+              "command": "release",
+              "unit": "A"
+            }
+          },
+          {
+            "request": {
+              "command": "status",
+              "unit": "A"
+            }
+          }
+        ]
+      },
+      "outcome": {
+        "ok": true,
+        "name": "ww73aclock1",
+        "completed_steps": 4,
+        "last_status": {
+          "A": {
+            "mode": "native",
+            "id": "org.p4console.wacky-probe"
+          }
+        },
+        "elapsed_ms": 620.042
+      }
+    },
+    {
+      "journal_index": 579,
+      "time": "2026-10-07T15:15:50.680460+00:00",
+      "started_at": "2026-10-07T15:15:50.631185+00:00",
+      "duration_ms": 49.253,
+      "unit_duration_ms": {
+        "B": 49.247
+      },
+      "request": {
+        "command": "status",
+        "unit": "B"
+      },
+      "response": {
+        "B": {
+          "command": "status",
+          "command_id": 1,
+          "result": "ok",
+          "result_id": 0,
+          "session": 0,
+          "sequence": 3709,
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 5937,
+          "input_remaining_ms": 0,
+          "text": "mode=native id=org.p4console.wacky-probe"
+        }
+      }
+    },
+    {
+      "journal_index": 580,
+      "time": "2026-10-07T15:15:51.179250+00:00",
+      "started_at": "2026-10-07T15:15:50.680531+00:00",
+      "duration_ms": 498.711,
+      "unit_duration_ms": {
+        "B": 498.705
+      },
+      "request": {
+        "command": "tap",
+        "unit": "B",
+        "x": 641,
+        "y": 479,
+        "hold_ms": 180
+      },
+      "response": {
+        "B": {
+          "command": "release",
+          "command_id": 4,
+          "result": "ok",
+          "result_id": 0,
+          "session": 2443147858,
+          "sequence": 3711,
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 30000,
+          "input_remaining_ms": 0,
+          "text": "mode=native id=org.p4console.wacky-probe"
+        }
+      }
+    },
+    {
+      "journal_index": 581,
+      "time": "2026-10-07T15:15:51.252146+00:00",
+      "started_at": "2026-10-07T15:15:51.179326+00:00",
+      "duration_ms": 72.815,
+      "unit_duration_ms": {
+        "B": 72.81
+      },
+      "request": {
+        "command": "release",
+        "unit": "B"
+      },
+      "response": {
+        "B": {
+          "command": "release",
+          "command_id": 4,
+          "result": "ok",
+          "result_id": 0,
+          "session": 2443147858,
+          "sequence": 3712,
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 30000,
+          "input_remaining_ms": 0,
+          "text": "mode=native id=org.p4console.wacky-probe"
+        }
+      }
+    },
+    {
+      "journal_index": 582,
+      "time": "2026-10-07T15:15:51.303545+00:00",
+      "started_at": "2026-10-07T15:15:51.252208+00:00",
+      "duration_ms": 51.332,
+      "unit_duration_ms": {
+        "B": 51.326
+      },
+      "request": {
+        "command": "status",
+        "unit": "B"
+      },
+      "response": {
+        "B": {
+          "command": "status",
+          "command_id": 1,
+          "result": "ok",
+          "result_id": 0,
+          "session": 0,
+          "sequence": 3713,
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 29921,
+          "input_remaining_ms": 0,
+          "text": "mode=native id=org.p4console.wacky-probe"
+        }
+      }
+    },
+    {
+      "journal_index": 583,
+      "time": "2026-10-07T15:15:51.303607+00:00",
+      "event": "guarded-batch",
+      "request": {
+        "command": "guarded_batch",
+        "name": "ww73bclock1",
+        "steps": [
+          {
+            "expect": {
+              "B": {
+                "mode": "native",
+                "id": "org.p4console.wacky-probe"
+              }
+            },
+            "timeout_ms": 5000
+          },
+          {
+            "request": {
+              "command": "tap",
+              "unit": "B",
+              "x": 641,
+              "y": 479,
+              "hold_ms": 180
+            }
+          },
+          {
+            "request": {
+              "command": "release",
+              "unit": "B"
+            }
+          },
+          {
+            "request": {
+              "command": "status",
+              "unit": "B"
+            }
+          }
+        ]
+      },
+      "outcome": {
+        "ok": true,
+        "name": "ww73bclock1",
+        "completed_steps": 4,
+        "last_status": {
+          "B": {
+            "mode": "native",
+            "id": "org.p4console.wacky-probe"
+          }
+        },
+        "elapsed_ms": 672.427
+      }
+    },
+    {
+      "journal_index": 584,
+      "time": "2026-10-07T15:15:58.611720+00:00",
+      "started_at": "2026-10-07T15:15:55.237524+00:00",
+      "duration_ms": 3374.169,
+      "unit_duration_ms": {
+        "B": 3361.047,
+        "A": 3373.963
+      },
+      "request": {
+        "command": "screenshot",
+        "unit": "both",
+        "name": "ww73-clock-changed",
+        "scale": 4,
+        "parallel": true
+      },
+      "response": {
+        "B": {
+          "capture_id": 3205145,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "1af8ddd02322196aaa0e20f44babc62a850cfdc398788c10b51d386c95585b36",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ww73-clock-changed-b.png"
+        },
+        "A": {
+          "capture_id": 550033165,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "1af8ddd02322196aaa0e20f44babc62a850cfdc398788c10b51d386c95585b36",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ww73-clock-changed-a.png"
+        }
+      }
+    },
+    {
+      "journal_index": 585,
+      "time": "2026-10-07T15:16:09.046320+00:00",
+      "started_at": "2026-10-07T15:16:08.965472+00:00",
+      "duration_ms": 80.825,
+      "unit_duration_ms": {
+        "A": 80.818
+      },
+      "request": {
+        "command": "status",
+        "unit": "A"
+      },
+      "response": {
+        "A": {
+          "command": "status",
+          "command_id": 1,
+          "result": "ok",
+          "result_id": 0,
+          "session": 0,
+          "sequence": 3796,
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 7981,
+          "input_remaining_ms": 0,
+          "text": "mode=native id=org.p4console.wacky-probe"
+        }
+      }
+    },
+    {
+      "journal_index": 586,
+      "time": "2026-10-07T15:16:15.402376+00:00",
+      "started_at": "2026-10-07T15:16:09.046412+00:00",
+      "duration_ms": 6355.928,
+      "unit_duration_ms": {
+        "A": 6355.908
+      },
+      "request": {
+        "command": "pulse",
+        "unit": "A",
+        "buttons": "back",
+        "hold_ms": 180
+      },
+      "response": {
+        "A": {
+          "error": "no release response after 3 identical requests",
+          "response": null
+        }
+      }
+    },
+    {
+      "journal_index": 587,
+      "time": "2026-10-07T15:16:19.536986+00:00",
+      "started_at": "2026-10-07T15:16:15.402642+00:00",
+      "duration_ms": 4134.314,
+      "unit_duration_ms": {
+        "A": 4073.141,
+        "B": 61.144
+      },
+      "request": {
+        "command": "release",
+        "unit": "both"
+      },
+      "response": {
+        "A": {
+          "error": "release: session (mode=shell page=0 app=0 view=4 row=11 game=0 link=0 rooms=0 ready=0 tr=1 ts=0)",
+          "response": {
+            "command": "release",
+            "command_id": 4,
+            "result": "session",
+            "result_id": 3,
+            "session": 3484803104,
+            "sequence": 3799,
+            "active": false,
+            "touch": false,
+            "buttons": 0,
+            "x": 0,
+            "y": 0,
+            "session_remaining_ms": 0,
+            "input_remaining_ms": 0,
+            "text": "mode=shell page=0 app=0 view=4 row=11 game=0 link=0 rooms=0 ready=0 tr=1 ts=0"
+          }
+        },
+        "B": {
+          "command": "release",
+          "command_id": 4,
+          "result": "ok",
+          "result_id": 0,
+          "session": 2443147858,
+          "sequence": 3773,
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 30000,
+          "input_remaining_ms": 0,
+          "text": "mode=native id=org.p4console.wacky-probe"
+        }
+      }
+    },
+    {
+      "journal_index": 588,
+      "time": "2026-10-07T15:16:19.537150+00:00",
+      "event": "guarded-batch",
+      "request": {
+        "command": "guarded_batch",
+        "name": "ww73asave2",
+        "steps": [
+          {
+            "expect": {
+              "A": {
+                "mode": "native",
+                "id": "org.p4console.wacky-probe"
+              }
+            },
+            "timeout_ms": 5000
+          },
+          {
+            "request": {
+              "command": "pulse",
+              "unit": "A",
+              "buttons": "back",
+              "hold_ms": 180
+            }
+          },
+          {
+            "request": {
+              "command": "release",
+              "unit": "A"
+            }
+          },
+          {
+            "expect": {
+              "A": {
+                "mode": "shell",
+                "page": 0
+              }
+            },
+            "timeout_ms": 30000
+          },
+          {
+            "request": {
+              "command": "status",
+              "unit": "A"
+            }
+          }
+        ]
+      },
+      "outcome": {
+        "ok": false,
+        "name": "ww73asave2",
+        "completed_steps": 1,
+        "error": "pulse failed for A: {'error': 'no release response after 3 identical requests', 'response': None}",
+        "last_status": {
+          "A": {
+            "mode": "native",
+            "id": "org.p4console.wacky-probe"
+          }
+        },
+        "release": {
+          "time": "2026-10-07T15:16:19.536986+00:00",
+          "started_at": "2026-10-07T15:16:15.402642+00:00",
+          "duration_ms": 4134.314,
+          "unit_duration_ms": {
+            "A": 4073.141,
+            "B": 61.144
+          },
+          "request": {
+            "command": "release",
+            "unit": "both"
+          },
+          "response": {
+            "A": {
+              "error": "release: session (mode=shell page=0 app=0 view=4 row=11 game=0 link=0 rooms=0 ready=0 tr=1 ts=0)",
+              "response": {
+                "command": "release",
+                "command_id": 4,
+                "result": "session",
+                "result_id": 3,
+                "session": 3484803104,
+                "sequence": 3799,
+                "active": false,
+                "touch": false,
+                "buttons": 0,
+                "x": 0,
+                "y": 0,
+                "session_remaining_ms": 0,
+                "input_remaining_ms": 0,
+                "text": "mode=shell page=0 app=0 view=4 row=11 game=0 link=0 rooms=0 ready=0 tr=1 ts=0"
+              }
+            },
+            "B": {
+              "command": "release",
+              "command_id": 4,
+              "result": "ok",
+              "result_id": 0,
+              "session": 2443147858,
+              "sequence": 3773,
+              "active": true,
+              "touch": false,
+              "buttons": 0,
+              "x": 0,
+              "y": 0,
+              "session_remaining_ms": 30000,
+              "input_remaining_ms": 0,
+              "text": "mode=native id=org.p4console.wacky-probe"
+            }
+          }
+        },
+        "elapsed_ms": 10571.642
+      }
+    },
+    {
+      "journal_index": 589,
+      "time": "2026-10-07T15:16:33.317685+00:00",
+      "started_at": "2026-10-07T15:16:33.227951+00:00",
+      "duration_ms": 89.721,
+      "unit_duration_ms": {
+        "A": 33.022,
+        "B": 56.686
+      },
+      "request": {
+        "command": "status",
+        "unit": "both"
+      },
+      "response": {
+        "A": {
+          "command": "status",
+          "command_id": 1,
+          "result": "ok",
+          "result_id": 0,
+          "session": 0,
+          "sequence": 3800,
+          "active": false,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 0,
+          "input_remaining_ms": 0,
+          "text": "mode=shell page=0 app=0 view=4 row=11 game=0 link=0 rooms=0 ready=0 tr=1 ts=0"
+        },
+        "B": {
+          "command": "status",
+          "command_id": 1,
+          "result": "ok",
+          "result_id": 0,
+          "session": 0,
+          "sequence": 3774,
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 16219,
+          "input_remaining_ms": 0,
+          "text": "mode=native id=org.p4console.wacky-probe"
+        }
+      }
+    },
+    {
+      "journal_index": 590,
+      "time": "2026-10-07T15:16:43.534792+00:00",
+      "started_at": "2026-10-07T15:16:40.074264+00:00",
+      "duration_ms": 3460.501,
+      "unit_duration_ms": {
+        "B": 3382.459,
+        "A": 3460.331
+      },
+      "request": {
+        "command": "screenshot",
+        "unit": "both",
+        "name": "ww73-save2-failure-state",
+        "scale": 4,
+        "parallel": true
+      },
+      "response": {
+        "B": {
+          "capture_id": 2079936227,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "1af8ddd02322196aaa0e20f44babc62a850cfdc398788c10b51d386c95585b36",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ww73-save2-failure-state-b.png"
+        },
+        "A": {
+          "capture_id": 1907977750,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "e5e9507e18d4fad9465baf09dc1930ed682f21a79375f57ffd39bda96b56d5c6",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ww73-save2-failure-state-a.png"
+        }
+      }
+    },
+    {
+      "journal_index": 591,
+      "time": "2026-10-07T15:20:32.846812+00:00",
+      "started_at": "2026-10-07T15:20:32.796095+00:00",
+      "duration_ms": 50.706,
+      "unit_duration_ms": {
+        "A": 14.416,
+        "B": 36.278
+      },
+      "request": {
+        "command": "status",
+        "unit": "both"
+      },
+      "response": {
+        "A": {
+          "command": "status",
+          "command_id": 1,
+          "result": "ok",
+          "result_id": 0,
+          "session": 0,
+          "sequence": 3860,
+          "active": false,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 0,
+          "input_remaining_ms": 0,
+          "text": "mode=shell page=0 app=0 view=4 row=11 game=0 link=0 rooms=0 ready=0 tr=1 ts=0"
+        },
+        "B": {
+          "command": "status",
+          "command_id": 1,
+          "result": "ok",
+          "result_id": 0,
+          "session": 0,
+          "sequence": 3834,
+          "active": false,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 0,
+          "input_remaining_ms": 0,
+          "text": "mode=native id=org.p4console.wacky-probe"
+        }
+      }
+    },
+    {
+      "journal_index": 592,
+      "time": "2026-10-07T15:20:35.214290+00:00",
+      "started_at": "2026-10-07T15:20:35.214254+00:00",
+      "duration_ms": 0.02,
+      "unit_duration_ms": {
+        "A": 0.006,
+        "B": 0.001
+      },
+      "request": {
+        "command": "close",
+        "unit": "both"
+      },
+      "response": {
+        "A": null,
+        "B": null
+      }
+    },
+    {
+      "journal_index": 593,
+      "time": "2026-10-07T15:20:37.011762+00:00",
+      "started_at": "2026-10-07T15:20:36.878286+00:00",
+      "duration_ms": 133.465,
+      "unit_duration_ms": {
+        "A": 59.601,
+        "B": 73.853
+      },
+      "request": {
+        "command": "status",
+        "unit": "both"
+      },
+      "response": {
+        "A": {
+          "command": "status",
+          "command_id": 1,
+          "result": "ok",
+          "result_id": 0,
+          "session": 0,
+          "sequence": 3861,
+          "active": false,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 0,
+          "input_remaining_ms": 0,
+          "text": "mode=shell page=0 app=0 view=4 row=11 game=0 link=0 rooms=0 ready=0 tr=1 ts=0"
+        },
+        "B": {
+          "command": "status",
+          "command_id": 1,
+          "result": "ok",
+          "result_id": 0,
+          "session": 0,
+          "sequence": 3835,
+          "active": false,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 0,
+          "input_remaining_ms": 0,
+          "text": "mode=native id=org.p4console.wacky-probe"
+        }
+      }
+    },
+    {
+      "journal_index": 594,
+      "time": "2026-10-07T15:22:22.079873+00:00",
+      "started_at": "2026-10-07T15:20:39.788448+00:00",
+      "duration_ms": 102291.028,
+      "unit_duration_ms": {
+        "A": 51274.232,
+        "B": 51016.783
+      },
+      "request": {
+        "command": "screenshot",
+        "unit": "both",
+        "name": "ww73-before-restore"
+      },
+      "response": {
+        "A": {
+          "capture_id": 3169954145,
+          "native_width": 720,
+          "native_height": 1280,
+          "width": 1280,
+          "height": 720,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 1,
+          "bytes": 1843200,
+          "sha256": "bd415e0fff8e6732ddd318696365ad8a7ad4e103734a27600d13b8678fff5821",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ww73-before-restore-a.png"
+        },
+        "B": {
+          "capture_id": 2799185050,
+          "native_width": 720,
+          "native_height": 1280,
+          "width": 1280,
+          "height": 720,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 1,
+          "bytes": 1843200,
+          "sha256": "4c506338143cfdc3dcb72ef42742717a2544feb2924ece8e1296ac28c6da676e",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ww73-before-restore-b.png"
+        }
+      }
+    },
+    {
+      "journal_index": 595,
+      "time": "2026-10-07T15:22:40.267895+00:00",
+      "started_at": "2026-10-07T15:22:40.219157+00:00",
+      "duration_ms": 48.712,
+      "unit_duration_ms": {
+        "A": 3.223,
+        "B": 45.467
+      },
+      "request": {
+        "command": "status",
+        "unit": "both"
+      },
+      "response": {
+        "A": {
+          "command": "status",
+          "command_id": 1,
+          "result": "ok",
+          "result_id": 0,
+          "session": 0,
+          "sequence": 4764,
+          "active": false,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 0,
+          "input_remaining_ms": 0,
+          "text": "mode=shell page=0 app=0 view=4 row=11 game=0 link=0 rooms=0 ready=0 tr=1 ts=0"
+        },
+        "B": {
+          "command": "status",
+          "command_id": 1,
+          "result": "ok",
+          "result_id": 0,
+          "session": 0,
+          "sequence": 4738,
+          "active": false,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 0,
+          "input_remaining_ms": 0,
+          "text": "mode=native id=org.p4console.wacky-probe"
+        }
+      }
+    },
+    {
+      "journal_index": 596,
+      "time": "2026-10-07T15:22:42.261366+00:00",
+      "started_at": "2026-10-07T15:22:42.261342+00:00",
+      "duration_ms": 0.012,
+      "unit_duration_ms": {
+        "A": 0.004,
+        "B": 0.001
+      },
+      "request": {
+        "command": "close",
+        "unit": "both"
+      },
+      "response": {
+        "A": null,
+        "B": null
+      }
+    },
+    {
+      "journal_index": 597,
+      "time": "2026-10-07T15:22:45.713513+00:00",
+      "started_at": "2026-10-07T15:22:45.628937+00:00",
+      "duration_ms": 84.553,
+      "unit_duration_ms": {
+        "A": 13.155,
+        "B": 71.382
+      },
+      "request": {
+        "command": "status",
+        "unit": "both"
+      },
+      "response": {
+        "A": {
+          "command": "status",
+          "command_id": 1,
+          "result": "ok",
+          "result_id": 0,
+          "session": 0,
+          "sequence": 4765,
+          "active": false,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 0,
+          "input_remaining_ms": 0,
+          "text": "mode=shell page=0 app=0 view=4 row=11 game=0 link=0 rooms=0 ready=0 tr=1 ts=0"
+        },
+        "B": {
+          "command": "status",
+          "command_id": 1,
+          "result": "ok",
+          "result_id": 0,
+          "session": 0,
+          "sequence": 4739,
+          "active": false,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 0,
+          "input_remaining_ms": 0,
+          "text": "mode=native id=org.p4console.wacky-probe"
+        }
+      }
+    },
+    {
+      "journal_index": 598,
+      "time": "2026-10-07T15:22:48.202907+00:00",
+      "started_at": "2026-10-07T15:22:48.168118+00:00",
+      "duration_ms": 34.765,
+      "unit_duration_ms": {
+        "B": 34.758
+      },
+      "request": {
+        "command": "status",
+        "unit": "B"
+      },
+      "response": {
+        "B": {
+          "command": "status",
+          "command_id": 1,
+          "result": "ok",
+          "result_id": 0,
+          "session": 0,
+          "sequence": 4740,
+          "active": false,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 0,
+          "input_remaining_ms": 0,
+          "text": "mode=native id=org.p4console.wacky-probe"
+        }
+      }
+    },
+    {
+      "journal_index": 599,
+      "time": "2026-10-07T15:22:48.756661+00:00",
+      "started_at": "2026-10-07T15:22:48.203000+00:00",
+      "duration_ms": 553.645,
+      "unit_duration_ms": {
+        "B": 553.626
+      },
+      "request": {
+        "command": "tap",
+        "unit": "B",
+        "x": 641,
+        "y": 479,
+        "hold_ms": 180
+      },
+      "response": {
+        "B": {
+          "command": "release",
+          "command_id": 4,
+          "result": "ok",
+          "result_id": 0,
+          "session": 1000684224,
+          "sequence": 4743,
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 30000,
+          "input_remaining_ms": 0,
+          "text": "mode=native id=org.p4console.wacky-probe"
+        }
+      }
+    },
+    {
+      "journal_index": 600,
+      "time": "2026-10-07T15:22:48.772854+00:00",
+      "started_at": "2026-10-07T15:22:48.756958+00:00",
+      "duration_ms": 15.887,
+      "unit_duration_ms": {
+        "B": 15.877
+      },
+      "request": {
+        "command": "release",
+        "unit": "B"
+      },
+      "response": {
+        "B": {
+          "command": "release",
+          "command_id": 4,
+          "result": "ok",
+          "result_id": 0,
+          "session": 1000684224,
+          "sequence": 4744,
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 30000,
+          "input_remaining_ms": 0,
+          "text": "mode=native id=org.p4console.wacky-probe"
+        }
+      }
+    },
+    {
+      "journal_index": 601,
+      "time": "2026-10-07T15:22:48.828736+00:00",
+      "started_at": "2026-10-07T15:22:48.772972+00:00",
+      "duration_ms": 55.756,
+      "unit_duration_ms": {
+        "B": 55.744
+      },
+      "request": {
+        "command": "status",
+        "unit": "B"
+      },
+      "response": {
+        "B": {
+          "command": "status",
+          "command_id": 1,
+          "result": "ok",
+          "result_id": 0,
+          "session": 0,
+          "sequence": 4745,
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 29973,
+          "input_remaining_ms": 0,
+          "text": "mode=native id=org.p4console.wacky-probe"
+        }
+      }
+    },
+    {
+      "journal_index": 602,
+      "time": "2026-10-07T15:22:48.828864+00:00",
+      "event": "guarded-batch",
+      "request": {
+        "command": "guarded_batch",
+        "name": "ww73brestore",
+        "steps": [
+          {
+            "expect": {
+              "B": {
+                "mode": "native",
+                "id": "org.p4console.wacky-probe"
+              }
+            },
+            "timeout_ms": 5000
+          },
+          {
+            "request": {
+              "command": "tap",
+              "unit": "B",
+              "x": 641,
+              "y": 479,
+              "hold_ms": 180
+            }
+          },
+          {
+            "request": {
+              "command": "release",
+              "unit": "B"
+            }
+          },
+          {
+            "request": {
+              "command": "status",
+              "unit": "B"
+            }
+          }
+        ]
+      },
+      "outcome": {
+        "ok": true,
+        "name": "ww73brestore",
+        "completed_steps": 4,
+        "last_status": {
+          "B": {
+            "mode": "native",
+            "id": "org.p4console.wacky-probe"
+          }
+        },
+        "elapsed_ms": 660.75
+      }
+    },
+    {
+      "journal_index": 603,
+      "time": "2026-10-07T15:22:54.284002+00:00",
+      "started_at": "2026-10-07T15:22:50.811537+00:00",
+      "duration_ms": 3472.436,
+      "unit_duration_ms": {
+        "B": 3390.933,
+        "A": 3472.223
+      },
+      "request": {
+        "command": "screenshot",
+        "unit": "both",
+        "name": "ww73-b-clock-restored",
+        "scale": 4,
+        "parallel": true
+      },
+      "response": {
+        "B": {
+          "capture_id": 4094292379,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "570fa7de76968027c1010dd0692d8ab6fd99af0466720ac5754a0e9e42777473",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ww73-b-clock-restored-b.png"
+        },
+        "A": {
+          "capture_id": 4136699204,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "e5e9507e18d4fad9465baf09dc1930ed682f21a79375f57ffd39bda96b56d5c6",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ww73-b-clock-restored-a.png"
+        }
+      }
+    },
+    {
+      "journal_index": 604,
+      "time": "2026-10-07T15:23:18.971560+00:00",
+      "started_at": "2026-10-07T15:23:18.945062+00:00",
+      "duration_ms": 26.486,
+      "unit_duration_ms": {
+        "B": 26.48
+      },
+      "request": {
+        "command": "status",
+        "unit": "B"
+      },
+      "response": {
+        "B": {
+          "command": "status",
+          "command_id": 1,
+          "result": "ok",
+          "result_id": 0,
+          "session": 0,
+          "sequence": 4805,
+          "active": false,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 0,
+          "input_remaining_ms": 0,
+          "text": "mode=native id=org.p4console.wacky-probe"
+        }
+      }
+    },
+    {
+      "journal_index": 605,
+      "time": "2026-10-07T15:23:25.393416+00:00",
+      "started_at": "2026-10-07T15:23:18.971653+00:00",
+      "duration_ms": 6421.73,
+      "unit_duration_ms": {
+        "B": 6421.717
+      },
+      "request": {
+        "command": "pulse",
+        "unit": "B",
+        "buttons": "back",
+        "hold_ms": 180
+      },
+      "response": {
+        "B": {
+          "error": "no release response after 3 identical requests",
+          "response": null
+        }
+      }
+    },
+    {
+      "journal_index": 606,
+      "time": "2026-10-07T15:23:29.464034+00:00",
+      "started_at": "2026-10-07T15:23:25.393652+00:00",
+      "duration_ms": 4070.358,
+      "unit_duration_ms": {
+        "A": 0.005,
+        "B": 4070.339
+      },
+      "request": {
+        "command": "release",
+        "unit": "both"
+      },
+      "response": {
+        "A": null,
+        "B": {
+          "error": "release: session (mode=shell page=0 app=0 view=4 row=11 game=0 link=0 rooms=0 ready=0 tr=1 ts=0)",
+          "response": {
+            "command": "release",
+            "command_id": 4,
+            "result": "session",
+            "result_id": 3,
+            "session": 493262825,
+            "sequence": 4809,
+            "active": false,
+            "touch": false,
+            "buttons": 0,
+            "x": 0,
+            "y": 0,
+            "session_remaining_ms": 0,
+            "input_remaining_ms": 0,
+            "text": "mode=shell page=0 app=0 view=4 row=11 game=0 link=0 rooms=0 ready=0 tr=1 ts=0"
+          }
+        }
+      }
+    },
+    {
+      "journal_index": 607,
+      "time": "2026-10-07T15:23:29.464121+00:00",
+      "event": "guarded-batch",
+      "request": {
+        "command": "guarded_batch",
+        "name": "ww73brestorexit",
+        "steps": [
+          {
+            "expect": {
+              "B": {
+                "mode": "native",
+                "id": "org.p4console.wacky-probe"
+              }
+            },
+            "timeout_ms": 5000
+          },
+          {
+            "request": {
+              "command": "pulse",
+              "unit": "B",
+              "buttons": "back",
+              "hold_ms": 180
+            }
+          },
+          {
+            "request": {
+              "command": "release",
+              "unit": "B"
+            }
+          },
+          {
+            "expect": {
+              "B": {
+                "mode": "shell",
+                "page": 0
+              }
+            },
+            "timeout_ms": 30000
+          },
+          {
+            "request": {
+              "command": "status",
+              "unit": "B"
+            }
+          }
+        ]
+      },
+      "outcome": {
+        "ok": false,
+        "name": "ww73brestorexit",
+        "completed_steps": 1,
+        "error": "pulse failed for B: {'error': 'no release response after 3 identical requests', 'response': None}",
+        "last_status": {
+          "B": {
+            "mode": "native",
+            "id": "org.p4console.wacky-probe"
+          }
+        },
+        "release": {
+          "time": "2026-10-07T15:23:29.464034+00:00",
+          "started_at": "2026-10-07T15:23:25.393652+00:00",
+          "duration_ms": 4070.358,
+          "unit_duration_ms": {
+            "A": 0.005,
+            "B": 4070.339
+          },
+          "request": {
+            "command": "release",
+            "unit": "both"
+          },
+          "response": {
+            "A": null,
+            "B": {
+              "error": "release: session (mode=shell page=0 app=0 view=4 row=11 game=0 link=0 rooms=0 ready=0 tr=1 ts=0)",
+              "response": {
+                "command": "release",
+                "command_id": 4,
+                "result": "session",
+                "result_id": 3,
+                "session": 493262825,
+                "sequence": 4809,
+                "active": false,
+                "touch": false,
+                "buttons": 0,
+                "x": 0,
+                "y": 0,
+                "session_remaining_ms": 0,
+                "input_remaining_ms": 0,
+                "text": "mode=shell page=0 app=0 view=4 row=11 game=0 link=0 rooms=0 ready=0 tr=1 ts=0"
+              }
+            }
+          }
+        },
+        "elapsed_ms": 10519.02
+      }
+    },
+    {
+      "journal_index": 608,
+      "time": "2026-10-07T15:23:37.797563+00:00",
+      "started_at": "2026-10-07T15:23:37.761333+00:00",
+      "duration_ms": 36.216,
+      "unit_duration_ms": {
+        "A": 15.949,
+        "B": 20.249
+      },
+      "request": {
+        "command": "status",
+        "unit": "both"
+      },
+      "response": {
+        "A": {
+          "command": "status",
+          "command_id": 1,
+          "result": "ok",
+          "result_id": 0,
+          "session": 0,
+          "sequence": 4825,
+          "active": false,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 0,
+          "input_remaining_ms": 0,
+          "text": "mode=shell page=0 app=0 view=4 row=11 game=0 link=0 rooms=0 ready=0 tr=1 ts=0"
+        },
+        "B": {
+          "command": "status",
+          "command_id": 1,
+          "result": "ok",
+          "result_id": 0,
+          "session": 0,
+          "sequence": 4810,
+          "active": false,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 0,
+          "input_remaining_ms": 0,
+          "text": "mode=shell page=0 app=0 view=4 row=11 game=0 link=0 rooms=0 ready=0 tr=1 ts=0"
+        }
+      }
+    },
+    {
+      "journal_index": 609,
+      "time": "2026-10-07T15:23:39.537815+00:00",
+      "started_at": "2026-10-07T15:23:39.537795+00:00",
+      "duration_ms": 0.01,
+      "unit_duration_ms": {
+        "A": 0.003,
+        "B": 0.001
+      },
+      "request": {
+        "command": "close",
+        "unit": "both"
+      },
+      "response": {
+        "A": null,
+        "B": null
+      }
+    },
+    {
+      "journal_index": 610,
+      "time": "2026-10-07T15:23:42.352761+00:00",
+      "started_at": "2026-10-07T15:23:42.299341+00:00",
+      "duration_ms": 53.408,
+      "unit_duration_ms": {
+        "A": 31.401,
+        "B": 21.995
+      },
+      "request": {
+        "command": "status",
+        "unit": "both"
+      },
+      "response": {
+        "A": {
+          "command": "status",
+          "command_id": 1,
+          "result": "ok",
+          "result_id": 0,
+          "session": 0,
+          "sequence": 4826,
+          "active": false,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 0,
+          "input_remaining_ms": 0,
+          "text": "mode=shell page=0 app=0 view=4 row=11 game=0 link=0 rooms=0 ready=0 tr=1 ts=0"
+        },
+        "B": {
+          "command": "status",
+          "command_id": 1,
+          "result": "ok",
+          "result_id": 0,
+          "session": 0,
+          "sequence": 4811,
+          "active": false,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 0,
+          "input_remaining_ms": 0,
+          "text": "mode=shell page=0 app=0 view=4 row=11 game=0 link=0 rooms=0 ready=0 tr=1 ts=0"
+        }
+      }
+    },
+    {
+      "journal_index": 611,
+      "time": "2026-10-07T15:23:47.592116+00:00",
+      "started_at": "2026-10-07T15:23:44.164858+00:00",
+      "duration_ms": 3427.222,
+      "unit_duration_ms": {
+        "B": 3425.477,
+        "A": 3426.955
+      },
+      "request": {
+        "command": "screenshot",
+        "unit": "both",
+        "name": "ww73-b-save-failure",
+        "scale": 4,
+        "parallel": true
+      },
+      "response": {
+        "B": {
+          "capture_id": 1672676446,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "d8f5770df1233c5704a03eaca8871e27cd9eb8baf6e9ee647f3b149b810d83c1",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ww73-b-save-failure-b.png"
+        },
+        "A": {
+          "capture_id": 1540406665,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "e5e9507e18d4fad9465baf09dc1930ed682f21a79375f57ffd39bda96b56d5c6",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ww73-b-save-failure-a.png"
+        }
+      }
+    }
+  ],
+  "screenshots": [
+    {
+      "journal_index": 545,
+      "time": "2026-10-07T15:14:19.824114+00:00",
+      "started_at": "2026-10-07T15:14:16.398973+00:00",
+      "duration_ms": 3425.115,
+      "unit_duration_ms": {
+        "A": 3424.142,
+        "B": 3424.885
+      },
+      "request": {
+        "command": "screenshot",
+        "unit": "both",
+        "name": "ww73-offline1-intro",
+        "scale": 4,
+        "parallel": true
+      },
+      "response": {
+        "A": {
+          "capture_id": 858727877,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "0dfb80858078f9cf8e6dd5e5f5b71ae27c306b0b852f6e5420f930699c848042",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ww73-offline1-intro-a.png"
+        },
+        "B": {
+          "capture_id": 1431530392,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "0dfb80858078f9cf8e6dd5e5f5b71ae27c306b0b852f6e5420f930699c848042",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ww73-offline1-intro-b.png"
+        }
+      }
+    },
+    {
+      "journal_index": 556,
+      "time": "2026-10-07T15:14:43.143664+00:00",
+      "started_at": "2026-10-07T15:14:39.650539+00:00",
+      "duration_ms": 3493.098,
+      "unit_duration_ms": {
+        "A": 3427.16,
+        "B": 3492.778
+      },
+      "request": {
+        "command": "screenshot",
+        "unit": "both",
+        "name": "ww73-offline1-menu",
+        "scale": 4,
+        "parallel": true
+      },
+      "response": {
+        "A": {
+          "capture_id": 577418108,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "cf63bf4ba730a326791e225e2f87b87d8377dbe63a8b6cada96734249c885c62",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ww73-offline1-menu-a.png"
+        },
+        "B": {
+          "capture_id": 2854933376,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "f887422c3d7e16552849dd2dfb2de6b544f606c46ebed79052c7095b0a5fc05f",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ww73-offline1-menu-b.png"
+        }
+      }
+    },
+    {
+      "journal_index": 562,
+      "time": "2026-10-07T15:15:06.741756+00:00",
+      "started_at": "2026-10-07T15:15:03.272232+00:00",
+      "duration_ms": 3469.495,
+      "unit_duration_ms": {
+        "B": 3395.308,
+        "A": 3469.286
+      },
+      "request": {
+        "command": "screenshot",
+        "unit": "both",
+        "name": "ww73-offline1-home",
+        "scale": 4,
+        "parallel": true
+      },
+      "response": {
+        "B": {
+          "capture_id": 3033590805,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "0d9a4c7bb3545748d9a16cf06e7b7219d58b4ff9c91256eadd42ab633e0bd0c3",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ww73-offline1-home-b.png"
+        },
+        "A": {
+          "capture_id": 778703354,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "0d9a4c7bb3545748d9a16cf06e7b7219d58b4ff9c91256eadd42ab633e0bd0c3",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ww73-offline1-home-a.png"
+        }
+      }
+    },
+    {
+      "journal_index": 573,
+      "time": "2026-10-07T15:15:35.021259+00:00",
+      "started_at": "2026-10-07T15:15:31.606712+00:00",
+      "duration_ms": 3414.514,
+      "unit_duration_ms": {
+        "B": 3413.511,
+        "A": 3414.281
+      },
+      "request": {
+        "command": "screenshot",
+        "unit": "both",
+        "name": "ww73-clock-initial",
+        "scale": 4,
+        "parallel": true
+      },
+      "response": {
+        "B": {
+          "capture_id": 4232581552,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "0cd429b81c5dccd34914d9690fd7516c5e5795574d6442296d057905db3f299d",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ww73-clock-initial-b.png"
+        },
+        "A": {
+          "capture_id": 3581560638,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "0cd429b81c5dccd34914d9690fd7516c5e5795574d6442296d057905db3f299d",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ww73-clock-initial-a.png"
+        }
+      }
+    },
+    {
+      "journal_index": 584,
+      "time": "2026-10-07T15:15:58.611720+00:00",
+      "started_at": "2026-10-07T15:15:55.237524+00:00",
+      "duration_ms": 3374.169,
+      "unit_duration_ms": {
+        "B": 3361.047,
+        "A": 3373.963
+      },
+      "request": {
+        "command": "screenshot",
+        "unit": "both",
+        "name": "ww73-clock-changed",
+        "scale": 4,
+        "parallel": true
+      },
+      "response": {
+        "B": {
+          "capture_id": 3205145,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "1af8ddd02322196aaa0e20f44babc62a850cfdc398788c10b51d386c95585b36",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ww73-clock-changed-b.png"
+        },
+        "A": {
+          "capture_id": 550033165,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "1af8ddd02322196aaa0e20f44babc62a850cfdc398788c10b51d386c95585b36",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ww73-clock-changed-a.png"
+        }
+      }
+    },
+    {
+      "journal_index": 590,
+      "time": "2026-10-07T15:16:43.534792+00:00",
+      "started_at": "2026-10-07T15:16:40.074264+00:00",
+      "duration_ms": 3460.501,
+      "unit_duration_ms": {
+        "B": 3382.459,
+        "A": 3460.331
+      },
+      "request": {
+        "command": "screenshot",
+        "unit": "both",
+        "name": "ww73-save2-failure-state",
+        "scale": 4,
+        "parallel": true
+      },
+      "response": {
+        "B": {
+          "capture_id": 2079936227,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "1af8ddd02322196aaa0e20f44babc62a850cfdc398788c10b51d386c95585b36",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ww73-save2-failure-state-b.png"
+        },
+        "A": {
+          "capture_id": 1907977750,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "e5e9507e18d4fad9465baf09dc1930ed682f21a79375f57ffd39bda96b56d5c6",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ww73-save2-failure-state-a.png"
+        }
+      }
+    },
+    {
+      "journal_index": 594,
+      "time": "2026-10-07T15:22:22.079873+00:00",
+      "started_at": "2026-10-07T15:20:39.788448+00:00",
+      "duration_ms": 102291.028,
+      "unit_duration_ms": {
+        "A": 51274.232,
+        "B": 51016.783
+      },
+      "request": {
+        "command": "screenshot",
+        "unit": "both",
+        "name": "ww73-before-restore"
+      },
+      "response": {
+        "A": {
+          "capture_id": 3169954145,
+          "native_width": 720,
+          "native_height": 1280,
+          "width": 1280,
+          "height": 720,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 1,
+          "bytes": 1843200,
+          "sha256": "bd415e0fff8e6732ddd318696365ad8a7ad4e103734a27600d13b8678fff5821",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ww73-before-restore-a.png"
+        },
+        "B": {
+          "capture_id": 2799185050,
+          "native_width": 720,
+          "native_height": 1280,
+          "width": 1280,
+          "height": 720,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 1,
+          "bytes": 1843200,
+          "sha256": "4c506338143cfdc3dcb72ef42742717a2544feb2924ece8e1296ac28c6da676e",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ww73-before-restore-b.png"
+        }
+      }
+    },
+    {
+      "journal_index": 603,
+      "time": "2026-10-07T15:22:54.284002+00:00",
+      "started_at": "2026-10-07T15:22:50.811537+00:00",
+      "duration_ms": 3472.436,
+      "unit_duration_ms": {
+        "B": 3390.933,
+        "A": 3472.223
+      },
+      "request": {
+        "command": "screenshot",
+        "unit": "both",
+        "name": "ww73-b-clock-restored",
+        "scale": 4,
+        "parallel": true
+      },
+      "response": {
+        "B": {
+          "capture_id": 4094292379,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "570fa7de76968027c1010dd0692d8ab6fd99af0466720ac5754a0e9e42777473",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ww73-b-clock-restored-b.png"
+        },
+        "A": {
+          "capture_id": 4136699204,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "e5e9507e18d4fad9465baf09dc1930ed682f21a79375f57ffd39bda96b56d5c6",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ww73-b-clock-restored-a.png"
+        }
+      }
+    },
+    {
+      "journal_index": 611,
+      "time": "2026-10-07T15:23:47.592116+00:00",
+      "started_at": "2026-10-07T15:23:44.164858+00:00",
+      "duration_ms": 3427.222,
+      "unit_duration_ms": {
+        "B": 3425.477,
+        "A": 3426.955
+      },
+      "request": {
+        "command": "screenshot",
+        "unit": "both",
+        "name": "ww73-b-save-failure",
+        "scale": 4,
+        "parallel": true
+      },
+      "response": {
+        "B": {
+          "capture_id": 1672676446,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "d8f5770df1233c5704a03eaca8871e27cd9eb8baf6e9ee647f3b149b810d83c1",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ww73-b-save-failure-b.png"
+        },
+        "A": {
+          "capture_id": 1540406665,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "e5e9507e18d4fad9465baf09dc1930ed682f21a79375f57ffd39bda96b56d5c6",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ww73-b-save-failure-a.png"
+        }
+      }
+    }
+  ],
+  "units": {
+    "A": {
+      "device_binding_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+      "binary_integrity_ok": true,
+      "lifecycle_markers": [
+        {
+          "kind": "line",
+          "start": 6405050,
+          "end": 6405317,
+          "text": "I (1759728) p4_console_os: P4_CONSOLE_OS CARTRIDGE_START app=org.p4console.wacky-probe file=WACKYTRY.P4G api=1 source=microsd-games-directory runtime=psram-elf audio=ready signals=offline saves=ready multiplayer=offline surface=320x200 save_bytes=36 save_sequence=1",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:14:07.531616+00:00",
+            "utc_upper": "2026-10-07T15:14:29.570418+00:00",
+            "prior_journal_index": 541,
+            "following_journal_index": 546,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "kind": "line",
+          "start": 7011822,
+          "end": 7011940,
+          "text": "I (1880565) p4_console_os: P4_CONSOLE_OS AUDIO_WORKER_STOP core=1 frames=1933440 underrun=1216 rejected=0 stack=2056",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:16:08.965472+00:00",
+            "utc_upper": "2026-10-07T15:16:19.536986+00:00",
+            "prior_journal_index": 585,
+            "following_journal_index": 587,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "kind": "line",
+          "start": 7011940,
+          "end": 7012008,
+          "text": "Guru Meditation Error: Core  1 panic'ed (Stack protection fault). ",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:16:08.965472+00:00",
+            "utc_upper": "2026-10-07T15:16:19.536986+00:00",
+            "prior_journal_index": 585,
+            "following_journal_index": 587,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "kind": "line",
+          "start": 7012010,
+          "end": 7012054,
+          "text": "Detected in task \"game_save\" at 0x4ff0bcd2",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:16:08.965472+00:00",
+            "utc_upper": "2026-10-07T15:16:19.536986+00:00",
+            "prior_journal_index": 585,
+            "following_journal_index": 587,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "kind": "line",
+          "start": 7012054,
+          "end": 7012081,
+          "text": "Stack pointer: 0x4ff92d80",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:16:08.965472+00:00",
+            "utc_upper": "2026-10-07T15:16:19.536986+00:00",
+            "prior_journal_index": 585,
+            "following_journal_index": 587,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "kind": "line",
+          "start": 7012081,
+          "end": 7012120,
+          "text": "Stack bounds: 0x4ff92d84 - 0x4ff94d80",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:16:08.965472+00:00",
+            "utc_upper": "2026-10-07T15:16:19.536986+00:00",
+            "prior_journal_index": 585,
+            "following_journal_index": 587,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "kind": "line",
+          "start": 7016173,
+          "end": 7016201,
+          "text": "ELF file SHA256: 5cd99983a",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:16:08.965472+00:00",
+            "utc_upper": "2026-10-07T15:16:19.536986+00:00",
+            "prior_journal_index": 585,
+            "following_journal_index": 587,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "kind": "line",
+          "start": 7016203,
+          "end": 7016217,
+          "text": "Rebooting...",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:16:08.965472+00:00",
+            "utc_upper": "2026-10-07T15:16:19.536986+00:00",
+            "prior_journal_index": 585,
+            "following_journal_index": 587,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "kind": "line",
+          "start": 7016217,
+          "end": 7016248,
+          "text": "ESP-ROM:esp32p4-eco2-20240710",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:16:08.965472+00:00",
+            "utc_upper": "2026-10-07T15:16:19.536986+00:00",
+            "prior_journal_index": 585,
+            "following_journal_index": 587,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "kind": "line",
+          "start": 7016267,
+          "end": 7016324,
+          "text": "rst:0xc (SW_CPU_RESET),boot:0x30f (SPI_FAST_FLASH_BOOT)",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:16:08.965472+00:00",
+            "utc_upper": "2026-10-07T15:16:19.536986+00:00",
+            "prior_journal_index": 585,
+            "following_journal_index": 587,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "kind": "line",
+          "start": 7019258,
+          "end": 7019309,
+          "text": "I (1781) app_init: ELF file SHA256:  5cd99983a...",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:16:08.965472+00:00",
+            "utc_upper": "2026-10-07T15:16:19.536986+00:00",
+            "prior_journal_index": 585,
+            "following_journal_index": 587,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        }
+      ],
+      "successful_save_or_cartridge_stop_count": 0,
+      "capture_payload_validation": [
+        {
+          "journal_index": 545,
+          "capture_id": 858727877,
+          "raw_start": 6406678,
+          "raw_end": 6524041,
+          "complete_payload_bytes": 115200,
+          "sha256": "0dfb80858078f9cf8e6dd5e5f5b71ae27c306b0b852f6e5420f930699c848042",
+          "journal_payload_identity_match": true,
+          "scope": "Validated retained RGB565 payload, not the PNG file bytes."
+        },
+        {
+          "journal_index": 556,
+          "capture_id": 577418108,
+          "raw_start": 6527943,
+          "raw_end": 6645306,
+          "complete_payload_bytes": 115200,
+          "sha256": "cf63bf4ba730a326791e225e2f87b87d8377dbe63a8b6cada96734249c885c62",
+          "journal_payload_identity_match": true,
+          "scope": "Validated retained RGB565 payload, not the PNG file bytes."
+        },
+        {
+          "journal_index": 562,
+          "capture_id": 778703354,
+          "raw_start": 6648962,
+          "raw_end": 6766523,
+          "complete_payload_bytes": 115200,
+          "sha256": "0d9a4c7bb3545748d9a16cf06e7b7219d58b4ff9c91256eadd42ab633e0bd0c3",
+          "journal_payload_identity_match": true,
+          "scope": "Validated retained RGB565 payload, not the PNG file bytes."
+        },
+        {
+          "journal_index": 573,
+          "capture_id": 3581560638,
+          "raw_start": 6770518,
+          "raw_end": 6888738,
+          "complete_payload_bytes": 115200,
+          "sha256": "0cd429b81c5dccd34914d9690fd7516c5e5795574d6442296d057905db3f299d",
+          "journal_payload_identity_match": true,
+          "scope": "Validated retained RGB565 payload, not the PNG file bytes."
+        },
+        {
+          "journal_index": 584,
+          "capture_id": 550033165,
+          "raw_start": 6891801,
+          "raw_end": 7010259,
+          "complete_payload_bytes": 115200,
+          "sha256": "1af8ddd02322196aaa0e20f44babc62a850cfdc398788c10b51d386c95585b36",
+          "journal_payload_identity_match": true,
+          "scope": "Validated retained RGB565 payload, not the PNG file bytes."
+        },
+        {
+          "journal_index": 590,
+          "capture_id": 1907977750,
+          "raw_start": 7031464,
+          "raw_end": 7148788,
+          "complete_payload_bytes": 115200,
+          "sha256": "e5e9507e18d4fad9465baf09dc1930ed682f21a79375f57ffd39bda96b56d5c6",
+          "journal_payload_identity_match": true,
+          "scope": "Validated retained RGB565 payload, not the PNG file bytes."
+        }
+      ],
+      "last_audio_marker": {
+        "kind": "line",
+        "start": 7011822,
+        "end": 7011940,
+        "text": "I (1880565) p4_console_os: P4_CONSOLE_OS AUDIO_WORKER_STOP core=1 frames=1933440 underrun=1216 rejected=0 stack=2056"
+      },
+      "final_status_journal_index": 589,
+      "final_status": {
+        "command": "status",
+        "command_id": 1,
+        "result": "ok",
+        "result_id": 0,
+        "session": 0,
+        "sequence": 3800,
+        "active": false,
+        "touch": false,
+        "buttons": 0,
+        "x": 0,
+        "y": 0,
+        "session_remaining_ms": 0,
+        "input_remaining_ms": 0,
+        "text": "mode=shell page=0 app=0 view=4 row=11 game=0 link=0 rooms=0 ready=0 tr=1 ts=0"
+      },
+      "state_at_prefix_end": "Home after crash/reboot; save2 restoration pending",
+      "later_prefix": {
+        "binary_integrity_ok": true,
+        "lifecycle_markers": [],
+        "capture_payload_validation": [
+          {
+            "journal_index": 594,
+            "capture_id": 3169954145,
+            "raw_start": 7153565,
+            "raw_end": 9030417,
+            "complete_payload_bytes": 1843200,
+            "sha256": "bd415e0fff8e6732ddd318696365ad8a7ad4e103734a27600d13b8678fff5821",
+            "journal_payload_identity_match": true,
+            "scope": "Validated retained RGB565 payload, not the PNG file bytes."
+          },
+          {
+            "journal_index": 603,
+            "capture_id": 4136699204,
+            "raw_start": 9032248,
+            "raw_end": 9149572,
+            "complete_payload_bytes": 115200,
+            "sha256": "e5e9507e18d4fad9465baf09dc1930ed682f21a79375f57ffd39bda96b56d5c6",
+            "journal_payload_identity_match": true,
+            "scope": "Validated retained RGB565 payload, not the PNG file bytes."
+          },
+          {
+            "journal_index": 611,
+            "capture_id": 1540406665,
+            "raw_start": 9150813,
+            "raw_end": 9268137,
+            "complete_payload_bytes": 115200,
+            "sha256": "e5e9507e18d4fad9465baf09dc1930ed682f21a79375f57ffd39bda96b56d5c6",
+            "journal_payload_identity_match": true,
+            "scope": "Validated retained RGB565 payload, not the PNG file bytes."
+          }
+        ],
+        "final_status_journal_index": 610,
+        "final_status": {
+          "command": "status",
+          "command_id": 1,
+          "result": "ok",
+          "result_id": 0,
+          "session": 0,
+          "sequence": 4826,
+          "active": false,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 0,
+          "input_remaining_ms": 0,
+          "text": "mode=shell page=0 app=0 view=4 row=11 game=0 link=0 rooms=0 ready=0 tr=1 ts=0"
+        },
+        "state_at_prefix_end": "Home after each unit experienced its own game_save panic/reboot; persistence and restoration pending"
+      }
+    },
+    "B": {
+      "device_binding_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+      "binary_integrity_ok": true,
+      "lifecycle_markers": [
+        {
+          "kind": "line",
+          "start": 6403039,
+          "end": 6403306,
+          "text": "I (1760447) p4_console_os: P4_CONSOLE_OS CARTRIDGE_START app=org.p4console.wacky-probe file=WACKYTRY.P4G api=1 source=microsd-games-directory runtime=psram-elf audio=ready signals=offline saves=ready multiplayer=offline surface=320x200 save_bytes=36 save_sequence=1",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:14:08.240926+00:00",
+            "utc_upper": "2026-10-07T15:14:35.148706+00:00",
+            "prior_journal_index": 543,
+            "following_journal_index": 551,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        }
+      ],
+      "successful_save_or_cartridge_stop_count": 0,
+      "capture_payload_validation": [
+        {
+          "journal_index": 545,
+          "capture_id": 1431530392,
+          "raw_start": 6404664,
+          "raw_end": 6522027,
+          "complete_payload_bytes": 115200,
+          "sha256": "0dfb80858078f9cf8e6dd5e5f5b71ae27c306b0b852f6e5420f930699c848042",
+          "journal_payload_identity_match": true,
+          "scope": "Validated retained RGB565 payload, not the PNG file bytes."
+        },
+        {
+          "journal_index": 556,
+          "capture_id": 2854933376,
+          "raw_start": 6525925,
+          "raw_end": 6643288,
+          "complete_payload_bytes": 115200,
+          "sha256": "f887422c3d7e16552849dd2dfb2de6b544f606c46ebed79052c7095b0a5fc05f",
+          "journal_payload_identity_match": true,
+          "scope": "Validated retained RGB565 payload, not the PNG file bytes."
+        },
+        {
+          "journal_index": 562,
+          "capture_id": 3033590805,
+          "raw_start": 6646978,
+          "raw_end": 6764537,
+          "complete_payload_bytes": 115200,
+          "sha256": "0d9a4c7bb3545748d9a16cf06e7b7219d58b4ff9c91256eadd42ab633e0bd0c3",
+          "journal_payload_identity_match": true,
+          "scope": "Validated retained RGB565 payload, not the PNG file bytes."
+        },
+        {
+          "journal_index": 573,
+          "capture_id": 4232581552,
+          "raw_start": 6768491,
+          "raw_end": 6886752,
+          "complete_payload_bytes": 115200,
+          "sha256": "0cd429b81c5dccd34914d9690fd7516c5e5795574d6442296d057905db3f299d",
+          "journal_payload_identity_match": true,
+          "scope": "Validated retained RGB565 payload, not the PNG file bytes."
+        },
+        {
+          "journal_index": 584,
+          "capture_id": 3205145,
+          "raw_start": 6889814,
+          "raw_end": 7007334,
+          "complete_payload_bytes": 115200,
+          "sha256": "1af8ddd02322196aaa0e20f44babc62a850cfdc398788c10b51d386c95585b36",
+          "journal_payload_identity_match": true,
+          "scope": "Validated retained RGB565 payload, not the PNG file bytes."
+        },
+        {
+          "journal_index": 590,
+          "capture_id": 2079936227,
+          "raw_start": 7014231,
+          "raw_end": 7131555,
+          "complete_payload_bytes": 115200,
+          "sha256": "1af8ddd02322196aaa0e20f44babc62a850cfdc398788c10b51d386c95585b36",
+          "journal_payload_identity_match": true,
+          "scope": "Validated retained RGB565 payload, not the PNG file bytes."
+        }
+      ],
+      "last_audio_marker": {
+        "kind": "line",
+        "start": 7157755,
+        "end": 7157965,
+        "text": "I (2102195) p4_console_os: P4_CONSOLE_OS AUDIO_WORKER app=org.p4console.wacky-probe game_core=0 audio_core=1 running=1 queued=1280 rejected=0 underrun=1376 clipped=0 frames=5468032 write_failures=0 stack=2072"
+      },
+      "final_status_journal_index": 589,
+      "final_status": {
+        "command": "status",
+        "command_id": 1,
+        "result": "ok",
+        "result_id": 0,
+        "session": 0,
+        "sequence": 3774,
+        "active": true,
+        "touch": false,
+        "buttons": 0,
+        "x": 0,
+        "y": 0,
+        "session_remaining_ms": 16219,
+        "input_remaining_ms": 0,
+        "text": "mode=native id=org.p4console.wacky-probe"
+      },
+      "state_at_prefix_end": "Wacky Options CLOCK OFF; exit/save/restore pending",
+      "later_prefix": {
+        "binary_integrity_ok": true,
+        "lifecycle_markers": [
+          {
+            "kind": "line",
+            "start": 9182002,
+            "end": 9182120,
+            "text": "I (2310553) p4_console_os: P4_CONSOLE_OS AUDIO_WORKER_STOP core=1 frames=8801664 underrun=1472 rejected=0 stack=2072",
+            "utc": {
+              "status": "bounded",
+              "utc_lower": "2026-10-07T15:23:18.945062+00:00",
+              "utc_upper": "2026-10-07T15:23:29.464034+00:00",
+              "prior_journal_index": 604,
+              "following_journal_index": 606,
+              "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+            }
+          },
+          {
+            "kind": "line",
+            "start": 9182120,
+            "end": 9182188,
+            "text": "Guru Meditation Error: Core  1 panic'ed (Stack protection fault). ",
+            "utc": {
+              "status": "bounded",
+              "utc_lower": "2026-10-07T15:23:18.945062+00:00",
+              "utc_upper": "2026-10-07T15:23:29.464034+00:00",
+              "prior_journal_index": 604,
+              "following_journal_index": 606,
+              "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+            }
+          },
+          {
+            "kind": "line",
+            "start": 9182190,
+            "end": 9182234,
+            "text": "Detected in task \"game_save\" at 0x4ff0bcd2",
+            "utc": {
+              "status": "bounded",
+              "utc_lower": "2026-10-07T15:23:18.945062+00:00",
+              "utc_upper": "2026-10-07T15:23:29.464034+00:00",
+              "prior_journal_index": 604,
+              "following_journal_index": 606,
+              "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+            }
+          },
+          {
+            "kind": "line",
+            "start": 9182234,
+            "end": 9182261,
+            "text": "Stack pointer: 0x4ff92ec0",
+            "utc": {
+              "status": "bounded",
+              "utc_lower": "2026-10-07T15:23:18.945062+00:00",
+              "utc_upper": "2026-10-07T15:23:29.464034+00:00",
+              "prior_journal_index": 604,
+              "following_journal_index": 606,
+              "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+            }
+          },
+          {
+            "kind": "line",
+            "start": 9182261,
+            "end": 9182300,
+            "text": "Stack bounds: 0x4ff92ec4 - 0x4ff94ec0",
+            "utc": {
+              "status": "bounded",
+              "utc_lower": "2026-10-07T15:23:18.945062+00:00",
+              "utc_upper": "2026-10-07T15:23:29.464034+00:00",
+              "prior_journal_index": 604,
+              "following_journal_index": 606,
+              "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+            }
+          },
+          {
+            "kind": "line",
+            "start": 9186353,
+            "end": 9186381,
+            "text": "ELF file SHA256: 5cd99983a",
+            "utc": {
+              "status": "bounded",
+              "utc_lower": "2026-10-07T15:23:18.945062+00:00",
+              "utc_upper": "2026-10-07T15:23:29.464034+00:00",
+              "prior_journal_index": 604,
+              "following_journal_index": 606,
+              "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+            }
+          },
+          {
+            "kind": "line",
+            "start": 9186383,
+            "end": 9186397,
+            "text": "Rebooting...",
+            "utc": {
+              "status": "bounded",
+              "utc_lower": "2026-10-07T15:23:18.945062+00:00",
+              "utc_upper": "2026-10-07T15:23:29.464034+00:00",
+              "prior_journal_index": 604,
+              "following_journal_index": 606,
+              "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+            }
+          },
+          {
+            "kind": "line",
+            "start": 9186397,
+            "end": 9186428,
+            "text": "ESP-ROM:esp32p4-eco2-20240710",
+            "utc": {
+              "status": "bounded",
+              "utc_lower": "2026-10-07T15:23:18.945062+00:00",
+              "utc_upper": "2026-10-07T15:23:29.464034+00:00",
+              "prior_journal_index": 604,
+              "following_journal_index": 606,
+              "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+            }
+          },
+          {
+            "kind": "line",
+            "start": 9186447,
+            "end": 9186504,
+            "text": "rst:0xc (SW_CPU_RESET),boot:0x30f (SPI_FAST_FLASH_BOOT)",
+            "utc": {
+              "status": "bounded",
+              "utc_lower": "2026-10-07T15:23:18.945062+00:00",
+              "utc_upper": "2026-10-07T15:23:29.464034+00:00",
+              "prior_journal_index": 604,
+              "following_journal_index": 606,
+              "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+            }
+          },
+          {
+            "kind": "line",
+            "start": 9189438,
+            "end": 9189489,
+            "text": "I (1781) app_init: ELF file SHA256:  5cd99983a...",
+            "utc": {
+              "status": "bounded",
+              "utc_lower": "2026-10-07T15:23:18.945062+00:00",
+              "utc_upper": "2026-10-07T15:23:29.464034+00:00",
+              "prior_journal_index": 604,
+              "following_journal_index": 606,
+              "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+            }
+          }
+        ],
+        "capture_payload_validation": [
+          {
+            "journal_index": 594,
+            "capture_id": 2799185050,
+            "raw_start": 7172506,
+            "raw_end": 9055107,
+            "complete_payload_bytes": 1843200,
+            "sha256": "4c506338143cfdc3dcb72ef42742717a2544feb2924ece8e1296ac28c6da676e",
+            "journal_payload_identity_match": true,
+            "scope": "Validated retained RGB565 payload, not the PNG file bytes."
+          },
+          {
+            "journal_index": 603,
+            "capture_id": 4094292379,
+            "raw_start": 9060636,
+            "raw_end": 9177999,
+            "complete_payload_bytes": 115200,
+            "sha256": "570fa7de76968027c1010dd0692d8ab6fd99af0466720ac5754a0e9e42777473",
+            "journal_payload_identity_match": true,
+            "scope": "Validated retained RGB565 payload, not the PNG file bytes."
+          },
+          {
+            "journal_index": 611,
+            "capture_id": 1672676446,
+            "raw_start": 9201798,
+            "raw_end": 9319122,
+            "complete_payload_bytes": 115200,
+            "sha256": "d8f5770df1233c5704a03eaca8871e27cd9eb8baf6e9ee647f3b149b810d83c1",
+            "journal_payload_identity_match": true,
+            "scope": "Validated retained RGB565 payload, not the PNG file bytes."
+          }
+        ],
+        "final_status_journal_index": 610,
+        "final_status": {
+          "command": "status",
+          "command_id": 1,
+          "result": "ok",
+          "result_id": 0,
+          "session": 0,
+          "sequence": 4811,
+          "active": false,
+          "touch": false,
+          "buttons": 0,
+          "x": 0,
+          "y": 0,
+          "session_remaining_ms": 0,
+          "input_remaining_ms": 0,
+          "text": "mode=shell page=0 app=0 view=4 row=11 game=0 link=0 rooms=0 ready=0 tr=1 ts=0"
+        },
+        "state_at_prefix_end": "Home after each unit experienced its own game_save panic/reboot; persistence and restoration pending"
+      }
+    }
+  },
+  "root_visual_observations": [
+    {
+      "journal_index": 573,
+      "observation": "Both Options views show CLOCK ON."
+    },
+    {
+      "journal_index": 584,
+      "observation": "Both Options views show CLOCK OFF after the toggles."
+    },
+    {
+      "journal_index": 590,
+      "observation": "After A Back and panic, A shows Home; B remains in Options, CLOCK OFF."
+    },
+    {
+      "journal_index": 603,
+      "observation": "B Options visibly restored to CLOCK ON before Back; persistence not verified."
+    },
+    {
+      "journal_index": 611,
+      "observation": "After B Back and panic, both show Home."
+    }
+  ],
+  "observation_basis": "Visual statements are supplied by the root device operator. This analysis reads only the immutable saved prefix. Screenshot paths below are journal references; their ongoing files were not read. Retained raw screenshot payload hashes are verified separately.",
+  "save_interpretation": "Both offline starts confirm save_bytes=36/save_sequence=1 from the earlier linked exits. The changed CLOCK setting was visible before Back. No SAVE_WORKER_STOP or CARTRIDGE_STOP follows this A launch before the panic/reboot, so successful save2 completion or CLOCK persistence cannot be inferred. B has not exited in this prefix. In the later prefix, B visibly returns CLOCK to ON before Back, then also panics/reboots without a successful save/cartridge stop. Visible restoration before exit is not persistent restoration.",
+  "pending": [
+    "A CLOCK persistence and restoration after reboot/relaunch",
+    "B CLOCK persistence/restoration after reboot/relaunch",
+    "Remediate and physically retest both save-task crashes",
+    "Heard music and SFX on each speaker"
+  ],
+  "prior_failures_retained": "The sealed linked record retains native cadence about28.6/28.8FPS below the30FPS release floor and lifetime audio underruns. This follow-up supplies no new cadence qualification.",
+  "crash_attribution": {
+    "direct_evidence": "Stack protection fault explicitly names task game_save on Core1; reported SP is4bytes below its lower bound. AUDIO_WORKER_STOP precedes the panic and is not the failing-task identity.",
+    "stack_pointer": "0x4ff92d80",
+    "stack_lower": "0x4ff92d84",
+    "stack_upper": "0x4ff94d80",
+    "decoded_root_cause": "A named panic PC/RA symbolize to cross-core critical-section entry during flash/NVS; address-shaped stack words include read_legacy_registry and platform_save_seal_object_is_allowed. These are candidate stack symbols, not an unwound call chain. Explicit game_save task and stack-bound violation support save-task stack exhaustion. B independently reports the same task/fault type; no B full unwind or successful NVS commit is claimed.",
+    "independent_a_lifecycle_review": {
+      "path": "build-host/wacky-save-crash-073/independent-save-lifecycle-review.json",
+      "bytes": 21476,
+      "sha256": "1e055e04b054551a5163085c0b96add985bbb8360fcc8ed4b457ab07e15efc51"
+    },
+    "parent_symbolization": [
+      {
+        "path": "build-host/wacky-save-crash-073/decode-invocation.json",
+        "bytes": 1041,
+        "sha256": "ed2ed3ae5985394d1d21693406f51dc6489c56ae26d38a2cbef8124ed6df281d"
+      },
+      {
+        "path": "build-host/wacky-save-crash-073/decoded-stack-candidates.txt",
+        "bytes": 3410,
+        "sha256": "42c6456c02b656197bcf5331f2c799d3aabf747641d9df9efcf10a22da73b2ef"
+      }
+    ],
+    "elf_binding_from_review": {
+      "file": "build-host/wacky-save-crash-073/p4_console_os.elf",
+      "bytes": 25169352,
+      "sha256": "5cd99983a8d81e559a3c5cdb5d5c944344a242b2ace042a190367ebd8a747406"
+    }
+  }
+}

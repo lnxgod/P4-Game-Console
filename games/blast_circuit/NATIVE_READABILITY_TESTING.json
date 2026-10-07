@@ -1,0 +1,271 @@
+{
+  "schema": 1,
+  "date": "2026-10-07",
+  "game_id": "org.p4console.blast-circuit",
+  "version": "0.2.8",
+  "status": "host-tested native-readability candidate; physical acceptance pending",
+  "change": {
+    "required_game_surface": [
+      768,
+      480
+    ],
+    "video_highres": "required in manifest, C descriptor and cartridge header",
+    "touch_input_units": [
+      320,
+      200
+    ],
+    "floors": "quiet theme colors and cell boundaries",
+    "foreground": "dark sprite outlines for players, bombs and pickups",
+    "editor": "FLOOR brush matches arena swatch",
+    "gameplay_save_and_protocol_change": false
+  },
+  "resolution_cause": {
+    "code": "apps/console_os/main/console_os_main.c run_stored_game",
+    "cache": "apps/console_os/build-tab5/CMakeCache.txt",
+    "cached_experimental_flags": [
+      "P4_CONSOLE_NATIVE_AIR_LOW_RES=ON",
+      "P4_CONSOLE_NATIVE_TIDE_BLAST_LOW_RES=ON",
+      "P4_CONSOLE_NATIVE_CHECKERS_LOW_RES=ON"
+    ],
+    "blast_fix": "Require video-highres to bypass the optional-only downgrade gate. The shared OS source/cache was not changed by this task."
+  },
+  "artifact": {
+    "path": "build-host/blast-readability-20261007/package/BLAST_CIRCUIT.P4G",
+    "bytes": 462836,
+    "payload_bytes": 462580,
+    "sha256": "178660e67f4fbb63140d141c25feb317807e8c9d46a898d4d2ac6fa1c8eefb51",
+    "payload_sha256": "440dad03c42c4411ad4ce76858e1e2d9452e60f9be6c9df8685bead0efded50e",
+    "required_capabilities_hex": "0x1003",
+    "optional_capabilities_hex": "0x24c",
+    "header_payload_digest_matches": true,
+    "native_package_elf_and_launcher_icon_parser": "passed",
+    "package_limit_bytes": 524288,
+    "compiler_stack_frame_limit_bytes": 2048,
+    "stack_limit_scope": "compiler per-function frame gate; total device runtime stack acceptance remains pending"
+  },
+  "build": {
+    "builder": "scripts/build-game-package.py",
+    "compiler": ".tools/espressif/tools/riscv32-esp-elf/esp-14.2.0_20251107/riscv32-esp-elf/bin/riscv32-esp-elf-gcc",
+    "compiler_sha256": "69e796c3a3e35ab36b256209e2d40f21cc946bf842718b4fc6d45159208d7910",
+    "target": "rv32imafc_zicsr_zifencei ilp32f",
+    "project_input_snapshot_sha256": "66463e540d370cbddcb7556e71f4b8815e3caeba86efeb193a40726a2dcf25c3",
+    "snapshot_scope": "Project compilation inputs, headers, generated includes, manifest, icon, builder helpers and toolchain lock; OS firmware is outside this snapshot.",
+    "project_input_sha256": {
+      "components/p4_cp437/include/p4/cp437.h": "bfbcc829d7c91a1d8c4f1335394a9f78c446fa8146fd4d16c5298142b00e5b55",
+      "components/p4_cp437/src/cp437.c": "10405ddafb45fbf288362acf6f3b346de0a6483c9e014cc588036300dd521bdf",
+      "components/p4_game_api/include/p4/achievements.h": "c389a044b056142d11796b8de48a50fa6ce5214e50c733455a32c9a0a663d37d",
+      "components/p4_game_api/include/p4/audio.h": "8b57ae696ed091bad426e09d6232ea52ab9e9a8bd70741d76f51bdaba4ee87a5",
+      "components/p4_game_api/include/p4/audio_pack.h": "8dcead613074e3e5db390039754942f432bd4aa024e33f61bff202a9fcc5818e",
+      "components/p4_game_api/include/p4/card_art.h": "b8af8b6137dd0681d2dc3b7555fb0e8d0ccf9cd064d9f12c1bcb7bfa2214db4f",
+      "components/p4_game_api/include/p4/cartridge.h": "b3c7f4c0b3e3ff67e9e3ba9a81b162991922c8cf4a819758e4e6a9f9ac518f6a",
+      "components/p4_game_api/include/p4/dice.h": "4a9ee228bab0aee3b7dd7db43880e3337ec193417ddbd4bc577e6cf2f5ae68d6",
+      "components/p4_game_api/include/p4/draw.h": "47d5b29c0e736d62f421a231ba7c0fd8a97b7209a580ba5fc9f815c8fbe5ea1a",
+      "components/p4_game_api/include/p4/feedback.h": "ede8ccc4e9cab3c73b14dd3467a5276794c3cee90006581307bb525040396915",
+      "components/p4_game_api/include/p4/game.h": "33e65134e86f1597fe732f64df88720c5892280ff31ca00ac9cbee15beac7459",
+      "components/p4_game_api/include/p4/input.h": "4dd1d878598e81c1ec99d40b095b82202a49e3b80169a7217a6528d8f4ad6eb1",
+      "components/p4_game_api/include/p4/mesh.h": "3e7dd39f0e2df522a365227ca579e670ca8f8f8dcef841883f26959ea91e1394",
+      "components/p4_game_api/include/p4/motion.h": "08768be7e8788299c44cffcbffafbdfd2d05a5603aa79ae8eaeb6c312cd41abb",
+      "components/p4_game_api/include/p4/presentation.h": "c82e11e65836eb5de29a473f254d583daaa1946c357f4d8c9b3a76461f272d21",
+      "components/p4_game_api/include/p4/presentation_font.h": "0bc9a110a5f9b0e8f1cc44ffa212206758ebdd58e15ac488030f65fe72a7f448",
+      "components/p4_game_api/include/p4/visual.h": "206e74c98b2a47202f0e253f126dcfdf5e57dda6c25de732c0360fe542543979",
+      "components/p4_game_api/runtime/cartridge_main.c": "a6b7062db30979c4d32728d451793cbde1d1303ceebc524a46b935f193a77c6d",
+      "components/p4_game_api/src/audio_pack.c": "d12cc933706012124784300f6abb15227d4534a298082ea9e8b23948acd9da71",
+      "components/p4_game_api/src/draw.c": "3056f2a5b8bb9f9db7c1df2d197e5a676b9c20f12d10398bc92f6c44b887fa36",
+      "components/p4_game_api/src/feedback.c": "2f05229f018a488576a8bacef4a91096b97e6c0495c51138c4518ee6cd01be4a",
+      "components/p4_game_api/src/game_runtime.c": "c1ac69e7c45192b287e07fec350d47826888117b1b41e25d90f2e7319d2c1996",
+      "components/p4_game_api/src/generated/audio_pack.inc": "74eea3afeaea981a75fc89fe8f015c06c8e105b87ab0e8622029e1ab2c83335a",
+      "components/p4_game_api/src/generated/feedback_atlas.inc": "b12b1deb0a7134f43b894bf063f9cecf1475d6e87a26c68b07486c6f679fd890",
+      "components/p4_game_api/src/input.c": "b895eff5252e8d141fb49dc3c8e31fbd629bcda72068f14917dcf425bc7a81f7",
+      "components/p4_game_api/src/presentation_font.c": "149b2e510c0a0b8dfe5c4a7ac4be2f8006c4360c09a82c088209f7ece1eb65c5",
+      "components/p4_game_api/src/visual.c": "8160e9798853236da029abc8bf55e5ddf95909872a830469270afb7fa8ba6e23",
+      "games/blast_circuit/assets/launcher.p4i": "9da4ae5c954396a610d1605f738619b3f2db6e8aa1981cac5d3afe426fd02b0c",
+      "games/blast_circuit/game.json": "ec18654eb1897a63f68019a90573f5d00effb2f72432819a62584bdd075ca110",
+      "games/blast_circuit/src/blast_circuit.c": "cc7b910607c1d102cb59442a9f9f1958b8c1b0e6c9f7c6b2c0947b579ecd78a1",
+      "games/blast_circuit/src/blast_circuit_audio.c": "0c79a449082e7efc9d2f8d57ffd6951b87035a6bd13ad28e88e7e224d158d5d5",
+      "games/blast_circuit/src/blast_circuit_internal.h": "93d3c114bab494660793fe57674ea94592fe9220c619a428d62a783b19d6816a",
+      "games/blast_circuit/src/blast_circuit_levels.c": "52e1036c83fb58ea4ad51ad0e825a65465c6b22d56fc2d87e7740ee3f71702b7",
+      "games/blast_circuit/src/blast_circuit_logic.c": "30f4ff321432c61bb1bc1d76078d27680bfaffff7ba0e5ca059e49a2b6a1ec27",
+      "games/blast_circuit/src/blast_circuit_network.c": "fe4770ac9eddfcd6560359185fa640bc9d39177b54a4bc30bf48b4be8e48264d",
+      "games/blast_circuit/src/blast_circuit_render.c": "8f820b937a46a84bf0a6fecf21456d6f7065da5838bdea595a12ad93d95c5e7f",
+      "games/blast_circuit/src/generated/audio.inc": "65bf4950dad5043a8fce71629d9ebc461bb3e5601251922e421e3e6caf6c5fdd",
+      "games/blast_circuit/src/generated/biomes.inc": "87e5d64af0a9450c403701015edc229f09bb3b34edb115fcdfe35eac748f9b1f",
+      "games/blast_circuit/src/generated/effects.inc": "c5a71e34d5b3c12749687035489f8ce28f9d6b189cad64d0ba1205c90fafcfca",
+      "games/blast_circuit/src/generated/ember.inc": "6f2cec6278475ad330b578332ba8228d0eebcd62058e23539dce19c222dd4785",
+      "games/blast_circuit/src/generated/ember_crate.inc": "3e04cd12dfc2cda8f452cc9d3453db76c5a16ebf53c8a0bae98c807a49134417",
+      "games/blast_circuit/src/generated/gilt.inc": "3fa9479955a0c873ff2ac807bce242212be67f58572c1444f99e7ff3c2fe66a8",
+      "games/blast_circuit/src/generated/greenhouse.inc": "74847ebecfdb16448af1e90834df81972878fb733827655162c38259de4b263c",
+      "games/blast_circuit/src/generated/music.inc": "360163347f0ef9cbca445cf45761ddad8019d81714a393f1e18edc9f0d94d48b",
+      "games/blast_circuit/src/generated/reinforced.inc": "56d9bd05d5c0c1d7858441279acb16f773689467f1287fd6320ff5e01458b609",
+      "games/blast_circuit/src/generated/runner.inc": "ece8443052a106b2ada0b659a0c395a373b4dd5535aed545278239d8b17514ff",
+      "games/blast_circuit/src/generated/volt.inc": "9561f71aa8a9ee0d8fcbf3fb966339c701140afd863e283773eeee51ce90a813",
+      "scripts/build-game-package.py": "c4b52cdbe7f96088612e4ce6e037a27de7b5b4c0b3298db5fb22b7e408efbb21",
+      "scripts/p4_game_release.py": "db195e6f9a31426796bc19ca3d73efe706bb5a48a49946e2a959e1453da8067e",
+      "scripts/p4_multiplayer_manifest.py": "3f5d75c8808d7e4186b1c95dce971e19c95b84f6e883b9fb845d19e972691679",
+      "toolchain.lock.json": "6c45009fd4ba924dac63e442d4bcdbff134cf81037cadb8f2d12209c41564a55"
+    }
+  },
+  "validation": {
+    "focused_game_tests": {
+      "passed": 3,
+      "failed": 0,
+      "tests": [
+        "blast_circuit_tests",
+        "blast_circuit_features",
+        "blast_circuit_music"
+      ],
+      "build_dir": "build-host/blast-readability-tests",
+      "sanitizers": [
+        "address",
+        "undefined"
+      ],
+      "coverage": [
+        "required high-res launch rejects unavailable capability",
+        "legacy clipping compatibility and native padded-stride/guard bounds",
+        "rules, save lifecycle, editor, network synchronization and audio"
+      ],
+      "log": "build-host/blast-readability-tests/Testing/Temporary/LastTest.log"
+    },
+    "generic_host_tests": {
+      "passed": 5,
+      "failed": 0,
+      "tests": [
+        "p4_game_host_smoke",
+        "p4_host_audio_timing",
+        "p4_host_exit_status",
+        "p4_host_mouse_events",
+        "p4_game_save_tests"
+      ],
+      "build_dir": "build-host/play-blast-readability",
+      "log": "build-host/play-blast-readability/Testing/Temporary/LastTest.log"
+    },
+    "new_game_generator_regressions": "passed; default and --high-res require native, explicit legacy route preserved, generated C and fractional motion checks passed",
+    "game_registry_check": "passed with locked modern bundled Python runtime",
+    "skills": {
+      "quick_validate": "8 passed",
+      "scenario_review": "unreadable low-resolution game and slow native game scenarios both require native repair and runtime evidence; explicit legacy compatibility preserved",
+      "files_sha256": {
+        ".agents/skills/esp32-start/SKILL.md": "219155d7d97631fb4597b72946562ea1d00781e18bafa18c65d027cfc3df147d",
+        ".agents/skills/esp32-make-game/SKILL.md": "d71e299aac46c2de051f5db062ea0d91db5cbffa2754d724a4c65177ba67b3cb",
+        ".agents/skills/esp32-test-game/SKILL.md": "1dbf8cf023af3574df5e22d664b1f72b7dbd760c58b3e466d00ef1100f5f3e16",
+        ".agents/skills/esp32-game-art/SKILL.md": "3eba1ec867bfb79535f0f88ff37a04056044c3943a31c18cfe600e025729f77e",
+        ".agents/skills/esp32-fix-console/SKILL.md": "e409e6534e41f434973b445d5ba2608f74af097f7d13e622eaf3847d91521393",
+        ".agents/skills/esp32-add-game/SKILL.md": "e478631c31d7c5b73163069d05533aa69885863227f19867c16c297194feeb43",
+        ".agents/skills/esp32-multiplayer/SKILL.md": "2e4a7bdcfc8ab08642d14d049c522f6abab295da8eea5a9a0eacc6a00b7bb5e0",
+        ".agents/skills/esp32-setup/SKILL.md": "aab03afc6dbf7b1cc8f61a3caadc7ffb38bc2793795589b87bef9a1269d3e6bf"
+      }
+    },
+    "source_diff_whitespace_check": "passed"
+  },
+  "visual_review": {
+    "capture_kind": "Deterministic test fixtures rendered by actual native C game sources into RGB565 768x480 surfaces; PPM exported losslessly to PNG. These are host fixtures, not device screenshots.",
+    "inspected": [
+      "title",
+      "ready",
+      "active arena",
+      "materials and hazards",
+      "all three arena themes",
+      "workshop",
+      "FLOOR brush",
+      "pause",
+      "round result",
+      "match result"
+    ],
+    "captures": [
+      {
+        "path": "build-host/blast-readability-20261007/native-after/arena-768.png",
+        "width": 768,
+        "height": 480,
+        "sha256": "670747c55ed110638b72d2c3d9913c03f27cfe5bf6bb1a6f65b839913fb3d3f0"
+      },
+      {
+        "path": "build-host/blast-readability-20261007/native-after/embers-768.png",
+        "width": 768,
+        "height": 480,
+        "sha256": "e67d7704bcf70e4b6b82a354794e816dbe43cada1634589b3dee0ce10f429078"
+      },
+      {
+        "path": "build-host/blast-readability-20261007/native-after/floor-brush-768.png",
+        "width": 768,
+        "height": 480,
+        "sha256": "1b77dfb0579d63808e4de587e8949c6d610a5eb32239dce465fb5473961aeb7e"
+      },
+      {
+        "path": "build-host/blast-readability-20261007/native-after/foundry-768.png",
+        "width": 768,
+        "height": 480,
+        "sha256": "fb9e8d767fa7d9b9998aea994c5c881069d386ea2372188ce421885cd053f5fc"
+      },
+      {
+        "path": "build-host/blast-readability-20261007/native-after/greenhouse-768.png",
+        "width": 768,
+        "height": 480,
+        "sha256": "fc209d2b4b8e1e5020987c7d77afc69cb498dea5ca7e6822a35ed53ee73b7989"
+      },
+      {
+        "path": "build-host/blast-readability-20261007/native-after/materials-768.png",
+        "width": 768,
+        "height": 480,
+        "sha256": "1a868d6b9204e58d4d708c6c07de09d84d3d01b301b9d9e7c95fb261a0aa00ec"
+      },
+      {
+        "path": "build-host/blast-readability-20261007/native-after/pause-768.png",
+        "width": 768,
+        "height": 480,
+        "sha256": "05bf0e87ddd43393611823dc3b04cd3014fb10ad817532c5ed46c512c438d55f"
+      },
+      {
+        "path": "build-host/blast-readability-20261007/native-after/prism-768.png",
+        "width": 768,
+        "height": 480,
+        "sha256": "db84258aa463f7c832f293ae6afcb96d3dbdd8ae5d6690db8fb66788a64ee534"
+      },
+      {
+        "path": "build-host/blast-readability-20261007/native-after/ready-768.png",
+        "width": 768,
+        "height": 480,
+        "sha256": "9e54df13949e3a1ba78db599dd486cb962432b6aa8dd1cc485ab91e6d58c1fd7"
+      },
+      {
+        "path": "build-host/blast-readability-20261007/native-after/results-768.png",
+        "width": 768,
+        "height": 480,
+        "sha256": "39d4c456726393d1e43609e75f203a9e2149ad0f3dd0b1331284b52bbcfc7b5a"
+      },
+      {
+        "path": "build-host/blast-readability-20261007/native-after/round-768.png",
+        "width": 768,
+        "height": 480,
+        "sha256": "81093af895360283127d865fe9e62c1c47230c9f8580ed66d22f279c816e15de"
+      },
+      {
+        "path": "build-host/blast-readability-20261007/native-after/title-768.png",
+        "width": 768,
+        "height": 480,
+        "sha256": "5d6623735801ddf95dc1f8dacf2ba6c2f619ff91417349ed67b68368cfc648fe"
+      },
+      {
+        "path": "build-host/blast-readability-20261007/native-after/tools-768.png",
+        "width": 768,
+        "height": 480,
+        "sha256": "f7c48ac1986aad9917abc63a64f8020a020d1c78df68c8a86046208fa4358812"
+      },
+      {
+        "path": "build-host/blast-readability-20261007/native-after/workshop-768.png",
+        "width": 768,
+        "height": 480,
+        "sha256": "57a5f12d90fa52423100303f02d2296ca68b5fff18b68083ec733ef39c1f8256"
+      }
+    ]
+  },
+  "acceptance": {
+    "device_write_performed": false,
+    "exact_unit": null,
+    "installed_os_artifact": null,
+    "fresh_interactive_host_play": "pending: direct SDL app attempt exited 134 and computer-use initialization failed before UI actions",
+    "device_native_surface_log": "pending",
+    "device_readability_and_motion": "pending",
+    "device_fps": "pending; 60 FPS target and actual-device 30 FPS release floor",
+    "linked_device_native_surface_and_play": "pending",
+    "historical_receipts": "LOCAL_TESTING.json and prior device test runs are retained unchanged and do not establish acceptance for 0.2.8"
+  }
+}

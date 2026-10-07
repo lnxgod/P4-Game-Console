@@ -28,6 +28,7 @@
 
 #include "doomdef.h"
 #include "d_loop.h"
+#include "p4_doom_net.h"
 
 #include "m_bbox.h"
 #include "m_menu.h"
@@ -862,6 +863,7 @@ void R_SetupFrame (player_t* player)
 //
 void R_RenderPlayerView (player_t* player)
 {	
+    P4_ENGINE_PERF_BEGIN(setup_started);
     R_SetupFrame (player);
 
     // Clear buffers.
@@ -869,23 +871,30 @@ void R_RenderPlayerView (player_t* player)
     R_ClearDrawSegs ();
     R_ClearPlanes ();
     R_ClearSprites ();
+    P4_ENGINE_PERF_END(P4_DOOM_ENGINE_SETUP, setup_started);
     
     // check for new console commands.
     NetUpdate ();
 
     // The head node is the last node output.
+    P4_ENGINE_PERF_BEGIN(bsp_started);
     R_RenderBSPNode (numnodes-1);
+    P4_ENGINE_PERF_END(P4_DOOM_ENGINE_BSP, bsp_started);
     
     // Check for new console commands.
     NetUpdate ();
     
+    P4_ENGINE_PERF_BEGIN(planes_started);
     R_DrawPlanes ();
+    P4_ENGINE_PERF_END(P4_DOOM_ENGINE_PLANES, planes_started);
     
     // Check for new console commands.
     NetUpdate ();
     
+    P4_ENGINE_PERF_BEGIN(masked_started);
     R_DrawMasked ();
+    P4_ENGINE_PERF_END(P4_DOOM_ENGINE_MASKED, masked_started);
 
     // Check for new console commands.
-    NetUpdate ();				
+    NetUpdateRenderTail ();
 }

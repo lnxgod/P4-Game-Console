@@ -16,6 +16,7 @@ typedef int esp_err_t;
 #define ESP_ERR_TIMEOUT 3
 #define ESP_ERR_INVALID_ARG 4
 #define ESP_ERR_NOT_FOUND 5
+#define ESP_ERR_WIFI_NOT_INIT 6
 #define ESP_LOGI(tag,...) ((void)(tag))
 #define pdTRUE 1
 #define pdPASS 1
@@ -29,7 +30,8 @@ static inline void *xSemaphoreCreateMutex(void){return (void *)1;}
 static inline int xSemaphoreTake(void *s,int n){(void)s;(void)n;return 1;}
 static inline int xSemaphoreGive(void *s){(void)s;return 1;}
 static inline void vSemaphoreDelete(void *s){(void)s;}
-static inline void vTaskDelay(int n){(void)n;}
+static void (*mock_delay_hook)(int);
+static inline void vTaskDelay(int n){if(mock_delay_hook)mock_delay_hook(n);}
 static inline int xTaskCreateWithCaps(void (*f)(void *),const char *n,int bytes,void *arg,int priority,void **out,int caps)
 {(void)f;(void)n;(void)bytes;(void)arg;(void)priority;(void)caps;*out=(void *)1;return 1;}
 static int64_t mock_time=100000;
@@ -49,18 +51,48 @@ typedef struct {struct{uint8_t ssid[32],ssid_len,channel,max_connection;int auth
 enum { WIFI_STORAGE_RAM,WIFI_MODE_AP,WIFI_MODE_STA,WIFI_IF_AP,WIFI_IF_STA,WIFI_AUTH_OPEN,WIFI_SCAN_TYPE_PASSIVE,WIFI_PS_NONE };
 static wifi_ap_record_t mock_records[32]; static uint16_t mock_count;
 static wifi_config_t mock_config; static int mock_mode;
-static inline int esp_netif_init(void){return 0;}
-static inline int esp_event_loop_create_default(void){return 0;}
-static inline esp_netif_t *esp_netif_create_default_wifi_sta(void){return (void *)1;}
-static inline esp_netif_t *esp_netif_create_default_wifi_ap(void){return (void *)2;}
-static inline int esp_wifi_init(const wifi_init_config_t *c){(void)c;return 0;}
-static inline int esp_wifi_set_storage(int n){(void)n;return 0;}
-static inline int esp_event_handler_register(int b,int id,void (*f)(void *,int,int32_t,void *),void *c){(void)b;(void)id;(void)f;(void)c;return 0;}
+typedef int wifi_mode_t;
+static bool mock_wifi_initialized, mock_init_apply_then_timeout;
+static unsigned mock_get_mode_calls;
+static esp_err_t mock_get_mode_result=ESP_OK;
+static void (*mock_get_mode_hook)(void);
+enum { MOCK_NETIF_INIT, MOCK_EVENT_LOOP, MOCK_STA, MOCK_AP, MOCK_WIFI_INIT,
+       MOCK_STORAGE, MOCK_WIFI_HANDLER, MOCK_IP_HANDLER, MOCK_INIT_STEPS };
+static unsigned mock_init_calls[MOCK_INIT_STEPS], mock_start_calls;
+static int mock_fail_step=-1;
+static void (*mock_init_hook)(int);
+static inline int mock_init_step(int step)
+{
+    ++mock_init_calls[step];
+    if(mock_init_hook)mock_init_hook(step);
+    if(step==mock_fail_step){mock_fail_step=-1;return ESP_FAIL;}
+    return ESP_OK;
+}
+static inline int esp_netif_init(void){return mock_init_step(MOCK_NETIF_INIT);}
+static inline int esp_event_loop_create_default(void){return mock_init_step(MOCK_EVENT_LOOP);}
+static inline esp_netif_t *esp_netif_create_default_wifi_sta(void){return mock_init_step(MOCK_STA)==ESP_OK?(void *)1:NULL;}
+static inline esp_netif_t *esp_netif_create_default_wifi_ap(void){return mock_init_step(MOCK_AP)==ESP_OK?(void *)2:NULL;}
+static inline int esp_wifi_init(const wifi_init_config_t *c)
+{
+    (void)c;esp_err_t result=mock_init_step(MOCK_WIFI_INIT);
+    if(result==ESP_OK || mock_init_apply_then_timeout)mock_wifi_initialized=true;
+    return result!=ESP_OK && mock_init_apply_then_timeout?ESP_ERR_TIMEOUT:result;
+}
+static inline int esp_wifi_get_mode(wifi_mode_t *mode)
+{
+    ++mock_get_mode_calls;
+    if(mock_get_mode_hook)mock_get_mode_hook();
+    if(mock_get_mode_result!=ESP_OK)return mock_get_mode_result;
+    if(!mock_wifi_initialized)return ESP_ERR_WIFI_NOT_INIT;
+    *mode=mock_mode;return ESP_OK;
+}
+static inline int esp_wifi_set_storage(int n){(void)n;return mock_init_step(MOCK_STORAGE);}
+static inline int esp_event_handler_register(int b,int id,void (*f)(void *,int,int32_t,void *),void *c){(void)id;(void)f;(void)c;return mock_init_step(b==WIFI_EVENT?MOCK_WIFI_HANDLER:MOCK_IP_HANDLER);}
 static inline int esp_wifi_scan_stop(void){return 0;}
 static inline int esp_wifi_stop(void){return 0;}
 static inline int esp_wifi_set_mode(int n){mock_mode=n;return 0;}
 static inline int esp_wifi_set_config(int n,const wifi_config_t *c){(void)n;mock_config=*c;return 0;}
-static inline int esp_wifi_start(void){return 0;}
+static inline int esp_wifi_start(void){++mock_start_calls;return 0;}
 static inline int esp_wifi_set_ps(int n){(void)n;return 0;}
 static inline int esp_wifi_connect(void){return 0;}
 static inline int esp_netif_get_ip_info(esp_netif_t *n,esp_netif_ip_info_t *ip){(void)n;ip->ip.addr=inet_addr("127.0.0.1");return 0;}

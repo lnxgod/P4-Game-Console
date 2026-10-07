@@ -33,6 +33,10 @@ enum {
     P4_MP_START_PAYLOAD_BYTES = 8,
     P4_MP_START_SCHEMA = 1,
     P4_MP_GAME_MESSAGE_MAX_BYTES = 64,
+    /** Dedicated engine checkpoints fit one 1024-byte transport datagram. */
+    P4_MP_CHECKPOINT_MAX_DATAGRAM_BYTES = 1024,
+    P4_MP_CHECKPOINT_MAX_PAYLOAD_BYTES = P4_MP_CHECKPOINT_MAX_DATAGRAM_BYTES -
+        P4_MP_HEADER_BYTES - P4_MP_TRAILER_BYTES,
     P4_MP_PLAYER_SLOT_ANY = 0xff,
 };
 
@@ -69,6 +73,11 @@ typedef enum {
     /** Transport-neutral payload copied to a connected native cartridge. */
     P4_MP_PACKET_GAME_MESSAGE = 11,
     P4_MP_PACKET_ACCESSORY = 12,
+    /** Negotiated engine checkpoint path; never a native cartridge message.
+     * The generic session receiver rejects this type without changing state.
+     * The owning OS adapter must validate the negotiated engine protocol,
+     * session, peer, exact route and transfer attempt before accepting it. */
+    P4_MP_PACKET_CHECKPOINT = 13,
 } p4_mp_packet_type_t;
 
 typedef enum {
@@ -354,6 +363,25 @@ typedef struct {
 } p4_mp_session_t;
 
 typedef enum {
+    P4_MP_JOIN_REJECT = 0,
+    P4_MP_JOIN_NEW,
+    P4_MP_JOIN_RETRY,
+} p4_mp_join_admission_t;
+
+/**
+ * Keep ACCEPT delivery retryable after closing admission or starting a game
+ * barrier. Only an already-admitted peer on its exact route may retry while
+ * accepting_new is false. Callers must still validate the offered game and
+ * pass the packet through session_receive for session, route and replay checks.
+ * A RETRY resends ACCEPT without reconfiguring the launch or its active barrier.
+ */
+p4_mp_join_admission_t p4_mp_session_join_admission(
+    const p4_mp_session_t *session,
+    uint32_t peer_id,
+    uint64_t route_id,
+    bool accepting_new);
+
+typedef enum {
     P4_MP_EVENT_NONE = 0,
     P4_MP_EVENT_JOIN_REQUEST,
     P4_MP_EVENT_ACCEPTED,
@@ -366,6 +394,8 @@ typedef enum {
     P4_MP_EVENT_PEER_TIMED_OUT,
     P4_MP_EVENT_ROUTE_DISCONNECTED,
     P4_MP_EVENT_GAME_MESSAGE,
+    /** Dedicated opt-in ingress; never emitted by generic session_receive. */
+    P4_MP_EVENT_CHECKPOINT,
 } p4_mp_event_type_t;
 
 typedef struct {
@@ -402,6 +432,12 @@ p4_mp_status_t p4_mp_session_accept_peer(
     uint32_t initial_sequence,
     uint64_t now_ms);
 
+/** Complete a game-specific admission after its credential/content checks.
+ * Only the exact pending host identity/route with a fresh sequence is accepted. */
+p4_mp_status_t p4_mp_session_accept_host(
+    p4_mp_session_t *session, uint32_t host_peer_id, uint64_t route_id,
+    uint32_t initial_sequence, uint64_t now_ms);
+
 p4_mp_status_t p4_mp_session_encode(
     p4_mp_session_t *session,
     p4_mp_packet_type_t type,
@@ -413,6 +449,22 @@ p4_mp_status_t p4_mp_session_encode(
     size_t *output_length);
 
 p4_mp_status_t p4_mp_session_receive(
+    p4_mp_session_t *session,
+    uint64_t route_id,
+    uint64_t now_ms,
+    const uint8_t *datagram,
+    size_t datagram_length,
+    p4_mp_event_t *event_out);
+
+/** Accept one prevalidated engine checkpoint from an already connected peer.
+ * The owning adapter MUST first validate negotiated engine protocol, content,
+ * admission attempt and checkpoint-transfer semantics without session mutation.
+ * This explicit ingress then checks framing, type, connected session/peer,
+ * exact route and the common receive sequence before refreshing liveness.
+ * It does not admit a joining peer or validate the engine-specific payload.
+ * Failures leave the session unchanged; success emits only CHECKPOINT.
+ * The event borrows datagram bytes for the duration of the caller's handling. */
+p4_mp_status_t p4_mp_session_receive_checkpoint(
     p4_mp_session_t *session,
     uint64_t route_id,
     uint64_t now_ms,

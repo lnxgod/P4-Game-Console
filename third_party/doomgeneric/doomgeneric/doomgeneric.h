@@ -39,6 +39,10 @@ int doomgeneric_QuitRequested(void);
 //Implement below functions for your platform
 void DG_Init();
 void DG_DrawFrame();
+/* Called before I_FinishUpdate writes the packed framebuffer. Returning zero
+ * skips both conversion and presentation. Platforms may lease a new complete
+ * framebuffer here; DG_DrawFrame must consume or publish that lease. */
+int DG_PrepareFrame(void);
 void DG_SleepMs(uint32_t ms);
 uint32_t DG_GetTicksMs();
 int DG_GetKey(int* pressed, unsigned char* key);

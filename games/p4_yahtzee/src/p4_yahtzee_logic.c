@@ -148,6 +148,8 @@ void p4_yahtzee_reset_match(p4_yahtzee_state_t *state, uint32_t seed)
     const uint8_t local_slot = state->local_player_slot;
     const p4_game_multiplayer_role_t role = state->network_role;
     const uint64_t network_seed = state->network_seed;
+    const uint32_t network_generation = state->network_generation;
+    const bool network_bound = state->network_bound;
     const uint32_t network_revision = state->network_revision;
     uint32_t last_network_sequence[P4_YAHTZEE_PLAYERS];
     memcpy(last_network_sequence, state->last_network_sequence,
@@ -171,6 +173,8 @@ void p4_yahtzee_reset_match(p4_yahtzee_state_t *state, uint32_t seed)
     state->local_player_slot = local_slot;
     state->network_role = role;
     state->network_seed = network_seed;
+    state->network_generation = network_generation;
+    state->network_bound = network_bound;
     state->network_revision = network_revision;
     memcpy(state->last_network_sequence, last_network_sequence,
            sizeof(last_network_sequence));

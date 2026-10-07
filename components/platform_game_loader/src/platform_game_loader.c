@@ -95,6 +95,14 @@ esp_err_t platform_game_loader_run(
     const platform_game_catalog_entry_t *entry,
     p4_cartridge_host_v1_t *host)
 {
+    return platform_game_loader_run_with_progress(entry, host, NULL, NULL);
+}
+
+esp_err_t platform_game_loader_run_with_progress(
+    const platform_game_catalog_entry_t *entry,
+    p4_cartridge_host_v1_t *host,
+    platform_game_loader_progress_fn_t progress, void *context)
+{
     if (entry == NULL || host == NULL || !entry->valid ||
         host->magic != P4_CARTRIDGE_HOST_MAGIC ||
         host->api_version != P4_CARTRIDGE_HOST_API_VERSION ||
@@ -122,12 +130,12 @@ esp_err_t platform_game_loader_run(
              entry->package.id, entry->file_name,
              entry->in_games_directory ? "games-directory" : "root");
     esp_err_t result = entry->in_games_directory
-        ? platform_game_storage_load_game_file(
+        ? platform_game_storage_load_game_file_with_progress(
             entry->file_name, P4_GAME_PACKAGE_MAX_BYTES,
-            &data, &size_bytes)
-        : platform_game_storage_load_root_file(
+            &data, &size_bytes, progress, context)
+        : platform_game_storage_load_root_file_with_progress(
             entry->file_name, P4_GAME_PACKAGE_MAX_BYTES,
-            &data, &size_bytes);
+            &data, &size_bytes, progress, context);
     if (result != ESP_OK) {
         failure_stage = "package-read";
     } else {
@@ -160,6 +168,8 @@ esp_err_t platform_game_loader_run(
                  entry->package.id, (unsigned)package.payload_bytes);
     }
 
+    if (result == ESP_OK && progress != NULL) progress(context);
+
     uint8_t *resource_data = NULL;
     size_t resource_size_bytes = 0U;
     p4_game_resource_info_t resource;
@@ -173,12 +183,12 @@ esp_err_t platform_game_loader_run(
             failure_stage = "resource-name";
         } else {
             const esp_err_t loaded = entry->in_games_directory
-                ? platform_game_storage_load_game_file(
+                ? platform_game_storage_load_game_file_with_progress(
                     resource_name, P4_GAME_RESOURCE_MAX_BYTES,
-                    &resource_data, &resource_size_bytes)
-                : platform_game_storage_load_root_file(
+                    &resource_data, &resource_size_bytes, progress, context)
+                : platform_game_storage_load_root_file_with_progress(
                     resource_name, P4_GAME_RESOURCE_MAX_BYTES,
-                    &resource_data, &resource_size_bytes);
+                    &resource_data, &resource_size_bytes, progress, context);
             if (loaded != ESP_OK && loaded != ESP_ERR_NOT_FOUND) {
                 result = loaded;
                 failure_stage = "resource-read";
@@ -223,6 +233,8 @@ esp_err_t platform_game_loader_run(
         }
     }
 
+    if (result == ESP_OK && progress != NULL) progress(context);
+
     esp_elf_t elf;
     bool initialized = false;
     bool runtime_symbols_registered = false;
@@ -257,6 +269,7 @@ esp_err_t platform_game_loader_run(
     }
     data = NULL;
     if (result == ESP_OK) {
+        if (progress != NULL) progress(context);
         char *arguments[] = {(char *)(void *)host};
         ESP_LOGI(TAG, "P4_CARTRIDGE_ENTRY_BEGIN app=%s",
                  entry->package.id);

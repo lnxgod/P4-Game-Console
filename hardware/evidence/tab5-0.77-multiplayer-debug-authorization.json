@@ -1,0 +1,2022 @@
+{
+  "schema": 1,
+  "board": "m5stack-tab5",
+  "product": "Game Changers AI OS",
+  "operation": "app-only",
+  "toolchain": {
+    "schema": 1,
+    "esp_idf": {
+      "version": "5.5.3",
+      "git_tag": "v5.5.3",
+      "git_commit": "2c211b236707889e8400c4dc5644dd5c4ee071e0",
+      "repository": "https://github.com/espressif/esp-idf.git"
+    },
+    "target": {
+      "chip": "esp32p4",
+      "silicon_family": "revision_1_x",
+      "min_revision_full": 100,
+      "max_revision_full": 199
+    },
+    "managed_components": {
+      "espressif/esp_codec_dev": "1.5.4",
+      "espressif/esp_hosted": "1.4.7",
+      "espressif/esp_lcd_lt8912b": "0.2.0",
+      "espressif/esp_tinyusb": "2.0.1",
+      "espressif/esp_wifi_remote": "0.14.5",
+      "espressif/usb": "1.5.0",
+      "espressif/usb_host_hid": "1.2.0"
+    },
+    "policy": {
+      "commit_dependencies_lock": true,
+      "upgrade_only_with_hardware_regression": true
+    }
+  },
+  "peripheral_scope": {
+    "global_pin_map_authorized": false,
+    "pcb_revision": "not separately marked/confirmed; bounded common C145 interfaces only",
+    "published_variants_reviewed": [
+      "initial 2025-05-09 ILI9881C/GT911",
+      "2025-10-14 ST7123",
+      "2026-04-28 ST7121"
+    ],
+    "official_source": {
+      "commit": "73ee07b1ad56f865f13a2739be8bb6808c1da58a",
+      "manual_sha256": "6c054369e4fb1a7d04fa95fb31adda26feaa9de3540942f733eb2c1a68cd81e1",
+      "manual_url": "https://docs.m5stack.com/en/core/Tab5",
+      "repository": "https://github.com/espressif/esp-bsp",
+      "schematic_sha256": "13cf3fd9954d39aa198e57b1bb94ec56af7d49107c80a245acc5bd90ac8ea329",
+      "schematic_url": "https://m5stack-doc.oss-cn-shenzhen.aliyuncs.com/1132/Tab5_Schematics_PDF.pdf"
+    },
+    "review": "Official C145 schematic and Tab5 manual give one shared P4/expander/audio/SD wiring map for all three published panel assemblies. The pinned BSP supplies distinct panel timings/init and GPIO23 handling, selected by the touch controller. Unknown panel firmware fails closed. No factory-binary pin inference used. INA226 0x41/5 mOhm shunt, BMI270 0x68 and RX8130CE 0x32 use the same published shared I2C1 map; identity and configuration readback precede telemetry. The RTC backup control matches the fitted rechargeable supply. Charger/rail controls stay excluded. USB-A J10 and its masked 0x44/P3 enable are additionally scoped by the pinned USB-controller schematic/BSP review. USB-C Serial/JTAG remains independent. User subsequently approved the exact C6 radio scope and requested battery charging. These narrowly scoped authorizations extend the prior 0.44 scope.",
+    "allowed": {
+      "display": {
+        "backlight_gpio": 22,
+        "bus": "MIPI-DSI",
+        "dphy_ldo_channel": 3,
+        "dphy_ldo_mv": 2500,
+        "logical_height": 720,
+        "logical_width": 1280,
+        "native_height": 1280,
+        "native_width": 720,
+        "panels": [
+          "ILI9881C",
+          "ST7123",
+          "ST7121"
+        ],
+        "reset": "PI4IOE5V6408 0x43 P4, release as input pull-up",
+        "rotation_cw_degrees": 90
+      },
+      "i2c": {
+        "expanders": [
+          67,
+          68
+        ],
+        "port": 1,
+        "scl": 32,
+        "sda": 31
+      },
+      "touch": {
+        "controllers": [
+          "GT911 at 0x14",
+          "ST7123/ST7121 at 0x55"
+        ],
+        "interrupt_gpio": 23,
+        "reset": "expander 0x43 P5"
+      },
+      "audio": {
+        "address_7bit": 16,
+        "amp_enable": "expander 0x43 P1 active high",
+        "bclk": 27,
+        "codec": "ES8388",
+        "dout": 26,
+        "i2s_port": 1,
+        "lrclk": 29,
+        "mclk": 30
+      },
+      "sd": {
+        "clk": 43,
+        "cmd": 44,
+        "data": [
+          39,
+          40,
+          41,
+          42
+        ],
+        "format_on_failure": false,
+        "power_ldo_channel": 4,
+        "slot": 0,
+        "width": 4
+      },
+      "sensors": {
+        "provenance": "third_party/tab5-sensors.json",
+        "power": "INA226 at 0x41, 5 mOhm shunt, voltage-based 2S estimate",
+        "motion": "BMI270 at 0x68, 4g / 2000 degrees per second",
+        "clock": "RX8130CE 0x32: read/init plus explicit UTC calendar write 0x10..0x16, VLF-only W0C 0x1D=0xBD after calendar readback, and clearing a pre-existing STOP bit at 0x1E after valid calendar; no alarms, timers, clock-output or offset configuration."
+      },
+      "usb_host": {
+        "connector": "J10 dedicated USB-A; native HS peripheral 0",
+        "power_enable": "PI4IOE5V6408 0x44/P3 active high; U27 MT9700 current-limited switch",
+        "driver_scope": "Masked direction/latch/high-impedance operations preserve every other expander bit; rollback powers off",
+        "provenance": "hardware/evidence/tab5-usb-gamepad-20261004-build.json",
+        "source_schematic_sha256": "13cf3fd9954d39aa198e57b1bb94ec56af7d49107c80a245acc5bd90ac8ea329",
+        "user_scope": "Requested native Xbox-compatible USB controller support in Core OS and approved the complete 0.43 update",
+        "acceptance": "USB host startup may be observed; no controller model is hardware-qualified by this install"
+      },
+      "c6_local_multiplayer": {
+        "evidence": "design/tab5-bluetooth/proposal.json",
+        "scope": "User explicitly approved C6 Bluetooth and local Wi-Fi Host/Join on 2026-10-05. Shared I2C1 GPIO31/32, masked expander 0x44/P0 WLAN 3.3V enable only; SDMMC slot1 GPIO12 CLK,13 CMD,11/10/9/8 D0-D3 at initial 10 MHz, GPIO15 C6 EN high-low-high reset. No C6 flash writes or unrelated pins/rails. Exact P4 artifact and backed-up unit must pass the installation guard.",
+        "broad_flash_authorization": false,
+        "hardware_acceptance": "pending"
+      },
+      "battery_charger_500ma": {
+        "authorized": true,
+        "date": "2026-10-05",
+        "basis": "User confirms attached batteries and requests fixing charging; pinned official M5Unified and C145 schematic in third_party/tab5-sensors.json.",
+        "scope": "Shared I2C1 GPIO31/32, expander 0x44 P7 CHG_EN, P5 QC disabled, P6 charge status input. 500 mA selection only; preserve all other pins. Exact-artifact guarded install required.",
+        "hardware_acceptance": "pending"
+      }
+    },
+    "usb_console": "native FS USB Serial/JTAG GPIO24/25 only",
+    "excluded": [
+      "C6 firmware writes",
+      "external 5V",
+      "camera",
+      "mic",
+      "expansion GPIO",
+      "All expander 0x44 controls except P0 radio power, P3 USB-A, P5/P7 charger control and P6 charger-status input"
+    ],
+    "sensor_reference": "third_party/tab5-sensors.json",
+    "rtc_reference": {
+      "url": "https://download.epsondevice.com/td/pdf/app/RX8130CE_en.pdf",
+      "revision": "ETM50E-10",
+      "sha256": "db027a5fa2dd17b333da81e95063764eb5536d2878c63b64949348d2ec4b8a22",
+      "sections": [
+        "13.2 register table",
+        "14.5 VLF write-zero-to-clear",
+        "18.5 sequential calendar setting without STOP",
+        "18.6 sequential calendar reading"
+      ]
+    }
+  },
+  "usb_host_enabled": true,
+  "charger_control_enabled": true,
+  "ble_multiplayer_enabled": true,
+  "wifi_multiplayer_enabled": true,
+  "units": {
+    "A": {
+      "identity_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+      "backup_sha256": "849ea1fd532207c96557daab6433cf2986919b80234ed541cba36b5e63d582df",
+      "model_confirmed": true,
+      "predecessor": {
+        "file": "build-host/rollout-helpers-076/preserved-076/app.bin",
+        "bytes": 4474688,
+        "sha256": "133e78dde7c217d19805731f76a255e3bca43188cc33f8be9f57ca417de57d92"
+      },
+      "port_at_authorization": "/dev/cu.usbmodem1101",
+      "predecessor_evidence": "hardware/backups/tab5-a-install-ike6jqrg/receipt.json",
+      "predecessor_install_receipt": {
+        "file": "hardware/backups/tab5-a-install-ike6jqrg/receipt.json",
+        "bytes": 1628,
+        "sha256": "320608090f12f986055fe811988f41b1e3fd1f786bf6cf72326ba162707ff05e"
+      },
+      "predecessor_binding": "Exact preserved 0.76 build artifact, bound to this unit by its successful checksum-verified 0.76 install receipt. The guard rechecks the live predecessor checksum on the same connection before any 0.77 write.",
+      "backup_evidence": {
+        "file": "hardware/backups/tab5-a-multiplayer-preinstall-20261007/receipt.json",
+        "bytes": 1985,
+        "sha256": "8a1fd149431f6f8c7ea1fc22ebc8383699914b2f83838d1a9efb2de17fc43d6d"
+      }
+    },
+    "B": {
+      "identity_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+      "backup_sha256": "1005bc51f3c0877c5722695e2a2fb058dcef024658953a16372c16137c7fb842",
+      "model_confirmed": true,
+      "predecessor": {
+        "file": "build-host/rollout-helpers-076/preserved-076/app.bin",
+        "bytes": 4474688,
+        "sha256": "133e78dde7c217d19805731f76a255e3bca43188cc33f8be9f57ca417de57d92"
+      },
+      "port_at_authorization": "/dev/cu.usbmodem101",
+      "predecessor_evidence": "hardware/backups/tab5-b-install-hzfklw_9/receipt.json",
+      "predecessor_install_receipt": {
+        "file": "hardware/backups/tab5-b-install-hzfklw_9/receipt.json",
+        "bytes": 1627,
+        "sha256": "6f56169e675e44886fe43fce26af9f10336622c03a869933aaa3797016bed835"
+      },
+      "predecessor_binding": "Exact preserved 0.76 build artifact, bound to this unit by its successful checksum-verified 0.76 install receipt. The guard rechecks the live predecessor checksum on the same connection before any 0.77 write.",
+      "backup_evidence": {
+        "file": "hardware/backups/tab5-b-multiplayer-preinstall-20261007/receipt.json",
+        "bytes": 2044,
+        "sha256": "99a51ce406d438ca98797bb54d991773536b2a1232ff6b8e8ad1f410800bd272"
+      }
+    }
+  },
+  "version": "0.77",
+  "install_authorized": true,
+  "firmware_only": true,
+  "created_at": "2026-10-07T19:52:41.972246+00:00",
+  "operator_request": "Go ahead and flash it to the Tab5s and test hosting and joining a Doom Arena game.",
+  "selected_scope": "{\n  \"build_correction\": {\n    \"receipt_path\": \"build-host/diag-enum-correction-077/receipt.json\",\n    \"receipt_sha256\": \"c2f751a2c2153d546f7788f3feda4d1387201708dec34cbb5d804d49dfb5052c\",\n    \"scope\": \"Explicit unsigned casts preserve compile-time size enforcement while satisfying the pinned compiler enum-compare warning. The failed first build and original source snapshot remain historical evidence.\"\n  },\n  \"checker_correction\": {\n    \"receipt_path\": \"build-host/compiled-gate-repair-077/receipt.json\",\n    \"receipt_sha256\": \"7ecaaf687aaec3a2203d621270080ce5e9402ae5ea1d50b5885e06aed2a9c3e1\",\n    \"review_path\": \"build-host/compiled-gate-repair-077-prepare-review/receipt.json\",\n    \"review_sha256\": \"0ae9cecf0418c8ebef6fd9ecec2532b24908bc18a6204cb1548d76d3d325f526\",\n    \"scope\": \"Checker-only corrections for line-bounded empty macros, native stdout/stderr expansion, and actual touch factory/object legacy rejection. Production and source map remain unchanged; prior build and checker failures remain history.\"\n  },\n  \"composition\": {\n    \"patch_path\": \"build-host/composed-077-stage/final-v3/combined.patch\",\n    \"patch_sha256\": \"3180c6f9d634da8d7d2973547d662b951cbd180fd3a3dee9e6d9734bd7486506\",\n    \"path\": \"build-host/composed-077-stage/final-v3/composition.json\",\n    \"production_bindings_sha256\": \"3e2a3cf3deb7bb44fcc7bb1c6da5225ac3d782227e72c3a48f9beb9b28a6eabf\"\n  },\n  \"functional_promotion_targets\": 37,\n  \"hardware_acceptance\": false,\n  \"helpers\": [\n    \"build-host/rollout-final-077-v3/assemble.py\",\n    \"build-host/rollout-final-077-v3/prepare-0.77-authorization.py\",\n    \"build-host/rollout-final-077-v3/verify-build-077.py\",\n    \"build-host/rollout-final-077-v3/record-0.77-install.py\",\n    \"build-host/rollout-final-077-v3/verify_compiled_successor.py\",\n    \"build-host/rollout-final-077-v3/verify_compiled_touch.py\",\n    \"build-host/rollout-final-077-v3/compiled_diagnostic_common.py\",\n    \"build-host/rollout-final-077-v3/verify_compiled_transport.py\",\n    \"build-host/rollout-final-077-v3/verify_compiled_telemetry.py\"\n  ],\n  \"new_source_files\": 19,\n  \"ownership\": \"Root owns production integration, firmware builds, device authorization, serial ports, flashing and physical acceptance. Agents provide isolated reviewed proposals and offline checks.\",\n  \"physical_checks\": [\n    \"Verify the compiled source and target artifacts, then guarded app-only device-checksum flash the two exact backed-up units from their verified 0.76 predecessors.\",\n    \"Notify the user when both flashes finish and allow the requested live control test while capturing logs.\",\n    \"Measure both host directions, guest leave/rejoin without another host Start, touch responsiveness, overlay cleanup and sound. Exclude screenshot transfer intervals from FPS measurements.\",\n    \"Measure input backlog, touch sample age/faults, network packet pressure and submitted FPS over valid matched intervals; require at least 30 FPS per unit for release acceptance.\",\n    \"Back up each physically identified SD card completely before full-capacity MBR/FAT32 formatting with 32 KiB clusters, restore and hash-verify the content, then compare on the same original unit.\"\n  ],\n  \"purpose\": \"Remove blocking touch reads from Doom presentation and shorten queued multiplayer input delivery while retaining the authoritative simulation and join/rejoin protocol.\",\n  \"retained_acceptance_gaps\": [\n    \"Both exact Tab5 units run verified 0.76. Its live human test has not yet produced an Arena session in the captured logs.\",\n    \"The 0.75 guest returned twice to a running B host without another Start, but startup took about 90 seconds and host submitted frame rate averaged 29.639 FPS, below the repository 30 FPS floor.\",\n    \"Input-pipeline host models and touch tests establish code behavior, not measured device latency or physical display cadence.\",\n    \"Music and sound telemetry exists; audible output on both units remains unconfirmed.\",\n    \"Both microSD cards report 512-byte clusters in a 256 MiB FAT32 volume despite physical capacities of 16 and 32 GB. Reformatting is authorized but awaits physical connection to the Mac reader; no media failure is established.\",\n    \"The legacy E4 source-contract digest mismatch is unchanged from production and remains recorded separately. Other multiplayer games still require device testing.\"\n  ],\n  \"schema\": 1,\n  \"scope\": [\n    \"Sample Tab5 touch in a bounded 60 Hz worker and consume queued input in the frame loop; neutralize stale or failed input and preserve lifecycle ownership and timeout behavior.\",\n    \"Send the oldest multiplayer input plus up to two already queued followers during ordinary live play; preserve acknowledgements, history validation, start/resume barriers, simulation rate, packet budget and checkpoint replay fairness.\",\n    \"Publish separate touch diagnostics from copied snapshots and make diagnostic USB writes nonblocking while coordinating with ordinary stdout/stderr output.\",\n    \"Add focused sampler, transport and pipeline tests and repair two existing desktop mocks for the APIs already used by production.\",\n    \"Advance the displayed version to 0.77 with the reviewed version-only golden changes.\"\n  ],\n  \"source_files\": 293,\n  \"source_map_sha256\": \"1aa403778a6be66a27cda57db8c1cd43647b7f672c9be79d8f0520b02009d346\",\n  \"status\": \"Root-selected successor for controlled build and device testing; hardware acceptance remains open.\",\n  \"version\": \"0.77\",\n  \"version_golden_files\": 4\n}",
+  "source_commit": "51aefe10080498c3e95e9b78a8b0ecd553e00b5f",
+  "verification_method": "device-checksum",
+  "previous_install_evidence": "hardware/test-runs/2026-10-07-tab5-076-multiplayer-debug-install.json",
+  "physical_acceptance": "Pending installation, exact-image launcher/health evidence, USB debug controls and two-unit Doom Arena host/join acceptance. Successful build and checksum verification alone do not qualify gameplay.",
+  "artifacts": {
+    "0x2000": {
+      "file": "apps/console_os/build-tab5/bootloader/bootloader.bin",
+      "bytes": 23136,
+      "sha256": "058cf4c0434733d72800c383e1bddb54aa33cf667b21254c8bd9d2f4f7f43443"
+    },
+    "0x8000": {
+      "file": "apps/console_os/build-tab5/partition_table/partition-table.bin",
+      "bytes": 3072,
+      "sha256": "606f2ba90d4e68e36eb704e2dff8e2b509ce2adf1a398297d1fe0fc626590871"
+    },
+    "0x10000": {
+      "file": "apps/console_os/build-tab5/ota_data_initial.bin",
+      "bytes": 8192,
+      "sha256": "7d2c7ac4888bfd75cd5f56e8d61f69595121183afc81556c876732fd3782c62f"
+    },
+    "0x20000": {
+      "file": "apps/console_os/build-tab5/p4_console_os.bin",
+      "bytes": 4481408,
+      "sha256": "59de8d8306f07624f579afe11aea82e171925e9ab7eebf649535b6a66e96e9b4"
+    }
+  },
+  "paired_protected_game": {
+    "payload_sha256": "5a2f96266b305ad7abc549aeaa838b3d21b9cfd666c2b4c2f775aa5cd7d373ff",
+    "lineage_header": {
+      "file": "apps/console_os/build-tab5/generated/protected-games/p4_protected_game_lineage.h",
+      "bytes": 1141,
+      "sha256": "877068af79618b5889112868907fd9b3a63b1ace00213e16909d4acdb5f79973"
+    },
+    "historical_package": {
+      "file": "apps/console_os/build-tab5/dev-games/GAMES/LORD.P4G",
+      "bytes": 434820,
+      "sha256": "bc737068ddf41e651132e7003f5cf60d59bb85f01d8421a5859d2f33996fb46e",
+      "payload_sha256": "5a2f96266b305ad7abc549aeaa838b3d21b9cfd666c2b4c2f775aa5cd7d373ff",
+      "save_identity_unchanged": true,
+      "installed_by_default": false
+    },
+    "save_identity_unchanged": true,
+    "installed_by_default": false,
+    "package_installed_by_this_update": false,
+    "current_package": {
+      "file": "apps/console_os/build-tab5/dev-games/GAMES/LORD.P4G",
+      "bytes": 434820,
+      "sha256": "bc737068ddf41e651132e7003f5cf60d59bb85f01d8421a5859d2f33996fb46e"
+    },
+    "comparison": "Generated protected payload allowlist is byte-identical to the previously recorded lineage and matches the 0.59 historical package payload."
+  },
+  "installer_sha256": "3c9544c4cc4ef3e004f4e7cbba86c7ed64bb2b7c04abe657336ab1b721c5ba01",
+  "build_verifier": {
+    "result": "tab5-build-candidate-verified",
+    "board": "m5stack-tab5",
+    "version": "0.77",
+    "image_bytes": 4481408,
+    "ble_multiplayer_enabled": true,
+    "wifi_multiplayer_enabled": true,
+    "image_sha256": "59de8d8306f07624f579afe11aea82e171925e9ab7eebf649535b6a66e96e9b4",
+    "native_cartridges": null,
+    "content_bundle_verified": false,
+    "usb_host_enabled": true,
+    "charger_control_enabled": true,
+    "hardware_verified": false,
+    "flash_authorized": false
+  },
+  "write_review": {
+    "offset": "0x20000",
+    "erase_all": false,
+    "force_revision": false,
+    "verification": "device-checksum",
+    "preserve": "bootloader, partition table, OTA selector, NVS, settings, microSD games and saves",
+    "full_readback": "Available only when explicitly selected for recovery/diagnostics; this authorization uses the installer default device checksum."
+  },
+  "additional_operator_request": "add remote controls for debugging; fix the multiplayer game list and Local Wi-Fi selection responsiveness; display Doom Arena by Game Changers; show measured loading progress and fix slow or stuck Arena guest joining",
+  "source_branch": "codex/tab5-multiplayer-debug",
+  "source_files_sha256": {
+    "Makefile": "7616132513e5681beb4bd3ae23f9c763919079a69fcdc9045d14c15511bb29bb",
+    "apps/console_os/CMakeLists.txt": "0a9d4d94ab4077fd628d759b5c55e32890e0f014f3badb79af8beac6d92c940a",
+    "apps/console_os/app-metadata.json": "d15d6e689f80e92dd00aea4f6153cf11c2f3730521959a2a3121deb52dfb7b6c",
+    "apps/console_os/components/platform_readonly_blob/CMakeLists.txt": "6abd57c2ff2cc0b3b94a05eb8c91617b2bcf2c77be15f776535d6a76c875370d",
+    "apps/console_os/components/platform_readonly_blob/include/platform/readonly_blob_loading.h": "bffa63e5cfb56763e2d014c1d45874f48b3f27bb39a3158ee1813e0948fb8bdb",
+    "apps/console_os/components/platform_readonly_blob/platform_game_storage_blob.c": "db868dc6bb08fc1a9d1ce48444654c931464f805b7a6db1ad6c86c3b680b3960",
+    "apps/console_os/dependencies-olimex.lock": "fe859ab1fa7237a27ff65cc0bbe8d1bb0cf6b536fbffdb10a64e06f609432a87",
+    "apps/console_os/dependencies-tab5.lock": "ef504de8027e393a97de7c16da2b2598bb08ade02660de3608af719ad3924bdd",
+    "apps/console_os/dependencies-waveshare.lock": "bfcf00ff616e3b532c52b6733869bbb5f1bffee28a29d12833f23a881f1afa9e",
+    "apps/console_os/dependencies.lock": "02d604c6abda80f1d264f7b2a57fde151a35fdd5437bbeb52819f8cdb7e76606",
+    "apps/console_os/main/CMakeLists.txt": "f3b7d38ea0b3373826c4cf799723b39eeaa4712dbd8bbb9fc9b1496c8950879a",
+    "apps/console_os/main/console_debug.h": "8fbcc0b6d1b69d04fbfbf52e7bde25747ce96b2e7f0c8c709b3d6b52599dc305",
+    "apps/console_os/main/console_os_main.c": "6964fae1bb56389ee7c183259db8b97cb3634621ddbf8465d0b25bc974d623a4",
+    "apps/console_os/main/doom_arena_ui.h": "54168d095a9c26a405a6b05dfd679d95be6c3586ca392686c655aec440c51f6a",
+    "apps/console_os/main/doom_gc_engine.c": "bff6b5f8362219cf1a349eb34b5a17e05c2de31c18aeeccbfcd766af511df1b0",
+    "apps/console_os/main/doom_gc_p4mp.c": "a1dbce319d8f2b1033ed1d927115b416212d842ff18c884d71004938b1dc9d3f",
+    "apps/console_os/main/doom_gc_p4mp.h": "536ab8bc7cec76fad10f4b2767b909e35e684f3107505512f4bd136d5ad889ee",
+    "apps/console_os/main/doom_p4mp_adapter.c": "60587c50fc4e17bb71ddeba993171aa5aa8b4b4745c08b63efa4a6e5d438491b",
+    "apps/console_os/main/doom_p4mp_adapter.h": "c398012a8f022b519c0500a77d437807b7cfead021fb6ac8e2a6fa4079b8b014",
+    "apps/doom/components/doom_audio/CMakeLists.txt": "51908aa9c3c998f9de0fce91e2c830c5b918b6d403df5fedb75fd2abd25e908d",
+    "apps/doom/components/doom_audio/include/doom/audio_runtime.h": "7c2fa0c2ff1b28964a0006f7196f888e19391ffe29792b5ef71d10d94965e615",
+    "apps/doom/components/doom_audio/include/doom/music_synth.h": "8c3c28146b1b65ba84c239e5ef8c8756bc0aa966986e9ac0c20ab98d8191716e",
+    "apps/doom/components/doom_audio/src/doom_audio_runtime.c": "460bf6c2b966d26b7c446494825c25edcc96bc3a50620ec6713aa27e5ac49b0a",
+    "apps/doom/components/doom_audio/src/doom_audio_sound_module.c": "c29f27d4bc6f9c301ba55140a6e3781ea5f2779b3b36b9f5ee0843007fa72dbd",
+    "apps/doom/components/doom_audio/src/doom_music_synth.c": "4022a5307a63156c8bb15ab249c7466412c00fa0c4a42de70847a5d95b279b6a",
+    "apps/doom/components/doom_audio/tests/CMakeLists.txt": "aefee931c5d2889023ffaba7b840864420d54a59b185c65da7197ebabb415938",
+    "apps/doom/components/doom_audio/tests/mocks/freertos/FreeRTOS.h": "98de2d9c8e41ada39c18e77cf969eec42cb295077951b18a174aef222a124964",
+    "apps/doom/components/doom_audio/tests/test_doom_audio_runtime.c": "9057ad6589eb5300f208135c107298c64098c9587b8c96874ac6a2ea33124aa9",
+    "apps/doom/components/doom_audio/tests/test_doom_audio_runtime_admission.c": "d43dfeb0b683202e11c87b18a264b620fade1b725ea4557683c1d94590bc588a",
+    "apps/doom/components/doom_audio/tests/test_doom_music_midi.c": "bf9c0c76f19c140c73816593c628bbe6694c1071cd3bbf766cacee06c737bdd2",
+    "apps/doom/host/doom_arena_late_join.c": "35a8a6b5aaee8f45764568efef4487036872efb8d7690a94889092b9a46cf042",
+    "apps/doom/host/doom_arena_rejoin.c": "380b9039af789ba2808bdd59a9e69ae2e52d55d89e493a1563025a5926ffe1f1",
+    "apps/doom/host/doom_late_join_digest.h": "4bcbdd98e0140422a6e77312b84d5f9375b3dcaa2377fa6a2d1149296aa0338f",
+    "apps/doom/host/doom_rejoin_digest.h": "c149036ce13d7bf921eca34366b2cc8d270035c26d467f128826b5abe091aeca",
+    "apps/doom_audio_probe/components/doom_engine_audio/CMakeLists.txt": "c8ad3d57264ef4f56e19634c37ebae7c568624c6b36e8b549a855ad62beaed2b",
+    "apps/doom_audio_probe/components/doom_engine_audio/linker-tab5.lf": "d026f65bb8f9a95c267734c311e837531e890b8f521d6ff13d7f625425d33e17",
+    "apps/doom_audio_probe/components/doom_engine_audio/p4_doom_checkpoint.c": "1a5da0b4157bec530b7e163416e55ce6737b6ae3f40b047ac4df311f5a992571",
+    "apps/doom_audio_probe/components/doom_engine_audio/p4_doom_checkpoint.h": "9f36bfca2697970ccf67c8e935160575d0074ccd29d4b9a1ce41a44caeccd0c1",
+    "apps/doom_audio_probe/components/doom_engine_audio/p4_doom_checkpoint_thinkers.h": "f2491e559f5138d13cc41fc0b39f4b0a98acb201db9a364e60e303ce7e57d825",
+    "apps/doom_audio_probe/components/doom_engine_audio/p4_doom_net.h": "287809c259650da6652430c0bd97b0069b8fb9c351c3264e9d3c19ba24e872bd",
+    "apps/doom_audio_probe/components/doom_engine_audio/p4_doom_net_stub.c": "f05af6d4f9d44fef3c4b3cdb0aaabcfe4dd43cc566f1c5898e2e965562f17b59",
+    "apps/doom_embedded_touch_audio/CMakeLists.txt": "5e915e3942f36e653c92bdb3ccb4e5470e9a06658f7ebe6a1b705f67e931a199",
+    "apps/doom_embedded_touch_audio/main/diag_mailbox.c": "fb414e75b3b1b73c92a2854aed014c5582eb2f2c5e7b81e6df4ec548bf4c5806",
+    "apps/doom_embedded_touch_audio/main/diag_mailbox.h": "6098e8c07132f6fd3a39a3f95b8b410162cae45f262f9b8abee384966b9941c3",
+    "apps/doom_embedded_touch_audio/main/doom_diagnostics.c": "b69d9fbaaa845be3c0d4be57b1699e89ea65e0080b0cc12e03b1d5ec8ef3a46c",
+    "apps/doom_embedded_touch_audio/main/doom_diagnostics.h": "75194d1641c8b8ac40afc6aa742910670060eb399db56bb7d5817f14bf89cf66",
+    "apps/doom_embedded_touch_audio/main/doom_embedded_touch_audio_main.c": "8bf02ed5e3f95b9acc870d8fa6b1c27e630d1379cfff967aafcf00e3bc8ad6b6",
+    "apps/doom_embedded_touch_audio/tests/CMakeLists.txt": "b2a4bc1ba690e8b96ad6b9a32b7e44292f13a3511fd7592e43943d92c8f0aa7a",
+    "apps/doom_embedded_touch_audio/tests/test_arena_score_touch.py": "36d07b0d874242be07b79bdaca801f1855b5cce722851500c2a765edfdab32ac",
+    "apps/doom_embedded_touch_audio/tests/test_debug_input.py": "5f9255736bca3f78c50c6e3eec2c6f2698c965bb20dfc8ae42df58fbc06f16d3",
+    "apps/doom_embedded_touch_audio/tests/test_sampled_touch.py": "587f9dd88713abb200ecbfb30adb3caf9e36c2cc4f190ecdbd9e49afabb0c817",
+    "apps/doom_embedded_touch_audio/tests/test_startup_presentation.py": "aeec9e3ed78ca780071e91e888319c84553f01eea64d54e91885d604d580ee1b",
+    "apps/doom_embedded_touch_audio/tests/test_touch_sampler_diagnostics.py": "63d812c263e358f10e681d213dc966663436564e43d9f1024d1e6a8a8007b3ac",
+    "components/console_shell/include/console/brand.h": "c6121792d4418a7f8879101aa99c6b82609f5fd516b29d31a8022b7c6374a7b9",
+    "components/console_shell/include/console/shell.h": "3045f3cc01e2fe9dbf9819e6b42a5568ffb82fc06012296d8e467955204505b5",
+    "components/console_shell/src/console_shell.c": "7dc62da4e4b22aaa44840fad0eedcf6a50db6317bb914a0539c4d0a932d6e3a9",
+    "components/console_shell/src/nextgen.inc": "3188068da015d689258a9ea608a543dab6b356b14584c871e711c713281e208e",
+    "components/console_shell/tests/test_console_shell.c": "b4ce5a9031b3af5997efdca32b22e658bebb0340a1e1cd627643009ec69e7e0d",
+    "components/console_shell/tests/test_nextgen.c": "2631f519a7ad71ae3270515ac9d2ba15aaaa5a9560bc699dd2a9350a69c45f70",
+    "components/doom_multiplayer/CMakeLists.txt": "4e18db9f60fc9e3a152e6c208c10dc7dbe7ad72cece4d927d819624066acb44f",
+    "components/doom_multiplayer/include/p4/doom_arena.h": "7b641e0b308ce0a067a1c91c311393c45226a46b61f80c536918018792fefb22",
+    "components/doom_multiplayer/include/p4/doom_checkpoint_service.h": "ba9764736c25b5a265d2cc5c482513ef0cd65354a8496d67628de17cf35c4337",
+    "components/doom_multiplayer/include/p4/doom_checkpoint_transfer.h": "37f98c6cf9fcaed7b64dc1c8f8a0ad031e0ab39b1989150a92761bc784df903d",
+    "components/doom_multiplayer/include/p4/doom_lockstep.h": "fe6078903fcfa2b1984a1f9090c8ba4bbd71c0a15165c627f64ffd3ca8468f1d",
+    "components/doom_multiplayer/include/p4/doom_multiplayer.h": "217194be8d427052a11cf961bff779381e5d0b600b49865ee72f5ad25609a6c4",
+    "components/doom_multiplayer/include/p4/doom_replay.h": "429e73f3edbc6e8a7387676a924c788bf754152df1d245431476b174d3027707",
+    "components/doom_multiplayer/include/p4/doom_resume.h": "988a65043964cf01ff1c826e5c82187071058ce6f220b25c83d0d3232cd38ce4",
+    "components/doom_multiplayer/src/doom_arena.c": "cff4ee53d5fc1d57d15a954f7f7b784e7c2146475f7fad0dc87a520b1723920c",
+    "components/doom_multiplayer/src/doom_checkpoint_service.c": "b883e45c8b4c31fb3c85867943e64c9978e05f17e1835b8383ffd7b2a9901d3e",
+    "components/doom_multiplayer/src/doom_checkpoint_transfer.c": "efd46fc7c5c117c6fdfb004d72d4c2c5b70c528398a2e0e14014fdccbecedb4b",
+    "components/doom_multiplayer/src/doom_lockstep.c": "f4f56a4613b23ef65df9dcffa16b99c6e8c2023c216d40f65367b4e781b457cd",
+    "components/doom_multiplayer/src/doom_multiplayer.c": "7a5c94bec48ccae70e8e61c63103d4dd9e539982dfde59a2e933eb4218c3544e",
+    "components/doom_multiplayer/src/doom_replay.c": "82da7fd95a6f3e910b5995f60c1457382982aa3a28e64654be36f1f950657923",
+    "components/doom_multiplayer/src/doom_resume.c": "7ffde6689edb27b82ce06ef6b28a880ec7506fc5d14cf1e9521b8b95a3bbad95",
+    "components/doom_multiplayer/tests/CMakeLists.txt": "89672b992468ec391c064de7c8ccf1b9690d733bb498bd703343208136387800",
+    "components/doom_multiplayer/tests/checkpoint_engine_stub.c": "16f0ce832beb3ceb8ef2d15c21fb6e923bccf588915982d22c89662912e7ebf5",
+    "components/doom_multiplayer/tests/checkpoint_host_sha.c": "010007aae481447f9530518306ffc94adc5bb65e077b40729551593ff8102c46",
+    "components/doom_multiplayer/tests/checkpoint_host_sha.h": "a18f8e3fc45a4edde8afa5d20dd889fc2436d992bd1360e780c6299592d57acc",
+    "components/doom_multiplayer/tests/mocks/esp_err.h": "61b748f4de687ead6bd5854936e32e76a2c31e215e7a9d446612c9856058e019",
+    "components/doom_multiplayer/tests/test_doom_arena.c": "c63f3af7aabc7edcee4135674a585d5a87b2a142f6bf58ae3b00bde83c5f74c3",
+    "components/doom_multiplayer/tests/test_doom_arena_framebuffer.c": "fd463699658e2efcda73e12e8c6dc7c0e3be204c2172b33e6b4fb4bf1bc8b988",
+    "components/doom_multiplayer/tests/test_doom_arena_framebuffer.py": "82d2d156aa17b493a3154672b08fbc5afb89e94dfa735b0e0c9dda408e2cb987",
+    "components/doom_multiplayer/tests/test_doom_arena_ui.c": "0cb92495ab389d58e0a63e32e71a09600f3d2edfdad4cf8d7fda9da461f5ca92",
+    "components/doom_multiplayer/tests/test_doom_checkpoint_service.c": "b5ae5fb745a2124cc6907e6f99bc58404a5a91c909ee45aa14012cd51c71d522",
+    "components/doom_multiplayer/tests/test_doom_gc_adapter.c": "16c587404c627dc5b1be310ab1f79dba95a93ac54870c0aee1395760d64ead6c",
+    "components/doom_multiplayer/tests/test_doom_gc_checkpoint.c": "4f0e7ca5aacd4bf4cdee02ca6501704738a0d5a2a7a9385ef6cb03679603f1c5",
+    "components/doom_multiplayer/tests/test_doom_gc_engine_stub.c": "af933f672125a2434924d61f160cf0dc3267f353e3c911c3ac98537604078258",
+    "components/doom_multiplayer/tests/test_doom_gc_late_join.c": "ce8e88d53d1597b8a490b4ea2736cb937d702fcd0d0c969ecf954fb85ba937cd",
+    "components/doom_multiplayer/tests/test_doom_gc_live_pipeline.c": "ec6b150c178e76fda7162921b1b756cdb188cd37d51a57730c6474f783daaf8d",
+    "components/doom_multiplayer/tests/test_doom_gc_live_ready.c": "adf768f6ef6fdd2885cf1b2f70c0e7c08cceb4bf445cb6a240d2f226b699ed23",
+    "components/doom_multiplayer/tests/test_doom_gc_pipeline_budget.c": "6047410ab4cba1eab06727db624e2a0741aa6ef4d035b54e58b0acdefad4fdfb",
+    "components/doom_multiplayer/tests/test_doom_gc_postconfigure_loading.c": "effbec6bd242b05df76e95af658481ccfec343d8f00484303dbcdfa9b1c0c394",
+    "components/doom_multiplayer/tests/test_doom_gc_rejoin.c": "557ba20252a15bbac6d387a8a1f826d2aea40ae24722c80ed54c19746339de2e",
+    "components/doom_multiplayer/tests/test_doom_gc_replay_pacing.c": "5a04e59dd4a631707c10b8b5123dcae2a0c53e0d5cd2a0aae5adad6fa971b16b",
+    "components/doom_multiplayer/tests/test_doom_gc_resume_store.c": "d82a913df095ef910ae539aeabb873eccd014876129535358bfa6c6788b026d0",
+    "components/doom_multiplayer/tests/test_doom_gc_rx_coalesce.c": "3dbb888420d24d16e58614b1f3f423d999e557ff8f7d50d4d6f5b4a45bfebfa3",
+    "components/doom_multiplayer/tests/test_doom_gc_stall.c": "aa9b4e342a848ec4871bb2f0c5eefc676d6c8f1953719ae6eebd51c03ff1dea1",
+    "components/doom_multiplayer/tests/test_doom_gc_startup_deadline.c": "d82a52523af3b32622e4d46155797953dea93ceac3cfba1db01047d1a773d346",
+    "components/doom_multiplayer/tests/test_doom_gc_startup_lease.c": "ed2ce0a84500c1e960c0c2292e68cd10c5d72ed75614eac80e13457288afb932",
+    "components/doom_multiplayer/tests/test_doom_gc_startup_vfs.c": "99a55ca74e3bcdd3c553f4d1e1815ea317211eb2fb8e31fcb00a5d9925ded841",
+    "components/doom_multiplayer/tests/test_doom_gc_startup_vfs.h": "bff722b0748443c0a0364cd3e5ef81b88d11d744b3a6d24707e4cc0d8ac0b3b4",
+    "components/doom_multiplayer/tests/test_doom_lockstep.c": "3634b754f8acc7b73c89373c364860d79be5e2d94cf64c76107a3b9b7e8e0b4a",
+    "components/doom_multiplayer/tests/test_doom_replay.c": "1516fe5881e61b5428f6690a9cef99b32bf3f4c50dd1607a92fb868d2c892f10",
+    "components/doom_multiplayer/tests/test_doom_replay_checkpoint.c": "6c78dc9f96ade8c97b5f6da1597358a10e164d1e78037e211deb1d60476279ae",
+    "components/doom_multiplayer/tests/test_doom_replay_rolling.c": "7d19cc9e28fc0d017c17cfc36bd0718d642a34534c792c9619f64e94870eb29c",
+    "components/doom_multiplayer/tests/test_doom_resume.c": "36d96b21982aec80fa215bf0078b0c5e5a101a755d9597e32a4e0c745c5ecfbe",
+    "components/doom_touch_input/include/doom_touch/input.h": "34b8b10191a60a3f1610a2a8fa4af3c90df6fc838ad12244c93b3f98700d9811",
+    "components/doom_touch_input/src/overlay.c": "c463fa322265722f82b59655b17e1ee145d4b8ba96f5640b478e8242e34aacce",
+    "components/doom_touch_input/tests/overlay_parity.c": "396cad8646dbaf368561a0222981ef3a0b254aaf841cd2c0b73d83ccb7e23177",
+    "components/doom_touch_input/tests/overlay_reference.c": "1149e8dda77f0d5c1b115e63b4a173cd6afa25ee1025b09f64ed200b68bf2ad5",
+    "components/doom_touch_input/tests/test_doom_touch_input.c": "77898c58f65de410415d36e525cb43f8fed2240e7265fd32ad5c8793344e20ef",
+    "components/doom_video/CMakeLists.txt": "510490d8c34d7a6df3af45f8ecdb280a885d18b7076564325a228e5e2c7c129d",
+    "components/doom_video/include/doom/video.h": "d3885709d67a134c7025faafe09097777332a12257e81f7dca605fdc0bf885f3",
+    "components/doom_video/include/doom/video_convert.h": "18d0365a286d47cab3017f59c65ef6dbed86858bf4699bd40f31f51ff65789a8",
+    "components/doom_video/include/doom/video_indexed.h": "9903d7a2e9cf000a01835ff64e71720052f6753c05feb604a7ecf6de18299554",
+    "components/doom_video/include/doom/video_metrics.h": "45b5c45945a6c756e7728b544c6757d69f76c9033bf781085c08e23d01b898da",
+    "components/doom_video/src/doom_video_convert.c": "2c7e89a438909d52afcb51468d1fceb0bd9ee512d3f98b7817dedae1e9b8eb7a",
+    "components/doom_video/src/doom_video_indexed.c": "f3e58d762b226761bdbf4648432a55f8f6c6eec6cae786a13338688d230ffd16",
+    "components/doom_video/src/doom_video_metrics.c": "2d7320ce500953512d33e8f22a01132adaa2584f3be38765c0e5b71c96a7e9fd",
+    "components/doom_video/src/doom_video_tab5_worker.c": "737b3b32e21c2adbcb2a0edc81a8800a8d666c18c9926e70d3073f2156445a9c",
+    "components/doom_video/tests/CMakeLists.txt": "904c697ee85b43d6fc04f6399be5303ce366636c81499286f491a8adc20ebaa2",
+    "components/doom_video/tests/test_doom_video.c": "1986c92899f440f3a84f83188907c161fe354da95e8ab2b378308a1fd537ca73",
+    "components/doom_video/tests/test_doom_video_fused.c": "e8f7ad4aa8a65ce5ad43d2c5c4a270e96fd2f4991840334639f9bb5d5a5a2876",
+    "components/doom_video/tests/test_pinned_doom_xrgb.c": "f7f283e3e977ac2d7375f598062a8fb94128364879382c0f32e924f1fa766caa",
+    "components/p4_game_platform/CMakeLists.txt": "b5a67b77ff7b312cbee88ca01542934e2ac737f5662c38bdf7eff2c6524d7fdc",
+    "components/p4_game_platform/include/p4/video_presenter.h": "27a387c333dee0e533840784aefaabcb861ac4aa28862928558add5097da1897",
+    "components/p4_game_platform/src/video_presenter.c": "902d87eb47484f203b59d3d911b9a3587194a4758548cf37bbf768310f5d5ab5",
+    "components/p4_midi/src/midi.c": "de59ed557c0fc7502766f3d7a2fd39d88722e150e4755ee24a2e7ab5c7554612",
+    "components/p4_multiplayer/include/p4/multiplayer.h": "6e0498c08a5c79930b9d472a09275cf5dacea8b28a55c092135c221c0f6e9df9",
+    "components/p4_multiplayer/include/p4/multiplayer_uart.h": "a87b75944acea5706f16aa52ef92121002c83edd8d67d03aabfad67200cefcc4",
+    "components/p4_multiplayer/src/packet.c": "4b5f4d106cdee98266e6176a6771ce26b6ed70d823843609ab6b514132d74458",
+    "components/p4_multiplayer/src/session.c": "86ebb164f47da23dd1ac4a6d59d1fea3002a8bebb7e3c77378a61bcbe6271704",
+    "components/p4_multiplayer/src/uart_endpoint_dual.c": "02c32dd32b7dbaf1564f72dd5c10f94e5e725fa465e70013b95ef2e0205d4be2",
+    "components/p4_multiplayer/tests/CMakeLists.txt": "74314eaae58bbc36f91eab45907bcb05fefca1500182a9e3bdb7ab59db97a947",
+    "components/p4_multiplayer/tests/test_checkpoint_wire.c": "0830c2dd953d40041e9a75ad6d88d1e924dc4b78a99195573ec9b9228613b169",
+    "components/p4_multiplayer/tests/test_join_retry.c": "da56981ee88f2fc344a9d20b6e869eccbdb0bdcbe64de97dc0d4727b4bba4e5d",
+    "components/p4_usb_content_transfer/CMakeLists.txt": "1f6b7554d1e40c3b8dfaf7ed28aeb91af4f6a06c43d1caba0826bb316079c04d",
+    "components/p4_usb_content_transfer/include/p4/debug_control.h": "0d19eb0a93128e4d518698a9ffc4c3f7b5fe5bcde402eca1b3193bcc8936fc23",
+    "components/p4_usb_content_transfer/include/p4/debug_snapshot.h": "8e8f4734e4e27f564d3fab504c00b0e2c5ea78547864cc9a932f4d4f4bbf4193",
+    "components/p4_usb_content_transfer/src/debug_control.c": "acc2faf57ed31569dc0cb58f271c67220a28bf2d076c49269a5377711e4367be",
+    "components/p4_usb_content_transfer/src/debug_snapshot.c": "d9a61655a4ae8105d5aa1849d1d5f549ff88db46d95f6b843286d6975dbeb025",
+    "components/p4_usb_content_transfer/tests/CMakeLists.txt": "53050f10e4912fed9d6ad4e0539b44d30566e9da0ff006762013ecb94217ff8e",
+    "components/p4_usb_content_transfer/tests/test_debug_control.c": "1eaca0bb94aa891e4852171465038a10cdfac5c773e6c9cf5ee00c3fea1e56e8",
+    "components/p4_usb_content_transfer/tests/test_debug_snapshot.c": "30db40af68b45d840397345f74fa2dfaa896a599fa0922f4ca026735bac1a667",
+    "components/platform_ble_host/src/platform_ble_host.c": "2d9da6ddc9dbc69cfc2a54e88fb7de4ab705e573d9ccf1e3652bab353355301c",
+    "components/platform_display/CMakeLists.txt": "92d7b947c89a9b5771774abc7cde65cad4f6fb055f83adcec82bcf87f30a12bb",
+    "components/platform_display/include/platform/display.h": "55af9154cf67ba5d713154c2abd45901e3eec0500a5218a105c64a49729dd85e",
+    "components/platform_display/include/platform/display_worker.h": "907ca395d70c1f07a7a3c2032663da6c64bcfcff11494f9be84c905eb471685b",
+    "components/platform_display/include/platform/display_worker_esp.h": "f9a4247eb8a737b2bad3e426d66afd29c846b55ec1684fdca7a9382242d32ec3",
+    "components/platform_display/src/display_worker.c": "b30b3e8f94b346fef462eea7f7b9b8f348e8b836d8eef3c4186ab3ec3ed74c1f",
+    "components/platform_display/src/display_worker_esp.c": "dcd10837715620ca0b07cbd1b84f2096090e7e9fdd0fa4d192267ff479b90421",
+    "components/platform_display/src/platform_display_layout.c": "42e5a8f26b5779afc4c2fdf208fb8e1ab5893b20a136426741f8e2eb029219d3",
+    "components/platform_display/src/platform_display_layout.h": "5e16b0040ab592b587242ec220664247495d53aba0e0ddf29f4bbb1bf53aa402",
+    "components/platform_display/src/platform_display_tab5.c": "fde8caafec2a16bf27b4cc60e682a66490e4015dd1fffd2b77dcc5ff839b57de",
+    "components/platform_display/src/tab5_game_prescale.h": "4b710fbe9b72a602e1c457dcee5e1df89c157a4299950dbbf2e11963578ef3d8",
+    "components/platform_display/src/tab5_prescaled_game_transform.h": "98cab86ad65d89cb09458dec681478990d4c85099762f991d54e8d4ccbddce09",
+    "components/platform_display/tests/CMakeLists.txt": "5208f9a28fac04068a1ed93ad0c883c3a04a69aaeb73fa45cc3713402a6bde2d",
+    "components/platform_display/tests/test_tab5_game_prescale.c": "6da0b905236f5632aae2c6d43da57fdbcf0e8b715738cd7252fa1b32828ca74e",
+    "components/platform_display/tests/test_tab5_prescaled_game.c": "e45767c98c5feeb9aaca96765956dd4de77cb11d182b8b86e81d9caf64fadc43",
+    "components/platform_display/tests/test_tab5_prescaled_game_transform.c": "a9834b2a5e15cc35e599890dedb8c5f7f49e4b34b4fb48b5e3454d44c837d5c6",
+    "components/platform_game_catalog/src/platform_game_catalog.c": "14976ee6e93181b4dfd65887a982f1f67fd1a3343800c70e3b28641c29d5751d",
+    "components/platform_game_catalog/tests/test_catalog_scan.py": "06cda386419a2f7b7299941a4ca3b1b01a06fb2c1ff7b990fb6e4477c11cfa28",
+    "components/platform_game_loader/include/platform/game_loader.h": "af00e238fabcb9a0218b200cb65fa2ea8ab803ac2961f7ea243482b17291e193",
+    "components/platform_game_loader/src/platform_game_loader.c": "a1bbd8fa89387b32cbb9b84b319c061570e964504c700eac75a71e85d0b1bd0f",
+    "components/platform_game_storage/CMakeLists.txt": "af4b400727c178abf56a7e9eb46e89dcfc068ee92af4d3bb8861a2fd7e91692f",
+    "components/platform_game_storage/include/platform/game_storage.h": "8148612c93549ca161b4a1c90ef66f1f7dcf01862b82081263c39a9bd8dd94fe",
+    "components/platform_game_storage/src/platform_game_storage.c": "69658b02b79495ef65fb78183f2a4fdf84ca174a80446c0fada8a9936bbe7b24",
+    "components/platform_game_storage/src/sd_metadata.c": "233ebfda3363ca41315e7c61792fe17e1bc2eea4dd660dc5a29a435f32768924",
+    "components/platform_game_storage/src/sd_metadata.h": "58fea2864548a649c4f32fb489801ede1efe0395fbe4905a4741a11b97067496",
+    "components/platform_game_storage/src/storage_block_read.c": "6d9cbf54c85c5660f3801a43a52aac9ec924ae1f501852a69be390fbeea15a12",
+    "components/platform_game_storage/src/storage_block_read.h": "1ae7855e0a162d36d8a134bb68fb81c7e0612c380b077c2096da28562dac1bf7",
+    "components/platform_game_storage/src/verified_reader.h": "b75596dd949adb11f575fe12afa4b4587354e59d8d0ddc8fa7c930c76dbb8154",
+    "components/platform_game_storage/src/verified_wad.c": "a48b816ebfc6f0c3ea8517c677498492a7dd7d50b7274f209a118102246c31a8",
+    "components/platform_game_storage/src/verified_wad.h": "97d1d5281f60d0937c9317194d82b381b0d038c4935703bbde27fff6de5e97f8",
+    "components/platform_game_storage/src/verified_window.c": "9b03c54083b6621c3db64873e5f6ca0fdfb22427a812ccece5a7349dbb495ad4",
+    "components/platform_game_storage/src/verified_window.h": "1b0bab236ed777fe06baffaf03b24dbc4aa1d5ffbbac11cc56db85c2c41cec02",
+    "components/platform_game_storage/tests/CMakeLists.txt": "23cd42fccc51beb90490b4939436e99c191ec71b147e4413519e2ebc4a958ed6",
+    "components/platform_game_storage/tests/mocks/esp_log.h": "bb9eaf98a56f61d81c3e8803a6309f3e335a6a926cca33327e3272c7692ebe29",
+    "components/platform_game_storage/tests/mocks/esp_timer.h": "82a7c14acf5d1cdcbea1b23bab880c69562da88013adc34ff5f2ae2115fb08d1",
+    "components/platform_game_storage/tests/mocks/esp_vfs.h": "2c2507a63fdd7062fbe4f0352f053d0a7539c72519c9bba0e47139bcdba32e67",
+    "components/platform_game_storage/tests/test_arena_vfs.c": "38db5bd5826a3b8d806f93397c4d97a75b3b7a43d2e768752a38863cdb013825",
+    "components/platform_game_storage/tests/test_loading_progress.py": "fe84aeddb1fdaf4c3380af2d245c77f95775e61c7f97f3fda6e0e162aefde6d9",
+    "components/platform_game_storage/tests/test_sd_metadata.c": "735a96bf18b0031d29df2809212c7e9805590255e9fe7b9549dfcf616ded52fd",
+    "components/platform_game_storage/tests/test_storage_block_read.c": "6be8cd3b0868d49cfbabfdaa13f7ea4bf61222b40f65f5ca29565cf6ca470300",
+    "components/platform_game_storage/tests/test_storage_cursor_read.c": "9ad72d71e7b071800d2fd833bf4099043cfe077e212ec15268c29ee91ad5030b",
+    "components/platform_game_storage/tests/test_storage_read_batch.c": "87a7b357d4510bd6d26ffba6b0eeb32657a33b0d5ce83e1fb201bc824d931538",
+    "components/platform_game_storage/tests/test_verified_reader_layout.c": "ad04b5c44a4d2a5c66e3fad8386d413f6c87f1335b25860b8f7304839aeb4c51",
+    "components/platform_game_storage/tests/test_verified_wad.c": "576aee27d4b0db9165a4052588fd897c80472b534359dbf81f60441ce768d4b5",
+    "components/platform_gamepad/include/platform/gamepad.h": "639e3f44501ba2f96bc65d5a378e29cc2911c9a8a4038fc8a80439577dc6159c",
+    "components/platform_gamepad/src/platform_gamepad.c": "4a0a99c06ec3b228db1863d9bde89809334121fb45dc38f64a19bf0341595bd2",
+    "components/platform_gamepad_xusb/tests/test_broker.c": "dd9a76ddb0d4e69a427b1456259853af80568321b0deb9f9a910ec556e085ba2",
+    "components/platform_multiplayer_ble/src/platform_multiplayer_ble.c": "ee8220a8125ecf06ed630f9d1c8de9d494f6f83fbd28fcd7ed8023950df08fc1",
+    "components/platform_multiplayer_wifi/include/platform/multiplayer_wifi.h": "84e74176c7d10bae461e10d9dd9aeaa3add81c4d2ab06586ffb006a896d66412",
+    "components/platform_multiplayer_wifi/src/platform_multiplayer_wifi.c": "ce9db09d84effab7a7231b503ff4f3697e6f56d141c95ce183f13e9812b410e2",
+    "components/platform_multiplayer_wifi/tests/CMakeLists.txt": "f2a38cdef08938d1ae63537949d7e6ca61274be746d2fe83f35f6fcded06016b",
+    "components/platform_multiplayer_wifi/tests/mocks/mock.h": "1a4cf1d0cf666b9953268ab7903835fddbd4d76bd0e350f94b105f3a907b1e14",
+    "components/platform_multiplayer_wifi/tests/test_poll_drained.c": "2021cd171cf8c7ce97c6f30b70ce5957c949c5f5152188932f3b57faac23a8b6",
+    "components/platform_multiplayer_wifi/tests/test_retry.c": "8af8f697db7482a30df2a95f0efbdfd95dbbd48a25751fc859503d76072a9ebd",
+    "components/platform_multiplayer_wifi/tests/test_wifi.c": "568ccd14b0c3efe51a01dd61495a42f8b6bb6ef1010bae6214a1e1461b540426",
+    "components/platform_touch/CMakeLists.txt": "deea945b8f74d002fc0ab8d1819ae45fe11ce897b188756795686a9876cfde8e",
+    "components/platform_touch/include/platform/touch_sampler.h": "035016583c6c24c32a6bda914463ae384b636385d6a647aa18100c88d1a2dc8c",
+    "components/platform_touch/src/platform_touch_sample_queue.c": "cb05acc67a1256825a31ec5c3686238e56f3c401ba9f8fb131a4986eda6a12fe",
+    "components/platform_touch/src/platform_touch_sample_queue.h": "7c2b40288d7571b244a52b85252b1978ec0897b26ff1c7ce64f2d3c05365d8ae",
+    "components/platform_touch/src/platform_touch_sampler.c": "2b971b21e091c80c08abf80ff88152c9c647ee4bde6652f26cd993ffef282b87",
+    "components/platform_touch/src/platform_touch_sampler_private.h": "6a53c3f118bbe08a8e7155fbd3462255f38e926201be73afcb09f839dcf1d7ed",
+    "components/platform_touch/src/platform_touch_tab5.c": "44b83c0d2e00756c52f20d206055eb3be8326ff37a5bacd3c875debc79d024b4",
+    "components/platform_touch/src/platform_touch_tab5_io.c": "595babc7197ddd30c564ed8ec1fc335d516f7c2657d916e59a9303164184bdea",
+    "components/platform_touch/src/platform_touch_tab5_io.h": "8bef49418520482af5882e78df98acc319bf86b5496b53dfcde89a926427a51a",
+    "components/platform_touch/tests/CMakeLists.txt": "cfcb98a8651b68ea95a22774074829a0e94d0b4e70e0e693e4a2c0410f7dbe68",
+    "components/platform_touch/tests/sampler_mocks/esp_heap_caps.h": "4df22dc7c0a5948d78db5d9fb225d4654a4be827e70daf47acbc529ae80f3d42",
+    "components/platform_touch/tests/sampler_mocks/freertos/FreeRTOS.h": "fabf569d1461e00b60df8fe9c9f3ad47aade39b45cd17b425acc461667b5db69",
+    "components/platform_touch/tests/sampler_mocks/freertos/task.h": "9c400796c1ce722fbc19e20cc6a28fd55f3d54befac481ef875781a1c1fe9fae",
+    "components/platform_touch/tests/tab5_mocks/driver/i2c_master.h": "d031bfa98f1dfd3918b45ce7ffbac26e9730bf71da561f79546a885cde0256a7",
+    "components/platform_touch/tests/tab5_mocks/esp_lcd_touch_st7123.h": "2ea77403a89abce87c4cd38c8acba49798a08d0383872d42bc0b7ad76cbb247d",
+    "components/platform_touch/tests/tab5_mocks/esp_lcd_types.h": "8497a47e3a44d0506536455cea035f11d0ab126ffff159f2cdce3f9c97d3a2cc",
+    "components/platform_touch/tests/test_platform_touch_sample_queue.c": "bd1d898c57d93af3f25eab16e9753bf8bc04ac750c8573a9f5a89f11c0cf0e8c",
+    "components/platform_touch/tests/test_platform_touch_sample_queue_recovery.c": "09715bc2549185f6ba8c2cb6bc8ca267d4de7b6c15306952d6286f89db56990f",
+    "components/platform_touch/tests/test_platform_touch_sampler_runtime.c": "0ff572f834f82468a8cb4e97319c9820ce094d480a6fd6903759602b0b24625c",
+    "components/platform_touch/tests/test_platform_touch_tab5.c": "f6afce4a4172788890c259d26619bc8e4e80bdc16c54ce66fbe5b7a7ea6cecae",
+    "games/checkers/CMakeLists.txt": "5b0da2cba6633cdc5e996ada4c30f220564827763a99b310de7bccb2317ee896",
+    "games/checkers/game.json": "921cb3c9dbb8c9c38dd2e71d780829ee1be97a7d442dd2f1fd71af5fe9fbfcab",
+    "games/checkers/src/checkers_network.c": "d5ff9f57e43cc83e70f2e22b83e38090e20e3a69515ee7c238887f55450dc8f9",
+    "games/checkers/tests/test_checkers.c": "d8a75d1d8fed9b8c04f12adf588b97ce6cb16c76cfe3ee74f35c192d2d7dd331",
+    "games/p4_air_hockey/CMakeLists.txt": "ba75065373d83ccd643086eef491af0a7e5855d63b7394c44accae89e6759bf2",
+    "games/p4_air_hockey/game.json": "a1fad6d29226c68fe2042d9c8a232642c2aa37f9a0e86d4717a50c78856e3cee",
+    "games/p4_air_hockey/src/p4_air_hockey_network.c": "685ea070cbeaa2345b66e54230de269bbdcb445c2d088c5f3d88c1194684d7a6",
+    "games/p4_air_hockey/tests/test_p4_air_hockey.c": "d639d0c4c5894e714f16f6e1f3bc9c205df365433791af4de4175fa85a19e735",
+    "games/p4_yahtzee/CMakeLists.txt": "1c2af5e22f0406710ab6e5d7decbe5473948b8b1eb0d5f9d38b3aa6ad0727bfc",
+    "games/p4_yahtzee/game.json": "2119792b59b5e320caf7ec1aa4ef2ad5bb53c4b3757625f4ab99fc19c6c78d07",
+    "games/p4_yahtzee/src/p4_yahtzee.c": "4e22b59285686375917a8362b4cecf3bc6d819d4aa5603630c01d3e23178182c",
+    "games/p4_yahtzee/src/p4_yahtzee_internal.h": "a20da9b50b953711ef02fa1e120d82f4ecad94acc4564ccd200401b5d90a6d1b",
+    "games/p4_yahtzee/src/p4_yahtzee_logic.c": "282e8b162e76e834e8237fc97b22d455633de5390c7b6e979243cf60b0e0b31b",
+    "games/p4_yahtzee/src/p4_yahtzee_network.c": "22b89b4ff2d5032c322a3475eb0cf142263c7e4952be774c3286884db08775a0",
+    "games/p4_yahtzee/tests/CMakeLists.txt": "cefc6a1ef42475517ec2746e8176ad79f9a83d4196b0796faa43833cadde87de",
+    "games/p4_yahtzee/tests/test_network_lifecycle.h": "700130967a34af3186c1b96712057d5f5ffe19d95b066961c716b1d64f23500c",
+    "games/p4_yahtzee/tests/test_p4_yahtzee.c": "9746c5dc64738d619228e26f64be5958b20b26f4b8af3747260a868aa9f58260",
+    "games/tide_maze/CMakeLists.txt": "56572b1dcdc1d739ecf40f696bfcda02f6bebabd952bab78006acc3730e73130",
+    "games/tide_maze/game.json": "666cf2c545ae7355659adcbdd8842b25774f110f554107d36c404738ee6052c7",
+    "games/tide_maze/src/tide_maze.c": "78de0b7fafdefd53036b670574e1b767aa94179e07788f855e5183af8358d9e0",
+    "games/tide_maze/tests/CMakeLists.txt": "c84a6c2a89788f281f086772d23a260935a44252a805d6308b004fee4461d55e",
+    "games/tide_maze/tests/test_tide_maze_audio.c": "8b4f15b70dfe8e8402f4a4ddff808e1f86a133f4db3ddad4913e92b35c97d64f",
+    "hardware/boards/m5stack-tab5/board-profile.json": "dd9fb1a0c35457d0f096df391ec206100252c611682cf99c30e333d7798a5895",
+    "hardware/boards/m5stack-tab5/sdkconfig.defaults": "af6f18feb9b2fc7265663492095565b1cb584753f7d68d97e419e274e7d85797",
+    "scripts/build.sh": "881bea5338d1d1a884274c15749936f612f31652b4f03d074a9a65209577bb5e",
+    "scripts/doom/test-arena-late-join.py": "75e09038fc4651bbe2464aaab9fcb24843e0c83ec566cfa5d9581a9fba8a9b10",
+    "scripts/doom/test-arena-rejoin.py": "d0c23d5fef609060f2556b1aa1e8e156b44e097b4c582da758008d56c29474dd",
+    "scripts/flash-console-os-tab5.py": "3c9544c4cc4ef3e004f4e7cbba86c7ed64bb2b7c04abe657336ab1b721c5ba01",
+    "scripts/p4-debug-control.py": "a0f0155a5c7e5fca64d0cec7e1682f66b13446d84ef3233ea41d3adcd6ce9ca9",
+    "scripts/tests/test-console-arena-resume.py": "97be883bb8b9681298ada110487b4c4b1dd31f3e2a307a7541700593d48fbfb7",
+    "scripts/tests/test-console-arena-start.py": "7f7104a9d32fc669431ab88dc2993cc28ade4b51f175730d57bfa0609531da17",
+    "scripts/tests/test-console-debug-transport-status.py": "b55be58102c3425b47858f97d33af704b0f35968dae5bca5a7f83826833e5939",
+    "scripts/tests/test-console-doom-loading-boundary.py": "56a1eab95c87338fb41a72b9d3aad5c642a06ba7544a0fcc6e5556c69015ffba",
+    "scripts/tests/test-console-multiplayer-flow.py": "9ad6acf5c61256d03b9add43c0a7721af7f0d15a8a4b2df1fb5fff7580ca510e",
+    "scripts/tests/test-console-multiplayer-inventory.py": "6281dc8d807bd3883d995523cbc188d85089e58c0341c4fadd14e98fa6ecc90f",
+    "scripts/tests/test-console-save-worker.py": "0001dacf2752ea08caa917e76b4f173b1dd75660790c54ca675e9ec165325a2b",
+    "scripts/tests/test-console-transport-response.py": "8981eab921f84b7b505fcc35f95431438971ed7b243b18df4e94527ae163c060",
+    "scripts/tests/test-doom-indexed-dram.py": "786f145e517d26b0a70146cf6fc8d54e1ec86dc6e486b77b9eee36c66dbf17e7",
+    "scripts/tests/test-doom-net-stats.py": "71cbb4bba98135789fcd85b39c128326196865978f92ce6a66e26581f67439ee",
+    "scripts/tests/test-doom-replay-idle.py": "783170d9e162612210183c62ff7e984f435f5fa308a97d64577980afb4e4ecd5",
+    "scripts/tests/test-native-video-worker-gate.py": "4e4444fe4eb6d6ee91e173eb4610552de6466e40f0c08204fb567aa80bbbc7d2",
+    "scripts/tests/test-p4-debug-control.py": "107a740c7b7955b78f2ec7effab676948d42b75c266e8376abeae0397f885b09",
+    "scripts/tests/test-p4-debug-snapshot.py": "c5f0c2f6b4a9c51592ac9bb2dc967c2f74b94586924b03e05eab11ada4a262a4",
+    "scripts/tests/test-tab5-arena-memory.py": "7b7ac2d048e515194349435ed2572a74a37090118da974973b5e06af8ebbd01b",
+    "scripts/tests/test-tab5-build-features.py": "32a577f25ab82eb43ab7e6bf6410aba08c8466854562ef916623b1648a2e75ec",
+    "scripts/tests/test-tab5-display-snapshot.py": "835a00905d60ea8c15c0345b1ece85a4dfac5eb53e86a2eb84484126eacfd09e",
+    "scripts/verify-console-os-tab5.py": "b4a1b5506ac36f8e4fd55f78917054632e29cedbbac74c83b263ff039cf94a3d",
+    "third_party/doomgeneric-p4.json": "eb6f5c0895297292e5ed3529a094a37a85bb01b7bed26a11524bee0ef618c5a7",
+    "third_party/doomgeneric-p4.patch": "5dfc80aa620cda1dd4507aa079d20982afb603de62b167b6911eaffbb0593403",
+    "third_party/doomgeneric/doomgeneric/d_loop.c": "734956f18a774f64f70c63b9da20a4f66a530100c72ae337f0f7ed88e0afaff6",
+    "third_party/doomgeneric/doomgeneric/d_loop.h": "4048f5ba40d376ea6ae8d4d4fbd736b5728dbee7e89f4294389c4387eb8fd6d4",
+    "third_party/doomgeneric/doomgeneric/d_main.c": "657bc91b74ceda0803b33c001490cf3add6d8ebfea18d79621c059a627cd70cd",
+    "third_party/doomgeneric/doomgeneric/d_net.c": "172820fa02d78b44b6562488c5accdb2c3446681d1f814a6857328e3451f079a",
+    "third_party/doomgeneric/doomgeneric/doomgeneric.c": "9d665b2376c151c46d40fdc96cd23ff11b37bae6e02bcfa21610ad1b8713dc74",
+    "third_party/doomgeneric/doomgeneric/doomgeneric.h": "f443f4bf6d71f44269d290d781a9b2acc056233b1726a983f1a36c68b084e199",
+    "third_party/doomgeneric/doomgeneric/g_game.c": "b7ca4d150a42a2bae334e5b6f6b1e6e52e766dc85a89a4d02fa5cc0c533d77ff",
+    "third_party/doomgeneric/doomgeneric/hu_stuff.c": "08de8663c3b84cd8c69437856a90041a14939f79617bf35b8f79b64af1653712",
+    "third_party/doomgeneric/doomgeneric/i_video.c": "a22b284c995d355ef6a6618ecd3ac5941be4f8b1135b3d7cb739506bffd85d75",
+    "third_party/doomgeneric/doomgeneric/i_video.h": "f96301eb56911f6aabde2b1de6f7139fbf522009c81e6496dd20e8437fbaca81",
+    "third_party/doomgeneric/doomgeneric/p_setup.c": "e0528ed85103772951f5f89f2a23f32dcd6de77ddf615033cb1fd111c3876c73",
+    "third_party/doomgeneric/doomgeneric/r_data.c": "77ea6c31e05a969d2f8ff7f7e1da623863c9eb9d3adcfc7322512355a89914fc",
+    "third_party/doomgeneric/doomgeneric/r_draw.c": "890e730cce0dcb3d1e2e09b77e36a89873c72d9e1d794c0fc63da72469c0b0a7",
+    "third_party/doomgeneric/doomgeneric/r_main.c": "9481acfbf9c39d6b77b31e9ef31385a3837c1eaeb9c7b6c0700004d06d929b0f",
+    "third_party/doomgeneric/doomgeneric/r_segs.c": "74728172c57193b770fe5efb2c9c47dba2991b607d14e345543f2c229d5930c1",
+    "third_party/doomgeneric/doomgeneric/r_things.c": "2a7f6d3b348a1bf831129087847f432fe8435334df2ed490be223c236f9f16dc",
+    "third_party/doomgeneric/doomgeneric/s_sound.c": "cdac89fb7a90216a466678dbe5fa2deb821ac9f174f450da7fe9272e25f9707a",
+    "third_party/doomgeneric/doomgeneric/st_stuff.c": "25de3739c5adfe550a5a58f3eedcc96b56bc592fbfdeb72a51b1a3aee7731f95",
+    "third_party/doomgeneric/doomgeneric/w_file.h": "18e4f2f1b02c291bf8a673a0b26c3ef6d6a2e6e50e71592ecf12faaff02f208f",
+    "third_party/doomgeneric/doomgeneric/w_file_stdc.c": "047526822f2eeff94389c63cb91b241885f67cb6beb2203a54958fe1a771cf9d",
+    "third_party/doomgeneric/doomgeneric/w_wad.c": "e47a9a9384fb9ea17e0210481c73fc17aca93c49a555e61575bb9124fa3ed403",
+    "third_party/doomgeneric/doomgeneric/w_wad.h": "de704f88f4258d9b3ae2316299ce888d0e991c60952bc7904cfb0f8418f437a4",
+    "third_party/tab5-bsp.json": "94006cbf842b8afaa113826f89a0a3cbd5120ca0912a9cebd1f70380c2fbe60d",
+    "third_party/tab5-sensors.json": "c7336584a9621eb3c64dfa7dcbb9716b406588575ad3fbb30af868984973e434",
+    "toolchain.lock.json": "6c45009fd4ba924dac63e442d4bcdbff134cf81037cadb8f2d12209c41564a55",
+    "apps/console_os/build-tab5/sdkconfig": "79e10b758f773feefa8ea9ad1426c2e33483c63d1006bee32f933e05d4f6e29d",
+    "apps/console_os/build-tab5/generated/protected-games/p4_protected_game_lineage.h": "877068af79618b5889112868907fd9b3a63b1ace00213e16909d4acdb5f79973"
+  },
+  "source_files_removed": [],
+  "source_binding_scope": "Unchanged tracked inputs are bound by source_commit; locally changed runtime/build/test inputs and exact environment, board, generated protected lineage, verifier and installer files are bound by source_files_sha256. Markdown/design narratives are excluded because acceptance records are completed after testing.",
+  "supersedes_installed_authorization": {
+    "file": "hardware/evidence/tab5-0.76-multiplayer-debug-authorization.json",
+    "bytes": 342764,
+    "sha256": "370abf25f699a7a52df3360b664a20acd4a8aa7883be7890ed4e713d8dd3abc2"
+  },
+  "update_package": {
+    "file": "apps/console_os/build-tab5/P4UPDATE.P4U",
+    "bytes": 4481664,
+    "sha256": "16392b7617327f8c195d078248a65cc08748afc0a787dfbe174c2ced42b52d17"
+  },
+  "unchanged_comparison_inputs": {
+    "0x2000": {
+      "source": "Extracted from both verified current 0.59 full recovery snapshots; identical on A/B and matching the prior 0.59 authorization byte count and SHA-256. Staged because app-only builds omit bootloader generation.",
+      "written": false
+    },
+    "0x8000": {
+      "source": "Existing generated partition table; exact bytes match both current 0.59 recovery snapshots and prior 0.59 authorization.",
+      "written": false
+    },
+    "0x10000": {
+      "source": "Deterministic 8192-byte all-0xFF initial OTA helper, regenerated locally and matching prior 0.59 authorization byte count and SHA-256. This is not the live selector. The guard checks and preserves each live active OTA slot-0 selector.",
+      "written": false
+    }
+  },
+  "build_log": {
+    "file": "build-host/tab5-multiplayer-debug-077-build-v3.log",
+    "bytes": 40831,
+    "sha256": "c5ff8c8c13938d27aa2eccdf7047703399ddfd1f2b4ef5e793e4a1c2e9267b9c"
+  },
+  "previous_install_evidence_binding": {
+    "file": "hardware/test-runs/2026-10-07-tab5-076-multiplayer-debug-install.json",
+    "bytes": 21215,
+    "sha256": "0dee3d5a775ec036f71664be83a5c0b3b77cd82bdb6e43a853e4fe881f684a8b"
+  },
+  "final_scope_file": {
+    "file": "build-host/tab5-multiplayer-hardware/077-final-scope-v3.txt",
+    "bytes": 5463,
+    "sha256": "370547785dad406ce5b6f09f3e3facc122ddd3a6066e283ce49961adf1269db0"
+  },
+  "prebuild_source_snapshot": {
+    "file": "build-host/tab5-multiplayer-hardware/077-prebuild-source-v3.json",
+    "bytes": 99418,
+    "sha256": "ccec416ba895a014b51abc56365ad0022afde017df9ed6243e5211b77902d961"
+  },
+  "source_freeze_attestation": "Operator supplied --final-build-complete for a controlled build after this snapshot; current source and scope match the captured inputs. Snapshot equality does not detect transient edits reverted during compilation.",
+  "postbuild_verification": {
+    "file": "build-host/tab5-multiplayer-hardware/077-postbuild-verification-v3.json",
+    "bytes": 1064988,
+    "sha256": "515e0d4123e2be1d5f259a41244bed6fa6cec85d226591b7b4975e9439f53060"
+  },
+  "helper_bindings": [
+    {
+      "file": "build-host/rollout-final-077-v3/candidate-pins.json",
+      "bytes": 54045,
+      "sha256": "becc05135ddde64e34add8f0ec15507f02d770f2e06e6e9da23c5ef51ccfeb5d"
+    },
+    {
+      "file": ".tools/esp-idf-v5.5.3/components/esp_driver_usb_serial_jtag/src/usb_serial_jtag.c",
+      "bytes": 17531,
+      "sha256": "fa671482d75c98f8ef694b816e1b5b8719f49d98696aecbcdafae93a859071da"
+    },
+    {
+      "file": ".tools/esp-idf-v5.5.3/components/esp_driver_usb_serial_jtag/src/usb_serial_jtag_vfs.c",
+      "bytes": 24086,
+      "sha256": "e26ed1445fc0b2340e2f7505d8a625bd6498961dfb893a28a5c89996a723ff98"
+    },
+    {
+      "file": ".tools/esp-idf-v5.5.3/components/esp_rom/esp32p4/ld/esp32p4.rom.newlib.ld",
+      "bytes": 1097,
+      "sha256": "64c0a1467df71ed603f03c90ef5680c076ee95c8f0e58b7a2e79682047c2d400"
+    },
+    {
+      "file": ".tools/esp-idf-v5.5.3/components/freertos/FreeRTOS-Kernel-SMP/tasks.c",
+      "bytes": 352940,
+      "sha256": "ae1a85285af3b1942c4048faef05a37bdc58418f53683f382a1177eb5cf1ee82"
+    },
+    {
+      "file": ".tools/esp-idf-v5.5.3/components/freertos/FreeRTOS-Kernel/tasks.c",
+      "bytes": 272955,
+      "sha256": "193c3d8379acc847097632da8e6d4dd2ee0bf8e069d78979d68dd26b653d48df"
+    },
+    {
+      "file": ".tools/esp-idf-v5.5.3/components/freertos/config/riscv/include/freertos/FreeRTOSConfig_arch.h",
+      "bytes": 3374,
+      "sha256": "1f4a4c560193014a4d7745f8a6a2bfc4601eae6abbf0f9819644dffd193bb7c4"
+    },
+    {
+      "file": ".tools/esp-idf-v5.5.3/components/log/src/log.c",
+      "bytes": 3125,
+      "sha256": "5ec13772f07794897e6c13a83d29b97aa58d3ae10e80537007de3764c403a8d1"
+    },
+    {
+      "file": ".tools/esp-idf-v5.5.3/components/log/src/os/log_write.c",
+      "bytes": 1224,
+      "sha256": "cf16d560637e27bdd4136b648f04360fdfd9b431b4974a74e33e3891210f1f21"
+    },
+    {
+      "file": ".tools/esp-idf-v5.5.3/components/newlib/src/flockfile.c",
+      "bytes": 575,
+      "sha256": "e3efcf113d6f89c17c24e4a4b49e82450a9e5e8333e3f6022bdb9bb2caf5853d"
+    },
+    {
+      "file": ".tools/esp-idf-v5.5.3/components/newlib/src/locks.c",
+      "bytes": 15998,
+      "sha256": "60ce1c4c18f3fc0ba832974b630bd1321eea6c42ecd05c020f3a68937ec34d2e"
+    },
+    {
+      "file": ".tools/esp-idf-v5.5.3/components/newlib/src/newlib_init.c",
+      "bytes": 7072,
+      "sha256": "97117853ef949dd1efc5a61705814ba1b40393ee2e3766a469c70f5eca79ef29"
+    },
+    {
+      "file": ".tools/esp-idf-v5.5.3/components/newlib/src/reent_init.c",
+      "bytes": 2162,
+      "sha256": "b4a0c02776144887ea33c28538680aaf95ae45c37cdbe6c9d3f78e444d0bd928"
+    },
+    {
+      "file": ".tools/esp-idf-v5.5.3/components/newlib/test_apps/newlib/main/test_printf.c",
+      "bytes": 1845,
+      "sha256": "703b032d60f94964af765069e80bf729d44594f13868cc120532c3f883f6562e"
+    },
+    {
+      "file": ".tools/espressif/dist/esp-rom-elfs-20241011.tar.gz",
+      "bytes": 3540038,
+      "sha256": "921f000164a421c7628fbfee55b173384aafaa51883adc65cd27bf9b0af9e9a9"
+    },
+    {
+      "file": ".tools/espressif/tools/esp-rom-elfs/20241011/esp32p4_rev0_rom.elf",
+      "bytes": 243316,
+      "sha256": "948f2c7d108d04a9c3a982f9c1c498fb17f2c4a68abc51f87782592034d7ce44"
+    },
+    {
+      "file": ".tools/espressif/tools/riscv32-esp-elf/esp-14.2.0_20251107/riscv32-esp-elf/bin/riscv32-esp-elf-gcc",
+      "bytes": 1709376,
+      "sha256": "69e796c3a3e35ab36b256209e2d40f21cc946bf842718b4fc6d45159208d7910"
+    },
+    {
+      "file": ".tools/espressif/tools/riscv32-esp-elf/esp-14.2.0_20251107/riscv32-esp-elf/bin/riscv32-esp-elf-nm",
+      "bytes": 1006368,
+      "sha256": "4d24fcc23c4a136df5ee781df461d0e3358e9ab193ef360014a6a079e5be2fee"
+    },
+    {
+      "file": ".tools/espressif/tools/riscv32-esp-elf/esp-14.2.0_20251107/riscv32-esp-elf/bin/riscv32-esp-elf-objdump",
+      "bytes": 440704,
+      "sha256": "0b413c2f0ecd701441fb852d5fa47d15991dabd00d2c79ee1a72ce63e46f9b16"
+    },
+    {
+      "file": ".tools/espressif/tools/riscv32-esp-elf/esp-14.2.0_20251107/riscv32-esp-elf/riscv32-esp-elf/include/stdio.h",
+      "bytes": 29660,
+      "sha256": "c900e320b44518e1a214792b8caf7cffa683fda7bae2cb70714bdcd8087fe2f8"
+    },
+    {
+      "file": ".tools/espressif/tools/riscv32-esp-elf/esp-14.2.0_20251107/riscv32-esp-elf/riscv32-esp-elf/lib/rv32imafc_zicsr_zifencei/ilp32f/no-rtti/libc.a",
+      "bytes": 14763748,
+      "sha256": "99d3cab74e3e1734d30bf90fb8bf94cc4748ea1a7f9e20b75e1f8fe8183aa88c"
+    },
+    {
+      "file": "build-host/arena-perf-076/main-telemetry-077/main-touch-telemetry.patch",
+      "bytes": 14786,
+      "sha256": "c076026f34d1050244ab123438844fc7d48fd559a69070c9f49bd491f5fe9596"
+    },
+    {
+      "file": "build-host/arena-perf-076/main-telemetry-077/manifest.json",
+      "bytes": 4682,
+      "sha256": "be26a93b39cce7b6cbced8316581c51d35f34412c03f105d4f0c1a461f0c56a4"
+    },
+    {
+      "file": "build-host/arena-perf-076/main-telemetry-077/staged/apps/doom_embedded_touch_audio/main/doom_embedded_touch_audio_main.c",
+      "bytes": 95441,
+      "sha256": "8bf02ed5e3f95b9acc870d8fa6b1c27e630d1379cfff967aafcf00e3bc8ad6b6"
+    },
+    {
+      "file": "build-host/arena-perf-076/successor-v2/manifest.json",
+      "bytes": 13046,
+      "sha256": "015215d3ddff4411993a9b16699d881324b7ef5fd536afd0cec3d3fcad8ee14b"
+    },
+    {
+      "file": "build-host/arena-perf-076/successor-v2/touch-successor-v2.patch",
+      "bytes": 92986,
+      "sha256": "677273bc190fea2a01f271806c50c6782835264f6550ace458dc5a8298fcb872"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077-prepare-review/checks.json",
+      "bytes": 53893,
+      "sha256": "e330ae171e9b53fff55d4fa62617a67b9430b52d58d11212a4e3e6d018701e26"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077-prepare-review/receipt.json",
+      "bytes": 1189,
+      "sha256": "0ae9cecf0418c8ebef6fd9ecec2532b24908bc18a6204cb1548d76d3d325f526"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077-prepare-review/review.md",
+      "bytes": 1260,
+      "sha256": "72fe4d029fb26cff30bd82dac879b9d7a16e9b665640045e0365659973322ba1"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077-prepare-review/review.py",
+      "bytes": 10557,
+      "sha256": "92300c8a6c4a63d4e51692cf661cc0cb4fd91ba6ae09139a29b1d2ff80eb98f5"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/README.md",
+      "bytes": 3194,
+      "sha256": "9055b2d523e20fbe4895895fac94eacad8efed4a275f382b53e8fda9d9adfdfd"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/checker-repair.patch",
+      "bytes": 8797,
+      "sha256": "25cb94afd7b7072dbdc240a9cf647d3f14d7688dc28ded9005da2a3da0071670"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/compiled_diagnostic_common.py",
+      "bytes": 9747,
+      "sha256": "90d84612ef12f4a0bb11f25cc897b1fc11eb5fdfc69dd1c3a989071c70542f56"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/doom_diagnostics.i",
+      "bytes": 168688,
+      "sha256": "eef6c678334c44f77afa1a4f7995b84592f1cf5b121980acf246b09f63e4566c"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/doom_diagnostics.macros",
+      "bytes": 219609,
+      "sha256": "b2d0366ef587f8d4ac2d263e0bf375a23558b53c623b8990af9dc2cbd87c2ac0"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/doom_diagnostics.reference.i",
+      "bytes": 168688,
+      "sha256": "eef6c678334c44f77afa1a4f7995b84592f1cf5b121980acf246b09f63e4566c"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/doom_embedded_touch_audio_main.i",
+      "bytes": 383242,
+      "sha256": "406287f741c911416b986fd2a6c843649ba4869ae65d5077c65774ec6cb735d0"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/doom_embedded_touch_audio_main.macros",
+      "bytes": 269107,
+      "sha256": "5341ab0fbee444207203c3c82dcc9169db903e43294b4b4aed00c33dad22ffe5"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/doom_embedded_touch_audio_main.reference.i",
+      "bytes": 383242,
+      "sha256": "406287f741c911416b986fd2a6c843649ba4869ae65d5077c65774ec6cb735d0"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/mutants/direct-legacy-v1.c",
+      "bytes": 7151,
+      "sha256": "db3f1b258d4f7852cdd48febffa0180a6c4d3c7d105163192bd801ec8d96a4a5"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/mutants/direct-legacy-v1.disassembly",
+      "bytes": 37107,
+      "sha256": "c791684c9d5fa12d5fad1c171a989db52a407cc506073322b582d9cb7254f68b"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/mutants/direct-legacy-v1.i",
+      "bytes": 179017,
+      "sha256": "93f88bd114018c237f106430d17c45261f09c5ea775ed4fec0a1e4c780892318"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/mutants/direct-legacy-v1.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/mutants/direct-legacy-v1.o",
+      "bytes": 77324,
+      "sha256": "2f1f5afa389d459df4715b32177e6e50cdb725cb27a2ce68411ee9e402fcf4fb"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/mutants/direct-legacy-v2.c",
+      "bytes": 7151,
+      "sha256": "04687024c1fc1a817578fa1fd4ff7addd906fbf3fd5d4a5774ece26d09730f7f"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/mutants/direct-legacy-v2.disassembly",
+      "bytes": 37107,
+      "sha256": "ddda4d79dab924b7daeedbe61ea778a65c6b16fb7c7fadc58410a30a249ff209"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/mutants/direct-legacy-v2.i",
+      "bytes": 179017,
+      "sha256": "4cd7ccc3f94c46f08f601d3e148c87a13ef65b1af9a14d9c020a4752ddc298cf"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/mutants/direct-legacy-v2.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/mutants/direct-legacy-v2.o",
+      "bytes": 77324,
+      "sha256": "0c65cd4816d6596da25fefbd6906cfc5874ed45e9d1d948089b122d42b0d405f"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/mutants/helper-mediated-legacy.c",
+      "bytes": 7287,
+      "sha256": "82051eb3820cc96c734608365b47aa0fddf1dec153aa6dfa2637051a309c6b4a"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/mutants/helper-mediated-legacy.disassembly",
+      "bytes": 37373,
+      "sha256": "b266ebf28dce863da2db4e308511af82c43cd0ff19704c84c5732d3a73a88aaf"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/mutants/helper-mediated-legacy.i",
+      "bytes": 179152,
+      "sha256": "ec304d8134e48f6e527b40444e3e33a8d1837873e3da648fb53a016e6ccbd6ac"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/mutants/helper-mediated-legacy.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/mutants/helper-mediated-legacy.o",
+      "bytes": 78020,
+      "sha256": "6b8faf384d340785f55d42d882d575532983d87324f096b0a5b2cc3d86811209"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/mutants/missing-custom-call.c",
+      "bytes": 7058,
+      "sha256": "33a1c6cb66738cfd0861c8ec727578439ca11df45c417e4c6d4eef2473ae215f"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/mutants/missing-custom-call.disassembly",
+      "bytes": 33289,
+      "sha256": "2edc3c18d7524a16324ec15a4292f9998909a40a83d286c3c6ea37ab86b43039"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/mutants/missing-custom-call.i",
+      "bytes": 178925,
+      "sha256": "8ba9db2dda00eda8e9fd8aa5e4c7022b07ba2bfe12cd32b78fd3d9b8b15d70dc"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/mutants/missing-custom-call.log",
+      "bytes": 557,
+      "sha256": "b3c9e5d7f2afa83d8c769067944bafa0ca28920cca81948c5384c94d8f9446db"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/mutants/missing-custom-call.o",
+      "bytes": 73700,
+      "sha256": "196723efb7490d5b6b5c5536eda57d9e42ff701841db26dda1a6ff7c7482fa6c"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/mutants/prototype-only-baseline.c",
+      "bytes": 7108,
+      "sha256": "72bba42a0956da3f4e1f4a7785c11a8a8779c7eb1e58110c74860e1d249adf85"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/mutants/prototype-only-baseline.disassembly",
+      "bytes": 37087,
+      "sha256": "7876b8ce4af85b0decb900994e346ab9a91cd7b997b2e04fea50b4a93f63150f"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/mutants/prototype-only-baseline.i",
+      "bytes": 178975,
+      "sha256": "f63d81681c6fabd917c39d1db6477117e5d6cdb9630eaec1c065858e77d04a4d"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/mutants/prototype-only-baseline.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/mutants/prototype-only-baseline.o",
+      "bytes": 76976,
+      "sha256": "ec566863372e43f830fa3bd6bce26410c888923fcf89a3bcfa26a932c59250c5"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/mutants/unreachable-fake-custom-call.c",
+      "bytes": 7119,
+      "sha256": "499556dab00c0315c361e2937d9fc6a4a169ac28b396c046b6592376dbd9c333"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/mutants/unreachable-fake-custom-call.disassembly",
+      "bytes": 33298,
+      "sha256": "c7cf6d5975370e4a21b804be5c4a9daa3cf9654903ccc37983eac630ead0298b"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/mutants/unreachable-fake-custom-call.i",
+      "bytes": 178986,
+      "sha256": "0daaf971cd1d4fa0bc339e8c907fadc0c1358686927326cdf9b5ca418784436b"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/mutants/unreachable-fake-custom-call.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/mutants/unreachable-fake-custom-call.o",
+      "bytes": 73724,
+      "sha256": "261d0fbd3d84579ec0078625d4f720bc77d7dd6a88a0f369e30b0e570115e612"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/native-green.json",
+      "bytes": 517310,
+      "sha256": "6b7939a74b5963fe4b559ebc090c985f0d8cc045a3a1e7b7963ed170c4ad804c"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/native-red.json",
+      "bytes": 516727,
+      "sha256": "b91faf48c729623b8e90ab1f0b26076052d25927de489221204187eed5fb9c8d"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/platform_touch_sample_queue.i",
+      "bytes": 64450,
+      "sha256": "2023439119381b5903ee1183877d4732dafc2c45735516aa62b33a72283344d0"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/platform_touch_sampler.i",
+      "bytes": 149521,
+      "sha256": "386d69f8c75aa73813f81d5fe3129455090378109cea437bbe0ca612e6476ece"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/platform_touch_tab5.i",
+      "bytes": 178975,
+      "sha256": "f63d81681c6fabd917c39d1db6477117e5d6cdb9630eaec1c065858e77d04a4d"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/platform_touch_tab5.macros",
+      "bytes": 224423,
+      "sha256": "20af5940f28801c6f331b0205afe3c2545c22a80eb784c250a29dda1eb9bfe24"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/platform_touch_tab5_io.i",
+      "bytes": 66094,
+      "sha256": "2a9fb60c89df13182de84bd4af6e29c3b8ab1d1f876484d7f6e43b8ddc1cc86b"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/receipt.json",
+      "bytes": 9507,
+      "sha256": "7ecaaf687aaec3a2203d621270080ce5e9402ae5ea1d50b5885e06aed2a9c3e1"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/reference-pins.json",
+      "bytes": 6517,
+      "sha256": "2c6a4c10b69fbad069287411c17866ca59c44d1fc47af34db090e741386aa92f"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/reproduction-inputs.json",
+      "bytes": 159603,
+      "sha256": "d47a86bf1c0adce6743fb972ee66a9c35ca65bc46303083de6f284be27a66e4f"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/seal.json",
+      "bytes": 225,
+      "sha256": "647ee3c45a3fa62b05bcc815bb10f787b7a673cab4d6a91b9d0567fad70a35ea"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/seal.py",
+      "bytes": 3282,
+      "sha256": "1aef06f9c642fce281abdcc49d0abad7210705826c6853a2c1fc56962a3778e4"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/test-results.json",
+      "bytes": 468186,
+      "sha256": "4d13ada3c0f74bd26827f63aff4befbfe668649dfa1ef294944df81e7ae46106"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/test_repair.py",
+      "bytes": 8674,
+      "sha256": "724171d5029c3000077bfaac0fa170f1ccb7a1134b4854a22ec0c9254fa3995b"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/uart_endpoint_dual.i",
+      "bytes": 213702,
+      "sha256": "bef4d9b672f2f3eb631d76c11e65c194ddf2dc48f1430cd90bc4a64857e28c33"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/uart_endpoint_dual.macros",
+      "bytes": 251980,
+      "sha256": "df902722bb58e6843a4c2bfe061b7859bed1fcbdafe40d0bdceef7f128887a5f"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/uart_endpoint_dual.reference.i",
+      "bytes": 213702,
+      "sha256": "bef4d9b672f2f3eb631d76c11e65c194ddf2dc48f1430cd90bc4a64857e28c33"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/verify_compiled_successor.py",
+      "bytes": 12924,
+      "sha256": "85e0d07ebbe742e74b4bad7891ba6b99d8cae82db142a274cabfc6dd977cc58e"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/verify_compiled_telemetry.py",
+      "bytes": 4316,
+      "sha256": "33345e28f7254b774d81e55bb409968e258b85e25671849ba6d1eff42dc6c135"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/verify_compiled_touch.py",
+      "bytes": 15792,
+      "sha256": "b008fcb0547c978fcacc1b0a58eb696241439d58d2984baebfa804f1f1f4e6dd"
+    },
+    {
+      "file": "build-host/compiled-gate-repair-077/verify_compiled_transport.py",
+      "bytes": 5752,
+      "sha256": "1d5f772c3f9620c61dad8bdd6d792d1d71da0e8d35a3ddc290baa0c53ee4aaf4"
+    },
+    {
+      "file": "build-host/composed-077-prepare-review/receipt.json",
+      "bytes": 10466,
+      "sha256": "4e7005effa522f3a5c7957e4909c23ab2d64ca9d57788b597d1474069b8833bc"
+    },
+    {
+      "file": "build-host/composed-077-stage/build-multiplayer-fixtures.json",
+      "bytes": 382,
+      "sha256": "34070071299712aff4ca1b2ef16d7ecbff61cf3077080123240e5be00ddb0614"
+    },
+    {
+      "file": "build-host/composed-077-stage/build-multiplayer-fixtures.log",
+      "bytes": 1526,
+      "sha256": "35e1d28ee0a49156df4d893e2221afe54f7f4c7bee51df75716bb6d244a4e6c8"
+    },
+    {
+      "file": "build-host/composed-077-stage/final-v2/combined.patch",
+      "bytes": 144674,
+      "sha256": "04ea8fff6e9d3f4e173abaf9eb71ff78c8d281fb106cf7a5f4d1b338e74e3133"
+    },
+    {
+      "file": "build-host/composed-077-stage/final-v2/composition.json",
+      "bytes": 2072,
+      "sha256": "d1c88861d76f5bf3d9b2a64783bb31fbb1f1b36e2629a40d72b76b319191daf2"
+    },
+    {
+      "file": "build-host/composed-077-stage/final-v2/production-bindings.json",
+      "bytes": 8865,
+      "sha256": "7f3b0f9469833ca62ccd9e39f2d346a557aa11c7e3c9e587018167a40e5223c7"
+    },
+    {
+      "file": "build-host/composed-077-stage/final-v2/production-promotion.json",
+      "bytes": 38600,
+      "sha256": "3641616d5b0d93b5181eeb68c5d9d029ce9e7c18c36795f5d9e7104b4d2725e6"
+    },
+    {
+      "file": "build-host/composed-077-stage/final-v2/staged-inputs.json",
+      "bytes": 208057,
+      "sha256": "88d6a9cd0feba9aa44dcaa9381d7d4b7be09ac609ac1b5b351d9c13b00815133"
+    },
+    {
+      "file": "build-host/composed-077-stage/final-v3/apply-proof.json",
+      "bytes": 717,
+      "sha256": "ab554a8e1fcdef87d75d8ff54c953414cf9414c93a39c470b3939959edcada48"
+    },
+    {
+      "file": "build-host/composed-077-stage/final-v3/combined.patch",
+      "bytes": 144694,
+      "sha256": "3180c6f9d634da8d7d2973547d662b951cbd180fd3a3dee9e6d9734bd7486506"
+    },
+    {
+      "file": "build-host/composed-077-stage/final-v3/compose.py",
+      "bytes": 5633,
+      "sha256": "fe6abf8f64c16e611b556dd1bed6364b1ffd66855e35d620288e591dc50ae23a"
+    },
+    {
+      "file": "build-host/composed-077-stage/final-v3/composition.json",
+      "bytes": 2530,
+      "sha256": "a7ab255839918dbb8471d1c9edcdabd9b9d4e904d3995ffeb9a7a06f3f18f52f"
+    },
+    {
+      "file": "build-host/composed-077-stage/final-v3/postimages/apps/doom_embedded_touch_audio/main/doom_diagnostics.c",
+      "bytes": 22161,
+      "sha256": "b69d9fbaaa845be3c0d4be57b1699e89ea65e0080b0cc12e03b1d5ec8ef3a46c"
+    },
+    {
+      "file": "build-host/composed-077-stage/final-v3/production-bindings.json",
+      "bytes": 8865,
+      "sha256": "3e2a3cf3deb7bb44fcc7bb1c6da5225ac3d782227e72c3a48f9beb9b28a6eabf"
+    },
+    {
+      "file": "build-host/composed-077-stage/final-v3/source-map.json",
+      "bytes": 36464,
+      "sha256": "eb05666fa51bcabab9b93f41da10944068fc4ddaec9afd4f3cb243aec98f225a"
+    },
+    {
+      "file": "build-host/composed-077-stage/final-v3/staged-inputs.json",
+      "bytes": 208057,
+      "sha256": "9d9eb0f986f81f4067b2bf0279d9bc1e8a495b8bcf1f94ead0b03033a58c28ac"
+    },
+    {
+      "file": "build-host/composed-077-stage/final/legacy-source-contract-differences.json",
+      "bytes": 1684,
+      "sha256": "3d87136c0130f92262c3f76b1100e1422eb384b469a0df1248723895d183f4a0"
+    },
+    {
+      "file": "build-host/composed-077-stage/source-contract-with-baselines.json",
+      "bytes": 440,
+      "sha256": "c81602d406e5082d228bb08b8bc61afa9660ab9db9cf9408fecd95a1f972dffa"
+    },
+    {
+      "file": "build-host/composed-077-stage/source-contract-with-baselines.log",
+      "bytes": 1096,
+      "sha256": "2cb12eaed30ac6d5df9bce3af90e07294b98aebf3508ad5117818f6eb4a75cd7"
+    },
+    {
+      "file": "build-host/composed-077-stage/test-doom.json",
+      "bytes": 369,
+      "sha256": "4995ce6db7a1a35e81579682006d66ef3a0acd82a017adc0799ecdca73a966e9"
+    },
+    {
+      "file": "build-host/composed-077-stage/test-doom.log",
+      "bytes": 3135,
+      "sha256": "b6bdb10b05c76189e22c3965bdba363316d9b173bbbdce20354c6fcfcdb01462"
+    },
+    {
+      "file": "build-host/composed-077-stage/test-multiplayer-fixtures.json",
+      "bytes": 449,
+      "sha256": "d76683acaf0bb8569900df7195e51eb34b2179d3ca5316bde3e9485ef8123514"
+    },
+    {
+      "file": "build-host/composed-077-stage/test-multiplayer-fixtures.log",
+      "bytes": 2135,
+      "sha256": "db284035741dc193ece8b7129caa3db597a37cc207ec631fee7f52a51ff0ece6"
+    },
+    {
+      "file": "build-host/composed-077-stage/test-multiplayer-initial.json",
+      "bytes": 438,
+      "sha256": "6ec2f3a749705cff112a6de45d8b3fbbbb0323f712d270781fc9b5ca844b1e21"
+    },
+    {
+      "file": "build-host/composed-077-stage/test-multiplayer-initial.log",
+      "bytes": 33629,
+      "sha256": "ecc99cc4e7fc8e61f9a926dd1528c0db70071c48c5966e5234038d93a4709a4d"
+    },
+    {
+      "file": "build-host/composed-077-stage/test-multiplayer-script-context.json",
+      "bytes": 574,
+      "sha256": "44783509d8810667e205be0ec7ca1c952169a18022c634901c2ea01379b19675"
+    },
+    {
+      "file": "build-host/composed-077-stage/test-multiplayer-script-context.log",
+      "bytes": 3163,
+      "sha256": "d0e0696a6b1bf09e0def7aec66405d13bd3a202e9ca85bedd6711ebdcae4ce3d"
+    },
+    {
+      "file": "build-host/composed-077-stage/test-shell.json",
+      "bytes": 371,
+      "sha256": "561edba70cbcce4d8254d7db3606f49655bbca19aacf3b77485fa2873761c8f3"
+    },
+    {
+      "file": "build-host/composed-077-stage/test-shell.log",
+      "bytes": 1021,
+      "sha256": "15fd2e0a7167885c4cf7e48163d424bb89b3a2a334f8d6c1d6f954e206b68dcc"
+    },
+    {
+      "file": "build-host/composed-077-stage/test-touch.json",
+      "bytes": 371,
+      "sha256": "eab08e78e965127aec294e75de29397fe956cbc303af771c49c873a07ba2c3cc"
+    },
+    {
+      "file": "build-host/composed-077-stage/test-touch.log",
+      "bytes": 1329,
+      "sha256": "ff4268b25cf5742d1f5a1d00dd123e8bc529d4816540e0ff259d84c34b489fe9"
+    },
+    {
+      "file": "build-host/diag-enum-correction-077-prepare-review/receipt.json",
+      "bytes": 1184,
+      "sha256": "868d9aed48fa75b55a56eb3592ff0a681d4ee629d2c26b4c90ff47a3e8489f44"
+    },
+    {
+      "file": "build-host/diag-enum-correction-077/after.c",
+      "bytes": 22161,
+      "sha256": "b69d9fbaaa845be3c0d4be57b1699e89ea65e0080b0cc12e03b1d5ec8ef3a46c"
+    },
+    {
+      "file": "build-host/diag-enum-correction-077/after.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "file": "build-host/diag-enum-correction-077/before.c",
+      "bytes": 22141,
+      "sha256": "d062e1ebd56e763d1c345aecda11495354e44a572fa8d35f6f68c028fdadc00c"
+    },
+    {
+      "file": "build-host/diag-enum-correction-077/before.log",
+      "bytes": 451,
+      "sha256": "4ccdafeee2b3e0a8182c774d146477b79404eb58d5eb1dbabdf801397a278fac"
+    },
+    {
+      "file": "build-host/diag-enum-correction-077/correction.patch",
+      "bytes": 615,
+      "sha256": "fb35905464405121ffd3e9c9fe95a43c91ba6bcac9c1b380f97eba3c449f97f7"
+    },
+    {
+      "file": "build-host/diag-enum-correction-077/original-compile-command.json",
+      "bytes": 43081,
+      "sha256": "a775456853aba1f8a56adf899f54085d153132816d742d46e56016fcca03f3cd"
+    },
+    {
+      "file": "build-host/diag-enum-correction-077/oversize-mutant.c",
+      "bytes": 22161,
+      "sha256": "76867383f4983da6c5de2cefaadb027ad86c4d44b1a64828bcb58a235cbeeb3e"
+    },
+    {
+      "file": "build-host/diag-enum-correction-077/oversize-mutant.log",
+      "bytes": 375,
+      "sha256": "c8a8eeb5e2d2bb5f83082e37c666e0cf4f012735d4fbe305f3d2f130f6d9a94e"
+    },
+    {
+      "file": "build-host/diag-enum-correction-077/receipt.json",
+      "bytes": 143860,
+      "sha256": "c2f751a2c2153d546f7788f3feda4d1387201708dec34cbb5d804d49dfb5052c"
+    },
+    {
+      "file": "build-host/diag-transport-077-review/libc-evidence/evidence.json",
+      "bytes": 4345,
+      "sha256": "1629bcfa42a17e47c0a2cf4835093bfd0e47ed5cfd8663c6054a173f791adbbd"
+    },
+    {
+      "file": "build-host/diag-transport-077-v2-review/libc-evidence/evidence.json",
+      "bytes": 7597,
+      "sha256": "fbb0e94370d329dec40045f193ad085cf93e7856871c63833d71489dbdec04e1"
+    },
+    {
+      "file": "build-host/diag-transport-077-v2-review/receipt.json",
+      "bytes": 48243,
+      "sha256": "02c0d88c1ee06cd99f04791b7e1c078d3801ca3a0646f5c300ff00aa11c6f766"
+    },
+    {
+      "file": "build-host/diag-transport-077-v2/diagnostic-transport.patch",
+      "bytes": 13896,
+      "sha256": "cbcd9087ec2b3f8b665b2a1e01b19650493e17855846ed2ff0ab9d3b633c719a"
+    },
+    {
+      "file": "build-host/diag-transport-077-v2/final-artifact-binding.json",
+      "bytes": 1905,
+      "sha256": "6b61341a835273e22b5ade58f33e4e94cdc3ec3cb8b9626113b54a9b61318c11"
+    },
+    {
+      "file": "build-host/diag-transport-077-v2/final-receipt.json",
+      "bytes": 44796,
+      "sha256": "8909a7997044a591bda3d099b70194f14e58b966cbc3fc1bdb9aa9c4e747c56f"
+    },
+    {
+      "file": "build-host/diag-transport-077-v2/staged/components/p4_multiplayer/include/p4/multiplayer_uart.h",
+      "bytes": 4868,
+      "sha256": "a87b75944acea5706f16aa52ef92121002c83edd8d67d03aabfad67200cefcc4"
+    },
+    {
+      "file": "build-host/diag-transport-077-v2/staged/components/p4_multiplayer/src/uart_endpoint_dual.c",
+      "bytes": 23222,
+      "sha256": "02c32dd32b7dbaf1564f72dd5c10f94e5e725fa465e70013b95ef2e0205d4be2"
+    },
+    {
+      "file": "build-host/input-latency-cycle-076/receipt.json",
+      "bytes": 106446,
+      "sha256": "3008d04e7677b4f3e23472a6dbce4a263181435ac04f143070db7e4d7ee02cdb"
+    },
+    {
+      "file": "build-host/input-latency-cycle-076/stages-v2/pipeline_safe/proposal.patch",
+      "bytes": 6090,
+      "sha256": "3bc1aca6f009b699736226d7716aba9b727d7eed03d051ce859656be53dd9f2e"
+    },
+    {
+      "file": "build-host/rollout-compiled-gates-077-prepare-review/receipt.json",
+      "bytes": 1167,
+      "sha256": "415ee8bc77c521e11d4ea8d73a6effe669827866c8e67806e939410fb0150f0a"
+    },
+    {
+      "file": "build-host/rollout-compiled-gates-077-prepare-review/utility-import-clarification.json",
+      "bytes": 1279,
+      "sha256": "1c05421d990ef128b03e9023d96fc4d80c14eb1b40fb6ffcef04b9ebc2a42438"
+    },
+    {
+      "file": "build-host/rollout-compiled-gates-077/compiled_diagnostic_common.py",
+      "bytes": 9491,
+      "sha256": "ae21a96e95834cd6199a80233289f002d247548ea9532e9e27bbc97587dbd648"
+    },
+    {
+      "file": "build-host/rollout-compiled-gates-077/receipt.json",
+      "bytes": 1907,
+      "sha256": "3601ae7884000f3f18e499047858f750debc4bc550f906ceabc53387f4c3780d"
+    },
+    {
+      "file": "build-host/rollout-compiled-gates-077/reference-pins.json",
+      "bytes": 5437,
+      "sha256": "ae7234656efbe95b5694238845c1f17e8013949e467b89102b604b32c24e2d1f"
+    },
+    {
+      "file": "build-host/rollout-compiled-gates-077/verify_compiled_telemetry.py",
+      "bytes": 4316,
+      "sha256": "7656cc37eec13d5641a935e778e6aa68bb5eee2eb9f3c9de08eaf6bfe6dafb79"
+    },
+    {
+      "file": "build-host/rollout-compiled-gates-077/verify_compiled_transport.py",
+      "bytes": 5073,
+      "sha256": "a99acc548a8737f141b9facd130931def40f9c0bd4c01a590fcc5d023b4985d4"
+    },
+    {
+      "file": "build-host/rollout-final-077-prepare-review/receipt.json",
+      "bytes": 1223,
+      "sha256": "55de2bfdb22fbbe9073839e04e8880af929e8b80abaa779d0ebe21fc3d9fdce2"
+    },
+    {
+      "file": "build-host/rollout-final-077-v2-prepare-review/receipt.json",
+      "bytes": 1155,
+      "sha256": "15ba7d0d20ad0173e1e03f340ceadbf4d9bff3d87124f7a7d448a0409a5e341e"
+    },
+    {
+      "file": "build-host/rollout-final-077-v2/assemble.py",
+      "bytes": 10065,
+      "sha256": "1ae918479c58d78a4b6a7c2937205c375d9da43cd18ab8c3844387601c2ddf1c"
+    },
+    {
+      "file": "build-host/rollout-final-077-v2/candidate-pins.json",
+      "bytes": 38127,
+      "sha256": "5a2944fc9a9676b8fee5de42358a570798bfa198ed118775a23dd7e601462ee9"
+    },
+    {
+      "file": "build-host/rollout-final-077-v2/compiled_diagnostic_common.py",
+      "bytes": 9613,
+      "sha256": "0954818b8d2f37d5b3d595014f0f6a516d242be2aa5d590e2a2a949e6452422c"
+    },
+    {
+      "file": "build-host/rollout-final-077-v2/correction-review-pin.json",
+      "bytes": 160,
+      "sha256": "e7724744ad5ae645c1826e55a295a1d38e87d387081434ddb0466ca5d2f09282"
+    },
+    {
+      "file": "build-host/rollout-final-077-v2/prepare-0.77-authorization.py",
+      "bytes": 35837,
+      "sha256": "edb111696f6b5d6d2f83152ae75ccadfefc55f4b49ddfd0963571829b9718a5e"
+    },
+    {
+      "file": "build-host/rollout-final-077-v2/preserved-077/P4UPDATE.P4U",
+      "bytes": 4481664,
+      "sha256": "16392b7617327f8c195d078248a65cc08748afc0a787dfbe174c2ced42b52d17"
+    },
+    {
+      "file": "build-host/rollout-final-077-v2/preserved-077/app.bin",
+      "bytes": 4481408,
+      "sha256": "59de8d8306f07624f579afe11aea82e171925e9ab7eebf649535b6a66e96e9b4"
+    },
+    {
+      "file": "build-host/rollout-final-077-v2/preserved-077/app.elf",
+      "bytes": 25311940,
+      "sha256": "bbc89d97893d56d76387e5dbbe257b595f1f6b91f46a06fee7b5296fba219676"
+    },
+    {
+      "file": "build-host/rollout-final-077-v2/preserved-077/app.map",
+      "bytes": 8223510,
+      "sha256": "bf86a6560dcd52231b65e84f339f4196b0ef1c15207a2f8870172aea570f23e1"
+    },
+    {
+      "file": "build-host/rollout-final-077-v2/preserved-077/receipt.json",
+      "bytes": 949,
+      "sha256": "f7a0cdcaeec8e61fc158dc6065b1d50f4a7259469f618681ed38f17fdbcb1223"
+    },
+    {
+      "file": "build-host/rollout-final-077-v2/receipt.json",
+      "bytes": 5573,
+      "sha256": "fc33c58e603cd18a3208dd6774f061fab37b964c8a96e96cb47762e7db68434f"
+    },
+    {
+      "file": "build-host/rollout-final-077-v2/record-0.77-install.py",
+      "bytes": 8220,
+      "sha256": "4ed262abedfdefc885899a65cc766f3c2219c9f56db38f44ef09164e1b7e47c2"
+    },
+    {
+      "file": "build-host/rollout-final-077-v2/reference-pins.json",
+      "bytes": 6517,
+      "sha256": "2c6a4c10b69fbad069287411c17866ca59c44d1fc47af34db090e741386aa92f"
+    },
+    {
+      "file": "build-host/rollout-final-077-v2/seal.json",
+      "bytes": 2819,
+      "sha256": "919d64f8f77706352e0e7be8ffbd5f53d62881f031821cac82c106793811d5da"
+    },
+    {
+      "file": "build-host/rollout-final-077-v2/source-map.json",
+      "bytes": 36464,
+      "sha256": "eb05666fa51bcabab9b93f41da10944068fc4ddaec9afd4f3cb243aec98f225a"
+    },
+    {
+      "file": "build-host/rollout-final-077-v2/verify-build-077.py",
+      "bytes": 51043,
+      "sha256": "dfcb6bc3b4759f8f58ae53d7aba71e61f852ed38369a31c5805a3a81cd379c56"
+    },
+    {
+      "file": "build-host/rollout-final-077-v2/verify_compiled_successor.py",
+      "bytes": 12924,
+      "sha256": "85e0d07ebbe742e74b4bad7891ba6b99d8cae82db142a274cabfc6dd977cc58e"
+    },
+    {
+      "file": "build-host/rollout-final-077-v2/verify_compiled_telemetry.py",
+      "bytes": 4316,
+      "sha256": "0cf107518ca41af1bd301f544399596da577b96f1d3d2b47d45fa15bed0cd761"
+    },
+    {
+      "file": "build-host/rollout-final-077-v2/verify_compiled_touch.py",
+      "bytes": 15306,
+      "sha256": "f06a05a37226f184250f3579ecc339345b1c3045453606a9c3e9e99dbb223d0f"
+    },
+    {
+      "file": "build-host/rollout-final-077-v2/verify_compiled_transport.py",
+      "bytes": 5073,
+      "sha256": "06cfe602bef15b5dbaf1c24caa97f1613e3c3f431689682129c802e518e29cd0"
+    },
+    {
+      "file": "build-host/rollout-final-077-v3/assemble.py",
+      "bytes": 10110,
+      "sha256": "c913ca25c514665ec3dc3b282a45dd83248c10ec6807c16fc0d5a6a84a9c16d5"
+    },
+    {
+      "file": "build-host/rollout-final-077-v3/compiled_diagnostic_common.py",
+      "bytes": 9747,
+      "sha256": "db033687fd4df4c7d09e6fd2163d243490680a7e65f911a33df842a3201fdd76"
+    },
+    {
+      "file": "build-host/rollout-final-077-v3/record-0.77-install.py",
+      "bytes": 8220,
+      "sha256": "4ed262abedfdefc885899a65cc766f3c2219c9f56db38f44ef09164e1b7e47c2"
+    },
+    {
+      "file": "build-host/rollout-final-077-v3/reference-pins.json",
+      "bytes": 15457,
+      "sha256": "5762c028635ea97a9c13b15f7e4715a7425740054f1910a0a531fcd674622f40"
+    },
+    {
+      "file": "build-host/rollout-final-077-v3/repair-handoff.json",
+      "bytes": 12466,
+      "sha256": "96977c923a9eb3223b70a289575374b25b4444c2b39bbd5aa8e8129dcba8a4fb"
+    },
+    {
+      "file": "build-host/rollout-final-077-v3/source-map.json",
+      "bytes": 36464,
+      "sha256": "eb05666fa51bcabab9b93f41da10944068fc4ddaec9afd4f3cb243aec98f225a"
+    },
+    {
+      "file": "build-host/rollout-final-077-v3/verify-build-077.py",
+      "bytes": 51043,
+      "sha256": "d6711d64e3c20ccb97ea04905127b28777e214d3e7aa561e05f8c752601cadad"
+    },
+    {
+      "file": "build-host/rollout-final-077-v3/verify_compiled_successor.py",
+      "bytes": 12924,
+      "sha256": "85e0d07ebbe742e74b4bad7891ba6b99d8cae82db142a274cabfc6dd977cc58e"
+    },
+    {
+      "file": "build-host/rollout-final-077-v3/verify_compiled_telemetry.py",
+      "bytes": 4316,
+      "sha256": "599395aa575fc63d39a56ba3e084a488690686092789f40a00b628a917939109"
+    },
+    {
+      "file": "build-host/rollout-final-077-v3/verify_compiled_touch.py",
+      "bytes": 15784,
+      "sha256": "46a7a4c970b7f6a237858837dc91d7a9a6ccaebc43dc8affb5a172385b3d5a69"
+    },
+    {
+      "file": "build-host/rollout-final-077-v3/verify_compiled_transport.py",
+      "bytes": 5752,
+      "sha256": "f57a0def11587ed9b21d004658b88088ac7f017a1a440a2d5220d3a280b243d4"
+    },
+    {
+      "file": "build-host/rollout-final-077/assemble.py",
+      "bytes": 12245,
+      "sha256": "22be9e9e2fb9819dc839b353f343adfece512ab4607de8ecc1ba913c781838a2"
+    },
+    {
+      "file": "build-host/rollout-final-077/candidate-pins.json",
+      "bytes": 31793,
+      "sha256": "eddb62996b09ce7b7d9f9d1dde15315dae7f9041fa8c0a01cb22d38671aae67c"
+    },
+    {
+      "file": "build-host/rollout-final-077/compiled_diagnostic_common.py",
+      "bytes": 9552,
+      "sha256": "124ab2a4b13791ebf9b610ebc781382e3fdad9d94d679e9dda4c57c06afe3950"
+    },
+    {
+      "file": "build-host/rollout-final-077/prepare-0.77-authorization.py",
+      "bytes": 35837,
+      "sha256": "d05cd848c5b20a46293040407cf24cb631e7a221e3e4e347edc74238723965d7"
+    },
+    {
+      "file": "build-host/rollout-final-077/receipt.json",
+      "bytes": 4810,
+      "sha256": "92034a804f1ee36dc6cf0e98aa663195581775556b7f5ac7ae63c3bd50cfe175"
+    },
+    {
+      "file": "build-host/rollout-final-077/record-0.77-install.py",
+      "bytes": 8220,
+      "sha256": "4ed262abedfdefc885899a65cc766f3c2219c9f56db38f44ef09164e1b7e47c2"
+    },
+    {
+      "file": "build-host/rollout-final-077/reference-pins.json",
+      "bytes": 5437,
+      "sha256": "ae7234656efbe95b5694238845c1f17e8013949e467b89102b604b32c24e2d1f"
+    },
+    {
+      "file": "build-host/rollout-final-077/seal.json",
+      "bytes": 2673,
+      "sha256": "2a5c69ee3adece6db32abb0e1471ed4eb9af65e96430f9ca62720b66dbf184c6"
+    },
+    {
+      "file": "build-host/rollout-final-077/source-map.json",
+      "bytes": 36464,
+      "sha256": "bbfd70c83584d82907bda76fe46615a9daa9410994d1cac50e8eb4760d208fc5"
+    },
+    {
+      "file": "build-host/rollout-final-077/verify-build-077.py",
+      "bytes": 51043,
+      "sha256": "497d42c7d4a0df4b72422bfb62fc458f0c5355901548042ba44d106e20261092"
+    },
+    {
+      "file": "build-host/rollout-final-077/verify_compiled_successor.py",
+      "bytes": 12924,
+      "sha256": "85e0d07ebbe742e74b4bad7891ba6b99d8cae82db142a274cabfc6dd977cc58e"
+    },
+    {
+      "file": "build-host/rollout-final-077/verify_compiled_telemetry.py",
+      "bytes": 4316,
+      "sha256": "272b21eba70f48e9585975975d3f65ba8372b236889f1cc27723cdc6b35575b0"
+    },
+    {
+      "file": "build-host/rollout-final-077/verify_compiled_touch.py",
+      "bytes": 15300,
+      "sha256": "7323403c8bd008e8ec8ab1815973d886397ae4d3b8469a2c9e07c7d57a0b0b58"
+    },
+    {
+      "file": "build-host/rollout-final-077/verify_compiled_transport.py",
+      "bytes": 5073,
+      "sha256": "3e61fae1aa643f706f830c366f1408ada61386403b008b0fbae089b85dcea2e6"
+    },
+    {
+      "file": "build-host/rollout-helpers-077-prepare-review/receipt.json",
+      "bytes": 4626,
+      "sha256": "508d92ec6ee8e05173cceb10b0b812b7354564b8070c57f4a84f8995166ef95b"
+    },
+    {
+      "file": "build-host/rollout-helpers-077/receipt.json",
+      "bytes": 9665,
+      "sha256": "f990b2b4801022baca3387ef8a5c26e85fa5193f0d88f3d950c179aae225abb5"
+    },
+    {
+      "file": "build-host/rollout-helpers-077/record-0.77-install.py",
+      "bytes": 8220,
+      "sha256": "4ed262abedfdefc885899a65cc766f3c2219c9f56db38f44ef09164e1b7e47c2"
+    },
+    {
+      "file": "build-host/rollout-helpers-077/verify-build-077.py",
+      "bytes": 50919,
+      "sha256": "5c4772651f62912665fcb1e18f9431561b698d21aebbeae1180811a463bd710e"
+    },
+    {
+      "file": "build-host/rollout-helpers-077/verify_compiled_successor.py",
+      "bytes": 12925,
+      "sha256": "816c8df168a37dc9e41a9250901b3c98f40e290a890a0cab3048c7972dfea264"
+    },
+    {
+      "file": "build-host/rollout-helpers-077/verify_compiled_touch.py",
+      "bytes": 14943,
+      "sha256": "eeb39148249366cfce61adb50213245819e40f1bf5b1e805045434932e50c927"
+    },
+    {
+      "file": "build-host/startup-vfs-fixture-077-v2-prepare-review/receipt.json",
+      "bytes": 1292,
+      "sha256": "384bf05fa9d7f5b234a0ca53d5372469692bc4103794bd41da2fb62ba537aefa"
+    },
+    {
+      "file": "build-host/startup-vfs-fixture-077-v2/receipt.json",
+      "bytes": 177667,
+      "sha256": "bcc72858c10fc7e465a8c0449dd1b70d66d4f9ef072976ff824576bbe36c828b"
+    },
+    {
+      "file": "build-host/tab5-multiplayer-hardware/077-final-scope-v2.txt",
+      "bytes": 4849,
+      "sha256": "d1d1cfc6b49f9f8df11f467d4474fb9d044a9ee26f9eb79bf510d38b0a456954"
+    },
+    {
+      "file": "build-host/tab5-multiplayer-hardware/077-final-scope-v3.txt",
+      "bytes": 5463,
+      "sha256": "370547785dad406ce5b6f09f3e3facc122ddd3a6066e283ce49961adf1269db0"
+    },
+    {
+      "file": "build-host/tab5-multiplayer-hardware/077-final-scope.txt",
+      "bytes": 4414,
+      "sha256": "ac06fd6eaa4c79c6dd1ad2b0ee308be18a1c5f9dc53f6c3a73249d62a0e733b5"
+    },
+    {
+      "file": "build-host/tab5-multiplayer-hardware/077-prebuild-source-v2.json",
+      "bytes": 81639,
+      "sha256": "ab693e09dacf9217ceb28cbf5d8a7b159b5bf993054c21efa4cd81390c84bec7"
+    },
+    {
+      "file": "build-host/tab5-multiplayer-hardware/077-prebuild-source.json",
+      "bytes": 74329,
+      "sha256": "da92d8493af35bed26cbd4929ef2514bab3e7d34bdb4e82dac25bd01c5420247"
+    },
+    {
+      "file": "build-host/touch-telemetry-077-population-review/receipt.json",
+      "bytes": 8138,
+      "sha256": "2a1b967ec5d3cd6be8f1920fa20891db9887dde8b35f986e678cd75052f1f5d4"
+    },
+    {
+      "file": "build-host/touch-telemetry-077-review/receipt.json",
+      "bytes": 4831,
+      "sha256": "c79a748cf163f4724455a1211e0bf4e25cebfa09674029d7cef0be98a95b5530"
+    },
+    {
+      "file": "build-host/touch-telemetry-077/manifest.json",
+      "bytes": 32456,
+      "sha256": "1cc4c16d26521a163044e3568e55471c98e3ce33084a195b61cddbce466127c8"
+    },
+    {
+      "file": "build-host/touch-telemetry-077/staged/apps/doom_embedded_touch_audio/main/doom_diagnostics.c",
+      "bytes": 22141,
+      "sha256": "d062e1ebd56e763d1c345aecda11495354e44a572fa8d35f6f68c028fdadc00c"
+    },
+    {
+      "file": "build-host/touch-telemetry-077/staged/apps/doom_embedded_touch_audio/main/doom_diagnostics.h",
+      "bytes": 2546,
+      "sha256": "75194d1641c8b8ac40afc6aa742910670060eb399db56bb7d5817f14bf89cf66"
+    },
+    {
+      "file": "build-host/touch-telemetry-077/touch-telemetry.patch",
+      "bytes": 3671,
+      "sha256": "caf0205a8007392809bfd140c1eca9842c5c7468d7833935b6ab6d581e584730"
+    },
+    {
+      "file": "build-host/version-golden-077-prepare-review/receipt.json",
+      "bytes": 1082,
+      "sha256": "a9cee3e1ec9b48ba78b45c5b67a4f748c0c6b7a7d90be329ccda701c64f60166"
+    },
+    {
+      "file": "build-host/version-golden-077/candidate.patch",
+      "bytes": 2441,
+      "sha256": "633996cf6243c7e2cb43b7bd3560ffe79d61090e74cfb231b09422d03134cf07"
+    },
+    {
+      "file": "build-host/version-golden-077/receipt.json",
+      "bytes": 6486,
+      "sha256": "6c9bc8a1635fc3acb7e6766dccb4d78125df86e50e6de9207efc20176cda65bc"
+    },
+    {
+      "file": "hardware/evidence/tab5-0.76-multiplayer-debug-authorization.json",
+      "bytes": 342764,
+      "sha256": "370abf25f699a7a52df3360b664a20acd4a8aa7883be7890ed4e713d8dd3abc2"
+    },
+    {
+      "file": "hardware/test-runs/2026-10-07-tab5-076-multiplayer-debug-install.json",
+      "bytes": 21215,
+      "sha256": "0dee3d5a775ec036f71664be83a5c0b3b77cd82bdb6e43a853e4fe881f684a8b"
+    },
+    {
+      "file": "toolchain.lock.json",
+      "bytes": 755,
+      "sha256": "6c45009fd4ba924dac63e442d4bcdbff134cf81037cadb8f2d12209c41564a55"
+    },
+    {
+      "file": "build-host/tab5-multiplayer-hardware/076-prebuild-source.json",
+      "bytes": 326736,
+      "sha256": "440279b22258a731a71085cc1afd32315e2caa8cbf03707f9dc05c1f869a5882"
+    },
+    {
+      "file": "build-host/composed-077-stage/final-v3/postimages/apps/console_os/main/doom_gc_p4mp.c",
+      "bytes": 73964,
+      "sha256": "a1dbce319d8f2b1033ed1d927115b416212d842ff18c884d71004938b1dc9d3f"
+    },
+    {
+      "file": "build-host/composed-077-stage/final-v3/postimages/apps/doom_embedded_touch_audio/main/doom_diagnostics.c",
+      "bytes": 22161,
+      "sha256": "b69d9fbaaa845be3c0d4be57b1699e89ea65e0080b0cc12e03b1d5ec8ef3a46c"
+    },
+    {
+      "file": "build-host/composed-077-stage/final-v3/postimages/apps/doom_embedded_touch_audio/main/doom_diagnostics.h",
+      "bytes": 2546,
+      "sha256": "75194d1641c8b8ac40afc6aa742910670060eb399db56bb7d5817f14bf89cf66"
+    },
+    {
+      "file": "build-host/composed-077-stage/final-v3/postimages/apps/doom_embedded_touch_audio/main/doom_embedded_touch_audio_main.c",
+      "bytes": 95441,
+      "sha256": "8bf02ed5e3f95b9acc870d8fa6b1c27e630d1379cfff967aafcf00e3bc8ad6b6"
+    },
+    {
+      "file": "build-host/composed-077-stage/final-v3/postimages/apps/doom_embedded_touch_audio/tests/CMakeLists.txt",
+      "bytes": 3482,
+      "sha256": "b2a4bc1ba690e8b96ad6b9a32b7e44292f13a3511fd7592e43943d92c8f0aa7a"
+    },
+    {
+      "file": "build-host/composed-077-stage/final-v3/postimages/apps/doom_embedded_touch_audio/tests/test_sampled_touch.py",
+      "bytes": 9936,
+      "sha256": "587f9dd88713abb200ecbfb30adb3caf9e36c2cc4f190ecdbd9e49afabb0c817"
+    },
+    {
+      "file": "build-host/composed-077-stage/final-v3/postimages/apps/doom_embedded_touch_audio/tests/test_touch_sampler_diagnostics.py",
+      "bytes": 8324,
+      "sha256": "63d812c263e358f10e681d213dc966663436564e43d9f1024d1e6a8a8007b3ac"
+    },
+    {
+      "file": "build-host/composed-077-stage/final-v3/postimages/components/doom_multiplayer/include/p4/doom_lockstep.h",
+      "bytes": 4715,
+      "sha256": "fe6078903fcfa2b1984a1f9090c8ba4bbd71c0a15165c627f64ffd3ca8468f1d"
+    },
+    {
+      "file": "build-host/composed-077-stage/final-v3/postimages/components/doom_multiplayer/src/doom_lockstep.c",
+      "bytes": 11890,
+      "sha256": "f4f56a4613b23ef65df9dcffa16b99c6e8c2023c216d40f65367b4e781b457cd"
+    },
+    {
+      "file": "build-host/composed-077-stage/final-v3/postimages/components/doom_multiplayer/tests/CMakeLists.txt",
+      "bytes": 22097,
+      "sha256": "89672b992468ec391c064de7c8ccf1b9690d733bb498bd703343208136387800"
+    },
+    {
+      "file": "build-host/composed-077-stage/final-v3/postimages/components/doom_multiplayer/tests/test_doom_arena_framebuffer.c",
+      "bytes": 10215,
+      "sha256": "fd463699658e2efcda73e12e8c6dc7c0e3be204c2172b33e6b4fb4bf1bc8b988"
+    },
+    {
+      "file": "build-host/composed-077-stage/final-v3/postimages/components/doom_multiplayer/tests/test_doom_gc_live_pipeline.c",
+      "bytes": 5204,
+      "sha256": "ec6b150c178e76fda7162921b1b756cdb188cd37d51a57730c6474f783daaf8d"
+    },
+    {
+      "file": "build-host/composed-077-stage/final-v3/postimages/components/doom_multiplayer/tests/test_doom_gc_live_ready.c",
+      "bytes": 4579,
+      "sha256": "adf768f6ef6fdd2885cf1b2f70c0e7c08cceb4bf445cb6a240d2f226b699ed23"
+    },
+    {
+      "file": "build-host/composed-077-stage/final-v3/postimages/components/doom_multiplayer/tests/test_doom_gc_pipeline_budget.c",
+      "bytes": 6852,
+      "sha256": "6047410ab4cba1eab06727db624e2a0741aa6ef4d035b54e58b0acdefad4fdfb"
+    },
+    {
+      "file": "build-host/composed-077-stage/final-v3/postimages/components/doom_multiplayer/tests/test_doom_gc_startup_vfs.c",
+      "bytes": 3113,
+      "sha256": "99a55ca74e3bcdd3c553f4d1e1815ea317211eb2fb8e31fcb00a5d9925ded841"
+    },
+    {
+      "file": "build-host/composed-077-stage/final-v3/postimages/components/p4_multiplayer/include/p4/multiplayer_uart.h",
+      "bytes": 4868,
+      "sha256": "a87b75944acea5706f16aa52ef92121002c83edd8d67d03aabfad67200cefcc4"
+    },
+    {
+      "file": "build-host/composed-077-stage/final-v3/postimages/components/p4_multiplayer/src/uart_endpoint_dual.c",
+      "bytes": 23222,
+      "sha256": "02c32dd32b7dbaf1564f72dd5c10f94e5e725fa465e70013b95ef2e0205d4be2"
+    },
+    {
+      "file": "build-host/composed-077-stage/final-v3/postimages/components/platform_touch/CMakeLists.txt",
+      "bytes": 2070,
+      "sha256": "deea945b8f74d002fc0ab8d1819ae45fe11ce897b188756795686a9876cfde8e"
+    },
+    {
+      "file": "build-host/composed-077-stage/final-v3/postimages/components/platform_touch/include/platform/touch_sampler.h",
+      "bytes": 3624,
+      "sha256": "035016583c6c24c32a6bda914463ae384b636385d6a647aa18100c88d1a2dc8c"
+    },
+    {
+      "file": "build-host/composed-077-stage/final-v3/postimages/components/platform_touch/src/platform_touch_sample_queue.c",
+      "bytes": 7098,
+      "sha256": "cb05acc67a1256825a31ec5c3686238e56f3c401ba9f8fb131a4986eda6a12fe"
+    },
+    {
+      "file": "build-host/composed-077-stage/final-v3/postimages/components/platform_touch/src/platform_touch_sample_queue.h",
+      "bytes": 1323,
+      "sha256": "7c2b40288d7571b244a52b85252b1978ec0897b26ff1c7ce64f2d3c05365d8ae"
+    },
+    {
+      "file": "build-host/composed-077-stage/final-v3/postimages/components/platform_touch/src/platform_touch_sampler.c",
+      "bytes": 8377,
+      "sha256": "2b971b21e091c80c08abf80ff88152c9c647ee4bde6652f26cd993ffef282b87"
+    },
+    {
+      "file": "build-host/composed-077-stage/final-v3/postimages/components/platform_touch/src/platform_touch_sampler_private.h",
+      "bytes": 536,
+      "sha256": "6a53c3f118bbe08a8e7155fbd3462255f38e926201be73afcb09f839dcf1d7ed"
+    },
+    {
+      "file": "build-host/composed-077-stage/final-v3/postimages/components/platform_touch/src/platform_touch_tab5.c",
+      "bytes": 7635,
+      "sha256": "44b83c0d2e00756c52f20d206055eb3be8326ff37a5bacd3c875debc79d024b4"
+    },
+    {
+      "file": "build-host/composed-077-stage/final-v3/postimages/components/platform_touch/src/platform_touch_tab5_io.c",
+      "bytes": 3966,
+      "sha256": "595babc7197ddd30c564ed8ec1fc335d516f7c2657d916e59a9303164184bdea"
+    },
+    {
+      "file": "build-host/composed-077-stage/final-v3/postimages/components/platform_touch/src/platform_touch_tab5_io.h",
+      "bytes": 1306,
+      "sha256": "8bef49418520482af5882e78df98acc319bf86b5496b53dfcde89a926427a51a"
+    },
+    {
+      "file": "build-host/composed-077-stage/final-v3/postimages/components/platform_touch/tests/CMakeLists.txt",
+      "bytes": 7244,
+      "sha256": "cfcb98a8651b68ea95a22774074829a0e94d0b4e70e0e693e4a2c0410f7dbe68"
+    },
+    {
+      "file": "build-host/composed-077-stage/final-v3/postimages/components/platform_touch/tests/sampler_mocks/esp_heap_caps.h",
+      "bytes": 263,
+      "sha256": "4df22dc7c0a5948d78db5d9fb225d4654a4be827e70daf47acbc529ae80f3d42"
+    },
+    {
+      "file": "build-host/composed-077-stage/final-v3/postimages/components/platform_touch/tests/sampler_mocks/freertos/FreeRTOS.h",
+      "bytes": 523,
+      "sha256": "fabf569d1461e00b60df8fe9c9f3ad47aade39b45cd17b425acc461667b5db69"
+    },
+    {
+      "file": "build-host/composed-077-stage/final-v3/postimages/components/platform_touch/tests/sampler_mocks/freertos/task.h",
+      "bytes": 455,
+      "sha256": "9c400796c1ce722fbc19e20cc6a28fd55f3d54befac481ef875781a1c1fe9fae"
+    },
+    {
+      "file": "build-host/composed-077-stage/final-v3/postimages/components/platform_touch/tests/tab5_mocks/driver/i2c_master.h",
+      "bytes": 64,
+      "sha256": "d031bfa98f1dfd3918b45ce7ffbac26e9730bf71da561f79546a885cde0256a7"
+    },
+    {
+      "file": "build-host/composed-077-stage/final-v3/postimages/components/platform_touch/tests/tab5_mocks/esp_lcd_touch_st7123.h",
+      "bytes": 320,
+      "sha256": "2ea77403a89abce87c4cd38c8acba49798a08d0383872d42bc0b7ad76cbb247d"
+    },
+    {
+      "file": "build-host/composed-077-stage/final-v3/postimages/components/platform_touch/tests/tab5_mocks/esp_lcd_types.h",
+      "bytes": 43,
+      "sha256": "8497a47e3a44d0506536455cea035f11d0ab126ffff159f2cdce3f9c97d3a2cc"
+    },
+    {
+      "file": "build-host/composed-077-stage/final-v3/postimages/components/platform_touch/tests/test_platform_touch_sample_queue.c",
+      "bytes": 4955,
+      "sha256": "bd1d898c57d93af3f25eab16e9753bf8bc04ac750c8573a9f5a89f11c0cf0e8c"
+    },
+    {
+      "file": "build-host/composed-077-stage/final-v3/postimages/components/platform_touch/tests/test_platform_touch_sample_queue_recovery.c",
+      "bytes": 10195,
+      "sha256": "09715bc2549185f6ba8c2cb6bc8ca267d4de7b6c15306952d6286f89db56990f"
+    },
+    {
+      "file": "build-host/composed-077-stage/final-v3/postimages/components/platform_touch/tests/test_platform_touch_sampler_runtime.c",
+      "bytes": 17518,
+      "sha256": "0ff572f834f82468a8cb4e97319c9820ce094d480a6fd6903759602b0b24625c"
+    },
+    {
+      "file": "build-host/composed-077-stage/final-v3/postimages/components/platform_touch/tests/test_platform_touch_tab5.c",
+      "bytes": 6992,
+      "sha256": "f6afce4a4172788890c259d26619bc8e4e80bdc16c54ce66fbe5b7a7ea6cecae"
+    },
+    {
+      "file": "build-host/version-golden-077/base/apps/console_os/CMakeLists.txt",
+      "bytes": 37927,
+      "sha256": "87b81f62653ede81660e1b56a243c1edd10b662d3a5a7ff8fa659cc89b54110c"
+    },
+    {
+      "file": "build-host/version-golden-077/source/apps/console_os/CMakeLists.txt",
+      "bytes": 37927,
+      "sha256": "0a9d4d94ab4077fd628d759b5c55e32890e0f014f3badb79af8beac6d92c940a"
+    },
+    {
+      "file": "build-host/version-golden-077/base/apps/console_os/app-metadata.json",
+      "bytes": 14769,
+      "sha256": "0e2e971bc5ee589d1502615083057835376abf298b1263000705467b154b37ab"
+    },
+    {
+      "file": "build-host/version-golden-077/source/apps/console_os/app-metadata.json",
+      "bytes": 14769,
+      "sha256": "d15d6e689f80e92dd00aea4f6153cf11c2f3730521959a2a3121deb52dfb7b6c"
+    },
+    {
+      "file": "build-host/version-golden-077/base/components/console_shell/include/console/brand.h",
+      "bytes": 175,
+      "sha256": "45d9caf66e818d4eba0e521048be5ed48a2b7dfaeb1911992b5a2856b1f2d791"
+    },
+    {
+      "file": "build-host/version-golden-077/source/components/console_shell/include/console/brand.h",
+      "bytes": 175,
+      "sha256": "c6121792d4418a7f8879101aa99c6b82609f5fd516b29d31a8022b7c6374a7b9"
+    },
+    {
+      "file": "build-host/version-golden-077/base/components/console_shell/tests/test_console_shell.c",
+      "bytes": 101616,
+      "sha256": "634463cd516d4740a2de9700ea60daa553c329b4a834dd51fbef10d888f68056"
+    },
+    {
+      "file": "build-host/version-golden-077/source/components/console_shell/tests/test_console_shell.c",
+      "bytes": 101616,
+      "sha256": "b4ce5a9031b3af5997efdca32b22e658bebb0340a1e1cd627643009ec69e7e0d"
+    },
+    {
+      "file": "build-host/version-golden-077/pixel-comparison.json",
+      "bytes": 4205,
+      "sha256": "d66476165d0e3288b30f13dd6ccf8af9d1e553b6bbd6fbac24265608ca79f981"
+    },
+    {
+      "file": "build-host/version-golden-077/receipt.json",
+      "bytes": 6486,
+      "sha256": "6c9bc8a1635fc3acb7e6766dccb4d78125df86e50e6de9207efc20176cda65bc"
+    },
+    {
+      "file": "build-host/version-golden-077/candidate.patch",
+      "bytes": 2441,
+      "sha256": "633996cf6243c7e2cb43b7bd3560ffe79d61090e74cfb231b09422d03134cf07"
+    },
+    {
+      "file": "build-host/version-golden-077-prepare-review/receipt.json",
+      "bytes": 1082,
+      "sha256": "a9cee3e1ec9b48ba78b45c5b67a4f748c0c6b7a7d90be329ccda701c64f60166"
+    },
+    {
+      "file": "build-host/version-golden-077/promotion-bindings.json",
+      "bytes": 1769,
+      "sha256": "6f2a27e22d529b2664d05ea7173e7db1f82f268ac17bfb27d41dad083057d1ad"
+    },
+    {
+      "file": "build-host/rollout-final-077-v3/prepare-0.77-authorization.py",
+      "bytes": 35837,
+      "sha256": "1a5ab94bfe7a04bc135ededa4e01fb90c1ff40a32ae265a2101615d332e8d4d8"
+    },
+    {
+      "file": "build-host/rollout-final-077-v3/verify-build-077.py",
+      "bytes": 51043,
+      "sha256": "d6711d64e3c20ccb97ea04905127b28777e214d3e7aa561e05f8c752601cadad"
+    },
+    {
+      "file": "build-host/rollout-final-077-v3/record-0.77-install.py",
+      "bytes": 8220,
+      "sha256": "4ed262abedfdefc885899a65cc766f3c2219c9f56db38f44ef09164e1b7e47c2"
+    },
+    {
+      "file": "build-host/native-tide-blast-resolution-073/proof/verify_compiled_gate.py",
+      "bytes": 2580,
+      "sha256": "da86a5db37a030ed845294daa44736c49f12ef6fc5c01543067c864668d3999d"
+    }
+  ]
+}

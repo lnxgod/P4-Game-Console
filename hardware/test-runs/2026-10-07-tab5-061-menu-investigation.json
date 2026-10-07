@@ -1,0 +1,949 @@
+{
+  "schema": 1,
+  "recorded_at": "2026-10-07T04:13:20.515929+00:00",
+  "board": "m5stack-tab5",
+  "version": "0.61",
+  "result": "menu-responsive-persistent-wifi-hang-not-reproduced-visual-acceptance-pending",
+  "capture_state": "closed",
+  "scope": "Separate investigation of the reported restricted game list, truncated title, and Wi-Fi selection hang. Bounded synthetic USB input and serial logical state only; no actual framebuffer capture.",
+  "capture_owner_receipt": {
+    "harness_session": 49851,
+    "exit_code": 0,
+    "ports_closed": true,
+    "source": "Parent operator closure confirmation after the final close command at 2026-10-07T04:10:38.216810+00:00."
+  },
+  "install_record": {
+    "file": "hardware/test-runs/2026-10-07-tab5-061-multiplayer-debug-install.json",
+    "bytes": 15948,
+    "sha256": "2f46fd5faacd7568c89f7469e6266cbe908001862263df4995ac1a0f25a7c5e6"
+  },
+  "application": {
+    "file": "apps/console_os/build-tab5/p4_console_os.bin",
+    "bytes": 4329008,
+    "sha256": "0733e6f5955da30587b3052020dc46014cbc73c495e1b494a2c2fce3f66f6107",
+    "version": "0.61",
+    "write_offset": "0x20000"
+  },
+  "preserved_failed_runtime_record": {
+    "file": "hardware/test-runs/2026-10-07-tab5-061-multiplayer-runtime.json",
+    "bytes": 17483,
+    "sha256": "f03e26184df8ace0461e278ba411a070c991dc40a3a1adf15703b4bfac37a0bf"
+  },
+  "raw_commands": {
+    "file": "build-host/tab5-multiplayer-hardware/remote-061-menu/commands.jsonl",
+    "bytes": 13572,
+    "sha256": "60745e00396908dc8de1852f9b1c9b2326170a8d5c0f3434d78b987735564892",
+    "git_ignored": true
+  },
+  "start_time_utc": "2026-10-07T04:06:20.630790+00:00",
+  "last_command_time_utc": "2026-10-07T04:10:38.216810+00:00",
+  "debug_view_legend": {
+    "0": "Role / Host or Join",
+    "1": "Host",
+    "2": "Join",
+    "3": "Settings",
+    "4": "Game",
+    "5": "Connection"
+  },
+  "units": {
+    "A": {
+      "identity_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+      "raw_capture": {
+        "file": "build-host/tab5-multiplayer-hardware/remote-061-menu/a.rx",
+        "bytes": 30614,
+        "sha256": "dc305332676f8c6bf27dd1d1a3f65075f8fa145caec87513e4b30bcec8480fe7",
+        "git_ignored": true
+      },
+      "boot_versions": [
+        "0.61"
+      ],
+      "shell_ready_receipts": [
+        "I (10145) p4_console_os: P4_CONSOLE_OS READY board=m5stack-tab5 display=mipi-dsi audio=es8388 storage=microsd removal=power-off-first hardware_acceptance=pending"
+      ],
+      "debug_response_count": 26,
+      "debug_response_bad_frames": 0,
+      "debug_buffered_bytes_at_capture_end": 0,
+      "last_debug_state": "mode=shell page=9 app=9 view=5 row=11 game=2 link=2 rooms=0 ready=0",
+      "native_multiplayer_registry": [
+        {
+          "id": "org.p4console.blast-circuit",
+          "title": "Blast Circuit",
+          "launcher": 119,
+          "style": 2,
+          "protocol": 3,
+          "source": "validated-p4g-manifest"
+        },
+        {
+          "id": "org.p4console.checkers",
+          "title": "Checkers",
+          "launcher": 116,
+          "style": 1,
+          "protocol": 1,
+          "source": "validated-p4g-manifest"
+        },
+        {
+          "id": "org.p4console.color-clash",
+          "title": "Color Clash",
+          "launcher": 114,
+          "style": 1,
+          "protocol": 5,
+          "source": "validated-p4g-manifest"
+        },
+        {
+          "id": "org.p4console.p4-air-hockey",
+          "title": "Air Hockey",
+          "launcher": 115,
+          "style": 2,
+          "protocol": 4,
+          "source": "validated-p4g-manifest"
+        },
+        {
+          "id": "org.p4console.p4-rummy",
+          "title": "Rummy 500",
+          "launcher": 118,
+          "style": 1,
+          "protocol": 4,
+          "source": "validated-p4g-manifest"
+        },
+        {
+          "id": "org.p4console.p4-yahtzee",
+          "title": "Yahtzee",
+          "launcher": 113,
+          "style": 1,
+          "protocol": 4,
+          "source": "validated-p4g-manifest"
+        },
+        {
+          "id": "org.p4console.texas-holdem",
+          "title": "Texas Hold'em",
+          "launcher": 117,
+          "style": 1,
+          "protocol": 2,
+          "source": "validated-p4g-manifest"
+        },
+        {
+          "id": "org.p4console.tide-maze",
+          "title": "Tide Maze",
+          "launcher": 120,
+          "style": 2,
+          "protocol": 1,
+          "source": "validated-p4g-manifest"
+        },
+        {
+          "id": "org.p4console.wacky-probe",
+          "title": "Wacky Wheels",
+          "launcher": 9001,
+          "style": 2,
+          "protocol": 2,
+          "source": "validated-p4g-manifest"
+        }
+      ],
+      "registry_receipts": [
+        "I (9569) p4_console_os: P4_CONSOLE_OS MULTIPLAYER_REGISTRY_READY games=9 runtime_players=4 owner=console-os"
+      ],
+      "selected_game_receipts": [
+        "I (42292) p4_console_os: P4_CONSOLE_OS MULTIPLAYER_GAME selected=org.p4console.gamechangersai index=2 count=12 mode=2"
+      ],
+      "wifi_initialization": {
+        "mode_0_uptime_ms": 55714,
+        "add_remote_channels_uptime_ms": 55765,
+        "first_mode_1_uptime_ms": 58174,
+        "mode_0_to_first_mode_1_ms": 2460,
+        "add_channels_to_first_mode_1_ms": 2409,
+        "mode_receipts": [
+          "I (55714) p4_wifi_mp: WIFI_LOCAL mode=0 result=ESP_OK",
+          "I (58174) p4_wifi_mp: WIFI_LOCAL mode=1 result=ESP_OK",
+          "I (206069) p4_wifi_mp: WIFI_LOCAL mode=1 result=ESP_OK"
+        ],
+        "scope": "Firmware uptime interval between logged mode operations, not full physical tap latency."
+      },
+      "cold_role_status": {
+        "time_utc": "2026-10-07T04:07:16.610117+00:00",
+        "request": {
+          "unit": "A",
+          "command": "status"
+        },
+        "result": "ok",
+        "active": true,
+        "touch": false,
+        "buttons": 0,
+        "session_remaining_ms": 29736,
+        "input_remaining_ms": 0,
+        "state": "mode=shell page=9 app=9 view=0 row=11 game=2 link=2 rooms=0 ready=0"
+      },
+      "later_role_status": {
+        "time_utc": "2026-10-07T04:09:13.998100+00:00",
+        "request": {
+          "unit": "both",
+          "command": "status"
+        },
+        "result": "ok",
+        "active": false,
+        "touch": false,
+        "buttons": 0,
+        "session_remaining_ms": 0,
+        "input_remaining_ms": 0,
+        "state": "mode=shell page=9 app=9 view=0 row=11 game=2 link=2 rooms=0 ready=0"
+      },
+      "role_status_observed_interval_seconds": 117.387983,
+      "navigation_command_states": [
+        {
+          "time_utc": "2026-10-07T04:06:31.447156+00:00",
+          "request": {
+            "unit": "both",
+            "command": "status"
+          },
+          "result": "ok",
+          "active": false,
+          "touch": false,
+          "buttons": 0,
+          "session_remaining_ms": 0,
+          "input_remaining_ms": 0,
+          "state": "mode=shell page=0 app=0 view=4 row=11 game=0 link=0 rooms=0 ready=0"
+        },
+        {
+          "time_utc": "2026-10-07T04:06:39.946010+00:00",
+          "request": {
+            "unit": "both",
+            "command": "tap",
+            "x": 120,
+            "y": 357,
+            "hold_ms": 300
+          },
+          "result": "ok",
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "session_remaining_ms": 30000,
+          "input_remaining_ms": 0,
+          "state": "mode=shell page=0 app=0 view=4 row=11 game=0 link=0 rooms=0 ready=0"
+        },
+        {
+          "time_utc": "2026-10-07T04:06:40.049856+00:00",
+          "request": {
+            "unit": "both",
+            "command": "status"
+          },
+          "result": "ok",
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "session_remaining_ms": 29087,
+          "input_remaining_ms": 0,
+          "state": "mode=shell page=9 app=9 view=4 row=11 game=0 link=0 rooms=0 ready=0"
+        },
+        {
+          "time_utc": "2026-10-07T04:07:03.905792+00:00",
+          "request": {
+            "unit": "both",
+            "command": "tap",
+            "x": 758,
+            "y": 429,
+            "hold_ms": 300
+          },
+          "result": "ok",
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "session_remaining_ms": 30000,
+          "input_remaining_ms": 0,
+          "state": "mode=shell page=9 app=9 view=5 row=11 game=2 link=0 rooms=0 ready=0"
+        },
+        {
+          "time_utc": "2026-10-07T04:07:03.972978+00:00",
+          "request": {
+            "unit": "both",
+            "command": "status"
+          },
+          "result": "ok",
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "session_remaining_ms": 29132,
+          "input_remaining_ms": 0,
+          "state": "mode=shell page=9 app=9 view=5 row=11 game=2 link=0 rooms=0 ready=0"
+        },
+        {
+          "time_utc": "2026-10-07T04:07:16.555037+00:00",
+          "request": {
+            "unit": "A",
+            "command": "tap",
+            "x": 758,
+            "y": 529,
+            "hold_ms": 300
+          },
+          "result": "ok",
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "session_remaining_ms": 30000,
+          "input_remaining_ms": 0,
+          "state": "mode=shell page=9 app=9 view=5 row=11 game=2 link=0 rooms=0 ready=0"
+        },
+        {
+          "time_utc": "2026-10-07T04:07:16.610117+00:00",
+          "request": {
+            "unit": "A",
+            "command": "status"
+          },
+          "result": "ok",
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "session_remaining_ms": 29736,
+          "input_remaining_ms": 0,
+          "state": "mode=shell page=9 app=9 view=0 row=11 game=2 link=2 rooms=0 ready=0"
+        },
+        {
+          "time_utc": "2026-10-07T04:07:25.672394+00:00",
+          "request": {
+            "unit": "A",
+            "command": "status"
+          },
+          "result": "ok",
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "session_remaining_ms": 20677,
+          "input_remaining_ms": 0,
+          "state": "mode=shell page=9 app=9 view=0 row=11 game=2 link=2 rooms=0 ready=0"
+        },
+        {
+          "time_utc": "2026-10-07T04:07:26.353492+00:00",
+          "request": {
+            "unit": "both",
+            "command": "status"
+          },
+          "result": "ok",
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "session_remaining_ms": 20038,
+          "input_remaining_ms": 0,
+          "state": "mode=shell page=9 app=9 view=0 row=11 game=2 link=2 rooms=0 ready=0"
+        },
+        {
+          "time_utc": "2026-10-07T04:09:13.998100+00:00",
+          "request": {
+            "unit": "both",
+            "command": "status"
+          },
+          "result": "ok",
+          "active": false,
+          "touch": false,
+          "buttons": 0,
+          "session_remaining_ms": 0,
+          "input_remaining_ms": 0,
+          "state": "mode=shell page=9 app=9 view=0 row=11 game=2 link=2 rooms=0 ready=0"
+        },
+        {
+          "time_utc": "2026-10-07T04:09:31.836485+00:00",
+          "request": {
+            "unit": "both",
+            "command": "pulse",
+            "buttons": "b",
+            "hold_ms": 300
+          },
+          "result": "ok",
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "session_remaining_ms": 30000,
+          "input_remaining_ms": 0,
+          "state": "mode=shell page=9 app=9 view=5 row=11 game=2 link=2 rooms=0 ready=0"
+        },
+        {
+          "time_utc": "2026-10-07T04:09:37.235362+00:00",
+          "request": {
+            "unit": "both",
+            "command": "status"
+          },
+          "result": "ok",
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "session_remaining_ms": 23698,
+          "input_remaining_ms": 0,
+          "state": "mode=shell page=9 app=9 view=5 row=11 game=2 link=2 rooms=0 ready=0"
+        },
+        {
+          "time_utc": "2026-10-07T04:09:45.433228+00:00",
+          "request": {
+            "unit": "A",
+            "command": "tap",
+            "x": 758,
+            "y": 529,
+            "hold_ms": 300
+          },
+          "result": "ok",
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "session_remaining_ms": 30000,
+          "input_remaining_ms": 0,
+          "state": "mode=shell page=9 app=9 view=0 row=11 game=2 link=2 rooms=0 ready=0"
+        },
+        {
+          "time_utc": "2026-10-07T04:09:45.492673+00:00",
+          "request": {
+            "unit": "A",
+            "command": "status"
+          },
+          "result": "ok",
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "session_remaining_ms": 29768,
+          "input_remaining_ms": 0,
+          "state": "mode=shell page=9 app=9 view=0 row=11 game=2 link=2 rooms=0 ready=0"
+        },
+        {
+          "time_utc": "2026-10-07T04:09:46.233843+00:00",
+          "request": {
+            "unit": "A",
+            "command": "pulse",
+            "buttons": "b",
+            "hold_ms": 300
+          },
+          "result": "ok",
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "session_remaining_ms": 30000,
+          "input_remaining_ms": 0,
+          "state": "mode=shell page=9 app=9 view=5 row=11 game=2 link=2 rooms=0 ready=0"
+        },
+        {
+          "time_utc": "2026-10-07T04:09:46.303127+00:00",
+          "request": {
+            "unit": "A",
+            "command": "status"
+          },
+          "result": "ok",
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "session_remaining_ms": 29767,
+          "input_remaining_ms": 0,
+          "state": "mode=shell page=9 app=9 view=5 row=11 game=2 link=2 rooms=0 ready=0"
+        },
+        {
+          "time_utc": "2026-10-07T04:10:13.419645+00:00",
+          "request": {
+            "unit": "both",
+            "command": "status"
+          },
+          "result": "ok",
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "session_remaining_ms": 2710,
+          "input_remaining_ms": 0,
+          "state": "mode=shell page=9 app=9 view=5 row=11 game=2 link=2 rooms=0 ready=0"
+        },
+        {
+          "time_utc": "2026-10-07T04:10:38.216810+00:00",
+          "request": {
+            "unit": "both",
+            "command": "close"
+          },
+          "result": "session",
+          "active": false,
+          "touch": false,
+          "buttons": 0,
+          "session_remaining_ms": 0,
+          "input_remaining_ms": 0,
+          "state": "mode=shell page=9 app=9 view=5 row=11 game=2 link=2 rooms=0 ready=0"
+        }
+      ],
+      "error_and_warning_receipts": [
+        "W (3703) ldo: The voltage value 0 is out of the recommended range [500, 2700]",
+        "W (58048) rpc_rsp: Hosted RPC_Resp [0x21f], uid [3], resp code [12290]"
+      ],
+      "fatal_pattern_matches": [],
+      "submit_timeout_or_frame_ack_markers": [],
+      "arena_engine_ready_receipts": [],
+      "doom_stats_receipts": [],
+      "sanitized_markers": {
+        "file": "hardware/test-runs/2026-10-07-tab5-061-menu-investigation/a.sanitized.log",
+        "bytes": 4618,
+        "sha256": "0090e20daf01d1ef0a3492012dbbb5f8974af87fe97bc3a6f5a553f674d640a3"
+      }
+    },
+    "B": {
+      "identity_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+      "raw_capture": {
+        "file": "build-host/tab5-multiplayer-hardware/remote-061-menu/b.rx",
+        "bytes": 30432,
+        "sha256": "0bb3d1bd63b13d1268e0ffe246bac3f00cbbfb960b50abdb7c226d8b25681045",
+        "git_ignored": true
+      },
+      "boot_versions": [
+        "0.61"
+      ],
+      "shell_ready_receipts": [
+        "I (8312) p4_console_os: P4_CONSOLE_OS READY board=m5stack-tab5 display=mipi-dsi audio=es8388 storage=microsd removal=power-off-first hardware_acceptance=pending"
+      ],
+      "debug_response_count": 24,
+      "debug_response_bad_frames": 0,
+      "debug_buffered_bytes_at_capture_end": 0,
+      "last_debug_state": "mode=shell page=9 app=9 view=5 row=11 game=2 link=2 rooms=0 ready=0",
+      "native_multiplayer_registry": [
+        {
+          "id": "org.p4console.blast-circuit",
+          "title": "Blast Circuit",
+          "launcher": 119,
+          "style": 2,
+          "protocol": 3,
+          "source": "validated-p4g-manifest"
+        },
+        {
+          "id": "org.p4console.checkers",
+          "title": "Checkers",
+          "launcher": 116,
+          "style": 1,
+          "protocol": 1,
+          "source": "validated-p4g-manifest"
+        },
+        {
+          "id": "org.p4console.color-clash",
+          "title": "Color Clash",
+          "launcher": 114,
+          "style": 1,
+          "protocol": 5,
+          "source": "validated-p4g-manifest"
+        },
+        {
+          "id": "org.p4console.p4-air-hockey",
+          "title": "Air Hockey",
+          "launcher": 115,
+          "style": 2,
+          "protocol": 4,
+          "source": "validated-p4g-manifest"
+        },
+        {
+          "id": "org.p4console.p4-rummy",
+          "title": "Rummy 500",
+          "launcher": 118,
+          "style": 1,
+          "protocol": 4,
+          "source": "validated-p4g-manifest"
+        },
+        {
+          "id": "org.p4console.p4-yahtzee",
+          "title": "Yahtzee",
+          "launcher": 113,
+          "style": 1,
+          "protocol": 4,
+          "source": "validated-p4g-manifest"
+        },
+        {
+          "id": "org.p4console.texas-holdem",
+          "title": "Texas Hold'em",
+          "launcher": 117,
+          "style": 1,
+          "protocol": 2,
+          "source": "validated-p4g-manifest"
+        },
+        {
+          "id": "org.p4console.tide-maze",
+          "title": "Tide Maze",
+          "launcher": 120,
+          "style": 2,
+          "protocol": 1,
+          "source": "validated-p4g-manifest"
+        },
+        {
+          "id": "org.p4console.wacky-probe",
+          "title": "Wacky Wheels",
+          "launcher": 9001,
+          "style": 2,
+          "protocol": 2,
+          "source": "validated-p4g-manifest"
+        }
+      ],
+      "registry_receipts": [
+        "I (7860) p4_console_os: P4_CONSOLE_OS MULTIPLAYER_REGISTRY_READY games=9 runtime_players=4 owner=console-os"
+      ],
+      "selected_game_receipts": [
+        "I (43025) p4_console_os: P4_CONSOLE_OS MULTIPLAYER_GAME selected=org.p4console.gamechangersai index=2 count=12 mode=2"
+      ],
+      "wifi_initialization": {
+        "mode_0_uptime_ms": 65447,
+        "add_remote_channels_uptime_ms": 65498,
+        "first_mode_1_uptime_ms": 67908,
+        "mode_0_to_first_mode_1_ms": 2461,
+        "add_channels_to_first_mode_1_ms": 2410,
+        "mode_receipts": [
+          "I (65447) p4_wifi_mp: WIFI_LOCAL mode=0 result=ESP_OK",
+          "I (67908) p4_wifi_mp: WIFI_LOCAL mode=1 result=ESP_OK",
+          "I (220122) p4_wifi_mp: WIFI_LOCAL mode=1 result=ESP_OK"
+        ],
+        "scope": "Firmware uptime interval between logged mode operations, not full physical tap latency."
+      },
+      "cold_role_status": {
+        "time_utc": "2026-10-07T04:07:26.353492+00:00",
+        "request": {
+          "unit": "both",
+          "command": "status"
+        },
+        "result": "ok",
+        "active": true,
+        "touch": false,
+        "buttons": 0,
+        "session_remaining_ms": 29736,
+        "input_remaining_ms": 0,
+        "state": "mode=shell page=9 app=9 view=0 row=11 game=2 link=2 rooms=0 ready=0"
+      },
+      "later_role_status": {
+        "time_utc": "2026-10-07T04:09:13.998100+00:00",
+        "request": {
+          "unit": "both",
+          "command": "status"
+        },
+        "result": "ok",
+        "active": false,
+        "touch": false,
+        "buttons": 0,
+        "session_remaining_ms": 0,
+        "input_remaining_ms": 0,
+        "state": "mode=shell page=9 app=9 view=0 row=11 game=2 link=2 rooms=0 ready=0"
+      },
+      "role_status_observed_interval_seconds": 107.644608,
+      "navigation_command_states": [
+        {
+          "time_utc": "2026-10-07T04:06:31.447156+00:00",
+          "request": {
+            "unit": "both",
+            "command": "status"
+          },
+          "result": "ok",
+          "active": false,
+          "touch": false,
+          "buttons": 0,
+          "session_remaining_ms": 0,
+          "input_remaining_ms": 0,
+          "state": "mode=shell page=0 app=0 view=4 row=11 game=0 link=0 rooms=0 ready=0"
+        },
+        {
+          "time_utc": "2026-10-07T04:06:39.946010+00:00",
+          "request": {
+            "unit": "both",
+            "command": "tap",
+            "x": 120,
+            "y": 357,
+            "hold_ms": 300
+          },
+          "result": "ok",
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "session_remaining_ms": 30000,
+          "input_remaining_ms": 0,
+          "state": "mode=shell page=0 app=0 view=4 row=11 game=0 link=0 rooms=0 ready=0"
+        },
+        {
+          "time_utc": "2026-10-07T04:06:40.049856+00:00",
+          "request": {
+            "unit": "both",
+            "command": "status"
+          },
+          "result": "ok",
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "session_remaining_ms": 29707,
+          "input_remaining_ms": 0,
+          "state": "mode=shell page=9 app=9 view=4 row=11 game=0 link=0 rooms=0 ready=0"
+        },
+        {
+          "time_utc": "2026-10-07T04:07:03.905792+00:00",
+          "request": {
+            "unit": "both",
+            "command": "tap",
+            "x": 758,
+            "y": 429,
+            "hold_ms": 300
+          },
+          "result": "ok",
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "session_remaining_ms": 30000,
+          "input_remaining_ms": 0,
+          "state": "mode=shell page=9 app=9 view=4 row=11 game=0 link=0 rooms=0 ready=0"
+        },
+        {
+          "time_utc": "2026-10-07T04:07:03.972978+00:00",
+          "request": {
+            "unit": "both",
+            "command": "status"
+          },
+          "result": "ok",
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "session_remaining_ms": 29720,
+          "input_remaining_ms": 0,
+          "state": "mode=shell page=9 app=9 view=5 row=11 game=2 link=0 rooms=0 ready=0"
+        },
+        {
+          "time_utc": "2026-10-07T04:07:26.294728+00:00",
+          "request": {
+            "unit": "B",
+            "command": "tap",
+            "x": 758,
+            "y": 529,
+            "hold_ms": 300
+          },
+          "result": "ok",
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "session_remaining_ms": 30000,
+          "input_remaining_ms": 0,
+          "state": "mode=shell page=9 app=9 view=5 row=11 game=2 link=0 rooms=0 ready=0"
+        },
+        {
+          "time_utc": "2026-10-07T04:07:26.353492+00:00",
+          "request": {
+            "unit": "both",
+            "command": "status"
+          },
+          "result": "ok",
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "session_remaining_ms": 29736,
+          "input_remaining_ms": 0,
+          "state": "mode=shell page=9 app=9 view=0 row=11 game=2 link=2 rooms=0 ready=0"
+        },
+        {
+          "time_utc": "2026-10-07T04:09:13.998100+00:00",
+          "request": {
+            "unit": "both",
+            "command": "status"
+          },
+          "result": "ok",
+          "active": false,
+          "touch": false,
+          "buttons": 0,
+          "session_remaining_ms": 0,
+          "input_remaining_ms": 0,
+          "state": "mode=shell page=9 app=9 view=0 row=11 game=2 link=2 rooms=0 ready=0"
+        },
+        {
+          "time_utc": "2026-10-07T04:09:31.836485+00:00",
+          "request": {
+            "unit": "both",
+            "command": "pulse",
+            "buttons": "b",
+            "hold_ms": 300
+          },
+          "result": "ok",
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "session_remaining_ms": 30000,
+          "input_remaining_ms": 0,
+          "state": "mode=shell page=9 app=9 view=5 row=11 game=2 link=2 rooms=0 ready=0"
+        },
+        {
+          "time_utc": "2026-10-07T04:09:37.235362+00:00",
+          "request": {
+            "unit": "both",
+            "command": "status"
+          },
+          "result": "ok",
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "session_remaining_ms": 24345,
+          "input_remaining_ms": 0,
+          "state": "mode=shell page=9 app=9 view=5 row=11 game=2 link=2 rooms=0 ready=0"
+        },
+        {
+          "time_utc": "2026-10-07T04:10:00.965027+00:00",
+          "request": {
+            "unit": "B",
+            "command": "tap",
+            "x": 758,
+            "y": 529,
+            "hold_ms": 300
+          },
+          "result": "ok",
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "session_remaining_ms": 30000,
+          "input_remaining_ms": 0,
+          "state": "mode=shell page=9 app=9 view=0 row=11 game=2 link=2 rooms=0 ready=0"
+        },
+        {
+          "time_utc": "2026-10-07T04:10:01.086439+00:00",
+          "request": {
+            "unit": "B",
+            "command": "status"
+          },
+          "result": "ok",
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "session_remaining_ms": 29668,
+          "input_remaining_ms": 0,
+          "state": "mode=shell page=9 app=9 view=0 row=11 game=2 link=2 rooms=0 ready=0"
+        },
+        {
+          "time_utc": "2026-10-07T04:10:01.777470+00:00",
+          "request": {
+            "unit": "B",
+            "command": "pulse",
+            "buttons": "b",
+            "hold_ms": 300
+          },
+          "result": "ok",
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "session_remaining_ms": 30000,
+          "input_remaining_ms": 0,
+          "state": "mode=shell page=9 app=9 view=5 row=11 game=2 link=2 rooms=0 ready=0"
+        },
+        {
+          "time_utc": "2026-10-07T04:10:01.837574+00:00",
+          "request": {
+            "unit": "B",
+            "command": "status"
+          },
+          "result": "ok",
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "session_remaining_ms": 29783,
+          "input_remaining_ms": 0,
+          "state": "mode=shell page=9 app=9 view=5 row=11 game=2 link=2 rooms=0 ready=0"
+        },
+        {
+          "time_utc": "2026-10-07T04:10:13.419645+00:00",
+          "request": {
+            "unit": "both",
+            "command": "status"
+          },
+          "result": "ok",
+          "active": true,
+          "touch": false,
+          "buttons": 0,
+          "session_remaining_ms": 18206,
+          "input_remaining_ms": 0,
+          "state": "mode=shell page=9 app=9 view=5 row=11 game=2 link=2 rooms=0 ready=0"
+        },
+        {
+          "time_utc": "2026-10-07T04:10:38.216810+00:00",
+          "request": {
+            "unit": "both",
+            "command": "close"
+          },
+          "result": "session",
+          "active": false,
+          "touch": false,
+          "buttons": 0,
+          "session_remaining_ms": 0,
+          "input_remaining_ms": 0,
+          "state": "mode=shell page=9 app=9 view=5 row=11 game=2 link=2 rooms=0 ready=0"
+        }
+      ],
+      "error_and_warning_receipts": [
+        "W (2586) st7123: The 36h command has been used and will be overwritten by external initialization sequence",
+        "W (2978) ldo: The voltage value 0 is out of the recommended range [500, 2700]",
+        "W (67781) rpc_rsp: Hosted RPC_Resp [0x21f], uid [3], resp code [12290]"
+      ],
+      "fatal_pattern_matches": [],
+      "submit_timeout_or_frame_ack_markers": [],
+      "arena_engine_ready_receipts": [],
+      "doom_stats_receipts": [],
+      "sanitized_markers": {
+        "file": "hardware/test-runs/2026-10-07-tab5-061-menu-investigation/b.sanitized.log",
+        "bytes": 4655,
+        "sha256": "05d8aa555add19f4a7cf80fd479b24321ed11429a3a5b72964dbfcae81a9aa83"
+      }
+    }
+  },
+  "command_errors": [
+    {
+      "time_utc": "2026-10-07T04:10:38.216810+00:00",
+      "unit": "A",
+      "request": {
+        "unit": "both",
+        "command": "close"
+      },
+      "error": "close: session (mode=shell page=9 app=9 view=5 row=11 game=2 link=2 rooms=0 ready=0)",
+      "response": {
+        "command": "close",
+        "command_id": 5,
+        "result": "session",
+        "result_id": 3,
+        "session": 1788101777,
+        "sequence": 26,
+        "active": false,
+        "touch": false,
+        "buttons": 0,
+        "x": 0,
+        "y": 0,
+        "session_remaining_ms": 0,
+        "input_remaining_ms": 0,
+        "text": "mode=shell page=9 app=9 view=5 row=11 game=2 link=2 rooms=0 ready=0"
+      },
+      "classification": "expired-debug-session-input-neutral"
+    },
+    {
+      "time_utc": "2026-10-07T04:10:38.216810+00:00",
+      "unit": "B",
+      "request": {
+        "unit": "both",
+        "command": "close"
+      },
+      "error": "close: session (mode=shell page=9 app=9 view=5 row=11 game=2 link=2 rooms=0 ready=0)",
+      "response": {
+        "command": "close",
+        "command_id": 5,
+        "result": "session",
+        "result_id": 3,
+        "session": 3278338479,
+        "sequence": 24,
+        "active": false,
+        "touch": false,
+        "buttons": 0,
+        "x": 0,
+        "y": 0,
+        "session_remaining_ms": 0,
+        "input_remaining_ms": 0,
+        "text": "mode=shell page=9 app=9 view=5 row=11 game=2 link=2 rooms=0 ready=0"
+      },
+      "classification": "expired-debug-session-input-neutral"
+    }
+  ],
+  "observations": {
+    "persistent_wifi_hang": "Not reproduced by the tested cold selections, later status requests, Back, and warm reselection on either unit.",
+    "cold_wifi": "Firmware mode 0 to first mode 1 took 2460 ms on A and 2461 ms on B. Both returned Role view 0 after selection.",
+    "back_and_reselect": "Both moved from Role view 0 to Connection view 5 with Back, then returned to Role view 0 on Wi-Fi reselection, then returned to Connection view 5.",
+    "installed_native_multiplayer_inventory": "Both registered nine validated native game entries. Selecting Arena logged count=12 total game choices.",
+    "user_visible_game_inventory_and_full_title": "Unverified: no device image or framebuffer was captured.",
+    "display_timeout_marker_scan": "No SUBMIT_TIMEOUT or FRAME_ACK markers found in either capture. Absence does not prove rendering or display acceptance.",
+    "final_close": "Both close responses report expired debug sessions with active=false, touch=false, buttons=0 and zero remaining session/input TTL. Owner then shut down the harness and closed ports.",
+    "runtime_acceptance": "No Arena hosting, joining, launch, movement, firing, or gameplay performance was exercised in this menu-only capture."
+  },
+  "limits": [
+    "Serial logical state and input acknowledgements do not prove visible pixels, physical touch, title legibility, or display refresh.",
+    "The user-reported menu problems remain valid investigation inputs. This capture did not reproduce a persistent Wi-Fi hang and does not establish that no intermittent hang exists.",
+    "Journal timestamps are emitted after commands complete. Gaps to later status timestamps must not be described as end-to-end physical tap latency.",
+    "Initial release replies sometimes retained the preceding view; subsequent status replies established the resulting view.",
+    "Cold Wi-Fi initialization includes the preserved Hosted RPC response warning on each unit followed by an ESP_OK mode receipt; this record does not infer the warning cause.",
+    "The earlier 0.61 failed engine startup remains preserved as a separate immutable runtime record. Later source changes for 0.62 are not device acceptance in this 0.61 record.",
+    "Raw captures remain local ignored inputs. Sanitized excerpts omit binary debug/discovery traffic, MAC addresses, route/lobby identifiers and serial port paths."
+  ],
+  "sanitized_commands": {
+    "file": "hardware/test-runs/2026-10-07-tab5-061-menu-investigation/commands.sanitized.jsonl",
+    "bytes": 13555,
+    "sha256": "bbf657502cb8becd0199201cda0b95740310c5b9f4c2298d6d4c136bc0654160"
+  }
+}

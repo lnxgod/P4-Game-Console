@@ -506,7 +506,12 @@ bool console_shell_init(console_shell_t *shell,
     shell->page = CONSOLE_PAGE_HOME;
     shell->color_mode = CONSOLE_COLOR_MODE_ARCADE;
     shell->multiplayer_selected_row = CONSOLE_MULTIPLAYER_OPTION_COUNT;
-    shell->multiplayer_view = CONSOLE_MULTIPLAYER_VIEW_ROLE;
+    shell->multiplayer_view =
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+        CONSOLE_MULTIPLAYER_VIEW_GAME;
+#else
+        CONSOLE_MULTIPLAYER_VIEW_ROLE;
+#endif
     shell->multiplayer_role_selection = 0U;
     p4_achievement_catalog_init(&shell->achievements);
     p4_file_list_init(&shell->desktop_files);
@@ -1744,6 +1749,8 @@ static console_shell_action_t multiplayer_lobby_select_action(
         .app_id = shell->active_app_id,
         .file_source_index = UINT32_MAX,
         .multiplayer_lobby_selection = selection,
+        .multiplayer_lobby_session_id =
+            shell->runtime.multiplayer_lobbies[selection - 1U].session_id,
     };
 }
 
@@ -1799,6 +1806,18 @@ static console_shell_action_t leave_multiplayer_view(console_shell_t *shell);
 
 static console_shell_action_t multiplayer_back_action(console_shell_t *shell)
 {
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    if (shell != NULL &&
+        (shell->multiplayer_view == CONSOLE_MULTIPLAYER_VIEW_ROLE ||
+         shell->multiplayer_view == CONSOLE_MULTIPLAYER_VIEW_TRANSPORT)) {
+        shell->multiplayer_view =
+            shell->multiplayer_view == CONSOLE_MULTIPLAYER_VIEW_ROLE
+                ? CONSOLE_MULTIPLAYER_VIEW_TRANSPORT
+                : CONSOLE_MULTIPLAYER_VIEW_GAME;
+        shell->dirty = true;
+        return page_changed(shell->active_app_id);
+    }
+#endif
     if (shell != NULL &&
         shell->multiplayer_view ==
             CONSOLE_MULTIPLAYER_VIEW_HOST_SETTINGS) {
@@ -1831,7 +1850,8 @@ static console_shell_action_t multiplayer_primary_action(
         return no_action();
     }
     if (shell->multiplayer_view == CONSOLE_MULTIPLAYER_VIEW_HOST &&
-        shell->runtime.multiplayer_can_start) {
+        shell->runtime.multiplayer_can_start &&
+        shell->runtime.multiplayer_lobby_is_host) {
         return (console_shell_action_t){
             .type = CONSOLE_ACTION_MULTIPLAYER_LAUNCH_GAME,
             .app_id = shell->active_app_id,
@@ -1851,7 +1871,13 @@ static console_shell_action_t multiplayer_primary_action(
         };
     }
     if (shell->multiplayer_view != CONSOLE_MULTIPLAYER_VIEW_JOIN ||
-        shell->runtime.multiplayer_lobby_selection == 0U) {
+        shell->runtime.multiplayer_lobby_selection == 0U ||
+        shell->runtime.multiplayer_lobby_selection >
+            shell->runtime.multiplayer_lobby_count ||
+        shell->runtime.multiplayer_lobby_selection >
+            CONSOLE_MULTIPLAYER_LOBBY_LIST_MAX ||
+        !shell->runtime.multiplayer_lobbies[
+            shell->runtime.multiplayer_lobby_selection - 1U].game_available) {
         return no_action();
     }
     return (console_shell_action_t){
@@ -2402,7 +2428,12 @@ static console_shell_action_t activate_app_index(console_shell_t *shell, size_t 
     shell->page = app->page;
     shell->active_app_id = app->id;
     if (app->page == CONSOLE_PAGE_MULTIPLAYER) {
-        shell->multiplayer_view = CONSOLE_MULTIPLAYER_VIEW_ROLE;
+        shell->multiplayer_view =
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+            CONSOLE_MULTIPLAYER_VIEW_GAME;
+#else
+            CONSOLE_MULTIPLAYER_VIEW_ROLE;
+#endif
         shell->multiplayer_role_selection = 0U;
         shell->multiplayer_selected_row =
             CONSOLE_MULTIPLAYER_OPTION_COUNT;
@@ -3768,6 +3799,12 @@ void console_shell_set_runtime_info(
         memcmp(shell->runtime.multiplayer_game_title,
                runtime->multiplayer_game_title,
                sizeof(runtime->multiplayer_game_title)) != 0 ||
+        memcmp(shell->runtime.multiplayer_games,
+               runtime->multiplayer_games,
+               sizeof(runtime->multiplayer_games)) != 0 ||
+        memcmp(shell->runtime.multiplayer_status,
+               runtime->multiplayer_status,
+               sizeof(runtime->multiplayer_status)) != 0 ||
         shell->runtime.multiplayer_lobby_phase !=
             runtime->multiplayer_lobby_phase ||
         shell->runtime.multiplayer_lobby_selection !=

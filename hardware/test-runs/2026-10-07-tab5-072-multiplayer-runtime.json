@@ -1,0 +1,866 @@
+{
+  "schema": "p4-console-bounded-multiplayer-runtime-v1",
+  "version": "0.72",
+  "board": "m5stack-tab5",
+  "publication": "staged record; root review/publication pending",
+  "record_scope": "B hosts one Arena session; A fresh late join and two owned-seat returns, with three bounded active-play command windows. No full release acceptance.",
+  "identity": {
+    "application": {
+      "bytes": 4458720,
+      "file": "hardware/backups/tab5-072-app-predecessor.bin",
+      "sha256": "d10155c89e0756438c4cb97e8e1c2661a816fa3b8b337d7750ea25d60436ca46"
+    },
+    "install": {
+      "bytes": 26824,
+      "file": "hardware/test-runs/2026-10-07-tab5-072-multiplayer-debug-install.json",
+      "sha256": "751558a86edc3bd5d6cea7c1d961222ad735f378676660a29c3018ed56726a8b"
+    },
+    "unit_identities_sha256": {
+      "A": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+      "B": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93"
+    },
+    "verification_method": "device-checksum, not full readback",
+    "attribution": "Unit attribution comes from the exact guarded-install receipt and harness A/B mapping, not from a live identity query."
+  },
+  "source": {
+    "analysis_receipt": {
+      "file": "build-host/runtime-acceptance-072/analysis-b-return2/receipt.json",
+      "bytes": 2440,
+      "sha256": "2d75759125444a671541f634b4bcc97581efc59eb358d6a11ac8b147ae4cd212"
+    },
+    "analysis_outputs": [
+      {
+        "bytes": 595,
+        "file": "build-host/runtime-acceptance-072/analysis-b-return2/inputs.json",
+        "sha256": "47c720bb9501aee398837b6aa29d79c395fb83633f06c2a3a6cbdc6ed551d77e"
+      },
+      {
+        "bytes": 16003321,
+        "file": "build-host/runtime-acceptance-072/analysis-b-return2/summary.json",
+        "sha256": "8e48b0d35f7db4cea333e4133e02715a28a085b30f2e077df088099b7c4d5f6e"
+      },
+      {
+        "bytes": 1858533,
+        "file": "build-host/runtime-acceptance-072/analysis-b-return2/readout.json",
+        "sha256": "eff2d25ab39553915b96535150c593c26f8c5cbfaa32b5588027303e7889d26e"
+      },
+      {
+        "bytes": 7613,
+        "file": "build-host/runtime-acceptance-072/analysis-b-return2/readout.txt",
+        "sha256": "df9eb1dce1bfab6b307d882be83e672fb2e5f7b219bf123091fc24173517e8f2"
+      }
+    ],
+    "runtime_prefix_receipt": {
+      "file": "build-host/runtime-acceptance-072/prefix-b-return2/receipt.json",
+      "bytes": 678,
+      "sha256": "56a06f398a46c575050a542dba663d376ad290abd18931273723acafdecd1241"
+    },
+    "runtime_inputs": [
+      {
+        "bytes": 4176110,
+        "file": "build-host/runtime-acceptance-072/prefix-b-return2/a.rx",
+        "sha256": "79c403ee3af51a16799aaaca9daae517df993c222d0c4cb61cff9c05332009ba"
+      },
+      {
+        "bytes": 3890548,
+        "file": "build-host/runtime-acceptance-072/prefix-b-return2/b.rx",
+        "sha256": "73cf5e150096e6656d455b5c36235412171a6571f8a1fde76eddd584ba0c383e"
+      },
+      {
+        "bytes": 598507,
+        "file": "build-host/runtime-acceptance-072/prefix-b-return2/commands.jsonl",
+        "sha256": "2f718c46a9d10867e066308163b870dafa7a4ef6c266b540d0b1eca94f429c69"
+      }
+    ],
+    "prior_fresh_return1_review": {
+      "file": "build-host/072-return1-review/receipt.json",
+      "bytes": 2929,
+      "sha256": "eb498db09d7ac5b9b92252be0518d08ba3eb04e4e2dffc2c6a00faa6f2c2e04b"
+    }
+  },
+  "closure": {
+    "scope": "Saved closed journal only; cadence analyzer was not rerun over the closure tail.",
+    "closed_prefix_receipt": {
+      "file": "build-host/runtime-acceptance-072/prefix-closed-bhost/receipt.json",
+      "bytes": 678,
+      "sha256": "d19f19c546b6333c46846a322e3d041d68cf4d6782b9e4313a49cf6bdf5402c6"
+    },
+    "inputs": [
+      {
+        "file": "build-host/runtime-acceptance-072/prefix-closed-bhost/commands.jsonl",
+        "bytes": 625944,
+        "sha256": "3c06bb961b8a41ffd5d790172b6d54c2168feee4e95af748de15e20ff4fab52e"
+      },
+      {
+        "file": "build-host/runtime-acceptance-072/prefix-closed-bhost/a.rx",
+        "bytes": 4369771,
+        "sha256": "e0f68b37e5d2321ab069302fc3a50488268e3ad41ee08e98a5fa35bd2d7a7529"
+      },
+      {
+        "file": "build-host/runtime-acceptance-072/prefix-closed-bhost/b.rx",
+        "bytes": 4148274,
+        "sha256": "e6a8d74d2272a284f0b894e5681c31dbeee5ab6fc27ab0616f2a812528867aa3"
+      }
+    ],
+    "extension_of_analyzed_prefix_verified": true,
+    "ports_closed_utc": "2026-10-07T13:41:06.021003+00:00",
+    "both_home_status_utc": "2026-10-07T13:40:36.540043+00:00",
+    "both_inputs_neutral": true,
+    "root_report": "Final guest and host quit completed; release/session acknowledgement errors occurred during restart."
+  },
+  "session": {
+    "id": "925c04e7",
+    "host": "B",
+    "guest": "A",
+    "host_boot_during_three_windows": 0,
+    "host_start_journal_row": 24,
+    "host_start_reply_utc": "2026-10-07T13:02:59.314101+00:00",
+    "host_start_guard_row": 25,
+    "one_host_start": "Root-reported one Start, corroborated by guarded menu launch and one host READY; later Start buttons open/close the Doom score overlay.",
+    "host_continuation": "Same host boot/session and frame stream across both guest departures and all admissions; no host EXIT/TERMINAL in analyzed prefix. Does not prove every instant was stall-free.",
+    "guest_admissions": [
+      {
+        "attempt": "fresh",
+        "guest_boot": 0,
+        "kind": "fresh",
+        "slot": 1,
+        "accepted_uptime_ms": 290630,
+        "replay_uptime_ms": 362965,
+        "ready_uptime_ms": 375306,
+        "admission_to_replay_ms": 72335,
+        "replay_to_ready_ms": 12341,
+        "admission_to_ready_ms": 84676,
+        "ready_tic": 7943
+      },
+      {
+        "attempt": "return1",
+        "guest_boot": 1,
+        "kind": "return",
+        "slot": 1,
+        "accepted_uptime_ms": 96922,
+        "replay_uptime_ms": 171158,
+        "ready_uptime_ms": 181956,
+        "admission_to_replay_ms": 74236,
+        "replay_to_ready_ms": 10798,
+        "admission_to_ready_ms": 85034,
+        "ready_tic": 29059
+      },
+      {
+        "attempt": "return2",
+        "guest_boot": 2,
+        "kind": "return",
+        "slot": 1,
+        "accepted_uptime_ms": 116418,
+        "replay_uptime_ms": 189636,
+        "ready_uptime_ms": 200919,
+        "admission_to_replay_ms": 73218,
+        "replay_to_ready_ms": 11283,
+        "admission_to_ready_ms": 84501,
+        "ready_tic": 51647
+      }
+    ],
+    "raw_landmarks": {
+      "A": [
+        {
+          "marker": "ADMISSION_ACCEPTED",
+          "boot": 0,
+          "uptime_ms": 290630,
+          "start": 617919,
+          "end": 618011,
+          "fields": {
+            "slot": 1
+          },
+          "labels": {
+            "kind": "fresh",
+            "side": "guest"
+          }
+        },
+        {
+          "marker": "REJOIN_REPLAY",
+          "boot": 0,
+          "uptime_ms": 362965,
+          "start": 630657,
+          "end": 630716,
+          "fields": {
+            "slot": 1
+          },
+          "labels": {}
+        },
+        {
+          "marker": "REJOIN_READY",
+          "boot": 0,
+          "uptime_ms": 375306,
+          "start": 631699,
+          "end": 631766,
+          "fields": {
+            "slot": 1,
+            "tic": 7943
+          },
+          "labels": {}
+        },
+        {
+          "marker": "TERMINAL",
+          "boot": 0,
+          "uptime_ms": 852773,
+          "start": 1589848,
+          "end": 1590019,
+          "fields": {
+            "audio_released": 1,
+            "complete": 1,
+            "retained": 0,
+            "touch_released": 1
+          },
+          "labels": {}
+        },
+        {
+          "marker": "TERMINAL",
+          "boot": 0,
+          "uptime_ms": 852775,
+          "start": 1590019,
+          "end": 1590127,
+          "fields": {
+            "cleanup_complete": 1
+          },
+          "labels": {}
+        },
+        {
+          "marker": "ADMISSION_ACCEPTED",
+          "boot": 1,
+          "uptime_ms": 96922,
+          "start": 1966173,
+          "end": 1966265,
+          "fields": {
+            "slot": 1
+          },
+          "labels": {
+            "kind": "return",
+            "side": "guest"
+          }
+        },
+        {
+          "marker": "REJOIN_REPLAY",
+          "boot": 1,
+          "uptime_ms": 171158,
+          "start": 1978713,
+          "end": 1978772,
+          "fields": {
+            "slot": 1
+          },
+          "labels": {}
+        },
+        {
+          "marker": "REJOIN_READY",
+          "boot": 1,
+          "uptime_ms": 181956,
+          "start": 1979756,
+          "end": 1979824,
+          "fields": {
+            "slot": 1,
+            "tic": 29059
+          },
+          "labels": {}
+        },
+        {
+          "marker": "TERMINAL",
+          "boot": 1,
+          "uptime_ms": 673825,
+          "start": 2951029,
+          "end": 2951200,
+          "fields": {
+            "audio_released": 1,
+            "complete": 1,
+            "retained": 0,
+            "touch_released": 1
+          },
+          "labels": {}
+        },
+        {
+          "marker": "TERMINAL",
+          "boot": 1,
+          "uptime_ms": 673827,
+          "start": 2951200,
+          "end": 2951308,
+          "fields": {
+            "cleanup_complete": 1
+          },
+          "labels": {}
+        },
+        {
+          "marker": "ADMISSION_ACCEPTED",
+          "boot": 2,
+          "uptime_ms": 116418,
+          "start": 3328204,
+          "end": 3328297,
+          "fields": {
+            "slot": 1
+          },
+          "labels": {
+            "kind": "return",
+            "side": "guest"
+          }
+        },
+        {
+          "marker": "REJOIN_REPLAY",
+          "boot": 2,
+          "uptime_ms": 189636,
+          "start": 3340743,
+          "end": 3340802,
+          "fields": {
+            "slot": 1
+          },
+          "labels": {}
+        },
+        {
+          "marker": "REJOIN_READY",
+          "boot": 2,
+          "uptime_ms": 200919,
+          "start": 3341785,
+          "end": 3341853,
+          "fields": {
+            "slot": 1,
+            "tic": 51647
+          },
+          "labels": {}
+        }
+      ],
+      "B": [
+        {
+          "marker": "READY",
+          "boot": 0,
+          "uptime_ms": 145236,
+          "start": 387335,
+          "end": 387396,
+          "fields": {
+            "players": 4,
+            "slot": 0
+          },
+          "labels": {}
+        },
+        {
+          "marker": "ADMISSION_ACCEPTED",
+          "boot": 0,
+          "uptime_ms": 290619,
+          "start": 890594,
+          "end": 890693,
+          "fields": {
+            "frontier": 4982,
+            "slot": 1
+          },
+          "labels": {
+            "kind": "fresh",
+            "side": "host"
+          }
+        },
+        {
+          "marker": "REJOIN_ARMED",
+          "boot": 0,
+          "uptime_ms": 375028,
+          "start": 979599,
+          "end": 979666,
+          "fields": {
+            "slot": 1,
+            "tic": 7943
+          },
+          "labels": {}
+        },
+        {
+          "marker": "PLAYER_LEFT",
+          "boot": 0,
+          "uptime_ms": 852748,
+          "start": 1809451,
+          "end": 1809508,
+          "fields": {
+            "slot": 1
+          },
+          "labels": {}
+        },
+        {
+          "marker": "REJOIN_ACCEPTED",
+          "boot": 0,
+          "uptime_ms": 949738,
+          "start": 1914118,
+          "end": 1914194,
+          "fields": {
+            "frontier": 26084,
+            "slot": 1
+          },
+          "labels": {}
+        },
+        {
+          "marker": "ADMISSION_ACCEPTED",
+          "boot": 0,
+          "uptime_ms": 949739,
+          "start": 1914194,
+          "end": 1914295,
+          "fields": {
+            "frontier": 26084,
+            "slot": 1
+          },
+          "labels": {
+            "kind": "return",
+            "side": "host"
+          }
+        },
+        {
+          "marker": "REJOIN_ARMED",
+          "boot": 0,
+          "uptime_ms": 1034511,
+          "start": 2004943,
+          "end": 2005012,
+          "fields": {
+            "slot": 1,
+            "tic": 29059
+          },
+          "labels": {}
+        },
+        {
+          "marker": "PLAYER_LEFT",
+          "boot": 0,
+          "uptime_ms": 1526670,
+          "start": 2850864,
+          "end": 2850922,
+          "fields": {
+            "slot": 1
+          },
+          "labels": {}
+        },
+        {
+          "marker": "REJOIN_ACCEPTED",
+          "boot": 0,
+          "uptime_ms": 1643109,
+          "start": 2972277,
+          "end": 2972354,
+          "fields": {
+            "frontier": 48691,
+            "slot": 1
+          },
+          "labels": {}
+        },
+        {
+          "marker": "ADMISSION_ACCEPTED",
+          "boot": 0,
+          "uptime_ms": 1643111,
+          "start": 2972354,
+          "end": 2972456,
+          "fields": {
+            "frontier": 48691,
+            "slot": 1
+          },
+          "labels": {
+            "kind": "return",
+            "side": "host"
+          }
+        },
+        {
+          "marker": "REJOIN_ARMED",
+          "boot": 0,
+          "uptime_ms": 1727364,
+          "start": 3059777,
+          "end": 3059846,
+          "fields": {
+            "slot": 1,
+            "tic": 51647
+          },
+          "labels": {}
+        }
+      ]
+    }
+  },
+  "active_play": {
+    "result": "All three bounded serial submission-cadence windows meet the repository 30 FPS floor and operator 25 FPS minimum.",
+    "method": "Reset-aware device-local adjacent counters, paired guarded commands and conservative raw-order UTC brackets. Entire screenshot commands excluded for both units; no subtraction or time interpolation.",
+    "windows": [
+      {
+        "id": "072-bhost-fresh-a-01",
+        "start_utc": "2026-10-07T13:12:01.388426+00:00",
+        "end_utc": "2026-10-07T13:14:50.380447+00:00",
+        "elapsed_ms": 168992.02099609375,
+        "paired_guarded_pulses": 60,
+        "guarded_batches": 31,
+        "screenshot_overlap": false,
+        "units": {
+          "A": {
+            "intervals_per_series": 37,
+            "sampled_duration_ms": 162414.0,
+            "successful_submission_frame_delta": 5550,
+            "minimum_interval_submitted_fps": 32.320621,
+            "weighted_submitted_fps": 34.17193099117071,
+            "minimum_interval_draw_entry_fps": 32.32698,
+            "weighted_draw_entry_fps": 34.172329914524106,
+            "worker_counter_intervals": 37,
+            "worker_completed_delta": 5550,
+            "worker_failure_delta": 0,
+            "error_counter_deltas": {
+              "video_failures": 0,
+              "video_timeouts": 0,
+              "audio_write_failures": 0,
+              "backend_write_failures": 0,
+              "music_parse_failures": 0
+            },
+            "network_error_counter_deltas": {
+              "tx_failures": 0,
+              "rx_session_rejected": 0,
+              "peer_departures": 0
+            },
+            "audio_counter_deltas": {
+              "audio_frames_forwarded": 2598656,
+              "audio_nonzero_frames": 2597633,
+              "backend_write_successes": 20302,
+              "music_events": 6505,
+              "music_notes": 3179,
+              "music_loops": 1
+            },
+            "synchronous_log_cost": {
+              "log_n": 37,
+              "log_total_us": 1878451,
+              "mean_ms_per_call": 50.768945945945944
+            }
+          },
+          "B": {
+            "intervals_per_series": 37,
+            "sampled_duration_ms": 166621.0,
+            "successful_submission_frame_delta": 5550,
+            "minimum_interval_submitted_fps": 30.574806,
+            "weighted_submitted_fps": 33.30912670071599,
+            "minimum_interval_draw_entry_fps": 30.564788,
+            "weighted_draw_entry_fps": 33.309286029377844,
+            "worker_counter_intervals": 36,
+            "worker_completed_delta": 5400,
+            "worker_failure_delta": 0,
+            "error_counter_deltas": {
+              "video_failures": 0,
+              "video_timeouts": 0,
+              "audio_write_failures": 0,
+              "backend_write_failures": 0,
+              "music_parse_failures": 0
+            },
+            "network_error_counter_deltas": {
+              "tx_failures": 0,
+              "rx_session_rejected": 0,
+              "peer_departures": 0
+            },
+            "audio_counter_deltas": {
+              "audio_frames_forwarded": 2665856,
+              "audio_nonzero_frames": 2665772,
+              "backend_write_successes": 20827,
+              "music_events": 6600,
+              "music_notes": 3229,
+              "music_loops": 1
+            },
+            "synchronous_log_cost": {
+              "log_n": 37,
+              "log_total_us": 1912651,
+              "mean_ms_per_call": 51.693270270270276
+            }
+          }
+        }
+      },
+      {
+        "id": "072-bhost-return1-a-01",
+        "start_utc": "2026-10-07T13:23:11.558932+00:00",
+        "end_utc": "2026-10-07T13:26:00.311023+00:00",
+        "elapsed_ms": 168752.0908203125,
+        "paired_guarded_pulses": 60,
+        "guarded_batches": 31,
+        "screenshot_overlap": false,
+        "units": {
+          "A": {
+            "intervals_per_series": 37,
+            "sampled_duration_ms": 162478.0,
+            "successful_submission_frame_delta": 5550,
+            "minimum_interval_submitted_fps": 31.772929,
+            "weighted_submitted_fps": 34.158470685262,
+            "minimum_interval_draw_entry_fps": 31.772256,
+            "weighted_draw_entry_fps": 34.158350221355036,
+            "worker_counter_intervals": 37,
+            "worker_completed_delta": 5550,
+            "worker_failure_delta": 0,
+            "error_counter_deltas": {
+              "video_failures": 0,
+              "video_timeouts": 0,
+              "audio_write_failures": 0,
+              "backend_write_failures": 0,
+              "music_parse_failures": 0
+            },
+            "network_error_counter_deltas": {
+              "tx_failures": 0,
+              "rx_session_rejected": 0,
+              "peer_departures": 0
+            },
+            "audio_counter_deltas": {
+              "audio_frames_forwarded": 2599680,
+              "audio_nonzero_frames": 2598757,
+              "backend_write_successes": 20310,
+              "music_events": 6439,
+              "music_notes": 3147,
+              "music_loops": 1
+            },
+            "synchronous_log_cost": {
+              "log_n": 37,
+              "log_total_us": 1887525,
+              "mean_ms_per_call": 51.01418918918919
+            }
+          },
+          "B": {
+            "intervals_per_series": 37,
+            "sampled_duration_ms": 164614.0,
+            "successful_submission_frame_delta": 5550,
+            "minimum_interval_submitted_fps": 31.472933,
+            "weighted_submitted_fps": 33.715236857132446,
+            "minimum_interval_draw_entry_fps": 31.485009,
+            "weighted_draw_entry_fps": 33.715325132158455,
+            "worker_counter_intervals": 37,
+            "worker_completed_delta": 5550,
+            "worker_failure_delta": 0,
+            "error_counter_deltas": {
+              "video_failures": 0,
+              "video_timeouts": 0,
+              "audio_write_failures": 0,
+              "backend_write_failures": 0,
+              "music_parse_failures": 0
+            },
+            "network_error_counter_deltas": {
+              "tx_failures": 0,
+              "rx_session_rejected": 0,
+              "peer_departures": 0
+            },
+            "audio_counter_deltas": {
+              "audio_frames_forwarded": 2633856,
+              "audio_nonzero_frames": 2633801,
+              "backend_write_successes": 20577,
+              "music_events": 6311,
+              "music_notes": 3080,
+              "music_loops": 1
+            },
+            "synchronous_log_cost": {
+              "log_n": 37,
+              "log_total_us": 1952270,
+              "mean_ms_per_call": 52.76405405405405
+            }
+          }
+        }
+      },
+      {
+        "id": "072-bhost-return2-a-01",
+        "start_utc": "2026-10-07T13:35:13.873062+00:00",
+        "end_utc": "2026-10-07T13:38:02.352585+00:00",
+        "elapsed_ms": 168479.52294921875,
+        "paired_guarded_pulses": 60,
+        "guarded_batches": 31,
+        "screenshot_overlap": false,
+        "units": {
+          "A": {
+            "intervals_per_series": 36,
+            "sampled_duration_ms": 161884.0,
+            "successful_submission_frame_delta": 5400,
+            "minimum_interval_submitted_fps": 31.100974,
+            "weighted_submitted_fps": 33.35721874922784,
+            "minimum_interval_draw_entry_fps": 31.09434,
+            "weighted_draw_entry_fps": 33.357240385153816,
+            "worker_counter_intervals": 36,
+            "worker_completed_delta": 5400,
+            "worker_failure_delta": 0,
+            "error_counter_deltas": {
+              "video_failures": 0,
+              "video_timeouts": 0,
+              "audio_write_failures": 0,
+              "backend_write_failures": 0,
+              "music_parse_failures": 0
+            },
+            "network_error_counter_deltas": {
+              "tx_failures": 0,
+              "rx_session_rejected": 0,
+              "peer_departures": 0
+            },
+            "audio_counter_deltas": {
+              "audio_frames_forwarded": 2590208,
+              "audio_nonzero_frames": 2589643,
+              "backend_write_successes": 20236,
+              "music_events": 6358,
+              "music_notes": 3107,
+              "music_loops": 1
+            },
+            "synchronous_log_cost": {
+              "log_n": 36,
+              "log_total_us": 1832409,
+              "mean_ms_per_call": 50.90025
+            }
+          },
+          "B": {
+            "intervals_per_series": 36,
+            "sampled_duration_ms": 163510.0,
+            "successful_submission_frame_delta": 5400,
+            "minimum_interval_submitted_fps": 30.096308,
+            "weighted_submitted_fps": 33.02550302733778,
+            "minimum_interval_draw_entry_fps": 30.097685,
+            "weighted_draw_entry_fps": 33.025453138725915,
+            "worker_counter_intervals": 36,
+            "worker_completed_delta": 5400,
+            "worker_failure_delta": 0,
+            "error_counter_deltas": {
+              "video_failures": 0,
+              "video_timeouts": 0,
+              "audio_write_failures": 0,
+              "backend_write_failures": 0,
+              "music_parse_failures": 0
+            },
+            "network_error_counter_deltas": {
+              "tx_failures": 0,
+              "rx_session_rejected": 0,
+              "peer_departures": 0
+            },
+            "audio_counter_deltas": {
+              "audio_frames_forwarded": 2616192,
+              "audio_nonzero_frames": 2616153,
+              "backend_write_successes": 20439,
+              "music_events": 6387,
+              "music_notes": 3118,
+              "music_loops": 1
+            },
+            "synchronous_log_cost": {
+              "log_n": 36,
+              "log_total_us": 1887268,
+              "mean_ms_per_call": 52.42411111111111
+            }
+          }
+        }
+      }
+    ],
+    "metric_limit": "Submissions and worker callback completions do not prove physical scanout cadence, per-input visual response or smoothness. PERF draw entries are a separate metric."
+  },
+  "audio": {
+    "result": "Each window has increasing nonzero mixed-audio/backend writes and music events/notes; one music loop per unit per window; no measured write-failure increments.",
+    "limits": [
+      "MUS versus MIDI is not distinguished by these counters.",
+      "Mixed SFX/music output and fire/use command receipts do not prove individual SFX audibility or correct sound mix.",
+      "No person-heard music/SFX confirmation in this record.",
+      "The unavailable music_parse_failures UINT32_MAX sentinel is not interpreted as a parse failure."
+    ]
+  },
+  "known_issues": {
+    "join_latency": "Guest admission to READY remains 84.501\u201385.034 seconds; approximately 72\u201374 seconds before replay.",
+    "logger": "Exact PERF log_n/log_total_us deltas show about 50.8\u201352.8 ms per synchronous log call. Averaged FPS above 30 does not remove these stalls; this motivates the 0.73 logger experiment.",
+    "quit_command_errors": [
+      {
+        "journal_row": 246,
+        "time": "2026-10-07T13:15:54.758946+00:00",
+        "name": "072-bhost-return1-a-quit-2",
+        "completed_steps": 5,
+        "error": "pulse failed for A: {'error': 'no release response after 3 identical requests', 'response': None}"
+      },
+      {
+        "journal_row": 461,
+        "time": "2026-10-07T13:27:06.716298+00:00",
+        "name": "072-bhost-return2-a-quit-2",
+        "completed_steps": 5,
+        "error": "pulse failed for A: {'error': 'no release response after 3 identical requests', 'response': None}"
+      },
+      {
+        "journal_row": 680,
+        "time": "2026-10-07T13:39:32.554917+00:00",
+        "name": "072-bhost-return3-a-quit-2",
+        "completed_steps": 5,
+        "error": "pulse failed for A: {'error': 'no release response after 3 identical requests', 'response': None}"
+      },
+      {
+        "journal_row": 698,
+        "time": "2026-10-07T13:40:29.304828+00:00",
+        "name": "072-bhost-stop1-a-quit-2",
+        "completed_steps": 5,
+        "error": "pulse failed for B: {'error': 'no release response after 3 identical requests', 'response': None}"
+      }
+    ],
+    "quit_error_interpretation": "All four final confirmation pulses lost release acknowledgement across normal exit/restart. The first two have terminal/cleanup markers and subsequent return admissions; final closure has both units Home with neutral inputs. Preserve command errors; do not treat missing ACK as a clean harness command.",
+    "log_integrity": {
+      "A": [
+        {
+          "start": 2156983,
+          "end": 2157293,
+          "boot": 1,
+          "prefix_uptimes_ms": [
+            244621,
+            245627
+          ],
+          "reason": "multiple-esp-log-prefixes-in-one-physical-line",
+          "utc_bracket": {
+            "following_journal_index": 276,
+            "prior_journal_index": 273,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion.",
+            "status": "bounded",
+            "utc_lower": "2026-10-07T13:19:03.609873+00:00",
+            "utc_upper": "2026-10-07T13:22:33.478098+00:00"
+          }
+        }
+      ],
+      "B": [
+        {
+          "start": 2960720,
+          "end": 2962119,
+          "boot": 0,
+          "prefix_uptimes_ms": [
+            1633448,
+            1633470
+          ],
+          "reason": "multiple-esp-log-prefixes-in-one-physical-line",
+          "utc_bracket": {
+            "following_journal_index": 482,
+            "prior_journal_index": 477,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion.",
+            "status": "bounded",
+            "utc_lower": "2026-10-07T13:28:13.119068+00:00",
+            "utc_upper": "2026-10-07T13:28:48.475663+00:00"
+          }
+        }
+      ]
+    },
+    "log_integrity_interpretation": "One merged physical log line on each unit, both outside the three selected windows. A combines a sensor line and worker prefix with differing uptime; B has truncated STATS before ENGINEPERF. No selected cadence window uses these anomalies; exact byte-level origin is not proven.",
+    "cumulative_counter_observations": {
+      "A": {},
+      "B": {
+        "rx_session_rejected": 431,
+        "peer_departures": 305
+      }
+    },
+    "counter_interpretation": "Positive cumulative observations repeat prior totals; they are not unique failures. B reaches three cumulative session rejects during admissions and two intentional departures in the analyzed prefix; selected play windows have zero increments.",
+    "analyzed_prefix_parser": {
+      "A": {
+        "bad_debug_frames": 0,
+        "pending_frame_bytes": 0,
+        "worker_parse_errors": []
+      },
+      "B": {
+        "bad_debug_frames": 0,
+        "pending_frame_bytes": 0,
+        "worker_parse_errors": []
+      }
+    }
+  },
+  "physical_review": {
+    "attribution": "Root operator review, not independent image inspection by this consolidator.",
+    "report": "All three joins restored; return2 endpoint pair reviewed as normal play with no SCORE/BREAK overlay.",
+    "return2_endpoint_journal_row": 662,
+    "return2_endpoint_completed_utc": "2026-10-07T13:38:05.924525+00:00",
+    "endpoint_rgb565_sha256": {
+      "A": "a60fc8455f76d66bdfd1d4bd76c070e5e86dff73f8d60a9bbdd1460e15c7fe09",
+      "B": "3ee1c95c0e7596d23244c9f45134ac3f4b7f7dd248d8c0b85120966792c40b14"
+    },
+    "hash_scope": "Hashes refer to transferred RGB565 payload, not PNG files; image files were not reopened."
+  },
+  "acceptance": {
+    "same_host_fresh_and_two_returns": "supported in this bounded B-host run",
+    "three_active_command_windows": "serial cadence and command completion passed",
+    "final_exit": "both Home, neutral, ports closed",
+    "reverse_host": "pending for 0.72",
+    "heard_music_and_sfx": "pending",
+    "physical_input_effects_and_sustained_smoothness": "not established solely by serial evidence or endpoint images",
+    "all_native_games": "outside this record",
+    "overall_release": "not accepted by this record"
+  },
+  "limits": [
+    "Only the explicitly saved prefixes and bound analyzer outputs were read; no live devices, captures, source/build outputs or firmware builds used.",
+    "Runtime measurements bind exact 0.72 image and the two hashed units; no successor-version acceptance is implied.",
+    "The three windows are separate; no cadence interval is stitched across guest departure, boot, admission, counter reset or screenshot.",
+    "READY players=4 denotes configured capacity, not four observed players.",
+    "Root report of closure plus saved ports-closed journal proves this capture ended; raw closure tail was preserved without rerunning full telemetry analysis."
+  ]
+}

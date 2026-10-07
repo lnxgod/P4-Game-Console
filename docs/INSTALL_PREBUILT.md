@@ -33,7 +33,15 @@ Never change that stamp to obtain firmware from a different revision.
 
 ## Prepare the precompiled files and USB tools
 
-From the repository root, with Git and Python 3 available:
+For an online download, install GitHub CLI (`gh`) alongside Git and Python 3,
+and sign in to an account with access to the private
+`openai/P4-Game-Console` repository:
+
+```sh
+gh auth login --hostname github.com
+```
+
+From the repository root:
 
 ```sh
 make prebuilt
@@ -42,12 +50,18 @@ make install-tools
 make prepare-game-data
 ```
 
-`make prebuilt` selects only the complete local source commit. It retrieves
-`tab5-<commit>.tar.gz` and its checksum from the corresponding GitHub release,
-verifies the archive, safely stages an allowlisted file inventory and verifies
-every file against the manifest. Source, SDK/component locks, game inventory,
+`make prebuilt` selects only the complete local source commit. It uses GitHub
+CLI authentication to read that exact `tab5-<commit>` release in
+`openai/P4-Game-Console`, then downloads `tab5-<commit>.tar.gz` and `SHA256SUMS`
+through the authenticated GitHub asset API. Metadata and streamed downloads
+have size and time limits; each asset must match its recorded byte count.
+The downloader verifies the archive, safely stages an allowlisted file inventory
+and verifies every file against the manifest. Source, SDK/component locks, game inventory,
 image family, partition layout and app/update pairing must match. A valid
 cached package is reused. An invalid existing package is preserved and reported.
+Cached packages and offline archives require neither GitHub CLI nor network
+access. Authentication stays with GitHub CLI; credentials are excluded from
+downloader output.
 
 The verified directory is:
 
@@ -83,7 +97,8 @@ python3 scripts/fetch-prebuilt.py \
   --sha256 <archive-sha256-from-SHA256SUMS>
 ```
 
-The downloader does not fall back to `latest` or compile implicitly. A local
+An access error or missing release stops the download; the downloader does not
+try the public upstream, fall back to `latest`, or compile implicitly. A local
 firmware change requires a new build. The existing source-build route remains
 `make setup`, `make verify`, `make prepare-game-data`, then
 `make console-os-tab5-idf` (use Python 3.10 or newer for the source tools).
@@ -141,8 +156,9 @@ perform an update.
 from pinned tools and committed component locks, runs the repository verifier,
 and exports the standard native bundle. SDK/component and compiler caches are
 keyed by the locks and platform. PRs produce downloadable build artifacts;
-successful trusted `main` builds publish commit-specific prereleases with
-checksums and paired source archives. The publisher refuses to replace existing
+successful trusted `main` builds publish commit-specific prereleases in the
+repository running the workflow, with checksums and paired source archives.
+The publisher refuses to replace existing
 assets. GitHub's server-enforced release immutability is a separate repository
 setting; the workflow does not enable it.
 

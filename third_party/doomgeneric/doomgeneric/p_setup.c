@@ -752,6 +752,7 @@ P_SetupLevel
     char	lumpname[9];
     int		lumpnum;
 	
+    P4_DoomLoadingProgress(P4_DOOM_ENGINE_LOADING_MAP, 0, 13);
     totalkills = totalitems = totalsecret = wminfo.maxfrags = 0;
     wminfo.partime = 180;
     for (i=0 ; i<MAXPLAYERS ; i++)
@@ -795,21 +796,32 @@ P_SetupLevel
 	
     // note: most of this ordering is important	
     P_LoadBlockMap (lumpnum+ML_BLOCKMAP);
+    P4_DoomLoadingProgress(P4_DOOM_ENGINE_LOADING_MAP, 1, 13);
     P_LoadVertexes (lumpnum+ML_VERTEXES);
+    P4_DoomLoadingProgress(P4_DOOM_ENGINE_LOADING_MAP, 2, 13);
     P_LoadSectors (lumpnum+ML_SECTORS);
+    P4_DoomLoadingProgress(P4_DOOM_ENGINE_LOADING_MAP, 3, 13);
     P_LoadSideDefs (lumpnum+ML_SIDEDEFS);
+    P4_DoomLoadingProgress(P4_DOOM_ENGINE_LOADING_MAP, 4, 13);
 
     P_LoadLineDefs (lumpnum+ML_LINEDEFS);
+    P4_DoomLoadingProgress(P4_DOOM_ENGINE_LOADING_MAP, 5, 13);
     P_LoadSubsectors (lumpnum+ML_SSECTORS);
+    P4_DoomLoadingProgress(P4_DOOM_ENGINE_LOADING_MAP, 6, 13);
     P_LoadNodes (lumpnum+ML_NODES);
+    P4_DoomLoadingProgress(P4_DOOM_ENGINE_LOADING_MAP, 7, 13);
     P_LoadSegs (lumpnum+ML_SEGS);
+    P4_DoomLoadingProgress(P4_DOOM_ENGINE_LOADING_MAP, 8, 13);
 
     P_GroupLines ();
+    P4_DoomLoadingProgress(P4_DOOM_ENGINE_LOADING_MAP, 9, 13);
     P_LoadReject (lumpnum+ML_REJECT);
+    P4_DoomLoadingProgress(P4_DOOM_ENGINE_LOADING_MAP, 10, 13);
 
     bodyqueslot = 0;
     deathmatch_p = deathmatchstarts;
     P_LoadThings (lumpnum+ML_THINGS);
+    P4_DoomLoadingProgress(P4_DOOM_ENGINE_LOADING_MAP, 11, 13);
     
     // if deathmatch, randomly spawn the active players
     if (deathmatch)
@@ -828,6 +840,7 @@ P_SetupLevel
 	
     // set up world state
     P_SpawnSpecials ();
+    P4_DoomLoadingProgress(P4_DOOM_ENGINE_LOADING_MAP, 12, 13);
 	
     // build subsector connect matrix
     //	UNUSED P_ConnectSubsectors ();
@@ -835,6 +848,7 @@ P_SetupLevel
     // preload graphics
     if (precache)
 	R_PrecacheLevel ();
+    P4_DoomLoadingProgress(P4_DOOM_ENGINE_LOADING_MAP, 13, 13);
 
     //printf ("free memory: 0x%x\n", Z_FreeMemory());
 
@@ -851,6 +865,5 @@ void P_Init (void)
     P_InitPicAnims ();
     R_InitSprites (sprnames);
 }
-
 
 

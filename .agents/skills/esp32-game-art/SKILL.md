@@ -9,10 +9,19 @@ Read `AGENTS.md`, `docs/GAME_ART.md`, `docs/GAME_PERFORMANCE.md` and
 `docs/LAUNCH_QUALITY.md`. Inspect the current game and its asset converter before
 choosing new art. Preserve gameplay, saves, hitboxes and normalized controls.
 
-Design the complete native 768×480 scene and tested 320×200 fallback: launcher,
-opening, active play, menus/pause and results. Use crisp exact text for labels,
-scores and cards. Preserve direct touch interaction. ANSI remixes retain their
-terminal identity while rendering glyphs and borders at native resolution.
+Design the complete native 768×480 scene for every maintained Tab5 game:
+launcher, opening, active play, menus/pause and results. Establish the actual
+runtime surface first; a 320×200 framebuffer or per-title OS downgrade is a
+resolution defect, not the art target. Follow **Fix Console** to correct it.
+Do not produce a low-resolution visual workaround or upscale a completed frame.
+
+Use crisp exact text for labels, scores and cards. Keep floors/backgrounds
+quiet enough that actors, paths, obstacles, pickups and hazards read immediately;
+use clear silhouettes, outlines and non-color symbols. Inspect native-size
+moving/overlapping states rather than judging texture detail in isolation.
+Preserve direct touch interaction and canonical 320×200 input coordinates.
+ANSI remixes retain their terminal identity with native glyphs and borders.
+Legacy fallback views are compatibility evidence only.
 
 Use the environment's built-in ImageGen tool for new raster illustrations,
 sprites and textures. Specify dimensions, camera, palette, atlas cells, padding
@@ -31,7 +40,7 @@ Use the game's deterministic converter and `scripts/pack-game-icon.py`; retain
 the editable input and conversion settings. Budget RGB565/alpha/indexed bytes,
 cartridge size and working memory before adding detail. Never decode PNGs or
 allocate image loaders in the game loop. Re-run conversion and verify identical
-output, then inspect packed native and fallback views for clipping, contrast,
+output, then inspect packed native-resolution views for clipping, contrast,
 glyph readability, transparency fringes and animation continuity.
 
 Use `esp32-test-game` for real SDL play and focused sanitizer checks.

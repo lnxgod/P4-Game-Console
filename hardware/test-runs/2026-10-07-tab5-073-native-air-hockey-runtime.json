@@ -1,0 +1,1023 @@
+{
+  "schema": "p4-tab5-native-multiplayer-runtime-v1",
+  "recorded_at": "2026-10-07T15:02:46.475835+00:00",
+  "result": "BOUNDED PASS: B-host/A-guest linked gameplay, both button rematches, peer-loss fallback and clean exits; audible SFX and reverse-host acceptance pending",
+  "scope": "Air Hockey 1.1.1 on Console OS 0.73. Root-operated hardware observations plus saved immutable binary-safe serial/journal analysis. This is one bounded native-game result, not full release acceptance.",
+  "os_install": {
+    "path": "hardware/test-runs/2026-10-07-tab5-073-multiplayer-debug-install.json",
+    "bytes": 28520,
+    "sha256": "e45fcc876998bcab95fee64ef5f9aaf2ef10e0915d9646cec3a692d061935c9e"
+  },
+  "application": {
+    "file": "apps/console_os/build-tab5/p4_console_os.bin",
+    "bytes": 4460976,
+    "sha256": "947edff0c2cee5f19c917346e434e54532fa30bcce2eb02149f51361baaaf0ce",
+    "version": "0.73",
+    "write_offset": "0x20000"
+  },
+  "board": "M5Stack Tab5 v1.3",
+  "game": {
+    "title": "Air Hockey",
+    "app": "org.p4console.p4-air-hockey",
+    "version": "1.1.1",
+    "api": 1,
+    "session_hex": "1c681785",
+    "host": "B",
+    "guest": "A",
+    "transport": "wifi-local",
+    "surface": "320x200",
+    "content_readback_receipt": {
+      "path": "build-host/native-refresh-073-20261007T1438/receipt.json",
+      "bytes": 61142,
+      "sha256": "06b19417adad22b4b7935bebcaa6667a1d4af8a3b736ef0d578a1a16c0061914"
+    },
+    "verified_readbacks": {
+      "A": {
+        "path": "build-host/native-refresh-073-20261007T1438/A/P4_AIR_HOCKEY.P4G",
+        "bytes": 133148,
+        "sha256": "03dbc6bb0660b12febba0d02959b61f2866b2d189c0a7093b91c11ffa4519397"
+      },
+      "B": {
+        "path": "build-host/native-refresh-073-20261007T1438/B/P4_AIR_HOCKEY.P4G",
+        "bytes": 133148,
+        "sha256": "03dbc6bb0660b12febba0d02959b61f2866b2d189c0a7093b91c11ffa4519397"
+      }
+    }
+  },
+  "evidence": {
+    "prefix_receipt": {
+      "path": "build-host/runtime-acceptance-073/prefix-air-native/receipt.json",
+      "bytes": 689,
+      "sha256": "9cb3b008dd944cd7874441baee02e5519f20f7e507dc41cedafab08e9b7805e5"
+    },
+    "prefix_captured_at": "2026-10-07T14:53:04.889835+00:00",
+    "raw_inputs": {
+      "commands.jsonl": {
+        "path": "build-host/runtime-acceptance-073/prefix-air-native/commands.jsonl",
+        "bytes": 139034,
+        "sha256": "e6f6b991de14f884bc101e0b896cbbc60e89a0a96776a3dc295b970d7acaeb35"
+      },
+      "a.rx": {
+        "path": "build-host/runtime-acceptance-073/prefix-air-native/a.rx",
+        "bytes": 2080495,
+        "sha256": "7e9a13e68e40572b4aad01b964e42501ddc842748caa99625a22107eff79ae57"
+      },
+      "b.rx": {
+        "path": "build-host/runtime-acceptance-073/prefix-air-native/b.rx",
+        "bytes": 2080313,
+        "sha256": "f2b2d31770f80fe836c739b4359b952732517a1bca4b7b6253ebaa9725107005"
+      }
+    },
+    "analysis_run_receipt": {
+      "path": "build-host/native-mp-tracker-073/air73-analysis-run-receipt.json",
+      "bytes": 4185,
+      "sha256": "d42102ca6e1640c25ed3714105ba534ac41b0521e919b84ba27ab71f2d0e4745"
+    },
+    "analysis": {
+      "path": "build-host/native-mp-tracker-073/air73-bhost-1-analysis.json",
+      "bytes": 386017,
+      "sha256": "5b1294b4f0563a0a18d6ba50e92fbc3018e8c3e89c6185f7553c92079610a085"
+    },
+    "independent_lifecycle_audio_review": {
+      "path": "build-host/native-mp-tracker-073/air73-lifecycle-review.json",
+      "bytes": 41403,
+      "sha256": "5e6703746baa02aec3daf2e781f05777b0358beb16f826216f0e4aef9707568e"
+    },
+    "window": {
+      "path": "build-host/native-mp-tracker-073/air73-bhost-1-windows.json",
+      "bytes": 721,
+      "sha256": "df7077b462676d94be47009dc2ce6d3bcf4a7894c728751c80ab7d9d2825b357"
+    }
+  },
+  "units": {
+    "A": {
+      "role": "guest",
+      "device_binding_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+      "cadence": {
+        "result": "PASS bounded active native-loop intervals exceed 30 FPS floor; 60 FPS target not met",
+        "summary": {
+          "interval_count": 1,
+          "frames": 300,
+          "wall_us": 7513045,
+          "weighted_fps": 39.930547467771056,
+          "minimum_interval_fps": 39.930547467771056
+        },
+        "measured_wall_seconds": 7.513045,
+        "eligible_intervals": [
+          {
+            "from_raw_offset": 1717817,
+            "to_raw_offset": 1719039,
+            "endpoint_uptime_ms": [
+              422581,
+              430094
+            ],
+            "possible_utc_window": [
+              "2026-10-07T14:51:50.645789+00:00",
+              "2026-10-07T14:52:01.786020+00:00"
+            ],
+            "duration_ms": 7513,
+            "delta": {
+              "samples": 300,
+              "wall_total_us": 7513045
+            },
+            "screenshot_journal_indices": [],
+            "eligible_clean_interval": true,
+            "exclusions": [],
+            "fps": 39.930547467771056
+          }
+        ],
+        "excluded_interval_count": 8,
+        "scope": "Adjacent sample/wall_total_us deltas, conservative serial-order UTC brackets inside declared PLAY window. Not optical scanout, a whole 25-second measurement, or full-round cadence. Cumulative phase averages/maxima are not per-window costs."
+      },
+      "audio": {
+        "software_result": "Increasing worker frame counts; no underrun/rejected/write_failures/clipped increments in eligible intervals",
+        "eligible_intervals": [
+          {
+            "from_raw_offset": 1717612,
+            "to_raw_offset": 1718834,
+            "endpoint_uptime_ms": [
+              422578,
+              430091
+            ],
+            "possible_utc_window": [
+              "2026-10-07T14:51:50.645789+00:00",
+              "2026-10-07T14:52:01.786020+00:00"
+            ],
+            "duration_ms": 7513,
+            "delta": {
+              "frames": 120320,
+              "underrun": 0,
+              "rejected": 0,
+              "write_failures": 0,
+              "clipped": 0
+            },
+            "screenshot_journal_indices": [],
+            "eligible_clean_interval": true,
+            "exclusions": [],
+            "fps": null
+          }
+        ],
+        "sample_frames_delta": 120320,
+        "heard_sfx": "PENDING",
+        "music": "No continuous music contract; event-tone content/heard output not established by worker counters",
+        "note": "Legacy analyzer counter_criteria_120s is false for these short intervals; 120 seconds is not a requirement for this bounded full-round/native smoke."
+      },
+      "lifecycle_markers": [
+        {
+          "raw_start": 496925,
+          "raw_end": 497047,
+          "tag_uptime_ms": 122129,
+          "marker_text": "I (122129) p4_console_os: P4_CONSOLE_OS MULTIPLAYER_LOBBY_SELECTION choice=join session=1c681785 game=Air Hockey found=1",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T14:46:50.421026+00:00",
+            "utc_upper": "2026-10-07T14:47:10.861980+00:00",
+            "prior_journal_index": 52,
+            "following_journal_index": 56,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 737729,
+          "raw_end": 738010,
+          "tag_uptime_ms": 165222,
+          "marker_text": "I (165222) p4_console_os: P4_CONSOLE_OS CARTRIDGE_START app=org.p4console.p4-air-hockey file=P4_AIR_HOCKEY.P4G api=1 source=microsd-games-directory runtime=psram-elf audio=ready signals=offline saves=session-only multiplayer=connected surface=320x200 save_bytes=0 save_sequence=0",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T14:47:33.420970+00:00",
+            "utc_upper": "2026-10-07T14:47:34.056246+00:00",
+            "prior_journal_index": 85,
+            "following_journal_index": 86,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 738400,
+          "raw_end": 738496,
+          "tag_uptime_ms": 165420,
+          "marker_text": "I (165420) game_loader: P4_CARTRIDGE_PACKAGE_READ app=org.p4console.p4-air-hockey bytes=133148",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T14:47:33.420970+00:00",
+            "utc_upper": "2026-10-07T14:47:34.056246+00:00",
+            "prior_journal_index": 85,
+            "following_journal_index": 86,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 738496,
+          "raw_end": 738604,
+          "tag_uptime_ms": 165424,
+          "marker_text": "I (165424) game_loader: P4_CARTRIDGE_PACKAGE_VERIFIED app=org.p4console.p4-air-hockey payload_bytes=132892",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T14:47:33.420970+00:00",
+            "utc_upper": "2026-10-07T14:47:34.056246+00:00",
+            "prior_journal_index": 85,
+            "following_journal_index": 86,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 1843097,
+          "raw_end": 1843194,
+          "tag_uptime_ms": 471778,
+          "marker_text": "I (471778) game_loader: P4_CARTRIDGE_LOAD_DONE app=org.p4console.p4-air-hockey cartridge_exit=0",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T14:52:40.130270+00:00",
+            "utc_upper": "2026-10-07T14:52:40.885942+00:00",
+            "prior_journal_index": 174,
+            "following_journal_index": 175,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 1843194,
+          "raw_end": 1843310,
+          "tag_uptime_ms": 471781,
+          "marker_text": "I (471781) p4_console_os: P4_CONSOLE_OS NATIVE_MULTIPLAYER_STOP game=org.p4console.p4-air-hockey state=2 dropped=0",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T14:52:40.130270+00:00",
+            "utc_upper": "2026-10-07T14:52:40.885942+00:00",
+            "prior_journal_index": 174,
+            "following_journal_index": 175,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 1843310,
+          "raw_end": 1843424,
+          "tag_uptime_ms": 471782,
+          "marker_text": "I (471782) p4_console_os: P4_CONSOLE_OS AUDIO_WORKER_STOP core=1 frames=4904960 underrun=0 rejected=0 stack=2056",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T14:52:40.130270+00:00",
+            "utc_upper": "2026-10-07T14:52:40.885942+00:00",
+            "prior_journal_index": 174,
+            "following_journal_index": 175,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 1843511,
+          "raw_end": 1843780,
+          "tag_uptime_ms": 471976,
+          "marker_text": "I (471976) p4_console_os: P4_CONSOLE_OS CARTRIDGE_STOP app=org.p4console.p4-air-hockey result=ESP_OK frames=12163 deadline_misses=12162 max_frame_ms=100 max_late_ms=96 display_ack_misses=0 return=launcher audio_frames=4905088 audio_stream_underrun_frames=0 amp_safe=1",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T14:52:40.130270+00:00",
+            "utc_upper": "2026-10-07T14:52:40.885942+00:00",
+            "prior_journal_index": 174,
+            "following_journal_index": 175,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        }
+      ],
+      "parse_anomalies": [
+        {
+          "kind": "AUDIO_WORKER",
+          "app": "org.p4console.p4-air-hockey",
+          "epoch": 1,
+          "raw_start": 1233643,
+          "raw_end": 1233967,
+          "launch_app": "org.p4console.p4-air-hockey",
+          "launch_active": true,
+          "tag_uptime_ms": 324573,
+          "tag": "p4_console_os",
+          "text": "P4_CONSOLE_OS AUDIO_WORKER app=org.p4console.p4-air-hockey game_core=0 audio_core=1 running=1 queued=0",
+          "fields": {
+            "app": "org.p4console.p4-air-hockey",
+            "game_core": 0,
+            "audio_core": 1,
+            "running": 1,
+            "queued": 0
+          },
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T14:50:03.844557+00:00",
+            "utc_upper": "2026-10-07T14:50:21.255988+00:00",
+            "prior_journal_index": 138,
+            "following_journal_index": 143,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          },
+          "parse_errors": [
+            "missing-or-malformed-frames",
+            "missing-or-malformed-underrun",
+            "missing-or-malformed-rejected",
+            "missing-or-malformed-write_failures",
+            "missing-or-malformed-clipped"
+          ],
+          "interleaved_line": true
+        }
+      ],
+      "reset_result": "Only initial USB/UART reset markers precede game launch; no later reset marker was found in saved parsed lines.",
+      "fatal_marker_matches": []
+    },
+    "B": {
+      "role": "host",
+      "device_binding_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+      "cadence": {
+        "result": "PASS bounded active native-loop intervals exceed 30 FPS floor; 60 FPS target not met",
+        "summary": {
+          "interval_count": 2,
+          "frames": 600,
+          "wall_us": 15115001,
+          "weighted_fps": 39.69566393015786,
+          "minimum_interval_fps": 39.63560609183411
+        },
+        "measured_wall_seconds": 15.115001,
+        "eligible_intervals": [
+          {
+            "from_raw_offset": 1714551,
+            "to_raw_offset": 1716156,
+            "endpoint_uptime_ms": [
+              417920,
+              425490
+            ],
+            "possible_utc_window": [
+              "2026-10-07T14:51:46.342229+00:00",
+              "2026-10-07T14:52:01.786020+00:00"
+            ],
+            "duration_ms": 7570,
+            "delta": {
+              "samples": 300,
+              "wall_total_us": 7568952
+            },
+            "screenshot_journal_indices": [],
+            "eligible_clean_interval": true,
+            "exclusions": [],
+            "fps": 39.63560609183411
+          },
+          {
+            "from_raw_offset": 1716156,
+            "to_raw_offset": 1717055,
+            "endpoint_uptime_ms": [
+              425490,
+              433036
+            ],
+            "possible_utc_window": [
+              "2026-10-07T14:51:49.239209+00:00",
+              "2026-10-07T14:52:01.786020+00:00"
+            ],
+            "duration_ms": 7546,
+            "delta": {
+              "samples": 300,
+              "wall_total_us": 7546049
+            },
+            "screenshot_journal_indices": [],
+            "eligible_clean_interval": true,
+            "exclusions": [],
+            "fps": 39.755904049920694
+          }
+        ],
+        "excluded_interval_count": 7,
+        "scope": "Adjacent sample/wall_total_us deltas, conservative serial-order UTC brackets inside declared PLAY window. Not optical scanout, a whole 25-second measurement, or full-round cadence. Cumulative phase averages/maxima are not per-window costs."
+      },
+      "audio": {
+        "software_result": "Increasing worker frame counts; no underrun/rejected/write_failures/clipped increments in eligible intervals",
+        "eligible_intervals": [
+          {
+            "from_raw_offset": 1714346,
+            "to_raw_offset": 1715951,
+            "endpoint_uptime_ms": [
+              417918,
+              425487
+            ],
+            "possible_utc_window": [
+              "2026-10-07T14:51:46.342229+00:00",
+              "2026-10-07T14:52:01.786020+00:00"
+            ],
+            "duration_ms": 7569,
+            "delta": {
+              "frames": 121088,
+              "underrun": 0,
+              "rejected": 0,
+              "write_failures": 0,
+              "clipped": 0
+            },
+            "screenshot_journal_indices": [],
+            "eligible_clean_interval": true,
+            "exclusions": [],
+            "fps": null
+          },
+          {
+            "from_raw_offset": 1715951,
+            "to_raw_offset": 1716850,
+            "endpoint_uptime_ms": [
+              425487,
+              433033
+            ],
+            "possible_utc_window": [
+              "2026-10-07T14:51:49.239209+00:00",
+              "2026-10-07T14:52:01.786020+00:00"
+            ],
+            "duration_ms": 7546,
+            "delta": {
+              "frames": 120704,
+              "underrun": 0,
+              "rejected": 0,
+              "write_failures": 0,
+              "clipped": 0
+            },
+            "screenshot_journal_indices": [],
+            "eligible_clean_interval": true,
+            "exclusions": [],
+            "fps": null
+          }
+        ],
+        "sample_frames_delta": 241792,
+        "heard_sfx": "PENDING",
+        "music": "No continuous music contract; event-tone content/heard output not established by worker counters",
+        "note": "Legacy analyzer counter_criteria_120s is false for these short intervals; 120 seconds is not a requirement for this bounded full-round/native smoke."
+      },
+      "lifecycle_markers": [
+        {
+          "raw_start": 376911,
+          "raw_end": 377016,
+          "tag_uptime_ms": 101307,
+          "marker_text": "I (101307) p4_console_os: P4_CONSOLE_OS MULTIPLAYER_LOBBY_CREATED session=1c681785 transport=wifi-local",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T14:46:29.559509+00:00",
+            "utc_upper": "2026-10-07T14:46:50.249438+00:00",
+            "prior_journal_index": 40,
+            "following_journal_index": 50,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 735004,
+          "raw_end": 735285,
+          "tag_uptime_ms": 165294,
+          "marker_text": "I (165294) p4_console_os: P4_CONSOLE_OS CARTRIDGE_START app=org.p4console.p4-air-hockey file=P4_AIR_HOCKEY.P4G api=1 source=microsd-games-directory runtime=psram-elf audio=ready signals=offline saves=session-only multiplayer=connected surface=320x200 save_bytes=0 save_sequence=0",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T14:47:33.420970+00:00",
+            "utc_upper": "2026-10-07T14:47:34.056246+00:00",
+            "prior_journal_index": 85,
+            "following_journal_index": 86,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 735675,
+          "raw_end": 735771,
+          "tag_uptime_ms": 165458,
+          "marker_text": "I (165458) game_loader: P4_CARTRIDGE_PACKAGE_READ app=org.p4console.p4-air-hockey bytes=133148",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T14:47:33.420970+00:00",
+            "utc_upper": "2026-10-07T14:47:34.056246+00:00",
+            "prior_journal_index": 85,
+            "following_journal_index": 86,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 735771,
+          "raw_end": 735879,
+          "tag_uptime_ms": 165463,
+          "marker_text": "I (165463) game_loader: P4_CARTRIDGE_PACKAGE_VERIFIED app=org.p4console.p4-air-hockey payload_bytes=132892",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T14:47:33.420970+00:00",
+            "utc_upper": "2026-10-07T14:47:34.056246+00:00",
+            "prior_journal_index": 85,
+            "following_journal_index": 86,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 1960882,
+          "raw_end": 1960979,
+          "tag_uptime_ms": 490132,
+          "marker_text": "I (490132) game_loader: P4_CARTRIDGE_LOAD_DONE app=org.p4console.p4-air-hockey cartridge_exit=0",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T14:52:58.530168+00:00",
+            "utc_upper": "2026-10-07T14:52:59.270931+00:00",
+            "prior_journal_index": 179,
+            "following_journal_index": 180,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 1960979,
+          "raw_end": 1961095,
+          "tag_uptime_ms": 490133,
+          "marker_text": "I (490133) p4_console_os: P4_CONSOLE_OS NATIVE_MULTIPLAYER_STOP game=org.p4console.p4-air-hockey state=3 dropped=0",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T14:52:58.530168+00:00",
+            "utc_upper": "2026-10-07T14:52:59.270931+00:00",
+            "prior_journal_index": 179,
+            "following_journal_index": 180,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 1961095,
+          "raw_end": 1961209,
+          "tag_uptime_ms": 490135,
+          "marker_text": "I (490135) p4_console_os: P4_CONSOLE_OS AUDIO_WORKER_STOP core=1 frames=5197440 underrun=0 rejected=0 stack=2056",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T14:52:58.530168+00:00",
+            "utc_upper": "2026-10-07T14:52:59.270931+00:00",
+            "prior_journal_index": 179,
+            "following_journal_index": 180,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 1961296,
+          "raw_end": 1961565,
+          "tag_uptime_ms": 490328,
+          "marker_text": "I (490328) p4_console_os: P4_CONSOLE_OS CARTRIDGE_STOP app=org.p4console.p4-air-hockey result=ESP_OK frames=12759 deadline_misses=12758 max_frame_ms=100 max_late_ms=99 display_ack_misses=0 return=launcher audio_frames=5197568 audio_stream_underrun_frames=0 amp_safe=1",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T14:52:58.530168+00:00",
+            "utc_upper": "2026-10-07T14:52:59.270931+00:00",
+            "prior_journal_index": 179,
+            "following_journal_index": 180,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        }
+      ],
+      "parse_anomalies": [],
+      "reset_result": "Only initial USB/UART reset markers precede game launch; no later reset marker was found in saved parsed lines.",
+      "fatal_marker_matches": []
+    }
+  },
+  "root_hardware_observations": [
+    {
+      "event": "linked play",
+      "journal_indices": [
+        91
+      ],
+      "root_observed": "14:47:57 both LINKED; mirrored scores A 0:1 / B 1:0"
+    },
+    {
+      "event": "first full round",
+      "journal_indices": [
+        136,
+        137
+      ],
+      "root_observed": "Results 7:3. Entire ah73m1s1 segment excluded from cadence because endpoint crossed into results."
+    },
+    {
+      "event": "host button rematch",
+      "journal_indices": [
+        139,
+        142
+      ],
+      "root_observed": "Host B A-button edge succeeded; 14:50:10 both 0:0 LINKED."
+    },
+    {
+      "event": "parked natural second round",
+      "journal_indices": [
+        144,
+        146,
+        149
+      ],
+      "root_observed": "Both touch 176,162 parked mirrored paddles in top corner; 14:51:10 natural results 7:2. Separate rules/results evidence, not cadence qualification."
+    },
+    {
+      "event": "guest button rematch",
+      "journal_indices": [
+        151,
+        154
+      ],
+      "root_observed": "Guest A A-button edge succeeded; 14:51:27 both 0:0 LINKED."
+    },
+    {
+      "event": "active control window",
+      "journal_indices": [
+        155,
+        156,
+        157,
+        158,
+        159,
+        160,
+        161,
+        162,
+        163,
+        164,
+        165,
+        166,
+        167,
+        168
+      ],
+      "root_observed": "Four 1000ms touch pulses at reviewed paddle positions. Declared 14:51:41.359225\u201314:52:06.369954. Endpoint screenshot 14:52:12.993129 both 2:2 LINKED with distinct mirrored paddle positions."
+    },
+    {
+      "event": "first guest exit attempt",
+      "journal_indices": [
+        170,
+        172
+      ],
+      "root_observed": "Initial release failed expired debug lease; completed_steps=0, no Back sent. Retained as a failed harness attempt."
+    },
+    {
+      "event": "guest clean exit",
+      "journal_indices": [
+        175,
+        176,
+        177,
+        178
+      ],
+      "root_observed": "Fresh status guard then Back A succeeded. At 14:52:44 A Home and B PEER LEFT with fresh 0:0 CPU fallback."
+    },
+    {
+      "event": "host clean exit",
+      "journal_indices": [
+        180,
+        181,
+        182,
+        183
+      ],
+      "root_observed": "Back B succeeded; both Home 14:53:02. Normal CARTRIDGE_STOP on both, no post-launch reset markers."
+    }
+  ],
+  "screenshot_receipts": [
+    {
+      "journal_index": 91,
+      "started_at": "2026-10-07T14:47:53.516179+00:00",
+      "ended_at": "2026-10-07T14:47:57.004176+00:00",
+      "request": {
+        "command": "screenshot",
+        "unit": "both",
+        "name": "ah73ready",
+        "scale": 4,
+        "parallel": true
+      },
+      "capture_receipts": {
+        "B": {
+          "capture_id": 1758367438,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "0d5331919e2f87d628acdacdb5befe1e93e0719709ba6096258417c341894778",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ah73ready-b.png"
+        },
+        "A": {
+          "capture_id": 2987575882,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "1d33b94b5cf8fe2ae206f1622b4a1e5ba7ab186b24a717355ced4e397560205d",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ah73ready-a.png"
+        }
+      }
+    },
+    {
+      "journal_index": 136,
+      "started_at": "2026-10-07T14:49:41.762438+00:00",
+      "ended_at": "2026-10-07T14:49:45.208362+00:00",
+      "request": {
+        "command": "screenshot",
+        "unit": "both",
+        "name": "ah73m1s1-end",
+        "scale": 4,
+        "parallel": true
+      },
+      "capture_receipts": {
+        "A": {
+          "capture_id": 982871541,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "3bd2a2a9065bae8877af9981fec7c539e4e05d1f53555e2f964f49210a289106",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ah73m1s1-end-a.png"
+        },
+        "B": {
+          "capture_id": 1011932466,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "11ffd0e7028e3ed504c3aea302517a60e0e4b55bd27df6881e3a432ef0c200b9",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ah73m1s1-end-b.png"
+        }
+      }
+    },
+    {
+      "journal_index": 142,
+      "started_at": "2026-10-07T14:50:06.786155+00:00",
+      "ended_at": "2026-10-07T14:50:10.206322+00:00",
+      "request": {
+        "command": "screenshot",
+        "unit": "both",
+        "name": "ah73-host-rematch-result",
+        "scale": 4,
+        "parallel": true
+      },
+      "capture_receipts": {
+        "B": {
+          "capture_id": 4002652389,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "145b70b0bd5a992176554012fe0cc88b7ecd45cbb5e9588fd4fc4ba052af0cb3",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ah73-host-rematch-result-b.png"
+        },
+        "A": {
+          "capture_id": 339669656,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "7a136210758cd7ebd24380a8ba6e803f106e28c575d60d157f23c19d5a7bcc4f",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ah73-host-rematch-result-a.png"
+        }
+      }
+    },
+    {
+      "journal_index": 146,
+      "started_at": "2026-10-07T14:50:23.030467+00:00",
+      "ended_at": "2026-10-07T14:50:26.462103+00:00",
+      "request": {
+        "command": "screenshot",
+        "unit": "both",
+        "name": "ah73-park-both",
+        "scale": 4,
+        "parallel": true
+      },
+      "capture_receipts": {
+        "B": {
+          "capture_id": 4130230330,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "4a5e2415c099b31a6f4074092ad84506b1f6894788111038116436f339a0eea2",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ah73-park-both-b.png"
+        },
+        "A": {
+          "capture_id": 1791132216,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "37a9750a97ec34f915d95ae360dd5713ec7280f9101fee81241487bab6eb3c4f",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ah73-park-both-a.png"
+        }
+      }
+    },
+    {
+      "journal_index": 149,
+      "started_at": "2026-10-07T14:51:06.796962+00:00",
+      "ended_at": "2026-10-07T14:51:10.253027+00:00",
+      "request": {
+        "command": "screenshot",
+        "unit": "both",
+        "name": "ah73-m2-results-check",
+        "scale": 4,
+        "parallel": true
+      },
+      "capture_receipts": {
+        "A": {
+          "capture_id": 1918922738,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "6a8fc9233ff7352b5ac246acf7f031bc8df6e66f86cedc6900e714cbcaae568b",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ah73-m2-results-check-a.png"
+        },
+        "B": {
+          "capture_id": 4026938908,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "f81a41f11bf2b71e44dd2fc79a3918f7e6137b3f651568f10c8bc4e49a4fa077",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ah73-m2-results-check-b.png"
+        }
+      }
+    },
+    {
+      "journal_index": 154,
+      "started_at": "2026-10-07T14:51:24.079980+00:00",
+      "ended_at": "2026-10-07T14:51:27.468283+00:00",
+      "request": {
+        "command": "screenshot",
+        "unit": "both",
+        "name": "ah73-guest-rematch-result",
+        "scale": 4,
+        "parallel": true
+      },
+      "capture_receipts": {
+        "A": {
+          "capture_id": 746396480,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "87d214ace8a7929c71b9b77249a769815ab39455b4a12fa9e66444e51d20b7bd",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ah73-guest-rematch-result-a.png"
+        },
+        "B": {
+          "capture_id": 835821314,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "1f96bc5c8fce8a1377d8a143b48a8afc65877c0173d8385f69891837a9ec2a22",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ah73-guest-rematch-result-b.png"
+        }
+      }
+    },
+    {
+      "journal_index": 168,
+      "started_at": "2026-10-07T14:52:09.534558+00:00",
+      "ended_at": "2026-10-07T14:52:12.993129+00:00",
+      "request": {
+        "command": "screenshot",
+        "unit": "both",
+        "name": "ah73-m3-controls-end",
+        "scale": 4,
+        "parallel": true
+      },
+      "capture_receipts": {
+        "A": {
+          "capture_id": 2312812550,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "b47085e50fe3b206ad9b25eaa55e529016507b655c7593b4476e4755b1bdef68",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ah73-m3-controls-end-a.png"
+        },
+        "B": {
+          "capture_id": 93226191,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "ce3f83be485347de5b687f7fe7e1d8bed8ecebcc177521ec8224ed408bc33a8e",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ah73-m3-controls-end-b.png"
+        }
+      }
+    },
+    {
+      "journal_index": 177,
+      "started_at": "2026-10-07T14:52:40.953168+00:00",
+      "ended_at": "2026-10-07T14:52:44.363034+00:00",
+      "request": {
+        "command": "screenshot",
+        "unit": "both",
+        "name": "ah73-guest-left",
+        "scale": 4,
+        "parallel": true
+      },
+      "capture_receipts": {
+        "A": {
+          "capture_id": 1634407953,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "8a55b40b7351966055c1f1142c9ece5dce7ddf6904853a564aa4edd81b14b832",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ah73-guest-left-a.png"
+        },
+        "B": {
+          "capture_id": 2510431054,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "0bbebaedd0903690dc42b6564a2682d1364663191a73c4515df20413459bcb26",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ah73-guest-left-b.png"
+        }
+      }
+    },
+    {
+      "journal_index": 182,
+      "started_at": "2026-10-07T14:52:59.355576+00:00",
+      "ended_at": "2026-10-07T14:53:02.764237+00:00",
+      "request": {
+        "command": "screenshot",
+        "unit": "both",
+        "name": "ah73-both-home",
+        "scale": 4,
+        "parallel": true
+      },
+      "capture_receipts": {
+        "A": {
+          "capture_id": 3902193688,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "8a55b40b7351966055c1f1142c9ece5dce7ddf6904853a564aa4edd81b14b832",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ah73-both-home-a.png"
+        },
+        "B": {
+          "capture_id": 2737378719,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "4dd79eaf08f673609db99dabaf5b83b8044c6addaf077773b8d6b49894f4b79d",
+          "path": "/Users/whatzer/Documents/ChatGPT/p4console/build-host/tab5-multiplayer-hardware/remote-073-native-after-readback-01/images/ah73-both-home-b.png"
+        }
+      }
+    }
+  ],
+  "screenshot_scope": "Root reviewed the actual screenshots. This saved-only analysis binds command receipts and raw RGB565 hashes; it did not independently reopen PNGs or claim PNG-file hash verification. Whole screenshot command windows are excluded on both units.",
+  "preserved_failures_and_limits": [
+    "Original frozen analyzer CLI failed on receipt bytes/size schema; original failure is retained and a separately reviewed hash-validating adapter completed unchanged analysis functions.",
+    "A has one interleaved malformed AUDIO_WORKER line outside the declared control window; preserved in analysis, not silently interpreted.",
+    "Both game lifetimes recorded nearly every 60 FPS deadline missed (A 12162/12163 frames, B 12758/12759); bounded measured cadence is approximately 40 FPS, not the 60 FPS target. These whole-lifetime counters include all phases and screenshots.",
+    "First guest departure attempt failed before Back due expired debug lease; fresh guarded retry succeeded.",
+    "No per-speaker heard SFX report. Worker frame production does not prove audible cues, volume, or musical content.",
+    "Reverse host direction, exhaustive rules, physical HID and longer performance coverage remain untested in this record.",
+    "Air source has no persistent save contract; save/relaunch is not applicable to this title.",
+    "Historical 0.71 button-rematch failure remains retained; this new package retest does not rewrite that failed evidence."
+  ],
+  "prior_failed_evidence": {
+    "path": "hardware/test-runs/2026-10-07-tab5-071-multiplayer-runtime.json",
+    "bytes": 224889,
+    "sha256": "602a84c1c5d022d0110330cc7a26b518c9878613bef9e1265bba20e8f2c25db0"
+  }
+}

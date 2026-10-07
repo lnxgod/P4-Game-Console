@@ -20,6 +20,7 @@
 #ifndef __I_VIDEO__
 #define __I_VIDEO__
 
+#include <stddef.h>
 #include "doomtype.h"
 
 // Screen width and height.
@@ -99,6 +100,12 @@ void I_InitGraphics (void);
 void I_GraphicsCheckCommandLine(void);
 
 void I_ShutdownGraphics(void);
+
+/* Optional paired platform framebuffer loan. NULL selects Z_Malloc.
+ * A non-NULL pointer must cover bytes writable indexed pixels until release;
+ * the platform controls its physical allocation and eventual deallocation. */
+void *DG_AllocIndexedFramebuffer(size_t bytes);
+void DG_ReleaseIndexedFramebuffer(void *buffer);
 
 // Takes full 8 bit values.
 void I_SetPalette (byte* palette);

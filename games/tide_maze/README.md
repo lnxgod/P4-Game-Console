@@ -44,6 +44,14 @@ In linked co-op each player steers one marble, shares collected pearls and stirs
 the water. Both must reach the dock. Start through Console OS Multiplayer / Host
 and Join; both consoles need the same cartridge. A normal launcher start is solo.
 
+Version 0.2.2 restores the guest's existing pearl and completion sound cues
+when accepted snapshots report those transitions. Initial, stale, malformed,
+repeated and reset snapshots stay silent. This is best-effort state-derived
+feedback: multiple updates can coalesce cues. Game identity, co-op rules and
+protocol 1 are unchanged. Automated paired-state tests cover pickup, clear,
+final win and pause/resume completion; actual speaker audibility on both roles
+and the outstanding device-lag acceptance remain pending.
+
 ## Controls
 
 | Input | Action |
@@ -88,6 +96,15 @@ fractional local motion and respawn; perspective touch inversion; both render
 sizes and padded-stride guards. Shared mesh tests independently check geometry,
 UV wrapping and clipping. The faster existing raster helpers are tested against
 original scalar pixel oracles and inspected with the pinned RV32 `-Os` compiler.
+
+The guest-audio regression uses real game callbacks and audio-service requests;
+fixture placement isolates pickup/completion rather than testing navigation.
+It covers both peers and rejects replayed, malformed, stale, initial and reset
+sound triggers.
+
+The 0.2.2 focused CMake/CTest run passed all 10 targets under ASan/UBSan.
+The SDL headless configure attempt could not find PkgConfig, so that smoke
+and interactive desktop play remain unverified for this revision.
 
 Host timing excludes the ESP32-P4, display and transport. A device transfer or
 catalog registration is installation evidence only. The lag complaint remains

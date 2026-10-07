@@ -2,7 +2,7 @@
   "schema": 1,
   "format": "p4-native-elf-v1",
   "api_version": 1,
-  "version": "0.2.7",
+  "version": "0.2.8",
   "package_file": "BLAST_CIRCUIT.P4G",
   "component": "blast_circuit",
   "entry_symbol": "p4_blast_circuit_game",
@@ -14,12 +14,12 @@
   "accent_rgb565": "0x5f79",
   "required_capabilities": [
     "video",
-    "controls"
+    "controls",
+    "video-highres"
   ],
   "optional_capabilities": [
     "audio-tone",
     "audio-stream",
-    "video-highres",
     "multiplayer-session",
     "save"
   ],

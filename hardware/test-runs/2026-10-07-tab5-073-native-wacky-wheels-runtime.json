@@ -1,0 +1,2226 @@
+{
+  "schema": "p4-tab5-native-multiplayer-runtime-v1",
+  "recorded_at": "2026-10-07T15:19:04.216157+00:00",
+  "result": "FAIL native 30 FPS floor; bounded linked race, replicated controls, peer-loss handling and clean exits observed; lifetime audio underruns retained",
+  "scope": "Wacky Wheels 0.1.1, B host/A guest on OS 0.73, session e0f96595. Saved immutable prefix only. This linked-run record does not include the subsequent save/CLOCK canary/relaunch investigation or full release acceptance.",
+  "os_install": {
+    "path": "hardware/test-runs/2026-10-07-tab5-073-multiplayer-debug-install.json",
+    "bytes": 28520,
+    "sha256": "e45fcc876998bcab95fee64ef5f9aaf2ef10e0915d9646cec3a692d061935c9e"
+  },
+  "application": {
+    "file": "apps/console_os/build-tab5/p4_console_os.bin",
+    "bytes": 4460976,
+    "sha256": "947edff0c2cee5f19c917346e434e54532fa30bcce2eb02149f51361baaaf0ce",
+    "version": "0.73",
+    "write_offset": "0x20000"
+  },
+  "board": "M5Stack Tab5 v1.3",
+  "game": {
+    "title": "Wacky Wheels",
+    "app": "org.p4console.wacky-probe",
+    "version": "0.1.1",
+    "api": 1,
+    "session_hex": "e0f96595",
+    "host": "B",
+    "guest": "A",
+    "transport": "wifi-local",
+    "surface": "320x200",
+    "content_readback_receipt": {
+      "path": "build-host/native-refresh-073-20261007T1438/receipt.json",
+      "bytes": 61142,
+      "sha256": "06b19417adad22b4b7935bebcaa6667a1d4af8a3b736ef0d578a1a16c0061914"
+    },
+    "verified_readbacks": {
+      "A": {
+        "WACKYTRY.P4G": {
+          "path": "build-host/native-refresh-073-20261007T1438/A/WACKYTRY.P4G",
+          "bytes": 68804,
+          "sha256": "a376d0edb01ad546d4aa5520c28d0535c8ed2370abb7e59ece796b2da411e739"
+        },
+        "WACKYTRY.P4R": {
+          "path": "build-host/native-refresh-073-20261007T1438/A/WACKYTRY.P4R",
+          "bytes": 4399076,
+          "sha256": "56373050954dc9126a001bcbdba8f24c7a0b7c65ccd73553ccd0735ef33f09c1"
+        }
+      },
+      "B": {
+        "WACKYTRY.P4G": {
+          "path": "build-host/native-refresh-073-20261007T1438/B/WACKYTRY.P4G",
+          "bytes": 68804,
+          "sha256": "a376d0edb01ad546d4aa5520c28d0535c8ed2370abb7e59ece796b2da411e739"
+        },
+        "WACKYTRY.P4R": {
+          "path": "build-host/native-refresh-073-20261007T1438/B/WACKYTRY.P4R",
+          "bytes": 4399076,
+          "sha256": "56373050954dc9126a001bcbdba8f24c7a0b7c65ccd73553ccd0735ef33f09c1"
+        }
+      }
+    }
+  },
+  "evidence": {
+    "prefix_receipt": {
+      "path": "build-host/runtime-acceptance-073/prefix-wacky-linked/receipt.json",
+      "bytes": 689,
+      "sha256": "8b20176087a4a2eeb61e5347c07b66729e2ed078ac6d53006bf894029474b182"
+    },
+    "prefix_captured_at": "2026-10-07T15:12:12.424486+00:00",
+    "raw_inputs": {
+      "commands.jsonl": {
+        "path": "build-host/runtime-acceptance-073/prefix-wacky-linked/commands.jsonl",
+        "bytes": 394427,
+        "sha256": "055a95943a450acbd03d2c478a852608c8fc244242be167202d001181f06b458"
+      },
+      "a.rx": {
+        "path": "build-host/runtime-acceptance-073/prefix-wacky-linked/a.rx",
+        "bytes": 6281947,
+        "sha256": "09103c65d95f47feaadfc82f8832fa4928d54a47a1346f9b567f8f6737adb7d7"
+      },
+      "b.rx": {
+        "path": "build-host/runtime-acceptance-073/prefix-wacky-linked/b.rx",
+        "bytes": 6279752,
+        "sha256": "de57496d7cde58edeebd6219541dc90cc894f49540382c57a3b4fe2bb00f45a0"
+      }
+    },
+    "analysis_run_receipt": {
+      "path": "build-host/native-mp-tracker-073/wacky73-analysis-run-receipt.json",
+      "bytes": 4387,
+      "sha256": "905d73e08eca3e7e106a4a6bafb6547fe99402840f3eec58bf375314977ec9cd"
+    },
+    "analysis": {
+      "path": "build-host/native-mp-tracker-073/wacky73-bhost-1-analysis.json",
+      "bytes": 655257,
+      "sha256": "3e4bbc0bf7170b05989030ab1ae979e6e2e8a09c57c50f577c2d341ff1ed82af"
+    },
+    "window": {
+      "path": "build-host/native-mp-tracker-073/wacky73-bhost-1-windows.json",
+      "bytes": 704,
+      "sha256": "b8b166b3f51fc9f8e7293a6ddd5c413b2f3b5b04fc1c93aa2ffaafc6285ee3ca"
+    },
+    "independent_lifecycle_audio_review": {
+      "path": "build-host/native-mp-tracker-073/wacky73-audio-lifecycle-review.json",
+      "bytes": 105598,
+      "sha256": "98bbefcac99d34a329374e20ae7651efe7303bc6b2016f6246d3c4901267ffd4"
+    }
+  },
+  "units": {
+    "A": {
+      "role": "guest",
+      "device_binding_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+      "cadence": {
+        "result": "FAIL native30FPS floor; bounded race-phase minimum exceeds25FPS",
+        "summary": {
+          "interval_count": 4,
+          "frames": 1200,
+          "wall_us": 41976000,
+          "weighted_fps": 28.58776443682104,
+          "minimum_interval_fps": 28.576871785101925
+        },
+        "measured_wall_seconds": 41.976,
+        "eligible_intervals": [
+          {
+            "from_raw_offset": 5916393,
+            "to_raw_offset": 5918126,
+            "endpoint_fields": [
+              {
+                "app": "org.p4console.wacky-probe",
+                "samples": 4800,
+                "wall_total_us": 168924014,
+                "wall_avg_us": 35192,
+                "wall_max_us": 117000,
+                "update_render_avg_us": 14842,
+                "update_render_max_us": 18731,
+                "input_avg_us": 619,
+                "input_max_us": 2296,
+                "audio_avg_us": 1,
+                "audio_max_us": 26,
+                "present_avg_us": 18321,
+                "present_max_us": 20369,
+                "reuse_avg_us": 25,
+                "reuse_max_us": 502,
+                "transform_avg_us": 15058,
+                "transform_max_us": 16964,
+                "handoff_avg_us": 54,
+                "handoff_max_us": 730,
+                "deadline_rebases": 4799,
+                "audio_discarded_us": 0
+              },
+              {
+                "app": "org.p4console.wacky-probe",
+                "samples": 5100,
+                "wall_total_us": 179422014,
+                "wall_avg_us": 35180,
+                "wall_max_us": 117000,
+                "update_render_avg_us": 14835,
+                "update_render_max_us": 18731,
+                "input_avg_us": 618,
+                "input_max_us": 2296,
+                "audio_avg_us": 1,
+                "audio_max_us": 26,
+                "present_avg_us": 18324,
+                "present_max_us": 20369,
+                "reuse_avg_us": 25,
+                "reuse_max_us": 502,
+                "transform_avg_us": 15058,
+                "transform_max_us": 16964,
+                "handoff_avg_us": 54,
+                "handoff_max_us": 730,
+                "deadline_rebases": 5099,
+                "audio_discarded_us": 0
+              }
+            ],
+            "endpoint_uptime_ms": [
+              1516616,
+              1527114
+            ],
+            "possible_utc_window": [
+              "2026-10-07T15:10:02.125793+00:00",
+              "2026-10-07T15:10:53.580961+00:00"
+            ],
+            "duration_ms": 10498,
+            "delta": {
+              "samples": 300,
+              "wall_total_us": 10498000
+            },
+            "screenshot_journal_indices": [],
+            "eligible_clean_interval": true,
+            "exclusions": [],
+            "fps": 28.576871785101925
+          },
+          {
+            "from_raw_offset": 5918126,
+            "to_raw_offset": 5919221,
+            "endpoint_fields": [
+              {
+                "app": "org.p4console.wacky-probe",
+                "samples": 5100,
+                "wall_total_us": 179422014,
+                "wall_avg_us": 35180,
+                "wall_max_us": 117000,
+                "update_render_avg_us": 14835,
+                "update_render_max_us": 18731,
+                "input_avg_us": 618,
+                "input_max_us": 2296,
+                "audio_avg_us": 1,
+                "audio_max_us": 26,
+                "present_avg_us": 18324,
+                "present_max_us": 20369,
+                "reuse_avg_us": 25,
+                "reuse_max_us": 502,
+                "transform_avg_us": 15058,
+                "transform_max_us": 16964,
+                "handoff_avg_us": 54,
+                "handoff_max_us": 730,
+                "deadline_rebases": 5099,
+                "audio_discarded_us": 0
+              },
+              {
+                "app": "org.p4console.wacky-probe",
+                "samples": 5400,
+                "wall_total_us": 189919063,
+                "wall_avg_us": 35170,
+                "wall_max_us": 117000,
+                "update_render_avg_us": 14830,
+                "update_render_max_us": 18731,
+                "input_avg_us": 619,
+                "input_max_us": 2296,
+                "audio_avg_us": 1,
+                "audio_max_us": 26,
+                "present_avg_us": 18324,
+                "present_max_us": 20369,
+                "reuse_avg_us": 25,
+                "reuse_max_us": 502,
+                "transform_avg_us": 15057,
+                "transform_max_us": 16964,
+                "handoff_avg_us": 54,
+                "handoff_max_us": 730,
+                "deadline_rebases": 5399,
+                "audio_discarded_us": 0
+              }
+            ],
+            "endpoint_uptime_ms": [
+              1527114,
+              1537611
+            ],
+            "possible_utc_window": [
+              "2026-10-07T15:10:06.875085+00:00",
+              "2026-10-07T15:10:53.580961+00:00"
+            ],
+            "duration_ms": 10497,
+            "delta": {
+              "samples": 300,
+              "wall_total_us": 10497049
+            },
+            "screenshot_journal_indices": [],
+            "eligible_clean_interval": true,
+            "exclusions": [],
+            "fps": 28.57946076082907
+          },
+          {
+            "from_raw_offset": 5919221,
+            "to_raw_offset": 5920316,
+            "endpoint_fields": [
+              {
+                "app": "org.p4console.wacky-probe",
+                "samples": 5400,
+                "wall_total_us": 189919063,
+                "wall_avg_us": 35170,
+                "wall_max_us": 117000,
+                "update_render_avg_us": 14830,
+                "update_render_max_us": 18731,
+                "input_avg_us": 619,
+                "input_max_us": 2296,
+                "audio_avg_us": 1,
+                "audio_max_us": 26,
+                "present_avg_us": 18324,
+                "present_max_us": 20369,
+                "reuse_avg_us": 25,
+                "reuse_max_us": 502,
+                "transform_avg_us": 15057,
+                "transform_max_us": 16964,
+                "handoff_avg_us": 54,
+                "handoff_max_us": 730,
+                "deadline_rebases": 5399,
+                "audio_discarded_us": 0
+              },
+              {
+                "app": "org.p4console.wacky-probe",
+                "samples": 5700,
+                "wall_total_us": 200402014,
+                "wall_avg_us": 35158,
+                "wall_max_us": 117000,
+                "update_render_avg_us": 14820,
+                "update_render_max_us": 18731,
+                "input_avg_us": 619,
+                "input_max_us": 2296,
+                "audio_avg_us": 1,
+                "audio_max_us": 26,
+                "present_avg_us": 18330,
+                "present_max_us": 20369,
+                "reuse_avg_us": 25,
+                "reuse_max_us": 502,
+                "transform_avg_us": 15061,
+                "transform_max_us": 16964,
+                "handoff_avg_us": 54,
+                "handoff_max_us": 730,
+                "deadline_rebases": 5699,
+                "audio_discarded_us": 0
+              }
+            ],
+            "endpoint_uptime_ms": [
+              1537611,
+              1548094
+            ],
+            "possible_utc_window": [
+              "2026-10-07T15:10:06.875085+00:00",
+              "2026-10-07T15:10:53.580961+00:00"
+            ],
+            "duration_ms": 10483,
+            "delta": {
+              "samples": 300,
+              "wall_total_us": 10482951
+            },
+            "screenshot_journal_indices": [],
+            "eligible_clean_interval": true,
+            "exclusions": [],
+            "fps": 28.6178958577599
+          },
+          {
+            "from_raw_offset": 5920316,
+            "to_raw_offset": 5921411,
+            "endpoint_fields": [
+              {
+                "app": "org.p4console.wacky-probe",
+                "samples": 5700,
+                "wall_total_us": 200402014,
+                "wall_avg_us": 35158,
+                "wall_max_us": 117000,
+                "update_render_avg_us": 14820,
+                "update_render_max_us": 18731,
+                "input_avg_us": 619,
+                "input_max_us": 2296,
+                "audio_avg_us": 1,
+                "audio_max_us": 26,
+                "present_avg_us": 18330,
+                "present_max_us": 20369,
+                "reuse_avg_us": 25,
+                "reuse_max_us": 502,
+                "transform_avg_us": 15061,
+                "transform_max_us": 16964,
+                "handoff_avg_us": 54,
+                "handoff_max_us": 730,
+                "deadline_rebases": 5699,
+                "audio_discarded_us": 0
+              },
+              {
+                "app": "org.p4console.wacky-probe",
+                "samples": 6000,
+                "wall_total_us": 210900014,
+                "wall_avg_us": 35150,
+                "wall_max_us": 117000,
+                "update_render_avg_us": 14812,
+                "update_render_max_us": 18731,
+                "input_avg_us": 618,
+                "input_max_us": 2296,
+                "audio_avg_us": 1,
+                "audio_max_us": 26,
+                "present_avg_us": 18337,
+                "present_max_us": 20369,
+                "reuse_avg_us": 25,
+                "reuse_max_us": 502,
+                "transform_avg_us": 15065,
+                "transform_max_us": 16964,
+                "handoff_avg_us": 54,
+                "handoff_max_us": 730,
+                "deadline_rebases": 5999,
+                "audio_discarded_us": 0
+              }
+            ],
+            "endpoint_uptime_ms": [
+              1548094,
+              1558592
+            ],
+            "possible_utc_window": [
+              "2026-10-07T15:10:06.875085+00:00",
+              "2026-10-07T15:10:53.580961+00:00"
+            ],
+            "duration_ms": 10498,
+            "delta": {
+              "samples": 300,
+              "wall_total_us": 10498000
+            },
+            "screenshot_journal_indices": [],
+            "eligible_clean_interval": true,
+            "exclusions": [],
+            "fps": 28.576871785101925
+          }
+        ],
+        "scope": "Adjacent native sample/wall_total_us deltas with conservative serial-order UTC bounds inside declared race PLAY phase, excluding whole snapshot command intervals. Not optical scanout or a whole58.599-second measurement; cumulative phase means/maxima are not per-window costs."
+      },
+      "audio": {
+        "eligible_intervals": [
+          {
+            "from_raw_offset": 5916183,
+            "to_raw_offset": 5917916,
+            "endpoint_fields": [
+              {
+                "app": "org.p4console.wacky-probe",
+                "game_core": 0,
+                "audio_core": 1,
+                "running": 1,
+                "queued": 1120,
+                "rejected": 0,
+                "underrun": 1808,
+                "clipped": 0,
+                "frames": 2797824,
+                "write_failures": 0,
+                "stack": 2048
+              },
+              {
+                "app": "org.p4console.wacky-probe",
+                "game_core": 0,
+                "audio_core": 1,
+                "running": 1,
+                "queued": 1152,
+                "rejected": 0,
+                "underrun": 1808,
+                "clipped": 0,
+                "frames": 2965760,
+                "write_failures": 0,
+                "stack": 2048
+              }
+            ],
+            "endpoint_uptime_ms": [
+              1516613,
+              1527111
+            ],
+            "possible_utc_window": [
+              "2026-10-07T15:10:02.125793+00:00",
+              "2026-10-07T15:10:53.580961+00:00"
+            ],
+            "duration_ms": 10498,
+            "delta": {
+              "frames": 167936,
+              "underrun": 0,
+              "rejected": 0,
+              "write_failures": 0,
+              "clipped": 0
+            },
+            "screenshot_journal_indices": [],
+            "eligible_clean_interval": true,
+            "exclusions": [],
+            "fps": null
+          },
+          {
+            "from_raw_offset": 5917916,
+            "to_raw_offset": 5919011,
+            "endpoint_fields": [
+              {
+                "app": "org.p4console.wacky-probe",
+                "game_core": 0,
+                "audio_core": 1,
+                "running": 1,
+                "queued": 1152,
+                "rejected": 0,
+                "underrun": 1808,
+                "clipped": 0,
+                "frames": 2965760,
+                "write_failures": 0,
+                "stack": 2048
+              },
+              {
+                "app": "org.p4console.wacky-probe",
+                "game_core": 0,
+                "audio_core": 1,
+                "running": 1,
+                "queued": 1200,
+                "rejected": 0,
+                "underrun": 1808,
+                "clipped": 0,
+                "frames": 3133696,
+                "write_failures": 0,
+                "stack": 2048
+              }
+            ],
+            "endpoint_uptime_ms": [
+              1527111,
+              1537608
+            ],
+            "possible_utc_window": [
+              "2026-10-07T15:10:06.875085+00:00",
+              "2026-10-07T15:10:53.580961+00:00"
+            ],
+            "duration_ms": 10497,
+            "delta": {
+              "frames": 167936,
+              "underrun": 0,
+              "rejected": 0,
+              "write_failures": 0,
+              "clipped": 0
+            },
+            "screenshot_journal_indices": [],
+            "eligible_clean_interval": true,
+            "exclusions": [],
+            "fps": null
+          },
+          {
+            "from_raw_offset": 5919011,
+            "to_raw_offset": 5920106,
+            "endpoint_fields": [
+              {
+                "app": "org.p4console.wacky-probe",
+                "game_core": 0,
+                "audio_core": 1,
+                "running": 1,
+                "queued": 1200,
+                "rejected": 0,
+                "underrun": 1808,
+                "clipped": 0,
+                "frames": 3133696,
+                "write_failures": 0,
+                "stack": 2048
+              },
+              {
+                "app": "org.p4console.wacky-probe",
+                "game_core": 0,
+                "audio_core": 1,
+                "running": 1,
+                "queued": 1104,
+                "rejected": 0,
+                "underrun": 1808,
+                "clipped": 0,
+                "frames": 3301504,
+                "write_failures": 0,
+                "stack": 2048
+              }
+            ],
+            "endpoint_uptime_ms": [
+              1537608,
+              1548091
+            ],
+            "possible_utc_window": [
+              "2026-10-07T15:10:06.875085+00:00",
+              "2026-10-07T15:10:53.580961+00:00"
+            ],
+            "duration_ms": 10483,
+            "delta": {
+              "frames": 167808,
+              "underrun": 0,
+              "rejected": 0,
+              "write_failures": 0,
+              "clipped": 0
+            },
+            "screenshot_journal_indices": [],
+            "eligible_clean_interval": true,
+            "exclusions": [],
+            "fps": null
+          },
+          {
+            "from_raw_offset": 5920106,
+            "to_raw_offset": 5921201,
+            "endpoint_fields": [
+              {
+                "app": "org.p4console.wacky-probe",
+                "game_core": 0,
+                "audio_core": 1,
+                "running": 1,
+                "queued": 1104,
+                "rejected": 0,
+                "underrun": 1808,
+                "clipped": 0,
+                "frames": 3301504,
+                "write_failures": 0,
+                "stack": 2048
+              },
+              {
+                "app": "org.p4console.wacky-probe",
+                "game_core": 0,
+                "audio_core": 1,
+                "running": 1,
+                "queued": 1136,
+                "rejected": 0,
+                "underrun": 1808,
+                "clipped": 0,
+                "frames": 3469440,
+                "write_failures": 0,
+                "stack": 2048
+              }
+            ],
+            "endpoint_uptime_ms": [
+              1548091,
+              1558589
+            ],
+            "possible_utc_window": [
+              "2026-10-07T15:10:06.875085+00:00",
+              "2026-10-07T15:10:53.580961+00:00"
+            ],
+            "duration_ms": 10498,
+            "delta": {
+              "frames": 167936,
+              "underrun": 0,
+              "rejected": 0,
+              "write_failures": 0,
+              "clipped": 0
+            },
+            "screenshot_journal_indices": [],
+            "eligible_clean_interval": true,
+            "exclusions": [],
+            "fps": null
+          }
+        ],
+        "sample_frames_delta": 671616,
+        "lifetime_underrun_frames": 2048,
+        "heard_music": "PENDING",
+        "heard_sfx": "PENDING",
+        "positive_underrun_intervals": [
+          {
+            "from_raw_offset": 5311967,
+            "to_raw_offset": 5430372,
+            "delta": 992,
+            "cumulative": 992,
+            "conservative_increment_utc": {
+              "lower": "2026-10-07T15:07:34.375505+00:00",
+              "upper": "2026-10-07T15:08:08.029356+00:00"
+            },
+            "whole_screenshot_utc_overlaps": [
+              464
+            ],
+            "retained_capture_raw_order": [
+              {
+                "journal_index": 464,
+                "relation": "complete retained capture envelope range between worker samples",
+                "capture_raw_start": 5312852,
+                "capture_raw_end": 5430372
+              }
+            ]
+          },
+          {
+            "from_raw_offset": 5433898,
+            "to_raw_offset": 5552571,
+            "delta": 160,
+            "cumulative": 1152,
+            "conservative_increment_utc": {
+              "lower": "2026-10-07T15:08:15.214849+00:00",
+              "upper": "2026-10-07T15:08:39.607590+00:00"
+            },
+            "whole_screenshot_utc_overlaps": [
+              473
+            ],
+            "retained_capture_raw_order": [
+              {
+                "journal_index": 473,
+                "relation": "complete retained capture envelope range between worker samples",
+                "capture_raw_start": 5435049,
+                "capture_raw_end": 5552571
+              }
+            ]
+          },
+          {
+            "from_raw_offset": 5554303,
+            "to_raw_offset": 5672721,
+            "delta": 224,
+            "cumulative": 1376,
+            "conservative_increment_utc": {
+              "lower": "2026-10-07T15:08:40.586008+00:00",
+              "upper": "2026-10-07T15:08:54.782340+00:00"
+            },
+            "whole_screenshot_utc_overlaps": [
+              480
+            ],
+            "retained_capture_raw_order": [
+              {
+                "journal_index": 480,
+                "relation": "complete retained capture envelope range between worker samples",
+                "capture_raw_start": 5555199,
+                "capture_raw_end": 5672721
+              }
+            ]
+          },
+          {
+            "from_raw_offset": 5672721,
+            "to_raw_offset": 5791395,
+            "delta": 176,
+            "cumulative": 1552,
+            "conservative_increment_utc": {
+              "lower": "2026-10-07T15:08:40.586008+00:00",
+              "upper": "2026-10-07T15:09:14.192153+00:00"
+            },
+            "whole_screenshot_utc_overlaps": [
+              480,
+              486
+            ],
+            "retained_capture_raw_order": [
+              {
+                "journal_index": 486,
+                "relation": "complete retained capture envelope range between worker samples",
+                "capture_raw_start": 5674071,
+                "capture_raw_end": 5791395
+              }
+            ]
+          },
+          {
+            "from_raw_offset": 5792491,
+            "to_raw_offset": 5911421,
+            "delta": 256,
+            "cumulative": 1808,
+            "conservative_increment_utc": {
+              "lower": "2026-10-07T15:08:55.375587+00:00",
+              "upper": "2026-10-07T15:09:48.443374+00:00"
+            },
+            "whole_screenshot_utc_overlaps": [
+              486,
+              492
+            ],
+            "retained_capture_raw_order": [
+              {
+                "journal_index": 492,
+                "relation": "complete retained capture envelope range between worker samples",
+                "capture_raw_start": 5793900,
+                "capture_raw_end": 5911421
+              }
+            ]
+          },
+          {
+            "from_raw_offset": 5922424,
+            "to_raw_offset": 6040843,
+            "delta": 240,
+            "cumulative": 2048,
+            "conservative_increment_utc": {
+              "lower": "2026-10-07T15:10:53.493574+00:00",
+              "upper": "2026-10-07T15:11:24.116997+00:00"
+            },
+            "whole_screenshot_utc_overlaps": [
+              508
+            ],
+            "retained_capture_raw_order": [
+              {
+                "journal_index": 508,
+                "relation": "complete retained capture envelope range between worker samples",
+                "capture_raw_start": 5923519,
+                "capture_raw_end": 6040843
+              }
+            ]
+          }
+        ]
+      },
+      "lifecycle_markers": [
+        {
+          "kind": "CARTRIDGE_START",
+          "app": "org.p4console.wacky-probe",
+          "epoch": 3,
+          "raw_start": 5308821,
+          "raw_end": 5309089,
+          "launch_app": "org.p4console.wacky-probe",
+          "launch_active": true,
+          "tag_uptime_ms": 1341750,
+          "tag": "p4_console_os",
+          "text": "P4_CONSOLE_OS CARTRIDGE_START app=org.p4console.wacky-probe file=WACKYTRY.P4G api=1 source=microsd-games-directory runtime=psram-elf audio=ready signals=offline saves=ready multiplayer=connected surface=320x200 save_bytes=0 save_sequence=0",
+          "fields": {
+            "app": "org.p4console.wacky-probe",
+            "file": "WACKYTRY.P4G",
+            "api": 1,
+            "source": "microsd-games-directory",
+            "runtime": "psram-elf",
+            "audio": "ready",
+            "signals": "offline",
+            "saves": "ready",
+            "multiplayer": "connected",
+            "surface": "320x200",
+            "save_bytes": 0,
+            "save_sequence": 0
+          },
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:07:09.782333+00:00",
+            "utc_upper": "2026-10-07T15:07:34.505730+00:00",
+            "prior_journal_index": 459,
+            "following_journal_index": 463,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          },
+          "parse_errors": [],
+          "interleaved_line": false
+        },
+        {
+          "kind": "AUDIO_WORKER_STOP",
+          "app": "org.p4console.wacky-probe",
+          "epoch": 3,
+          "raw_start": 6043626,
+          "raw_end": 6043744,
+          "launch_app": "org.p4console.wacky-probe",
+          "launch_active": true,
+          "tag_uptime_ms": 1595649,
+          "tag": "p4_console_os",
+          "text": "P4_CONSOLE_OS AUDIO_WORKER_STOP core=1 frames=4062336 underrun=2048 rejected=0 stack=2048",
+          "fields": {
+            "core": 1,
+            "frames": 4062336,
+            "underrun": 2048,
+            "rejected": 0,
+            "stack": 2048
+          },
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:11:24.082731+00:00",
+            "utc_upper": "2026-10-07T15:11:24.892879+00:00",
+            "prior_journal_index": 511,
+            "following_journal_index": 512,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          },
+          "parse_errors": [],
+          "interleaved_line": false
+        },
+        {
+          "kind": "CARTRIDGE_STOP",
+          "app": "org.p4console.wacky-probe",
+          "epoch": 3,
+          "raw_start": 6043997,
+          "raw_end": 6044267,
+          "launch_app": "org.p4console.wacky-probe",
+          "launch_active": false,
+          "tag_uptime_ms": 1596155,
+          "tag": "p4_console_os",
+          "text": "P4_CONSOLE_OS CARTRIDGE_STOP app=org.p4console.wacky-probe result=ESP_OK frames=7054 deadline_misses=7053 max_frame_ms=100 max_late_ms=100 display_ack_misses=0 return=launcher audio_frames=4062592 audio_stream_underrun_frames=2048 amp_safe=1",
+          "fields": {
+            "app": "org.p4console.wacky-probe",
+            "result": "ESP_OK",
+            "frames": 7054,
+            "deadline_misses": 7053,
+            "max_frame_ms": 100,
+            "max_late_ms": 100,
+            "display_ack_misses": 0,
+            "return": "launcher",
+            "audio_frames": 4062592,
+            "audio_stream_underrun_frames": 2048,
+            "amp_safe": 1
+          },
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:11:24.082731+00:00",
+            "utc_upper": "2026-10-07T15:11:24.892879+00:00",
+            "prior_journal_index": 511,
+            "following_journal_index": 512,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          },
+          "parse_errors": [],
+          "interleaved_line": false
+        }
+      ],
+      "wacky_parse_anomalies": [],
+      "prior_prefix_anomalies": 1,
+      "prior_anomaly_scope": "A prior Air interleaved audio line is retained in the full analysis; no Wacky anomaly.",
+      "save_and_network_stop_markers": [
+        {
+          "raw_start": 6043511,
+          "raw_end": 6043626,
+          "uptime_ms": 1595647,
+          "text": "I (1595647) p4_console_os: P4_CONSOLE_OS NATIVE_MULTIPLAYER_STOP game=org.p4console.wacky-probe state=2 dropped=3",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:11:24.082731+00:00",
+            "utc_upper": "2026-10-07T15:11:24.892879+00:00",
+            "prior_journal_index": 511,
+            "following_journal_index": 512,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 6043744,
+          "raw_end": 6043909,
+          "uptime_ms": 1595970,
+          "text": "I (1595970) p4_console_os: P4_CONSOLE_OS SAVE_WORKER_STOP app=org.p4console.wacky-probe requests=1 callback_busy=0 low_water_bytes=284 snapshot_bytes=36 sequence=1",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:11:24.082731+00:00",
+            "utc_upper": "2026-10-07T15:11:24.892879+00:00",
+            "prior_journal_index": 511,
+            "following_journal_index": 512,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        }
+      ],
+      "capture_payload_validation": [
+        {
+          "journal_index": 464,
+          "capture_id": 1640759063,
+          "raw_start": 5312852,
+          "raw_end": 5430372,
+          "envelopes": 59,
+          "data_chunks": 57,
+          "payload_bytes": 115200,
+          "payload_sha256": "4007160deccca9d67cb93fba65ce9bdf6d1b3fda2ff3e04c520b9c65fcac7769",
+          "journal_payload_identity_match": true
+        },
+        {
+          "journal_index": 473,
+          "capture_id": 187050855,
+          "raw_start": 5435049,
+          "raw_end": 5552571,
+          "envelopes": 59,
+          "data_chunks": 57,
+          "payload_bytes": 115200,
+          "payload_sha256": "f507e0f84f3d89d7ffe01feb4c91ceef8192ea79bb494f5a4e130db9a3fbf068",
+          "journal_payload_identity_match": true
+        },
+        {
+          "journal_index": 480,
+          "capture_id": 1229372867,
+          "raw_start": 5555199,
+          "raw_end": 5672721,
+          "envelopes": 59,
+          "data_chunks": 57,
+          "payload_bytes": 115200,
+          "payload_sha256": "fe7f3725e0a091f77c84aba79650595e292755b55b6280e461238312597b9be3",
+          "journal_payload_identity_match": true
+        },
+        {
+          "journal_index": 486,
+          "capture_id": 4222890127,
+          "raw_start": 5674071,
+          "raw_end": 5791395,
+          "envelopes": 59,
+          "data_chunks": 57,
+          "payload_bytes": 115200,
+          "payload_sha256": "cc297fbc9307f3cc8f8563188ac4f2e032ebd5fc6513b966692bbdca240cdedb",
+          "journal_payload_identity_match": true
+        },
+        {
+          "journal_index": 492,
+          "capture_id": 858274698,
+          "raw_start": 5793900,
+          "raw_end": 5911421,
+          "envelopes": 59,
+          "data_chunks": 57,
+          "payload_bytes": 115200,
+          "payload_sha256": "3eaab159fbe7418c3e540fa5965636c9baf9deeec91e35bce92e8e9aee930970",
+          "journal_payload_identity_match": true
+        },
+        {
+          "journal_index": 508,
+          "capture_id": 933209167,
+          "raw_start": 5923519,
+          "raw_end": 6040843,
+          "envelopes": 59,
+          "data_chunks": 57,
+          "payload_bytes": 115200,
+          "payload_sha256": "7aee163dbad334fb9eacbb9027919d44be9585afb2dac2a5146110409d239574",
+          "journal_payload_identity_match": true
+        },
+        {
+          "journal_index": 514,
+          "capture_id": 2386104080,
+          "raw_start": 6045457,
+          "raw_end": 6162781,
+          "envelopes": 59,
+          "data_chunks": 57,
+          "payload_bytes": 115200,
+          "payload_sha256": "8a55b40b7351966055c1f1142c9ece5dce7ddf6904853a564aa4edd81b14b832",
+          "journal_payload_identity_match": true
+        },
+        {
+          "journal_index": 521,
+          "capture_id": 1086482739,
+          "raw_start": 6163795,
+          "raw_end": 6281356,
+          "envelopes": 59,
+          "data_chunks": 57,
+          "payload_bytes": 115200,
+          "payload_sha256": "8a55b40b7351966055c1f1142c9ece5dce7ddf6904853a564aa4edd81b14b832",
+          "journal_payload_identity_match": true
+        }
+      ],
+      "fatal_or_boot_reset_markers_after_launch": []
+    },
+    "B": {
+      "role": "host",
+      "device_binding_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+      "cadence": {
+        "result": "FAIL native30FPS floor; bounded race-phase minimum exceeds25FPS",
+        "summary": {
+          "interval_count": 4,
+          "frames": 1200,
+          "wall_us": 41674000,
+          "weighted_fps": 28.794932091951818,
+          "minimum_interval_fps": 28.691660290742156
+        },
+        "measured_wall_seconds": 41.674,
+        "eligible_intervals": [
+          {
+            "from_raw_offset": 5913370,
+            "to_raw_offset": 5914720,
+            "endpoint_fields": [
+              {
+                "app": "org.p4console.wacky-probe",
+                "samples": 4800,
+                "wall_total_us": 168273528,
+                "wall_avg_us": 35056,
+                "wall_max_us": 114000,
+                "update_render_avg_us": 14721,
+                "update_render_max_us": 18880,
+                "input_avg_us": 612,
+                "input_max_us": 2680,
+                "audio_avg_us": 1,
+                "audio_max_us": 23,
+                "present_avg_us": 18333,
+                "present_max_us": 20230,
+                "reuse_avg_us": 24,
+                "reuse_max_us": 375,
+                "transform_avg_us": 15084,
+                "transform_max_us": 16942,
+                "handoff_avg_us": 53,
+                "handoff_max_us": 435,
+                "deadline_rebases": 4799,
+                "audio_discarded_us": 0
+              },
+              {
+                "app": "org.p4console.wacky-probe",
+                "samples": 5100,
+                "wall_total_us": 178687528,
+                "wall_avg_us": 35036,
+                "wall_max_us": 114000,
+                "update_render_avg_us": 14711,
+                "update_render_max_us": 18880,
+                "input_avg_us": 611,
+                "input_max_us": 2680,
+                "audio_avg_us": 1,
+                "audio_max_us": 23,
+                "present_avg_us": 18331,
+                "present_max_us": 20230,
+                "reuse_avg_us": 24,
+                "reuse_max_us": 375,
+                "transform_avg_us": 15079,
+                "transform_max_us": 16942,
+                "handoff_avg_us": 53,
+                "handoff_max_us": 435,
+                "deadline_rebases": 5099,
+                "audio_discarded_us": 0
+              }
+            ],
+            "endpoint_uptime_ms": [
+              1514889,
+              1525303
+            ],
+            "possible_utc_window": [
+              "2026-10-07T15:10:02.848050+00:00",
+              "2026-10-07T15:10:53.580961+00:00"
+            ],
+            "duration_ms": 10414,
+            "delta": {
+              "samples": 300,
+              "wall_total_us": 10414000
+            },
+            "screenshot_journal_indices": [],
+            "eligible_clean_interval": true,
+            "exclusions": [],
+            "fps": 28.807374687920106
+          },
+          {
+            "from_raw_offset": 5914720,
+            "to_raw_offset": 5915815,
+            "endpoint_fields": [
+              {
+                "app": "org.p4console.wacky-probe",
+                "samples": 5100,
+                "wall_total_us": 178687528,
+                "wall_avg_us": 35036,
+                "wall_max_us": 114000,
+                "update_render_avg_us": 14711,
+                "update_render_max_us": 18880,
+                "input_avg_us": 611,
+                "input_max_us": 2680,
+                "audio_avg_us": 1,
+                "audio_max_us": 23,
+                "present_avg_us": 18331,
+                "present_max_us": 20230,
+                "reuse_avg_us": 24,
+                "reuse_max_us": 375,
+                "transform_avg_us": 15079,
+                "transform_max_us": 16942,
+                "handoff_avg_us": 53,
+                "handoff_max_us": 435,
+                "deadline_rebases": 5099,
+                "audio_discarded_us": 0
+              },
+              {
+                "app": "org.p4console.wacky-probe",
+                "samples": 5400,
+                "wall_total_us": 189143528,
+                "wall_avg_us": 35026,
+                "wall_max_us": 114000,
+                "update_render_avg_us": 14708,
+                "update_render_max_us": 18880,
+                "input_avg_us": 610,
+                "input_max_us": 2680,
+                "audio_avg_us": 1,
+                "audio_max_us": 23,
+                "present_avg_us": 18333,
+                "present_max_us": 20230,
+                "reuse_avg_us": 24,
+                "reuse_max_us": 378,
+                "transform_avg_us": 15080,
+                "transform_max_us": 16942,
+                "handoff_avg_us": 53,
+                "handoff_max_us": 435,
+                "deadline_rebases": 5399,
+                "audio_discarded_us": 0
+              }
+            ],
+            "endpoint_uptime_ms": [
+              1525303,
+              1535759
+            ],
+            "possible_utc_window": [
+              "2026-10-07T15:10:06.875085+00:00",
+              "2026-10-07T15:10:53.580961+00:00"
+            ],
+            "duration_ms": 10456,
+            "delta": {
+              "samples": 300,
+              "wall_total_us": 10456000
+            },
+            "screenshot_journal_indices": [],
+            "eligible_clean_interval": true,
+            "exclusions": [],
+            "fps": 28.691660290742156
+          },
+          {
+            "from_raw_offset": 5915815,
+            "to_raw_offset": 5916908,
+            "endpoint_fields": [
+              {
+                "app": "org.p4console.wacky-probe",
+                "samples": 5400,
+                "wall_total_us": 189143528,
+                "wall_avg_us": 35026,
+                "wall_max_us": 114000,
+                "update_render_avg_us": 14708,
+                "update_render_max_us": 18880,
+                "input_avg_us": 610,
+                "input_max_us": 2680,
+                "audio_avg_us": 1,
+                "audio_max_us": 23,
+                "present_avg_us": 18333,
+                "present_max_us": 20230,
+                "reuse_avg_us": 24,
+                "reuse_max_us": 378,
+                "transform_avg_us": 15080,
+                "transform_max_us": 16942,
+                "handoff_avg_us": 53,
+                "handoff_max_us": 435,
+                "deadline_rebases": 5399,
+                "audio_discarded_us": 0
+              },
+              {
+                "app": "org.p4console.wacky-probe",
+                "samples": 5700,
+                "wall_total_us": 199547529,
+                "wall_avg_us": 35008,
+                "wall_max_us": 114000,
+                "update_render_avg_us": 14691,
+                "update_render_max_us": 18880,
+                "input_avg_us": 611,
+                "input_max_us": 4312,
+                "audio_avg_us": 1,
+                "audio_max_us": 23,
+                "present_avg_us": 18339,
+                "present_max_us": 20230,
+                "reuse_avg_us": 24,
+                "reuse_max_us": 378,
+                "transform_avg_us": 15081,
+                "transform_max_us": 16942,
+                "handoff_avg_us": 53,
+                "handoff_max_us": 444,
+                "deadline_rebases": 5699,
+                "audio_discarded_us": 0
+              }
+            ],
+            "endpoint_uptime_ms": [
+              1535759,
+              1546163
+            ],
+            "possible_utc_window": [
+              "2026-10-07T15:10:06.875085+00:00",
+              "2026-10-07T15:10:53.580961+00:00"
+            ],
+            "duration_ms": 10404,
+            "delta": {
+              "samples": 300,
+              "wall_total_us": 10404001
+            },
+            "screenshot_journal_indices": [],
+            "eligible_clean_interval": true,
+            "exclusions": [],
+            "fps": 28.83506066560355
+          },
+          {
+            "from_raw_offset": 5916908,
+            "to_raw_offset": 5917999,
+            "endpoint_fields": [
+              {
+                "app": "org.p4console.wacky-probe",
+                "samples": 5700,
+                "wall_total_us": 199547529,
+                "wall_avg_us": 35008,
+                "wall_max_us": 114000,
+                "update_render_avg_us": 14691,
+                "update_render_max_us": 18880,
+                "input_avg_us": 611,
+                "input_max_us": 4312,
+                "audio_avg_us": 1,
+                "audio_max_us": 23,
+                "present_avg_us": 18339,
+                "present_max_us": 20230,
+                "reuse_avg_us": 24,
+                "reuse_max_us": 378,
+                "transform_avg_us": 15081,
+                "transform_max_us": 16942,
+                "handoff_avg_us": 53,
+                "handoff_max_us": 444,
+                "deadline_rebases": 5699,
+                "audio_discarded_us": 0
+              },
+              {
+                "app": "org.p4console.wacky-probe",
+                "samples": 6000,
+                "wall_total_us": 209947528,
+                "wall_avg_us": 34991,
+                "wall_max_us": 114000,
+                "update_render_avg_us": 14678,
+                "update_render_max_us": 18880,
+                "input_avg_us": 610,
+                "input_max_us": 4312,
+                "audio_avg_us": 1,
+                "audio_max_us": 23,
+                "present_avg_us": 18341,
+                "present_max_us": 20230,
+                "reuse_avg_us": 24,
+                "reuse_max_us": 378,
+                "transform_avg_us": 15079,
+                "transform_max_us": 16942,
+                "handoff_avg_us": 53,
+                "handoff_max_us": 444,
+                "deadline_rebases": 5999,
+                "audio_discarded_us": 0
+              }
+            ],
+            "endpoint_uptime_ms": [
+              1546163,
+              1556563
+            ],
+            "possible_utc_window": [
+              "2026-10-07T15:10:06.875085+00:00",
+              "2026-10-07T15:10:53.580961+00:00"
+            ],
+            "duration_ms": 10400,
+            "delta": {
+              "samples": 300,
+              "wall_total_us": 10399999
+            },
+            "screenshot_journal_indices": [],
+            "eligible_clean_interval": true,
+            "exclusions": [],
+            "fps": 28.84615661982275
+          }
+        ],
+        "scope": "Adjacent native sample/wall_total_us deltas with conservative serial-order UTC bounds inside declared race PLAY phase, excluding whole snapshot command intervals. Not optical scanout or a whole58.599-second measurement; cumulative phase means/maxima are not per-window costs."
+      },
+      "audio": {
+        "eligible_intervals": [
+          {
+            "from_raw_offset": 5913160,
+            "to_raw_offset": 5914510,
+            "endpoint_fields": [
+              {
+                "app": "org.p4console.wacky-probe",
+                "game_core": 0,
+                "audio_core": 1,
+                "running": 1,
+                "queued": 1088,
+                "rejected": 0,
+                "underrun": 1472,
+                "clipped": 0,
+                "frames": 2771456,
+                "write_failures": 0,
+                "stack": 2056
+              },
+              {
+                "app": "org.p4console.wacky-probe",
+                "game_core": 0,
+                "audio_core": 1,
+                "running": 1,
+                "queued": 1168,
+                "rejected": 0,
+                "underrun": 1472,
+                "clipped": 0,
+                "frames": 2937984,
+                "write_failures": 0,
+                "stack": 2056
+              }
+            ],
+            "endpoint_uptime_ms": [
+              1514886,
+              1525300
+            ],
+            "possible_utc_window": [
+              "2026-10-07T15:10:02.848050+00:00",
+              "2026-10-07T15:10:53.580961+00:00"
+            ],
+            "duration_ms": 10414,
+            "delta": {
+              "frames": 166528,
+              "underrun": 0,
+              "rejected": 0,
+              "write_failures": 0,
+              "clipped": 0
+            },
+            "screenshot_journal_indices": [],
+            "eligible_clean_interval": true,
+            "exclusions": [],
+            "fps": null
+          },
+          {
+            "from_raw_offset": 5914510,
+            "to_raw_offset": 5915605,
+            "endpoint_fields": [
+              {
+                "app": "org.p4console.wacky-probe",
+                "game_core": 0,
+                "audio_core": 1,
+                "running": 1,
+                "queued": 1168,
+                "rejected": 0,
+                "underrun": 1472,
+                "clipped": 0,
+                "frames": 2937984,
+                "write_failures": 0,
+                "stack": 2056
+              },
+              {
+                "app": "org.p4console.wacky-probe",
+                "game_core": 0,
+                "audio_core": 1,
+                "running": 1,
+                "queued": 1168,
+                "rejected": 0,
+                "underrun": 1472,
+                "clipped": 0,
+                "frames": 3105280,
+                "write_failures": 0,
+                "stack": 2056
+              }
+            ],
+            "endpoint_uptime_ms": [
+              1525300,
+              1535756
+            ],
+            "possible_utc_window": [
+              "2026-10-07T15:10:06.875085+00:00",
+              "2026-10-07T15:10:53.580961+00:00"
+            ],
+            "duration_ms": 10456,
+            "delta": {
+              "frames": 167296,
+              "underrun": 0,
+              "rejected": 0,
+              "write_failures": 0,
+              "clipped": 0
+            },
+            "screenshot_journal_indices": [],
+            "eligible_clean_interval": true,
+            "exclusions": [],
+            "fps": null
+          },
+          {
+            "from_raw_offset": 5915605,
+            "to_raw_offset": 5916698,
+            "endpoint_fields": [
+              {
+                "app": "org.p4console.wacky-probe",
+                "game_core": 0,
+                "audio_core": 1,
+                "running": 1,
+                "queued": 1168,
+                "rejected": 0,
+                "underrun": 1472,
+                "clipped": 0,
+                "frames": 3105280,
+                "write_failures": 0,
+                "stack": 2056
+              },
+              {
+                "app": "org.p4console.wacky-probe",
+                "game_core": 0,
+                "audio_core": 1,
+                "running": 1,
+                "queued": 1120,
+                "rejected": 0,
+                "underrun": 1472,
+                "clipped": 0,
+                "frames": 3271808,
+                "write_failures": 0,
+                "stack": 2056
+              }
+            ],
+            "endpoint_uptime_ms": [
+              1535756,
+              1546160
+            ],
+            "possible_utc_window": [
+              "2026-10-07T15:10:06.875085+00:00",
+              "2026-10-07T15:10:53.580961+00:00"
+            ],
+            "duration_ms": 10404,
+            "delta": {
+              "frames": 166528,
+              "underrun": 0,
+              "rejected": 0,
+              "write_failures": 0,
+              "clipped": 0
+            },
+            "screenshot_journal_indices": [],
+            "eligible_clean_interval": true,
+            "exclusions": [],
+            "fps": null
+          },
+          {
+            "from_raw_offset": 5916698,
+            "to_raw_offset": 5917789,
+            "endpoint_fields": [
+              {
+                "app": "org.p4console.wacky-probe",
+                "game_core": 0,
+                "audio_core": 1,
+                "running": 1,
+                "queued": 1120,
+                "rejected": 0,
+                "underrun": 1472,
+                "clipped": 0,
+                "frames": 3271808,
+                "write_failures": 0,
+                "stack": 2056
+              },
+              {
+                "app": "org.p4console.wacky-probe",
+                "game_core": 0,
+                "audio_core": 1,
+                "running": 1,
+                "queued": 1136,
+                "rejected": 0,
+                "underrun": 1472,
+                "clipped": 0,
+                "frames": 3438208,
+                "write_failures": 0,
+                "stack": 2056
+              }
+            ],
+            "endpoint_uptime_ms": [
+              1546160,
+              1556560
+            ],
+            "possible_utc_window": [
+              "2026-10-07T15:10:06.875085+00:00",
+              "2026-10-07T15:10:53.580961+00:00"
+            ],
+            "duration_ms": 10400,
+            "delta": {
+              "frames": 166400,
+              "underrun": 0,
+              "rejected": 0,
+              "write_failures": 0,
+              "clipped": 0
+            },
+            "screenshot_journal_indices": [],
+            "eligible_clean_interval": true,
+            "exclusions": [],
+            "fps": null
+          }
+        ],
+        "sample_frames_delta": 666752,
+        "lifetime_underrun_frames": 1904,
+        "heard_music": "PENDING",
+        "heard_sfx": "PENDING",
+        "positive_underrun_intervals": [
+          {
+            "from_raw_offset": 5308328,
+            "to_raw_offset": 5426733,
+            "delta": 896,
+            "cumulative": 896,
+            "conservative_increment_utc": {
+              "lower": "2026-10-07T15:07:34.375505+00:00",
+              "upper": "2026-10-07T15:08:08.029356+00:00"
+            },
+            "whole_screenshot_utc_overlaps": [
+              464
+            ],
+            "retained_capture_raw_order": [
+              {
+                "journal_index": 464,
+                "relation": "complete retained capture envelope range between worker samples",
+                "capture_raw_start": 5309212,
+                "capture_raw_end": 5426733
+              }
+            ]
+          },
+          {
+            "from_raw_offset": 5430253,
+            "to_raw_offset": 5549308,
+            "delta": 176,
+            "cumulative": 1072,
+            "conservative_increment_utc": {
+              "lower": "2026-10-07T15:08:15.214849+00:00",
+              "upper": "2026-10-07T15:08:39.500464+00:00"
+            },
+            "whole_screenshot_utc_overlaps": [
+              473
+            ],
+            "retained_capture_raw_order": [
+              {
+                "journal_index": 473,
+                "relation": "complete retained capture envelope range between worker samples",
+                "capture_raw_start": 5431788,
+                "capture_raw_end": 5549308
+              }
+            ]
+          },
+          {
+            "from_raw_offset": 5550400,
+            "to_raw_offset": 5669199,
+            "delta": 64,
+            "cumulative": 1136,
+            "conservative_increment_utc": {
+              "lower": "2026-10-07T15:08:22.127161+00:00",
+              "upper": "2026-10-07T15:08:54.782340+00:00"
+            },
+            "whole_screenshot_utc_overlaps": [
+              473,
+              480
+            ],
+            "retained_capture_raw_order": [
+              {
+                "journal_index": 480,
+                "relation": "complete retained capture envelope range between worker samples",
+                "capture_raw_start": 5551680,
+                "capture_raw_end": 5669004
+              }
+            ]
+          },
+          {
+            "from_raw_offset": 5669199,
+            "to_raw_offset": 5788128,
+            "delta": 144,
+            "cumulative": 1280,
+            "conservative_increment_utc": {
+              "lower": "2026-10-07T15:08:40.586008+00:00",
+              "upper": "2026-10-07T15:09:14.192153+00:00"
+            },
+            "whole_screenshot_utc_overlaps": [
+              480,
+              486
+            ],
+            "retained_capture_raw_order": [
+              {
+                "journal_index": 486,
+                "relation": "complete retained capture envelope range between worker samples",
+                "capture_raw_start": 5670804,
+                "capture_raw_end": 5788128
+              }
+            ]
+          },
+          {
+            "from_raw_offset": 5789220,
+            "to_raw_offset": 5907893,
+            "delta": 192,
+            "cumulative": 1472,
+            "conservative_increment_utc": {
+              "lower": "2026-10-07T15:08:55.375587+00:00",
+              "upper": "2026-10-07T15:09:48.443374+00:00"
+            },
+            "whole_screenshot_utc_overlaps": [
+              486,
+              492
+            ],
+            "retained_capture_raw_order": [
+              {
+                "journal_index": 492,
+                "relation": "complete retained capture envelope range between worker samples",
+                "capture_raw_start": 5790373,
+                "capture_raw_end": 5907893
+              }
+            ]
+          },
+          {
+            "from_raw_offset": 5919010,
+            "to_raw_offset": 6037427,
+            "delta": 208,
+            "cumulative": 1680,
+            "conservative_increment_utc": {
+              "lower": "2026-10-07T15:10:53.493574+00:00",
+              "upper": "2026-10-07T15:11:24.116997+00:00"
+            },
+            "whole_screenshot_utc_overlaps": [
+              508
+            ],
+            "retained_capture_raw_order": [
+              {
+                "journal_index": 508,
+                "relation": "complete retained capture envelope range between worker samples",
+                "capture_raw_start": 5920103,
+                "capture_raw_end": 6037427
+              }
+            ]
+          },
+          {
+            "from_raw_offset": 6038519,
+            "to_raw_offset": 6112845,
+            "delta": 224,
+            "cumulative": 1904,
+            "conservative_increment_utc": {
+              "lower": "2026-10-07T15:10:53.493574+00:00",
+              "upper": "2026-10-07T15:11:47.204155+00:00"
+            },
+            "whole_screenshot_utc_overlaps": [
+              508,
+              514
+            ],
+            "retained_capture_raw_order": [
+              {
+                "journal_index": 514,
+                "relation": "capture envelope range partially overlaps between-sample raw range",
+                "capture_raw_start": 6039869,
+                "capture_raw_end": 6158090
+              }
+            ]
+          }
+        ]
+      },
+      "lifecycle_markers": [
+        {
+          "kind": "CARTRIDGE_START",
+          "app": "org.p4console.wacky-probe",
+          "epoch": 3,
+          "raw_start": 5305310,
+          "raw_end": 5305578,
+          "launch_app": "org.p4console.wacky-probe",
+          "launch_active": true,
+          "tag_uptime_ms": 1341674,
+          "tag": "p4_console_os",
+          "text": "P4_CONSOLE_OS CARTRIDGE_START app=org.p4console.wacky-probe file=WACKYTRY.P4G api=1 source=microsd-games-directory runtime=psram-elf audio=ready signals=offline saves=ready multiplayer=connected surface=320x200 save_bytes=0 save_sequence=0",
+          "fields": {
+            "app": "org.p4console.wacky-probe",
+            "file": "WACKYTRY.P4G",
+            "api": 1,
+            "source": "microsd-games-directory",
+            "runtime": "psram-elf",
+            "audio": "ready",
+            "signals": "offline",
+            "saves": "ready",
+            "multiplayer": "connected",
+            "surface": "320x200",
+            "save_bytes": 0,
+            "save_sequence": 0
+          },
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:07:09.782333+00:00",
+            "utc_upper": "2026-10-07T15:07:16.229933+00:00",
+            "prior_journal_index": 459,
+            "following_journal_index": 460,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          },
+          "parse_errors": [],
+          "interleaved_line": false
+        },
+        {
+          "kind": "AUDIO_WORKER_STOP",
+          "app": "org.p4console.wacky-probe",
+          "epoch": 3,
+          "raw_start": 6159974,
+          "raw_end": 6160092,
+          "launch_app": "org.p4console.wacky-probe",
+          "launch_active": true,
+          "tag_uptime_ms": 1618770,
+          "tag": "p4_console_os",
+          "text": "P4_CONSOLE_OS AUDIO_WORKER_STOP core=1 frames=4433536 underrun=1904 rejected=0 stack=2056",
+          "fields": {
+            "core": 1,
+            "frames": 4433536,
+            "underrun": 1904,
+            "rejected": 0,
+            "stack": 2056
+          },
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:11:47.100644+00:00",
+            "utc_upper": "2026-10-07T15:11:48.030200+00:00",
+            "prior_journal_index": 518,
+            "following_journal_index": 519,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          },
+          "parse_errors": [],
+          "interleaved_line": false
+        },
+        {
+          "kind": "CARTRIDGE_STOP",
+          "app": "org.p4console.wacky-probe",
+          "epoch": 3,
+          "raw_start": 6160345,
+          "raw_end": 6160614,
+          "launch_app": "org.p4console.wacky-probe",
+          "launch_active": false,
+          "tag_uptime_ms": 1619284,
+          "tag": "p4_console_os",
+          "text": "P4_CONSOLE_OS CARTRIDGE_STOP app=org.p4console.wacky-probe result=ESP_OK frames=7795 deadline_misses=7794 max_frame_ms=100 max_late_ms=98 display_ack_misses=0 return=launcher audio_frames=4433664 audio_stream_underrun_frames=1904 amp_safe=1",
+          "fields": {
+            "app": "org.p4console.wacky-probe",
+            "result": "ESP_OK",
+            "frames": 7795,
+            "deadline_misses": 7794,
+            "max_frame_ms": 100,
+            "max_late_ms": 98,
+            "display_ack_misses": 0,
+            "return": "launcher",
+            "audio_frames": 4433664,
+            "audio_stream_underrun_frames": 1904,
+            "amp_safe": 1
+          },
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:11:47.100644+00:00",
+            "utc_upper": "2026-10-07T15:11:48.030200+00:00",
+            "prior_journal_index": 518,
+            "following_journal_index": 519,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          },
+          "parse_errors": [],
+          "interleaved_line": false
+        }
+      ],
+      "wacky_parse_anomalies": [],
+      "prior_prefix_anomalies": 0,
+      "prior_anomaly_scope": "A prior Air interleaved audio line is retained in the full analysis; no Wacky anomaly.",
+      "save_and_network_stop_markers": [
+        {
+          "raw_start": 6159859,
+          "raw_end": 6159974,
+          "uptime_ms": 1618769,
+          "text": "I (1618769) p4_console_os: P4_CONSOLE_OS NATIVE_MULTIPLAYER_STOP game=org.p4console.wacky-probe state=3 dropped=0",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:11:47.100644+00:00",
+            "utc_upper": "2026-10-07T15:11:48.030200+00:00",
+            "prior_journal_index": 518,
+            "following_journal_index": 519,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        },
+        {
+          "raw_start": 6160092,
+          "raw_end": 6160257,
+          "uptime_ms": 1619097,
+          "text": "I (1619097) p4_console_os: P4_CONSOLE_OS SAVE_WORKER_STOP app=org.p4console.wacky-probe requests=1 callback_busy=0 low_water_bytes=284 snapshot_bytes=36 sequence=1",
+          "utc": {
+            "status": "bounded",
+            "utc_lower": "2026-10-07T15:11:47.100644+00:00",
+            "utc_upper": "2026-10-07T15:11:48.030200+00:00",
+            "prior_journal_index": 518,
+            "following_journal_index": 519,
+            "scope": "Raw serial emission order under monotonic host UTC; not an uptime clock conversion."
+          }
+        }
+      ],
+      "capture_payload_validation": [
+        {
+          "journal_index": 464,
+          "capture_id": 576953127,
+          "raw_start": 5309212,
+          "raw_end": 5426733,
+          "envelopes": 59,
+          "data_chunks": 57,
+          "payload_bytes": 115200,
+          "payload_sha256": "055797d5da176d86ea86a4f69153b197094781dec07c4f7a8c44e1b05c867bca",
+          "journal_payload_identity_match": true
+        },
+        {
+          "journal_index": 473,
+          "capture_id": 1653105243,
+          "raw_start": 5431788,
+          "raw_end": 5549308,
+          "envelopes": 59,
+          "data_chunks": 57,
+          "payload_bytes": 115200,
+          "payload_sha256": "15d4c42c67abdf17fd3f505acc9152c713b298ad36838917e5c9865988887dbf",
+          "journal_payload_identity_match": true
+        },
+        {
+          "journal_index": 480,
+          "capture_id": 292423073,
+          "raw_start": 5551680,
+          "raw_end": 5669004,
+          "envelopes": 59,
+          "data_chunks": 57,
+          "payload_bytes": 115200,
+          "payload_sha256": "e52da239a584d7731f1e5feacc188af329e35209effdc5b82ce9c3466f1b996d",
+          "journal_payload_identity_match": true
+        },
+        {
+          "journal_index": 486,
+          "capture_id": 2273399562,
+          "raw_start": 5670804,
+          "raw_end": 5788128,
+          "envelopes": 59,
+          "data_chunks": 57,
+          "payload_bytes": 115200,
+          "payload_sha256": "0f78a12bf5a7dc13271cd50938156e224a3938972c1ce0cf8a37aacf9e18830e",
+          "journal_payload_identity_match": true
+        },
+        {
+          "journal_index": 492,
+          "capture_id": 1068285519,
+          "raw_start": 5790373,
+          "raw_end": 5907893,
+          "envelopes": 59,
+          "data_chunks": 57,
+          "payload_bytes": 115200,
+          "payload_sha256": "2ce2f3e0a85891818a6490b81eed51a18b4c97e4bc435db73ed33fcf15a42956",
+          "journal_payload_identity_match": true
+        },
+        {
+          "journal_index": 508,
+          "capture_id": 2907824074,
+          "raw_start": 5920103,
+          "raw_end": 6037427,
+          "envelopes": 59,
+          "data_chunks": 57,
+          "payload_bytes": 115200,
+          "payload_sha256": "adceb5eea1dd5c891068fda88224d560c79933d9b05d467aed409ea2dc5c8f3f",
+          "journal_payload_identity_match": true
+        },
+        {
+          "journal_index": 514,
+          "capture_id": 2596001039,
+          "raw_start": 6039869,
+          "raw_end": 6158090,
+          "envelopes": 59,
+          "data_chunks": 57,
+          "payload_bytes": 115200,
+          "payload_sha256": "bb97300cc289a851a9c507e10075bc4f8ac67242026571cff6a6cb07146e44ba",
+          "journal_payload_identity_match": true
+        },
+        {
+          "journal_index": 521,
+          "capture_id": 2121261229,
+          "raw_start": 6161804,
+          "raw_end": 6279128,
+          "envelopes": 59,
+          "data_chunks": 57,
+          "payload_bytes": 115200,
+          "payload_sha256": "4dd79eaf08f673609db99dabaf5b83b8044c6addaf077773b8d6b49894f4b79d",
+          "journal_payload_identity_match": true
+        }
+      ],
+      "fatal_or_boot_reset_markers_after_launch": []
+    }
+  },
+  "phase": {
+    "declaration": {
+      "id": "ww73active",
+      "app": "org.p4console.wacky-probe",
+      "state": "PLAY",
+      "units": [
+        "A",
+        "B"
+      ],
+      "start_utc": "2026-10-07T15:09:58.714461+00:00",
+      "end_utc": "2026-10-07T15:10:57.312979+00:00",
+      "roles": {
+        "A": "guest",
+        "B": "host"
+      },
+      "evidence": "Root observed both green linked race, matching course/P1-P2 and peer wait cleared. Both gas and steering visibly replicated before window; short host-left/guest-right correction around15:10:02/06 then coasting race. Endpoint15:11:05 both green race timer3:42 without results. Race-phase cadence only, not sustained active-input or full-round completion.",
+      "music_evidence": null
+    },
+    "interpretation": "Race remained in play before/after this window. Short steering/throttle correction at about 15:10:02/06 followed by coasting. This is a bounded race-phase cadence sample, not continuous control activity, a full three-lap race, or Doom active-pulse qualification."
+  },
+  "root_observations": [
+    {
+      "at": "2026-10-07T15:07:41+00:00",
+      "screenshot_journal_index": 464,
+      "observation": "Both show the same green race, P1 host B/P2 guest A, timer about 19 seconds; startup peer wait cleared."
+    },
+    {
+      "at": "2026-10-07T15:08:25+00:00",
+      "screenshot_journal_index": 473,
+      "observation": "Host gas moved the car and movement was visible on the peer."
+    },
+    {
+      "at": "2026-10-07T15:08:44+00:00",
+      "screenshot_journal_index": 480,
+      "observation": "Guest gas moved the car and movement was visible on the peer."
+    },
+    {
+      "at": "2026-10-07T15:08:58+00:00",
+      "screenshot_journal_index": 486,
+      "observation": "Host right steering changed visible heading."
+    },
+    {
+      "at": "2026-10-07T15:09:18+00:00",
+      "screenshot_journal_index": 492,
+      "observation": "Guest left steering changed visible heading."
+    },
+    {
+      "at": "2026-10-07T15:11:05+00:00",
+      "screenshot_journal_index": 508,
+      "observation": "Both remained in the green race at about 3:42; no results screen."
+    },
+    {
+      "at": "2026-10-07T15:11:28+00:00",
+      "screenshot_journal_index": 514,
+      "observation": "Guest Back returned A Home; B showed PEER LEFT / BACK TO EXIT."
+    },
+    {
+      "at": "2026-10-07T15:11:51+00:00",
+      "screenshot_journal_index": 521,
+      "observation": "Host Back returned B Home; both Home."
+    }
+  ],
+  "observation_basis": "Root operator supplied the paired visual observations. This offline analysis reads the immutable journal/raw captures only, not ongoing image directories. Snapshot payload integrity is independently checked in the bound review; image receipts are RGB565 payload hashes, not PNG file hashes.",
+  "screenshot_receipts": [
+    {
+      "journal_index": 464,
+      "started_at": "2026-10-07T15:07:38.353050+00:00",
+      "finished_at": "2026-10-07T15:07:41.756714+00:00",
+      "name": "ww73-launch-observed",
+      "scale": 4,
+      "parallel": true,
+      "units": {
+        "A": {
+          "capture_id": 1640759063,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "4007160deccca9d67cb93fba65ce9bdf6d1b3fda2ff3e04c520b9c65fcac7769"
+        },
+        "B": {
+          "capture_id": 576953127,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "055797d5da176d86ea86a4f69153b197094781dec07c4f7a8c44e1b05c867bca"
+        }
+      }
+    },
+    {
+      "journal_index": 473,
+      "started_at": "2026-10-07T15:08:22.204085+00:00",
+      "finished_at": "2026-10-07T15:08:25.662616+00:00",
+      "name": "ww73hgas-wacky-probe-b-host-gas",
+      "scale": 4,
+      "parallel": true,
+      "units": {
+        "A": {
+          "capture_id": 187050855,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "f507e0f84f3d89d7ffe01feb4c91ceef8192ea79bb494f5a4e130db9a3fbf068"
+        },
+        "B": {
+          "capture_id": 1653105243,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "15d4c42c67abdf17fd3f505acc9152c713b298ad36838917e5c9865988887dbf"
+        }
+      }
+    },
+    {
+      "journal_index": 480,
+      "started_at": "2026-10-07T15:08:40.697158+00:00",
+      "finished_at": "2026-10-07T15:08:44.136271+00:00",
+      "name": "ww73ggas-wacky-probe-b-guest-gas",
+      "scale": 4,
+      "parallel": true,
+      "units": {
+        "A": {
+          "capture_id": 1229372867,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "fe7f3725e0a091f77c84aba79650595e292755b55b6280e461238312597b9be3"
+        },
+        "B": {
+          "capture_id": 292423073,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "e52da239a584d7731f1e5feacc188af329e35209effdc5b82ce9c3466f1b996d"
+        }
+      }
+    },
+    {
+      "journal_index": 486,
+      "started_at": "2026-10-07T15:08:55.514715+00:00",
+      "finished_at": "2026-10-07T15:08:58.930910+00:00",
+      "name": "ww73hright-wacky-probe-host-steer-right",
+      "scale": 4,
+      "parallel": true,
+      "units": {
+        "A": {
+          "capture_id": 4222890127,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "cc297fbc9307f3cc8f8563188ac4f2e032ebd5fc6513b966692bbdca240cdedb"
+        },
+        "B": {
+          "capture_id": 2273399562,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "0f78a12bf5a7dc13271cd50938156e224a3938972c1ce0cf8a37aacf9e18830e"
+        }
+      }
+    },
+    {
+      "journal_index": 492,
+      "started_at": "2026-10-07T15:09:14.877368+00:00",
+      "finished_at": "2026-10-07T15:09:18.279310+00:00",
+      "name": "ww73gleft-wacky-probe-guest-steer-left",
+      "scale": 4,
+      "parallel": true,
+      "units": {
+        "A": {
+          "capture_id": 858274698,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "3eaab159fbe7418c3e540fa5965636c9baf9deeec91e35bce92e8e9aee930970"
+        },
+        "B": {
+          "capture_id": 1068285519,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "2ce2f3e0a85891818a6490b81eed51a18b4c97e4bc435db73ed33fcf15a42956"
+        }
+      }
+    },
+    {
+      "journal_index": 508,
+      "started_at": "2026-10-07T15:11:01.935289+00:00",
+      "finished_at": "2026-10-07T15:11:05.379859+00:00",
+      "name": "ww73-active-end",
+      "scale": 4,
+      "parallel": true,
+      "units": {
+        "A": {
+          "capture_id": 933209167,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "7aee163dbad334fb9eacbb9027919d44be9585afb2dac2a5146110409d239574"
+        },
+        "B": {
+          "capture_id": 2907824074,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "adceb5eea1dd5c891068fda88224d560c79933d9b05d467aed409ea2dc5c8f3f"
+        }
+      }
+    },
+    {
+      "journal_index": 514,
+      "started_at": "2026-10-07T15:11:24.961236+00:00",
+      "finished_at": "2026-10-07T15:11:28.376100+00:00",
+      "name": "ww73depart-wacky-probe-b-depart-guest",
+      "scale": 4,
+      "parallel": true,
+      "units": {
+        "A": {
+          "capture_id": 2386104080,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "8a55b40b7351966055c1f1142c9ece5dce7ddf6904853a564aa4edd81b14b832"
+        },
+        "B": {
+          "capture_id": 2596001039,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "bb97300cc289a851a9c507e10075bc4f8ac67242026571cff6a6cb07146e44ba"
+        }
+      }
+    },
+    {
+      "journal_index": 521,
+      "started_at": "2026-10-07T15:11:48.110875+00:00",
+      "finished_at": "2026-10-07T15:11:51.498213+00:00",
+      "name": "ww73finish-wacky-probe-b-finish-after-guest-left",
+      "scale": 4,
+      "parallel": true,
+      "units": {
+        "A": {
+          "capture_id": 1086482739,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "8a55b40b7351966055c1f1142c9ece5dce7ddf6904853a564aa4edd81b14b832"
+        },
+        "B": {
+          "capture_id": 2121261229,
+          "native_width": 180,
+          "native_height": 320,
+          "width": 320,
+          "height": 180,
+          "format": "rgb565-le",
+          "rotation": 1,
+          "scale": 4,
+          "bytes": 115200,
+          "sha256": "4dd79eaf08f673609db99dabaf5b83b8044c6addaf077773b8d6b49894f4b79d"
+        }
+      }
+    }
+  ],
+  "preserved_harness_failures": [
+    {
+      "journal_index": 449,
+      "name": "ww73start-wacky-probe-start-c1",
+      "completed_steps": 0,
+      "reason": "Expired debug lease caused initial release to fail before any Start input."
+    },
+    {
+      "journal_index": 462,
+      "name": "ww73startfresh-wacky-probe-start-c1",
+      "completed_steps": 3,
+      "reason": "A STATUS received no reply after three identical requests during loading (journal460 duration6055.599ms). Single Start had already been admitted; no Start retry. Later both native STATUS and reviewed race screenshots establish eventual launch, but the timeout remains a responsiveness failure."
+    }
+  ],
+  "audio_assessment": "FAILURES RETAINED: lifetime stream underrun frames A2048/B1904. No new underrun/rejected/write_failures/clipped increments in the eligible measured race intervals. Observed increase brackets overlap screenshot transfers; this is temporal correlation, not proof that every missing audio sample occurred inside capture or that capture was the sole cause. Music/SFX content and per-speaker audibility remain pending.",
+  "network_assessment": "Guest NATIVE_MULTIPLAYER_STOP dropped=3; host dropped=0. These cumulative totals have no per-drop timestamps and are not classified as proven wire packet loss. Root observed working replication followed by expected peer-loss UI on intentional departure.",
+  "save_scope": "Both launch with save_bytes=0/save_sequence=0. Both SAVE_WORKER_STOP records report36 bytes/sequence1 and low_water284 after normal exits. This proves recorded save-worker completion only; restore/CLOCK canary/relaunch acceptance requires a later separately bound prefix.",
+  "pending": [
+    "Full three-lap race/results/rematch",
+    "Reverse host direction",
+    "Heard music and separately triggered/heard SFX on each speaker",
+    "Save restoration and CLOCK canary retention/relaunch",
+    "Native 30 FPS release floor and 60 FPS target",
+    "Root cause of lifetime audio underruns and guest dropped=3"
+  ],
+  "historical_failures_retained": "The earlier0.71 Wacky immediate peer-loss startup and Back-exit stack assertion remain historical failures. This0.73 bounded run reached a race and cleanly stopped both units, without replacing earlier evidence."
+}

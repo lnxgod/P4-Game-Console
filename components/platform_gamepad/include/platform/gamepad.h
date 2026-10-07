@@ -27,7 +27,12 @@ void platform_gamepad_unregister_provider(
     platform_gamepad_transport_t transport,
     platform_gamepad_snapshot_provider_t provider);
 
-/** Copy the active canonical controller snapshot without exposing transport. */
+/**
+ * Copy the active canonical controller snapshot without exposing transport.
+ * An initialized provider with no controller ever connected returns ESP_OK and
+ * its neutral, disconnected, identity-free snapshot. Lower-priority connected
+ * providers still take precedence over any disconnected publication.
+ */
 esp_err_t platform_gamepad_get_snapshot(
     platform_gamepad_snapshot_t *snapshot);
 

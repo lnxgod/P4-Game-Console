@@ -167,11 +167,16 @@ metadata into `p4_game_descriptor_t`; that descriptor is the stable API ABI.
   interaction section of `docs/GAME_ART.md`.
 - Use optional `p4/draw.h` primitives and licensed sprites, or a bounded custom
   software renderer. Keep clipping, stride and resource ownership correct.
-- Target native 768x480 RGB565 by default, with optional `video-highres` plus
-  `P4_GAME_CAP_VIDEO_HIGH_RES` and a tested 320x200 fallback. The creator now
-  requests this automatically. Render directly into the negotiated surface;
-  enlarging a finished low-resolution frame is not a visual upgrade. Touch
-  and standard control hit regions remain normalized to 320x200 in either mode.
+- Every maintained Tab5 game must render directly at native 768x480 RGB565.
+  Put `video-highres` in the manifest's required capabilities and
+  `P4_GAME_CAP_VIDEO_HIGH_RES` in the descriptor's required capabilities.
+  The creator emits both requirements by default; verify they remain aligned
+  after edits. Never select
+  `--low-res`, upscale a completed 320x200 frame or reduce resolution to repair
+  performance/readability. Fix measured native rendering costs and preserve
+  an unmet acceptance gate. Touch and standard control hit regions stay
+  normalized to 320x200; those input units do not set game render resolution.
+  Preserve legacy fallback source only for explicitly requested legacy work.
 - Read `docs/GAME_ART.md` for the shared presentation and ImageGen contract.
   Use `p4/presentation.h` for cartridge-local antialiased text and materials;
   keep important card ranks, suits, scores and instructions exact and legible.

@@ -36,10 +36,24 @@ def verify_native_only(components: set[str], symbols: str) -> None:
 
 def verify_arena_memory(symbols: str) -> None:
     """Arena histories/caches must not consume the startup DMA reserve."""
-    for name in ("gc", "s_arena_reader"):
+    for name in ("gc", "s_arena_reader", "visplanes", "openings"):
         match = re.search(r"^([0-9a-fA-F]+) [bB] " + name + r"$", symbols, re.M)
         require(match is not None and 0x48000000 <= int(match[1], 16) < 0x4a000000,
                 f"Arena {name} must be in PSRAM to preserve startup DMA memory")
+
+
+def verify_storage_seek(sdk: str) -> None:
+    """Require bounded FAT cluster maps for random Arena resource reads."""
+    for line in ("CONFIG_FATFS_USE_FASTSEEK=y",
+                 "CONFIG_FATFS_ALLOC_PREFER_EXTRAM=y",
+                 "CONFIG_FATFS_FAST_SEEK_BUFFER_SIZE=112456"):
+        require(line in sdk.splitlines(), f"missing required sdkconfig: {line}")
+
+
+def verify_udp_mailbox(sdk: str) -> None:
+    """Keep the per-socket UDP receive queue at the reviewed Tab5 bound."""
+    values = re.findall(r"^CONFIG_LWIP_UDP_RECVMBOX_SIZE=(.*)$", sdk, re.M)
+    require(values == ["32"], "Tab5 UDP receive mailbox must be exactly 32")
 
 
 def verify_usb_host(enabled: bool, components: set[str], sources: set[str], symbols: str) -> None:
@@ -82,6 +96,8 @@ def verify(build: pathlib.Path, firmware_only: bool = False) -> dict:
     require(digest(ROOT / "third_party/bmi270/config.inc") == bmi["config_inc_sha256"],
             "BMI270 configuration differs from pinned Bosch data")
     sdk = (build / "sdkconfig").read_text()
+    verify_storage_seek(sdk)
+    verify_udp_mailbox(sdk)
     usb_host_enabled = "CONFIG_P4_TAB5_USB_HOST=y" in sdk.splitlines()
     charger_control_enabled = "CONFIG_P4_TAB5_CHARGER_500MA=y" in sdk.splitlines()
     for line in (

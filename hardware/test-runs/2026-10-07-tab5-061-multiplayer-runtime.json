@@ -1,0 +1,390 @@
+{
+  "schema": 1,
+  "recorded_at": "2026-10-07T03:57:47.203798+00:00",
+  "board": "m5stack-tab5",
+  "version": "0.61",
+  "result": "menu-and-lobby-pass-engine-startup-failed",
+  "capture_state": "closed",
+  "scope": "Two physical Tab5 units controlled by bounded synthetic USB debug input, using local Wi-Fi for Arena. Engine and lobby receipts are reported separately from human gameplay acceptance.",
+  "install_record": {
+    "file": "hardware/test-runs/2026-10-07-tab5-061-multiplayer-debug-install.json",
+    "bytes": 15948,
+    "sha256": "2f46fd5faacd7568c89f7469e6266cbe908001862263df4995ac1a0f25a7c5e6"
+  },
+  "application": {
+    "file": "apps/console_os/build-tab5/p4_console_os.bin",
+    "bytes": 4329008,
+    "sha256": "0733e6f5955da30587b3052020dc46014cbc73c495e1b494a2c2fce3f66f6107",
+    "version": "0.61",
+    "write_offset": "0x20000"
+  },
+  "raw_commands": {
+    "file": "build-host/tab5-multiplayer-hardware/remote-061/commands.jsonl",
+    "bytes": 14131,
+    "sha256": "3b834aed368a8dd5505c7e3a10331214dc8ede4ab8bfb7974bd70e20349ce614"
+  },
+  "start_time_utc": "2026-10-07T03:50:09.974443+00:00",
+  "last_command_time_utc": "2026-10-07T03:54:50.834752+00:00",
+  "sessions": [
+    {
+      "session": "86c66409",
+      "units": {
+        "A": {
+          "boot_index": 0,
+          "entry": "host-created",
+          "lobby_ready": {
+            "uptime_ms": 100451,
+            "game": "org.p4console.gamechangersai",
+            "mode": 2,
+            "episode": 1,
+            "map": 1,
+            "skill": 5,
+            "players": 2,
+            "local_slot": 0,
+            "role": "host",
+            "tick_hz": 35,
+            "input_delay": 2,
+            "transport": "wifi-local",
+            "route": "<redacted-route>"
+          },
+          "engine_ready": null,
+          "validation_to_snapshot_ms": 37494,
+          "validation_to_engine_ready_ms": null,
+          "fatal_receipts": [
+            "assert failed: sdio_push_data_to_queue sdio_drv.c:701 (pkt_rxbuff)"
+          ],
+          "engine_error_receipts": [],
+          "ended_by_reboot": true,
+          "runtime_stats_count": 0
+        },
+        "B": {
+          "boot_index": 0,
+          "entry": "guest-join-selected",
+          "lobby_ready": {
+            "uptime_ms": 100576,
+            "game": "org.p4console.gamechangersai",
+            "mode": 2,
+            "episode": 1,
+            "map": 1,
+            "skill": 5,
+            "players": 2,
+            "local_slot": 1,
+            "role": "client",
+            "tick_hz": 35,
+            "input_delay": 2,
+            "transport": "wifi-local",
+            "route": "<redacted-route>"
+          },
+          "engine_ready": null,
+          "validation_to_snapshot_ms": 26973,
+          "validation_to_engine_ready_ms": null,
+          "fatal_receipts": [
+            "abort() was called at PC 0x40006ff1 on core 0"
+          ],
+          "engine_error_receipts": [
+            "P4 multiplayer configuration failed"
+          ],
+          "ended_by_reboot": true,
+          "runtime_stats_count": 0
+        }
+      },
+      "host_unit": "A",
+      "two_player_lobby_correlated": true,
+      "two_player_engine_barrier_correlated": false
+    }
+  ],
+  "units": {
+    "A": {
+      "identity_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+      "raw_capture": {
+        "file": "build-host/tab5-multiplayer-hardware/remote-061/a.rx",
+        "bytes": 57729,
+        "sha256": "7a8ae0eb1595444f11e7c940322c377e43d6210e18ef26f13556df085e1980ec",
+        "git_ignored": true
+      },
+      "boot_versions": [
+        "0.61",
+        "0.61"
+      ],
+      "shell_ready_receipts": [
+        "I (10149) p4_console_os: P4_CONSOLE_OS READY board=m5stack-tab5 display=mipi-dsi audio=es8388 storage=microsd removal=power-off-first hardware_acceptance=pending",
+        "I (10919) p4_console_os: P4_CONSOLE_OS READY board=m5stack-tab5 display=mipi-dsi audio=es8388 storage=microsd removal=power-off-first hardware_acceptance=pending"
+      ],
+      "debug_response_count": 40,
+      "debug_response_bad_frames": 0,
+      "debug_buffered_bytes_at_capture_end": 0,
+      "last_debug_state": "mode=shell page=0 app=0 view=4 row=11 game=0 link=0 rooms=0 ready=0",
+      "setup_receipts": [
+        "I (65443) p4_console_os: P4_CONSOLE_OS MULTIPLAYER_SETUP game=2 mode=2 episode=1 map=2 skill=5 monsters=0 fast=0 respawn=0 limit=0",
+        "I (70818) p4_console_os: P4_CONSOLE_OS MULTIPLAYER_SETUP game=2 mode=2 episode=1 map=1 skill=5 monsters=0 fast=0 respawn=0 limit=0"
+      ],
+      "attempts": [
+        {
+          "session": "86c66409",
+          "boot_index": 0,
+          "entry": "host-created",
+          "entry_uptime_ms": 82996,
+          "markers": [
+            "I (82996) p4_console_os: P4_CONSOLE_OS MULTIPLAYER_LOBBY_CREATED session=86c66409 transport=wifi-local",
+            "I (82998) p4_console_os: P4_CONSOLE_OS MULTIPLAYER_LOBBY_ACTION role=host result=ESP_OK",
+            "I (100435) p4_console_os: P4_CONSOLE_OS MULTIPLAYER_PEER_SEEN transport=wifi-local route=<redacted-route>",
+            "I (100451) p4_console_os: P4_CONSOLE_OS MULTIPLAYER_LOBBY_READY game=org.p4console.gamechangersai mode=2 episode=1 map=1 skill=5 players=2 local_slot=0 role=host tick_hz=35 input_delay=2 transport=wifi-local route=<redacted-route>",
+            "I (113340) p4_console_os: P4_CONSOLE_OS WAD_VALIDATION_ON_DEMAND title=doom trigger=launch full_sha256=1 boot_scan=0",
+            "I (150834) game_storage: P4_GAME_STORAGE LOCKED_SNAPSHOT_READY title=game-changers-ai wad_bytes=28787748 deh_bytes=0 source=single-pass-exact-sha256 target=verified-sd-blocks elapsed_ms=37490",
+            "I (150839) p4_console_os: P4_CONSOLE_OS HANDOFF_BEGIN app=doom mode=exclusive-one-way audio_owner=doom storage=game-locked input_owner=platform multiplayer=1",
+            "I (150847) p4_console_os: P4_CONSOLE_OS HANDOFF_COMPLETE app=doom shell_services=released",
+            "I (152595) p4_doom_touch_audio: P4_DOOM_E6 CLEANUP_REGISTERED order=audio-touch-bus-dark-video-display-blob",
+            "I (152622) p4_doom_touch_audio: P4_DOOM_ARENA CONTENT pure-hades=0.6 dwango5=24 default=01,02,03,04,05 vote=majority midi=embedded",
+            "Z_Init: Init zone memory allocation daemon. ",
+            "V_Init: allocate screens.",
+            "W_Init: Init WADfiles.",
+            "I_Init: Setting up machine state.",
+            "M_Init: Init miscellaneous info.",
+            "R_Init: Init DOOM refresh daemon - ................",
+            "assert failed: sdio_push_data_to_queue sdio_drv.c:701 (pkt_rxbuff)",
+            "ELF file SHA256: c1ac8ee2c",
+            "Rebooting..."
+          ],
+          "runtime_stats": [],
+          "last_serial_uptime_ms": 303212,
+          "lobby_ready": {
+            "uptime_ms": 100451,
+            "game": "org.p4console.gamechangersai",
+            "mode": 2,
+            "episode": 1,
+            "map": 1,
+            "skill": 5,
+            "players": 2,
+            "local_slot": 0,
+            "role": "host",
+            "tick_hz": 35,
+            "input_delay": 2,
+            "transport": "wifi-local",
+            "route": "<redacted-route>"
+          },
+          "validation_start_uptime_ms": 113340,
+          "locked_snapshot": {
+            "uptime_ms": 150834,
+            "title": "game-changers-ai",
+            "wad_bytes": 28787748,
+            "deh_bytes": 0,
+            "source": "single-pass-exact-sha256",
+            "target": "verified-sd-blocks",
+            "elapsed_ms": 37490
+          },
+          "handoff_begin_uptime_ms": 150839,
+          "handoff_complete_uptime_ms": 150847,
+          "ended_by_reboot": true,
+          "fatal_receipts": [
+            "assert failed: sdio_push_data_to_queue sdio_drv.c:701 (pkt_rxbuff)"
+          ],
+          "engine_error_receipts": [],
+          "validation_to_snapshot_ms": 37494,
+          "validation_to_engine_ready_ms": null
+        }
+      ],
+      "player_left_receipts": [],
+      "cleanup_exit_receipts": [],
+      "engine_error_receipts": [],
+      "error_and_warning_receipts": [
+        "W (3703) ldo: The voltage value 0 is out of the recommended range [500, 2700]",
+        "W (30559) rpc_rsp: Hosted RPC_Resp [0x21f], uid [3], resp code [12290]",
+        "E (303212) sdmmc_cmd: sdmmc_read_sectors: not eno",
+        "W (3715) ldo: The voltage value 0 is out of the recommended range [500, 2700]"
+      ],
+      "fatal_pattern_matches": [
+        "assert failed: sdio_push_data_to_queue sdio_drv.c:701 (pkt_rxbuff)"
+      ],
+      "sanitized_markers": {
+        "file": "hardware/test-runs/2026-10-07-tab5-061-multiplayer-runtime/a.sanitized.log",
+        "bytes": 6778,
+        "sha256": "7ae7357700a6c44b20e9152826b1d307039d8f04472f27098af9166f4661caf0"
+      }
+    },
+    "B": {
+      "identity_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+      "raw_capture": {
+        "file": "build-host/tab5-multiplayer-hardware/remote-061/b.rx",
+        "bytes": 54031,
+        "sha256": "2892bd51c4fc58a9b82b970e4008ad40748727ad1fa40e69d0b1f219ab804489",
+        "git_ignored": true
+      },
+      "boot_versions": [
+        "0.61",
+        "0.61"
+      ],
+      "shell_ready_receipts": [
+        "I (8316) p4_console_os: P4_CONSOLE_OS READY board=m5stack-tab5 display=mipi-dsi audio=es8388 storage=microsd removal=power-off-first hardware_acceptance=pending",
+        "I (8329) p4_console_os: P4_CONSOLE_OS READY board=m5stack-tab5 display=mipi-dsi audio=es8388 storage=microsd removal=power-off-first hardware_acceptance=pending"
+      ],
+      "debug_response_count": 20,
+      "debug_response_bad_frames": 0,
+      "debug_buffered_bytes_at_capture_end": 0,
+      "last_debug_state": "mode=shell page=0 app=0 view=4 row=11 game=0 link=0 rooms=0 ready=0",
+      "setup_receipts": [],
+      "attempts": [
+        {
+          "session": "86c66409",
+          "boot_index": 0,
+          "entry": "guest-join-selected",
+          "entry_uptime_ms": 96406,
+          "markers": [
+            "I (96406) p4_console_os: P4_CONSOLE_OS MULTIPLAYER_LOBBY_JOIN_SELECTED session=86c66409 lobby=<redacted-lobby> transport=wifi-local",
+            "I (96408) p4_console_os: P4_CONSOLE_OS MULTIPLAYER_LOBBY_ACTION role=join result=ESP_OK",
+            "I (100436) p4_console_os: P4_CONSOLE_OS MULTIPLAYER_PEER_SEEN transport=wifi-local route=<redacted-route>",
+            "I (100576) p4_console_os: P4_CONSOLE_OS MULTIPLAYER_LOBBY_READY game=org.p4console.gamechangersai mode=2 episode=1 map=1 skill=5 players=2 local_slot=1 role=client tick_hz=35 input_delay=2 transport=wifi-local route=<redacted-route>",
+            "I (113377) p4_console_os: P4_CONSOLE_OS WAD_VALIDATION_ON_DEMAND title=doom trigger=launch full_sha256=1 boot_scan=0",
+            "I (140350) game_storage: P4_GAME_STORAGE LOCKED_SNAPSHOT_READY title=game-changers-ai wad_bytes=28787748 deh_bytes=0 source=single-pass-exact-sha256 target=verified-sd-blocks elapsed_ms=26969",
+            "I (140355) p4_console_os: P4_CONSOLE_OS HANDOFF_BEGIN app=doom mode=exclusive-one-way audio_owner=doom storage=game-locked input_owner=platform multiplayer=1",
+            "I (140358) p4_console_os: P4_CONSOLE_OS HANDOFF_COMPLETE app=doom shell_services=released",
+            "I (141382) p4_doom_touch_audio: P4_DOOM_E6 CLEANUP_REGISTERED order=audio-touch-bus-dark-video-display-blob",
+            "I (141406) p4_doom_touch_audio: P4_DOOM_ARENA CONTENT pure-hades=0.6 dwango5=24 default=01,02,03,04,05 vote=majority midi=embedded",
+            "Z_Init: Init zone memory allocation daemon. ",
+            "V_Init: allocate screens.",
+            "W_Init: Init WADfiles.",
+            "I_Init: Setting up machine state.",
+            "M_Init: Init miscellaneous info.",
+            "R_Init: Init DOOM refresh daemon - ................",
+            "P_Init: Init Playloop state.",
+            "S_Init: Setting up sound.",
+            "D_CheckNetGame: Checking network game status.",
+            "P4 multiplayer configuration failed",
+            "abort() was called at PC 0x40006ff1 on core 0",
+            "ELF file SHA256: c1ac8ee2c",
+            "Rebooting..."
+          ],
+          "runtime_stats": [],
+          "last_serial_uptime_ms": 300212,
+          "lobby_ready": {
+            "uptime_ms": 100576,
+            "game": "org.p4console.gamechangersai",
+            "mode": 2,
+            "episode": 1,
+            "map": 1,
+            "skill": 5,
+            "players": 2,
+            "local_slot": 1,
+            "role": "client",
+            "tick_hz": 35,
+            "input_delay": 2,
+            "transport": "wifi-local",
+            "route": "<redacted-route>"
+          },
+          "validation_start_uptime_ms": 113377,
+          "locked_snapshot": {
+            "uptime_ms": 140350,
+            "title": "game-changers-ai",
+            "wad_bytes": 28787748,
+            "deh_bytes": 0,
+            "source": "single-pass-exact-sha256",
+            "target": "verified-sd-blocks",
+            "elapsed_ms": 26969
+          },
+          "handoff_begin_uptime_ms": 140355,
+          "handoff_complete_uptime_ms": 140358,
+          "ended_by_reboot": true,
+          "fatal_receipts": [
+            "abort() was called at PC 0x40006ff1 on core 0"
+          ],
+          "engine_error_receipts": [
+            "P4 multiplayer configuration failed"
+          ],
+          "validation_to_snapshot_ms": 26973,
+          "validation_to_engine_ready_ms": null
+        }
+      ],
+      "player_left_receipts": [],
+      "cleanup_exit_receipts": [],
+      "engine_error_receipts": [
+        "P4 multiplayer configuration failed"
+      ],
+      "error_and_warning_receipts": [
+        "W (2585) st7123: The 36h command has been used and will be overwritten by external initialization sequence",
+        "W (2977) ldo: The voltage value 0 is out of the recommended range [500, 2700]",
+        "W (31054) rpc_rsp: Hosted RPC_Resp [0x21f], uid [3], resp code [12290]",
+        "W (141186) st7123: The 36h command has been used and will be overwritten by external initialization sequence",
+        "W (2595) st7123: The 36h command has been used and will be overwritten by external initialization sequence",
+        "W (2987) ldo: The voltage value 0 is out of the recommended range [500, 2700]"
+      ],
+      "fatal_pattern_matches": [
+        "abort() was called at PC 0x40006ff1 on core 0"
+      ],
+      "sanitized_markers": {
+        "file": "hardware/test-runs/2026-10-07-tab5-061-multiplayer-runtime/b.sanitized.log",
+        "bytes": 7046,
+        "sha256": "800975e3c1256156209f7a95ec940d718eb541f8429e58d16a37933ea4986853"
+      }
+    }
+  },
+  "command_errors": [
+    {
+      "time": "2026-10-07T03:50:21.425608+00:00",
+      "request": {
+        "unit": "both",
+        "command": "status"
+      },
+      "unit": "A",
+      "error": "no status response after 3 identical requests"
+    },
+    {
+      "time": "2026-10-07T03:53:04.358165+00:00",
+      "request": {
+        "unit": "both",
+        "command": "status"
+      },
+      "unit": "A",
+      "error": "no status response after 3 identical requests"
+    },
+    {
+      "time": "2026-10-07T03:53:04.358165+00:00",
+      "request": {
+        "unit": "both",
+        "command": "status"
+      },
+      "unit": "B",
+      "error": "no status response after 3 identical requests"
+    },
+    {
+      "time": "2026-10-07T03:54:50.834752+00:00",
+      "request": {
+        "unit": "both",
+        "command": "status"
+      },
+      "unit": "A",
+      "error": "no status response after 3 identical requests"
+    },
+    {
+      "time": "2026-10-07T03:54:50.834752+00:00",
+      "request": {
+        "unit": "both",
+        "command": "status"
+      },
+      "unit": "B",
+      "error": "no status response after 3 identical requests"
+    }
+  ],
+  "acceptance": {
+    "engine_barrier_hosts_observed": [],
+    "actual_host_directions_exercised": [
+      "A"
+    ],
+    "arena_engine_entry": "failed before READY on both units",
+    "active_game_movement_firing_quit_peer_departure": "not exercised in this failed startup run",
+    "gameplay_cadence": "not measured",
+    "human_visual_audio_touch_acceptance": "pending"
+  },
+  "limits": [
+    "Each engine READY proves its two initial synchronized tics and peer barrier, not a person seeing, hearing or physically controlling the game.",
+    "Runtime counter intervals are reported when available; release cadence and human gameplay acceptance remain separate.",
+    "Peer departure is claimed only where a PLAYER_LEFT receipt is present; quit commands alone are not graceful-exit proof.",
+    "The operator observed lagging transition replies during the initial 150 ms tap batch, then recovered by checking state and separating commands. The separate 300 ms Map plus/minus taps logged map 2 then map 1.",
+    "The last debug response is the last received reply, which may predate a later engine load, error or reboot; shell-ready serial receipts and boot versions are recorded separately.",
+    "The prior incomplete 0.60 run remains preserved as a separate historical record.",
+    "Raw captures remain ignored local files. Published excerpts strip binary debug/discovery traffic, MAC addresses, route/lobby identifiers and serial port paths."
+  ],
+  "sanitized_commands": {
+    "file": "hardware/test-runs/2026-10-07-tab5-061-multiplayer-runtime/commands.sanitized.jsonl",
+    "bytes": 14114,
+    "sha256": "02af88ec76badb54d4ca954577b107310588ca9ac8f47a68d3b3a75df829db74"
+  }
+}

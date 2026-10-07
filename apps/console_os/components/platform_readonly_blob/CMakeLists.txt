@@ -2,9 +2,10 @@
 
 idf_component_register(
     SRCS "platform_game_storage_blob.c"
-    INCLUDE_DIRS "../../../../components/platform_readonly_blob/include"
+    INCLUDE_DIRS "include" "../../../../components/platform_readonly_blob/include"
     REQUIRES
         freertos
+        esp_timer
         log
         platform_game_storage
         vfs

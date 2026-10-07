@@ -128,6 +128,8 @@ void R_DrawColumn (void)
     //  which is the only mapping to be done.
     fracstep = dc_iscale; 
     frac = dc_texturemid + (dc_yl-centery)*fracstep; 
+    const byte *source = dc_source;
+    const lighttable_t *colormap = dc_colormap;
 
     // Inner loop that does the actual texture mapping,
     //  e.g. a DDA-lile scaling.
@@ -136,7 +138,7 @@ void R_DrawColumn (void)
     {
 	// Re-map color indices from wall texture column
 	//  using a lighting/special effects LUT.
-	*dest = dc_colormap[dc_source[(frac>>FRACBITS)&127]];
+	*dest = colormap[source[(frac>>FRACBITS)&127]];
 	
 	dest += SCREENWIDTH; 
 	frac += fracstep;
@@ -618,6 +620,9 @@ void R_DrawSpan (void)
          | ((ds_ystep >> 6)  & 0x0000ffff);
 
     dest = ylookup[ds_y] + columnofs[ds_x1];
+    const byte *source = ds_source;
+    const lighttable_t *colormap = ds_colormap;
+
 
     // We do not check for zero spans here?
     count = ds_x2 - ds_x1;
@@ -631,7 +636,7 @@ void R_DrawSpan (void)
 
 	// Lookup pixel from flat texture tile,
 	//  re-index using light/colormap.
-	*dest++ = ds_colormap[ds_source[spot]];
+	*dest++ = colormap[source[spot]];
 
         position += step;
 
