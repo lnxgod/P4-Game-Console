@@ -1,5 +1,13 @@
 # Skyline Leap
 
+[Game index](../README.md) · [Build and install](../README.md#build-and-play) · [Console OS](../../apps/console_os/README.md)
+
+**Availability:** Disabled draft; not in default bundle. **Folder:** `GAMES/WIP`.
+
+**Package:** `SKYLINE.P4G`. **Players:** Solo.
+
+**Local preview:** `make play-game GAME=skyline_leap` from the repository root.
+
 Version 1.1.0. Cross four rooftop routes, collect three signal shards, disable patrol bots, and reach the open exit.
 
 An original yellow-jacket courier, animated purple robots, crystal pickups, exit doors, a detailed ImageGen coastal city background, and riveted metal platforms make the 768x480 view distinct. Courier art follows facing, jump/fall, firing, and hurt states without changing physics. Four route tints distinguish the stages.

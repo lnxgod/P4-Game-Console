@@ -1,5 +1,10 @@
 # Game Changers AI multiplayer arena
 
+[Game README](games/arena/README.md) · [Console OS](../apps/console_os/README.md) · [Monorepo](../README.md)
+
+This guide describes one Doom-based game mode in the monorepo. Console OS
+is the shared platform that hosts it; Pure Hell is one of its content packs.
+
 M5Stack Tab5 candidate, Console OS **0.56**. This is a special selection inside
 **Multiplayer**, with no separate launcher tile. Ordinary Doom shareware and
 Chex Quest retain their separate content and two-player adapters. Installation and physical acceptance are recorded separately below.

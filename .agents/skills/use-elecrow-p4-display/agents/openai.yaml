@@ -1,4 +1,0 @@
-interface:
-  display_name: "Elecrow P4 10 in Variant Display"
-  short_description: "Build and test the 10 in variant display path"
-  default_prompt: "Use $use-elecrow-p4-display to add or diagnose display output on the Elecrow 10 in variant safely."

@@ -264,7 +264,7 @@ The `{multiplayer_style}` profile and optional `multiplayer-session`
 capability are declared in `game.json`. This scaffold adds metadata only:
 the generated game does not yet synchronize players or state.
 
-Use the [multiplayer skill](../../.agents/skills/develop-p4-multiplayer-games/SKILL.md)
+Use the [multiplayer skill](../../.agents/skills/esp32-multiplayer/SKILL.md)
 to implement the game's bounded protocol. Checkers provides a small turn-based
 example; Air Hockey provides real-time host-authority and two-instance tests.
 Console OS owns registration, Host/Join, room discovery, exact-game matching,
@@ -276,7 +276,9 @@ and `p4_game_multiplayer_read_status()`; exchange only bounded game messages
 with `p4_game_multiplayer_send()` and `p4_game_multiplayer_receive()`.
 Keep a complete offline mode and increment `multiplayer.protocol` when message
 meaning changes. Set `message_bytes` to the largest actual packet, at most 64.
-The current OS links support two human consoles.
+Tab5 Local Wi-Fi supports up to four consoles where the game profile does;
+Bluetooth and USB serial remain limited to two. This scaffold does not prove
+physical multiplayer acceptance.
 """
     resolution = ""
     if high_res:
@@ -288,6 +290,8 @@ where supported, with 320x200 fallback. Touch remains normalized to 320x200;
 scale drawing using `surface->width` and `surface->height`.
 """
     return f"""# {title}
+
+[Game index](../README.md) · [Console OS](../../apps/console_os/README.md)
 
 This is a minimal native P4 Game API v1 scaffold, ready for your own rules,
 art and gameplay. The [starter guide](../../docs/GAME_STARTERS.md) offers
@@ -322,7 +326,7 @@ make play-game GAME={slug}
 
 Add focused rule/protocol tests as the game grows. Run `make game-registry-check`
 after manifest changes. Follow the
-[local testing skill](../../.agents/skills/test-p4-games-locally/SKILL.md) for
+[local testing skill](../../.agents/skills/esp32-test-game/SKILL.md) for
 sanitizer smoke and interactive controls/lifecycle checks.
 
 ## ESP32-P4 performance
@@ -345,12 +349,12 @@ pending until measured.
 After the finished game passes its focused tests and local play checks, set
 `enabled` to `true` in `game.json` and validate it again. The build discovers
 the enabled manifest and puts the game in `{folder}`. Use the
-[package skill](../../.agents/skills/develop-p4-games/SKILL.md) and the matching
+[package skill](../../.agents/skills/esp32-add-game/SKILL.md) and the matching
 target: `make console-os-tab5-idf`, `make console-os-waveshare-idf`,
 `make console-os-olimex-idf` or `make console-os-elecrow-idf` for Elecrow.
 Install the resulting `.P4G` and any required resource sidecar through that
 board's documented content path. A compatible game-only update does not need
-an OS reflash. Use [installos](../../.agents/skills/installos/SKILL.md) only when
+an OS reflash. Use [ESP32 - Set Up](../../.agents/skills/esp32-setup/SKILL.md) only when
 setting up the OS itself.
 {resolution}{multiplayer}
 """

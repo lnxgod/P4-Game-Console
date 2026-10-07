@@ -222,7 +222,7 @@ never overwrites an existing game.
 
 For optional scaffolds, examples and free-form authoring guidance, see
 [Game starters and OS services](GAME_STARTERS.md). Linked-console game requests
-also use the [multiplayer authoring skill](../.agents/skills/develop-p4-multiplayer-games/SKILL.md);
+also use the [multiplayer authoring skill](../.agents/skills/esp32-multiplayer/SKILL.md);
 ordinary controller mappings consume the existing normalized input API.
 
 ## API at a glance

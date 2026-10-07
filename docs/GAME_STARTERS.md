@@ -13,10 +13,10 @@ changes the experience, such as same-device versus linked-console multiplayer.
 
 | Need | Starting path |
 | --- | --- |
-| Any new game or native remix | [Native C authoring skill](../.agents/skills/develop-p4-console-games/SKILL.md), Game API v1 and `.P4G` |
-| Networking added to a native game | Add the [multiplayer skill](../.agents/skills/develop-p4-multiplayer-games/SKILL.md) automatically |
-| Packaging or installing an existing game | [Game package skill](../.agents/skills/develop-p4-games/SKILL.md) |
-| Installing the operating system | [installos](../.agents/skills/installos/SKILL.md) |
+| Any new game or native remix | [Native C authoring skill](../.agents/skills/esp32-make-game/SKILL.md), Game API v1 and `.P4G` |
+| Networking added to a native game | Add the [multiplayer skill](../.agents/skills/esp32-multiplayer/SKILL.md) automatically |
+| Packaging or installing an existing game | [Game package skill](../.agents/skills/esp32-add-game/SKILL.md) |
+| Installing the operating system | [esp32-setup](../.agents/skills/esp32-setup/SKILL.md) |
 
 Native C is the supported game-creation route. Accept free-form mechanics and
 custom engines, including software 3D or raycasting; the examples below do not
@@ -105,7 +105,7 @@ manifest does not create four independent controllers.
 If touch-only interaction is essential to the requested design, preserve it
 and describe that choice rather than pretending a gamepad mapping exists.
 Air Hockey is a useful networking reference, not a ready-made controller
-template. Use the [controller skill](../.agents/skills/add-usb-gamepad-support/SKILL.md)
+template. Use the [controller skill](../.agents/skills/esp32-controllers/SKILL.md)
 only for missing/broken platform support or a new physical controller profile.
 
 ## Multiplayer without a second platform
@@ -124,7 +124,7 @@ exact-device evidence before claiming a supported human-console count.
 ## Finish against the selected target
 
 Implement the player's core loop, then tune it in the appropriate local runner.
-For native games use the [SDL3 play-test skill](../.agents/skills/test-p4-games-locally/SKILL.md)
+For native games use the [SDL3 play-test skill](../.agents/skills/esp32-test-game/SKILL.md)
 and the game's focused tests. Multiplayer needs two game instances with
 mocked OS sessions as well; one SDL window does not prove synchronization.
 
@@ -136,7 +136,7 @@ The Tab5 USB-A controller candidate is host-tested and build-tested, with
 named controller hardware acceptance pending. C6 Wi-Fi/Bluetooth remains
 disabled; native USB-C supplies content/relay transport. Its current
 storage route is SD-only; internal storage plus SD-on-restart is specified in
-[installos](../.agents/skills/installos/references/tab5-storage.md), not yet
+[esp32-setup](../.agents/skills/esp32-setup/references/tab5-storage.md), not yet
 implemented. Check [the Tab5 board document](boards/M5STACK_TAB5.md) for newer
 evidence before making a device claim.
 

@@ -1,6 +1,16 @@
-# P4 Yahtzee
+# Yahtzee
 
-P4 Yahtzee is a native, two-to-four-player P4 Game API v1 dice game. It
+[Game index](../README.md) · [Build and install](../README.md#build-and-play) · [Console OS](../../apps/console_os/README.md)
+
+**Availability:** Included. **Folder:** `GAMES/TABLETOP`.
+
+**Package:** `P4_YAHTZEE.P4G`. **Players:** 2–4 pass-and-play or linked.
+
+**Local preview:** `make play-game GAME=p4_yahtzee` from the repository root.
+
+Linked counts describe the game profile; see [transport and hardware limits](../README.md#test-status-and-multiplayer).
+
+Yahtzee is a native, two-to-four-player P4 Game API v1 dice game. It
 supports same-device pass-and-play and an optional OS-owned
 `multiplayer-session`.
 Network mode exchanges compact turn requests and host-authoritative scorecard
@@ -14,13 +24,13 @@ all four scorecards remain inside the Console API's 64-byte message limit.
 Console OS derives lobby compatibility and timing from that metadata; Yahtzee
 source stays independent of BLE and UART.
 
-For network play, open Multiplayer and select `P4 YAHTZEE` under `GAME`.
+For network play, open Multiplayer and select **Yahtzee** under **Game**.
 Create a room, join its compatible room from each peer, then start from the
 host. The lobby launches every cartridge directly into the connected match;
 the in-game `LOCAL / NETWORK` menu remains the fallback when the cartridge is
-launched normally. Current Console OS transports expose two active network
-slots, while the protocol and cartridge state are ready for a future
-four-player transport adapter.
+launched normally. Tab5 Local Wi-Fi supports up to four network slots;
+Bluetooth and USB serial retain their two-console limit. Physical four-console
+acceptance must be recorded separately from host protocol tests.
 
 ## Controls
 

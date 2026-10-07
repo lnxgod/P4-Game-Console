@@ -1,28 +1,50 @@
-# Quake easter-egg port
+# Quake port
 
-> **Dormant compatibility port:** Current Console OS does not link this port,
-> scan for its PAK, start its USB receiver, or show Quake in the launcher. The
-> files remain for isolated host experiments and historical failure analysis.
+[Monorepo](../../README.md) · [Console OS](../../apps/console_os/README.md)
 
-This port keeps Quake separate from the open P4 Cart ecosystem. The engine is
-GPL source pinned under `third_party/quakegeneric`; Quake's game-data PAK is a
-local/SD input with separate shareware terms and is never committed or embedded
-into firmware.
+This directory contains the SDL3 host adapter and build definition for the
+pinned Quake engine. The retained device adapter is in
+[`components/p4_quake`](../../components/p4_quake/). Quake is **hidden from the
+current Console OS launcher**: the OS does not link the adapter, scan its PAK
+or start its receiver. It is not a default installed game. Retained
+source and upload tooling do not mean the Tab5 game is release-ready.
 
-The PC adapter uses SDL3, renders the engine's 512x300 indexed framebuffer in
-the Console OS 768x480 landscape window, supports keyboard/mouse/gamepad input,
-queues Quake's software-mixed PCM through SDL3, and retains protocol-15 UDP.
-The 512x300 image is aspect-fit at 768x450 with 15-pixel top/bottom margins.
+The PC adapter renders a 512×300 indexed image aspect-fit into a 768×480
+window, with keyboard/mouse/gamepad input and software-mixed SDL3 audio. Its
+protocol-15 UDP networking remains separate from the Console OS P4MP service.
+
+## Data and local preview
+
+The engine source is the pinned GPL-covered tree under
+[`third_party/quakegeneric`](../../third_party/quakegeneric/). The shareware
+`id1/pak0.pak` is a separate, ignored local input; its exact identity and source
+are in [`third_party/game-data.json`](../../third_party/game-data.json).
+Do not commit PAKs or commercial game data.
+
+With CMake, Ninja, SDL3 and the verified local PAK prepared, run from the root:
 
 ```sh
-make quake-provenance
-make quake-smoke
-make quake-play
+python3 scripts/quake/verify-quakegeneric.py
+cmake -S ports/quake -B build-host/quake -G Ninja -DP4_QUAKE_DATA_DIR="$PWD/local-data/quake"
+cmake --build build-host/quake
+ctest --test-dir build-host/quake --output-on-failure
+build-host/quake/p4_quake_host --basedir "$PWD/local-data/quake"
 ```
 
-`quake-smoke` verifies the ignored PAK identity and runs eight deterministic
-headless frames. `quake-play` opens a local window. Neither target builds or
-flashes ESP32 firmware.
+The host runner offers `--headless`, `--no-audio`, `--frames COUNT` and trailing
+engine arguments after `--`. Use Quake's in-game controls menu for bindings.
+A data-backed smoke test is registered only when a data directory is configured.
+This is a separate engine runner, not `make play-game GAME=quake`.
+
+## Scope
+
+No Console OS Quake multiplayer or current physical Tab5 acceptance is claimed
+here. Device integration must follow the [Tab5 guide](../../docs/boards/M5STACK_TAB5.md)
+and [content policy](../../docs/CONTENT_LIBRARY.md), including the reviewed
+engine/storage lifecycle. Do not add an arbitrary-data launcher entry or use a
+historical install script as authorization to flash a device.
+
+## Historical embedded adapter
 
 The retired Waveshare adapter loaded only the exact
 hash-gated `/sdcard/GAMES/QUAKE/ID1/PAK0.PAK`, denies engine writes, renders

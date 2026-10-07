@@ -1,9 +1,20 @@
-# LORD — P4 ANSI Door Edition
+# Red Dragon
 
-This is the complete standalone P4 Console port of *Legend of the Red
-Dragon*. It installs under `GAMES/ADVENTURE`, renders at 320×200 in a
-16-color ANSI/RIP-inspired style, and uses only the stable P4 Game API for
-video, controls, tone audio, shared CP437 drawing, and optional durable saves.
+[Game index](../README.md) · [Build and install](../README.md#build-and-play) · [Console OS](../../apps/console_os/README.md)
+
+**Availability:** Included work in progress; protected OS pairing. **Folder:** `GAMES/WIP`.
+
+**Package:** `LORD.P4G`. **Players:** Solo; 2-player linked profile / realm features.
+
+**Local preview:** `make play-game GAME=lord` from the repository root.
+
+Linked counts describe the game profile; see [transport and hardware limits](../README.md#test-status-and-multiplayer).
+
+Red Dragon is the native P4 Console port of *Legend of the Red Dragon*.
+The current 1.9.0 work in progress installs under `GAMES/WIP` and draws its
+16-color ANSI presentation at native 768×480 with a 320×200 fallback. It uses
+the stable Game API for controls, audio, CP437 drawing and durable saves.
+The detailed version notes below retain the history of the earlier port.
 
 Version 1.8.1 includes:
 

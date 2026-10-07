@@ -1,0 +1,6 @@
+interface:
+  display_name: "ESP32 - Waveshare Screen"
+  short_description: "Fix the older Waveshare console screen"
+  default_prompt: "Use $esp32-waveshare-screen to help with waveshare screen for this console."
+policy:
+  allow_implicit_invocation: true

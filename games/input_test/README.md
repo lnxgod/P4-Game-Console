@@ -1,6 +1,14 @@
-# Input Test
+# Input Monitor
 
-Input Test is a removable `INPUT.P4G` diagnostic under `SYSTEM/TESTS`. It
+[Game index](../README.md) · [Build and install](../README.md#build-and-play) · [Console OS](../../apps/console_os/README.md)
+
+**Availability:** Included system utility. **Folder:** `SYSTEM/TESTS`.
+
+**Package:** `INPUT.P4G`. **Players:** One operator; no linked game mode.
+
+**Local preview:** `make play-game GAME=input_test` from the repository root.
+
+Input Monitor is a removable `INPUT.P4G` diagnostic under `SYSTEM/TESTS`. It
 shows the normalized held, pressed, and released button masks, current touch
 contacts, and an event counter. Start clears the counter and Back returns to
 Program Manager.

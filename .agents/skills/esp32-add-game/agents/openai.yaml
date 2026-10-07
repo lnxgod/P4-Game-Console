@@ -1,0 +1,6 @@
+interface:
+  display_name: "ESP32 - Add Game"
+  short_description: "Package, install or update console games"
+  default_prompt: "Use $esp32-add-game to package or update a storage-installed native game for P4 Console OS."
+policy:
+  allow_implicit_invocation: true

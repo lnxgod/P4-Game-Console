@@ -1,0 +1,6 @@
+interface:
+  display_name: "ESP32 - Waveshare Sound"
+  short_description: "Fix the older Waveshare console sound"
+  default_prompt: "Use $esp32-waveshare-sound to help with waveshare sound for this console."
+policy:
+  allow_implicit_invocation: true

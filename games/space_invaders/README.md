@@ -1,5 +1,13 @@
 # Space Invaders
 
+[Game index](../README.md) · [Build and install](../README.md#build-and-play) · [Console OS](../../apps/console_os/README.md)
+
+**Availability:** Included. **Folder:** `GAMES/ARCADE`.
+
+**Package:** `INVADERS.P4G`. **Players:** Solo.
+
+**Local preview:** `make play-game GAME=space_invaders` from the repository root.
+
 Version 1.1.0. Defend against waves of original alien drones and protect the destructible shields.
 
 A wide battle area uses original purple and teal craft, an animated white/cobalt player ship, a painted nebula and planet backdrop, and metal bunkers that visibly break apart. Four-frame ship animation, short formation tweens, bright projectile cores and impact flares bring movement and damage to life. The wider view maps the original simulation bounds consistently; movement speed, formation steps, firing cadence, shield collisions and scoring retain their existing rules.

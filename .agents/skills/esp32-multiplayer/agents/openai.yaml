@@ -1,0 +1,6 @@
+interface:
+  display_name: "ESP32 - Multiplayer"
+  short_description: "Let friends play on connected consoles"
+  default_prompt: "Use $esp32-multiplayer with the game-authoring skill to implement my multiplayer idea using Console OS sessions and normalized controls."
+policy:
+  allow_implicit_invocation: true

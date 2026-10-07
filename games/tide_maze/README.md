@@ -1,5 +1,15 @@
 # Tide Maze
 
+[Game index](../README.md) · [Build and install](../README.md#build-and-play) · [Console OS](../../apps/console_os/README.md)
+
+**Availability:** Included candidate; device lag acceptance open. **Folder:** `GAMES/ARCADE`.
+
+**Package:** `TIDE_MAZE.P4G`. **Players:** Solo; 2 linked co-op.
+
+**Local preview:** `make play-game GAME=tide_maze` from the repository root.
+
+Linked counts describe the game profile; see [transport and hardware limits](../README.md#test-status-and-multiplayer).
+
 A native C marble labyrinth: tilt a flooded, raised ceramic maze, collect its
 pearls and roll into the gold dock. Three original mazes share a conservative
 water simulation. Currents push the marble; braking steadies it. Whirlpools

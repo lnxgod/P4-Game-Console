@@ -1,4 +1,0 @@
-interface:
-  display_name: "Elecrow P4 10 in Variant Audio"
-  short_description: "Build and test the factory 10 in sound path"
-  default_prompt: "Use $use-elecrow-p4-audio to implement or diagnose sound on the Elecrow 10 in variant using its pinned factory audio path."

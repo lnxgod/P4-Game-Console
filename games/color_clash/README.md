@@ -1,5 +1,15 @@
 # Color Clash
 
+[Game index](../README.md) · [Build and install](../README.md#build-and-play) · [Console OS](../../apps/console_os/README.md)
+
+**Availability:** Included. **Folder:** `GAMES/CARDS`.
+
+**Package:** `COLOR_CLASH.P4G`. **Players:** Solo vs CPUs; 2–4 linked.
+
+**Local preview:** `make play-game GAME=color_clash` from the repository root.
+
+Linked counts describe the game profile; see [transport and hardware limits](../README.md#test-status-and-multiplayer).
+
 Color Clash is an original shedding-card game for two to four players, with a
 classic balanced deck and original branding. Match the discard by color or
 symbol, or play a Wild. Skip, Reverse, Draw Two, Wild Draw Four, and the unique
@@ -13,10 +23,11 @@ bytes. Public
 round state uses a compact 27-byte snapshot; private hands use ordered chunks
 of at most 54 cards, supporting the full deck without unbounded packets. Each
 client applies only messages addressed to its player slot, so its screen shows
-its own hand and public opponent card counts. With the current two-console
-transport, the authoritative host fills seats three and four with computer
-players, producing a four-seat match with two humans and two CPUs. Future
-three- or four-console transports automatically leave fewer or no CPU seats.
+its own hand and public opponent card counts. In a two-console room the
+authoritative host fills seats three and four with computer players. Tab5
+Local Wi-Fi can admit three or four humans, leaving fewer or no CPU seats.
+Bluetooth and USB serial remain limited to two consoles; physical four-device
+acceptance is separate from the protocol tests.
 Only the host advances CPU turns and broadcasts their resulting state.
 
 There is deliberately no pass-and-play mode. A normal launcher start provides
